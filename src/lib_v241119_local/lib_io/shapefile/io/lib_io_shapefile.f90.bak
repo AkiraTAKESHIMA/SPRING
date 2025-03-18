@@ -1,0 +1,790 @@
+module lib_io_shapefile
+  implicit none
+  private
+
+  public :: shp_
+  public :: shp_entity_
+  public :: shp_part_
+
+  public :: dbf_
+  public :: dbf_field_
+  public :: dbf_record_
+  public :: dbf_value_
+
+  public :: SHPOpen
+  public :: SHPClose
+  public :: SHPGetInfo
+  public :: SHPGetEntityInfo
+  public :: SHPGetEntityData
+  public :: SHPGetAll
+  public :: SHPClean
+
+  public :: DBFOpen
+  public :: DBFClose
+  public :: DBFGetInfo
+  public :: DBFGetRecord
+  public :: DBFGetAll
+  public :: DBFClean
+!===============================================================
+!
+!===============================================================
+  type shp_part_
+    integer(4) :: id = 0
+    integer(4) :: nVertices = 0
+    real(8), pointer :: x(:), & !(nVertices)
+                        y(:), &
+                        z(:), &
+                        m(:)
+  end type
+
+  type shp_entity_
+    integer(4) :: id = 0
+    integer(4) :: nVertices = 0
+    integer(4) :: nParts = 0
+    type(shp_part_), pointer :: part(:)  !(nParts)
+    real(8) :: xmin = 0.d0, &
+               xmax = 0.d0, &
+               ymin = 0.d0, &
+               ymax = 0.d0, &
+               zmin = 0.d0, &
+               zmax = 0.d0, &
+               mmin = 0.d0, &
+               mmax = 0.d0
+    logical(4) :: measureIsUsed = .false.
+  end type
+
+  type shp_
+    integer(4) :: nEntities = 0
+    type(shp_entity_), pointer :: entity(:)  !(nEntities)
+    integer(4) :: SHPType = 0
+    character(16) :: SHPTypeName = ''
+    real(8) :: minBound(4) = (/0.d0, 0.d0, 0.d0, 0.d0/), &
+               maxBound(4) = (/0.d0, 0.d0, 0.d0, 0.d0/)
+  end type
+
+  integer, parameter :: clen_title = 64
+
+  type dbf_field_
+    character(1)          :: typeChar = ''
+    character(7)          :: typeName = ''
+    character(clen_title) :: title    = ''
+    integer(4)            :: width    = 0
+    integer(4)            :: decimals = 0
+  end type
+
+  type dbf_value_
+    character(:), pointer :: s
+    integer(4)            :: i = 0
+    real(8)               :: d = 0.d0
+  end type
+
+  type dbf_record_
+    type(dbf_value_), pointer :: value(:)  !(nFields)
+  end type dbf_record_
+
+  type dbf_
+    integer(4) :: nFields = 0
+    integer(4) :: nRecords = 0
+    type(dbf_field_) , pointer :: field(:)
+    type(dbf_record_), pointer :: record(:)
+  end type
+
+  interface SHPGetInfo
+    module procedure SHPGetInfo_structure
+    module procedure SHPGetInfo_components
+  end interface
+
+  interface SHPGetEntityInfo
+    module procedure SHPGetEntityInfo_structure
+    module procedure SHPGetEntityInfo_components
+  end interface
+
+  interface DBFGetInfo
+    module procedure DBFGetInfo_structure
+    module procedure DBFGetInfo_components
+  end interface
+!===============================================================
+!
+!===============================================================
+contains
+!===============================================================
+!
+!===============================================================
+subroutine SHPOpen(f)
+  implicit none
+  character(*), intent(in) :: f
+  character(len_trim(f)), pointer :: f_
+
+  allocate(f_)
+  f_ = trim(f)
+
+  call c_shpopen(f_)
+end subroutine SHPOpen
+!===============================================================
+!
+!===============================================================
+subroutine SHPClose()
+  implicit none
+
+  call c_shpclose()
+end subroutine SHPClose
+!===============================================================
+!
+!===============================================================
+subroutine SHPGetInfo_structure(shp)
+  implicit none
+  type(shp_), intent(inout) :: shp
+
+  call SHPGetInfo(shp%nEntities, shp%SHPType, shp%SHPTypeName, shp%minBound, shp%maxBound)
+end subroutine SHPGetInfo_structure
+!===============================================================
+!
+!===============================================================
+subroutine SHPGetInfo_components(nEntities, SHPType, SHPTypeName, minBound, maxBound)
+  implicit none
+  integer(4)  , intent(out), optional :: nEntities
+  integer(4)  , intent(out), optional :: SHPType
+  character(*), intent(out), optional :: SHPTypeName
+  real(8)     , intent(out), optional :: minBound(:)  !(4)
+  real(8)     , intent(out), optional :: maxBound(:)  !(4)
+  integer(4)   , pointer :: nEntities_
+  integer(4)   , pointer :: SHPType_
+  character(16), pointer :: SHPTypeName_
+  integer(4)   , pointer :: nameLength_
+  real(8)      , pointer :: minBound_(:), &
+                            maxBound_(:)
+
+  allocate(nEntities_    , &
+           SHPType_    , &
+           SHPTypeName_, &
+           nameLength_   , &
+           minBound_(4)  , &
+           maxBound_(4))
+  nEntities_  = 0
+  SHPType_ = 0
+  SHPTypeName_ = ''
+  minBound_(:) = 0.d0
+  maxBound_(:) = 0.d0
+
+  call c_shpgetinfo(nEntities_, SHPType_, SHPTypeName_, nameLength_, minBound_, maxBound_)
+
+  if( present(SHPType) ) SHPType = SHPType_
+  if( present(SHPTypeName) )then
+    SHPTypeName = SHPTypeName_
+    if( len(SHPTypeName) > nameLength_ )then
+      SHPTypeName(nameLength_+1:) = ''
+    endif
+  endif
+
+  if( present(nEntities)   ) nEntities   = nEntities_
+  if( present(SHPType)     ) SHPType     = SHPType_
+  if( present(SHPTypeName) ) SHPTypeName = SHPTypeName_
+  if( present(minBound)    ) minBound(:) = minBound_(:)
+  if( present(maxBound)    ) maxBound(:) = maxBound_(:)
+
+  deallocate(nEntities_, &
+             SHPType_, &
+             SHPTypeName_, &
+             nameLength_, &
+             minBound_, &
+             maxBound_)
+end subroutine SHPGetInfo_components
+!===============================================================
+!
+!===============================================================
+subroutine SHPGetEntityInfo_structure(iEntity, entity)
+  implicit none
+  integer(4)       , intent(in)  :: iEntity
+  type(shp_entity_), intent(out) :: entity
+
+  if( entity%id == 0 )then
+    entity%id = iEntity
+  else
+    if( entity%id /= iEntity )then
+      print*, '*** Entity index mismatch.'
+      print*, 'iEntity  :', iEntity
+      print*, 'entity%id:', entity%id
+      stop
+    endif
+  endif
+
+  call SHPGetEntityInfo(&
+           iEntity, &
+           nVertices=entity%nVertices, nParts=entity%nParts, measureIsUsed=entity%measureIsUsed, &
+           xmin=entity%xmin, xmax=entity%xmax, &
+           ymin=entity%ymin, ymax=entity%ymax, &
+           zmin=entity%zmin, zmax=entity%zmax, &
+           mmin=entity%mmin, mmax=entity%mmax)
+end subroutine SHPGetEntityInfo_structure
+!===============================================================
+!
+!===============================================================
+subroutine SHPGetEntityInfo_components(&
+    iEntity, &
+    nVertices, nParts, measureIsUsed, &
+    xmin, xmax, ymin, ymax, zmin, zmax, mmin, mmax)
+  implicit none
+  integer(4), intent(in) :: iEntity
+  integer(4), intent(out), optional :: nVertices
+  integer(4), intent(out), optional :: nParts
+  logical(4), intent(out), optional :: measureIsUsed
+  real(8)   , intent(out), optional :: xmin, xmax, &
+                                    ymin, ymax, &
+                                    zmin, zmax, &
+                                    mmin, mmax
+  integer(4), pointer :: iEntity_
+  integer(4), pointer :: nVertices_
+  integer(4), pointer :: nParts_
+  logical(4), pointer :: measureIsUsed_
+  real(8)   , pointer :: xmin_, xmax_, &
+                         ymin_, ymax_, &
+                         zmin_, zmax_, &
+                         mmin_, mmax_
+  integer(4), pointer :: stat
+
+  allocate(iEntity_)
+  iEntity_ = iEntity
+
+  allocate(nVertices_, &
+           nParts_, &
+           measureIsUsed_, &
+           xmin_, xmax_, &
+           ymin_, ymax_, &
+           zmin_, zmax_, &
+           mmin_, mmax_)
+  allocate(stat)
+
+  call c_shpgetentityinfo(&
+           iEntity_-1, &
+           nVertices_, nParts_, measureIsUsed_, &
+           xmin_, xmax_, ymin_, ymax_, zmin_, zmax_, mmin_, mmax_, stat)
+
+  if( stat /= 0 ) stop
+
+  if( present(nVertices)     ) nVertices     = nVertices_
+  if( present(nParts)        ) nParts        = nParts_
+  if( present(measureIsUsed) ) measureIsUsed = measureIsUsed_
+  if( present(xmin) ) xmin = xmin_
+  if( present(xmax) ) xmax = xmax_
+  if( present(ymin) ) ymin = ymin_
+  if( present(ymax) ) ymax = ymax_
+  if( present(zmin) ) zmin = zmin_
+  if( present(zmax) ) zmax = zmax_
+  if( present(mmin) ) mmin = mmin_
+  if( present(mmax) ) mmax = mmax_
+
+  deallocate(iEntity_, &
+             nVertices_, &
+             nParts_, &
+             measureIsUsed_, &
+             xmin_, &
+             xmax_, &
+             ymin_, &
+             ymax_, &
+             zmin_, &
+             zmax_, &
+             mmin_, &
+             mmax_, &
+             stat)
+end subroutine SHPGetEntityInfo_components
+!===============================================================
+!
+!===============================================================
+subroutine SHPGetEntityData(iEntity, entity)
+  implicit none
+  integer(4)       , intent(in)    :: iEntity
+  type(shp_entity_), intent(inout) :: entity
+  type(shp_part_)  , pointer :: part
+  integer(4)       , pointer :: iEntity_
+  integer(4)       , pointer :: iPart
+  integer(4)       , pointer :: panPartStart(:)
+  integer(4)       , pointer :: stat
+  real(8)   , pointer :: x(:), &
+                         y(:), &
+                         z(:), &
+                         m(:)
+  integer(4) :: iP0
+  !-------------------------------------------------------------
+  ! Set or check entity id.
+  !-------------------------------------------------------------
+  if( entity%id == 0 )then
+    entity%id = iEntity
+  else
+    if( entity%id /= iEntity )then
+      print*, '*** Entity index mismatch.'
+      print*, 'iEntity  :', iEntity
+      print*, 'entity%id:', entity%id
+      stop
+    endif
+  endif
+  !-------------------------------------------------------------
+  ! Get panPartStart.
+  !-------------------------------------------------------------
+  allocate(iEntity_)
+  iEntity_ = iEntity
+
+  call SHPGetEntityInfo(iEntity, entity)
+
+  allocate(panPartStart(entity%nParts))
+  allocate(stat)
+
+  call c_shpgetpanpartstart(iEntity_-1, panPartStart, stat)
+
+  if( stat /= 0 ) stop
+
+  allocate(entity%part(entity%nParts))
+  allocate(iPart)
+  do iPart = 1, entity%nParts-1
+    entity%part(iPart)%nVertices = panPartStart(iPart+1) - panPartStart(iPart)
+  enddo
+  entity%part(entity%nParts)%nVertices = entity%nVertices - panPartStart(entity%nParts)
+
+  deallocate(panPartStart)
+  !-------------------------------------------------------------
+  ! Read coordinate data.
+  !-------------------------------------------------------------
+  allocate(x(entity%nVertices), &
+           y(entity%nVertices), &
+           z(entity%nVertices))
+  if( entity%measureIsUsed )then
+    allocate(m(entity%nVertices))
+  else
+    allocate(m(1))
+  endif
+
+  call c_shpgetdata(iEntity_-1, x, y, z, m, stat)
+
+  if( stat /= 0 ) stop
+
+  iP0 = 0
+  do iPart = 1, entity%nParts
+    part => entity%part(iPart)
+    allocate(part%x(part%nVertices), &
+             part%y(part%nVertices), &
+             part%z(part%nVertices))
+    part%x(:) = x(iP0+1:iP0+part%nVertices)
+    part%y(:) = y(iP0+1:iP0+part%nVertices)
+    part%z(:) = z(iP0+1:iP0+part%nVertices)
+
+    if( entity%measureIsUsed )then
+      allocate(part%m(part%nVertices))
+      part%m(:) = m(iP0+1:iP0+part%nVertices)
+    else
+      allocate(part%m(1))
+      part%m(:) = 0.d0
+    endif
+
+    iP0 = iP0 + part%nVertices
+  enddo
+  !-------------------------------------------------------------
+  ! Deallocate.
+  !-------------------------------------------------------------
+  deallocate(iEntity_, &
+             iPart, &
+             stat)
+  deallocate(x, y, z, m)
+end subroutine SHPGetEntityData
+!===============================================================
+!
+!===============================================================
+subroutine SHPGetAll(shp)
+  implicit none
+  type(shp_), intent(inout) :: shp
+  integer(4) :: iEntity
+
+  call SHPClean(shp)
+
+  call SHPGetInfo(shp)
+
+  allocate(shp%entity(shp%nEntities))
+  do iEntity = 1, shp%nEntities
+    call SHPGetEntityData(iEntity, shp%entity(iEntity))
+  enddo
+end subroutine SHPGetAll
+!===============================================================
+!
+!===============================================================
+subroutine SHPClean(shp)
+  implicit none
+  type(shp_), intent(inout) :: shp
+  type(shp_part_), pointer :: part
+  integer(4) :: iEntity
+  integer(4) :: iPart
+
+  if( associated(shp%entity) )then
+    do iEntity = 1, size(shp%entity)
+      if( associated(shp%entity(iEntity)%part) )then
+        shp%entity(iEntity)%part(:)%id        = 0
+        shp%entity(iEntity)%part(:)%nVertices = 0
+
+        do iPart = 1, size(shp%entity(iEntity)%part)
+          part => shp%entity(iEntity)%part(iPart)
+          if( associated(part%x) ) deallocate(part%x)
+          if( associated(part%y) ) deallocate(part%y)
+          if( associated(part%z) ) deallocate(part%z)
+          if( associated(part%m) ) deallocate(part%m)
+        enddo  ! iPart/
+
+        deallocate(shp%entity(iEntity)%part)
+      endif
+    enddo  ! iEntity/
+
+    shp%entity(:)%id = 0
+    shp%entity(:)%nVertices = 0
+    shp%entity(:)%nParts = 0
+    shp%entity(:)%xmin = 0.d0
+    shp%entity(:)%xmax = 0.d0
+    shp%entity(:)%ymin = 0.d0
+    shp%entity(:)%ymax = 0.d0
+    shp%entity(:)%zmin = 0.d0
+    shp%entity(:)%zmax = 0.d0
+    shp%entity(:)%mmin = 0.d0
+    shp%entity(:)%mmax = 0.d0
+    shp%entity(:)%measureIsUsed = .false.
+
+    deallocate(shp%entity)
+  endif
+
+  shp%nEntities = 0
+  shp%SHPTypeName = ''
+  shp%minBound(:) = 0.d0
+  shp%maxBound(:) = 0.d0
+end subroutine SHPClean
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine DBFOpen(f)
+  implicit none
+  character(*), intent(in) :: f
+  character(len_trim(f)), pointer :: f_
+  integer(4), pointer :: stat
+
+  allocate(f_)
+  f_ = trim(f)
+
+  allocate(stat)
+
+  call c_dbfopen(f_, stat)
+
+  if( stat /= 0 ) stop
+
+  deallocate(stat)
+end subroutine DBFOpen
+!===============================================================
+!
+!===============================================================
+subroutine DBFClose()
+  implicit none
+
+  call c_dbfclose()
+end subroutine DBFClose
+!===============================================================
+!
+!===============================================================
+subroutine DBFGetInfo_structure(dbf)
+  implicit none
+  type(dbf_), intent(inout) :: dbf
+  integer(4)      , pointer :: iField
+  type(dbf_field_), pointer :: field
+  character(1)         , pointer :: typeChar
+  character(7)         , pointer :: typeName
+  character(clen_title), pointer :: title
+  integer(4)           , pointer :: width
+  integer(4)           , pointer :: decimals
+  integer(4), pointer :: typeNameLength
+  integer(4), pointer :: titleLength
+
+  call DBFGetInfo_components(dbf%nFields, dbf%nRecords)
+
+  if( associated(dbf%field) ) deallocate(dbf%field)
+  allocate(dbf%field(dbf%nFields))
+
+  if( associated(dbf%record) ) deallocate(dbf%record)
+  allocate(dbf%record(dbf%nRecords))
+
+  allocate(iField)
+  allocate(typeChar, &
+           typeName, &
+           title, &
+           width, &
+           decimals)
+  allocate(typeNameLength, &
+           titleLength)
+
+  do iField = 1, dbf%nFields
+    call c_dbfgetfieldinfo( iField-1, &
+                            typeChar, typeName, typeNameLength, &
+                            title, titleLength, width, decimals)
+    field => dbf%field(iField)
+    field%typeChar = typeChar
+    field%typeName = typeName(:typeNameLength)
+    field%title    = title(:titleLength)
+    field%width    = width
+    field%decimals = decimals
+  enddo
+
+  deallocate(iField, &
+             typeChar, &
+             typeName, &
+             title, &
+             width, &
+             decimals, &
+             typeNameLength, &
+             titleLength)
+end subroutine DBFGetInfo_structure
+!===============================================================
+!
+!===============================================================
+subroutine DBFGetInfo_components(&
+    nFields, nRecords, &
+    typeChar, typeName, title, width, decimals)
+  implicit none
+  integer(4)  , intent(out), optional :: nFields
+  integer(4)  , intent(out), optional :: nRecords
+  character(*), pointer    , optional :: typeChar(:)
+  character(*), pointer    , optional :: typeName(:)
+  character(*), pointer    , optional :: title(:)
+  integer(4)  , pointer    , optional :: width(:)
+  integer(4)  , pointer    , optional :: decimals(:)
+  integer(4), pointer :: nFields_
+  integer(4), pointer :: nRecords_
+  integer(4), pointer :: iField
+  character(1) , pointer :: typeChar_(:)
+  character(7) , pointer :: typeName_(:), &
+                            typeName_tmp
+  character(clen_title), pointer :: title_(:)
+  integer(4)           , pointer :: width_(:)
+  integer(4)           , pointer :: decimals_(:)
+  integer(4), parameter :: typeNameLengthAll = 7
+  integer(4), pointer   :: typeNameLength
+  integer(4), pointer   :: titleLength
+
+  allocate(nFields_, &
+           nRecords_)
+
+  call c_dbfgetfieldcount( nFields_ )
+
+  call c_dbfgetrecordcount( nRecords_ )
+
+  if( present(nFields)  ) nFields  = nFields_
+  if( present(nRecords) ) nRecords = nRecords_
+
+  if( nFields_ == 0 ) return
+
+  if( .not. ( present(typeChar) .or. &
+              present(typeName) .or. &
+              present(title) .or. &
+              present(width) .or. &
+              present(decimals) ) ) return
+
+  allocate(iField)
+  allocate(typeChar_(nFields), &
+           typeName_(nFields), &
+           title_(nFields), &
+           width_(nFields), &
+           decimals_(nFields))
+  allocate(typeNameLength, &
+           titleLength)
+
+  do iField = 1, nFields
+    call c_dbfgetfieldinfo( iField-1, &
+                            typeChar_(iField), typeName_(iField), typeNameLength, &
+                            title_(iField), titleLength, width_(iField), decimals_(iField) )
+    call slice_str(typeName_(iField), typeNameLength)
+    call slice_str(title_(iField), titleLength)
+  enddo
+
+  if( present(typeChar) )then
+    if( associated(typeChar) ) deallocate(typeChar)
+    allocate(typeChar(nFields))
+    typeChar(:) = typeChar_(:)
+  endif
+
+  if( present(typeName) )then
+    if( associated(typeName) ) deallocate(typeName)
+    allocate(typeName(nFields))
+    typeName(:) = typeName_(:)
+  endif
+
+  if( present(title) )then
+    if( associated(title) ) deallocate(title)
+    allocate(title(nFields))
+    title(:) = title_(:)
+  endif
+
+  if( present(width) )then
+    if( associated(width) ) deallocate(width)
+    allocate(width(nFields))
+    width(:) = width_(:)
+  endif
+
+  if( present(decimals) )then
+    if( associated(decimals) ) deallocate(decimals)
+    allocate(decimals(nFields))
+    decimals(:) = decimals_(:)
+  endif
+
+  deallocate(nFields_, &
+             nRecords_, &
+             iField, &
+             typeChar_, &
+             typeName_, &
+             typeName_tmp, &
+             title_, &
+             width_, &
+             decimals_, &
+             typeNameLength, &
+             titleLength)
+end subroutine DBFGetInfo_components
+!===============================================================
+!
+!===============================================================
+subroutine DBFGetRecord(iRecord, field, record)
+  implicit none
+  integer(4)       , intent(in)  :: iRecord
+  type(dbf_field_) , intent(in)  :: field(:)
+  type(dbf_record_), intent(out) :: record
+  integer(4)            :: nFields
+  integer(4)  , pointer :: iField
+  integer(4)  , pointer :: iRecord_
+  character(1), pointer :: typeChar
+  integer(4)  , pointer :: recslen
+  character(:), pointer :: recs
+  integer(4)  , pointer :: reci
+  real(8)     , pointer :: recd
+
+  nFields = size(field)
+
+  allocate(iRecord_)
+  iRecord_ = iRecord
+
+  allocate(record%value(nFields))
+
+  allocate(recslen)
+
+  allocate(iField)
+  do iField = 1, nFields
+    if( field(iField)%typeChar == 'C' )then
+      recslen = field(iField)%width
+      allocate(character(recslen) :: record%value(iField)%s)
+      record%value(iField)%s = ''
+    endif
+  enddo
+
+  allocate(character(maxval(field(:)%width)*2) :: recs)
+  allocate(reci, &
+           recd)
+  allocate(typeChar)
+
+  do iField = 1, nFields
+    typeChar = field(iField)%typeChar
+    call c_dbfgetrecord(iRecord_-1, iField-1, field(iField)%typeChar, &
+                        recslen, recs, reci, recd)
+    if( recslen > 0 )then
+      allocate(character(recslen) :: record%value(iField)%s)
+      record%value(iField)%s = recs(:recslen)
+    endif
+    record%value(iField)%i = reci
+    record%value(iField)%d = recd
+  enddo
+
+  deallocate(iField, &
+             iRecord_, &
+             typeChar, &
+             recslen, &
+             recs, &
+             reci, &
+             recd)
+end subroutine DBFGetRecord
+!===============================================================
+!
+!===============================================================
+subroutine DBFGetAll(dbf)
+  implicit none
+  type(dbf_), intent(inout) :: dbf
+  integer(4) :: iRecord
+
+  call DBFClean(dbf)
+
+  call DBFGetInfo_structure(dbf)
+
+  do iRecord = 1, dbf%nRecords
+    call DBFGetRecord(iRecord, dbf%field, dbf%record(iRecord))
+  enddo
+end subroutine DBFGetAll
+!===============================================================
+!
+!===============================================================
+subroutine DBFClean(dbf)
+  implicit none
+  type(dbf_), intent(inout) :: dbf
+  type(dbf_record_), pointer :: record
+  integer(4) :: iRecord
+  integer(4) :: iField
+
+  if( associated(dbf%field) )then
+    dbf%field(:)%typeChar = ''
+    dbf%field(:)%typeName = ''
+    dbf%field(:)%title    = ''
+    dbf%field(:)%width    = 0
+    dbf%field(:)%decimals = 0
+    deallocate(dbf%field)
+  endif
+
+  if( associated(dbf%record) )then
+    do iRecord = 1, size(dbf%record)
+      record => dbf%record(iRecord)
+      if( associated(record%value) )then
+        record%value(:)%i = 0
+        record%value(:)%d = 0.d0
+
+        do iField = 1, size(record%value)
+          if( associated(record%value(iField)%s) )then
+            deallocate(record%value(iField)%s)
+          endif
+        enddo  ! iField/
+
+        deallocate(record%value)
+      endif
+    enddo  ! iRecord/
+
+    nullify(record)
+
+    deallocate(dbf%record)
+  endif
+
+  dbf%nFields  = 0
+  dbf%nRecords = 0
+end subroutine DBFClean
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine slice_str(str, n)
+  implicit none
+  character(*), intent(inout) :: str
+  integer(4)  , intent(in) :: n
+  character(n) :: str_
+
+  str_ = str(:n)
+  str = str_
+end subroutine slice_str
+!===============================================================
+!
+!===============================================================
+end module lib_io_shapefile
