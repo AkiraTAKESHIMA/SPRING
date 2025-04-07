@@ -6,7 +6,8 @@ module def_type
   use lib_array
   use lib_math
   use common_const
-  use common_type
+  use common_type_opt
+  use common_type_rt
   implicit none
 
   type rt_in_
@@ -187,5 +188,6 @@ module def_type
 
   type opt_
     type(opt_sys_) :: sys
+    type(opt_log_) :: log
   end type
 end module def_type

@@ -6,15 +6,16 @@ module mod_check_input
   use lib_io
   use lib_math
   use common_const
-  use common_type
+  use common_type_rt
   use def_type
   implicit none
-  !-------------------------------------------------------------
   private
-
+  !-------------------------------------------------------------
+  ! Public procedures
+  !-------------------------------------------------------------
   public :: check_relations_input
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
   character(clen_key), parameter :: mode_rerr_tiny     = 'tiny'
   character(clen_key), parameter :: mode_rerr_negative = 'negative'

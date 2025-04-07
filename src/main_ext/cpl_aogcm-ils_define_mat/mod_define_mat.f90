@@ -4,9 +4,26 @@ module mod_define_mat
   use lib_log
   use lib_io
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_rt
+  use common_type_rt
+  use common_file, only: &
+        set_opt_old_files
+  ! common2
+  use common_rt_base, only: &
+        init_rt_main_data, &
+        set_default_values_rt, &
+        free_rt_main_data
+  use common_rt_stats, only: &
+        get_rt_main_stats, &
+        report_rt_main_summary
+  use common_rt_io, only: &
+        read_rt_main, &
+        write_rt_main
+  use common_rt_main_core, only: &
+        calc_rt_coef_sum_modify_enabled, &
+        calc_rt_coef_sum_modify_not_enabled
+  ! this
   use def_const
   use def_type
   implicit none
@@ -214,8 +231,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call free_rt_main_comps(rtmi_oo_a)
-  call free_rt_main_comps(rtmi_ol_a)
+  call free_rt_main_data(rtmi_oo_a)
+  call free_rt_main_data(rtmi_ol_a)
   !-------------------------------------------------------------
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -286,14 +303,14 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call init_rt_main_comps(rtmi_rr_a)
-  call init_rt_main_comps(rtmi_rn_a)
-  call init_rt_main_comps(rtmi_ro_a)
+  call init_rt_main_data(rtmi_rr_a)
+  call init_rt_main_data(rtmi_rn_a)
+  call init_rt_main_data(rtmi_ro_a)
 
-  call init_rt_main_comps(rtmo_lr_a)
-  call init_rt_main_comps(rtmo_ln_a)
-  call init_rt_main_comps(rtmo_lnv_a)
-  call init_rt_main_comps(rtmo_lo_a)
+  call init_rt_main_data(rtmo_lr_a)
+  call init_rt_main_data(rtmo_ln_a)
+  call init_rt_main_data(rtmo_lnv_a)
+  call init_rt_main_data(rtmo_lo_a)
   !-------------------------------------------------------------
   ! Make rt_lsm_noriv_to_agcm
   !-------------------------------------------------------------
@@ -447,7 +464,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main_comps(rtmo_lnv_a)
+  call free_rt_main_data(rtmo_lnv_a)
   !-------------------------------------------------------------
   ! Calc. all types of grdwgt of LSM
   !-------------------------------------------------------------
@@ -864,8 +881,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call write_rt_main(rtmo_lr_a)
 
-  call get_rt_stats(rtmo_lr_a, echo_msg=.false.)
-  call report_rt_summary(rtmo_lr_a, .true., .true.)
+  call get_rt_main_stats(rtmo_lr_a, echo_msg=.false.)
+  call report_rt_main_summary(rtmo_lr_a, .true., .true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -877,8 +894,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call write_rt_main(rtmo_ln_a)
 
-  call get_rt_stats(rtmo_ln_a, echo_msg=.false.)
-  call report_rt_summary(rtmo_ln_a, .true., .true.)
+  call get_rt_main_stats(rtmo_ln_a, echo_msg=.false.)
+  call report_rt_main_summary(rtmo_ln_a, .true., .true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -890,8 +907,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call write_rt_main(rtmo_lo_a)
 
-  call get_rt_stats(rtmo_lo_a, echo_msg=.false.)
-  call report_rt_summary(rtmo_lo_a, .true., .true.)
+  call get_rt_main_stats(rtmo_lo_a, echo_msg=.false.)
+  call report_rt_main_summary(rtmo_lo_a, .true., .true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -903,8 +920,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call write_rt_main(rtmo_a_lr)
 
-  call get_rt_stats(rtmo_a_lr, echo_msg=.false.)
-  call report_rt_summary(rtmo_a_lr, .true., .true.)
+  call get_rt_main_stats(rtmo_a_lr, echo_msg=.false.)
+  call report_rt_main_summary(rtmo_a_lr, .true., .true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -916,8 +933,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call write_rt_main(rtmo_a_ln)
 
-  call get_rt_stats(rtmo_a_ln, echo_msg=.false.)
-  call report_rt_summary(rtmo_a_ln, .true., .true.)
+  call get_rt_main_stats(rtmo_a_ln, echo_msg=.false.)
+  call report_rt_main_summary(rtmo_a_ln, .true., .true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -929,23 +946,23 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call write_rt_main(rtmo_a_lo)
 
-  call get_rt_stats(rtmo_a_lo, echo_msg=.false.)
-  call report_rt_summary(rtmo_a_lo, .true., .true.)
+  call get_rt_main_stats(rtmo_a_lo, echo_msg=.false.)
+  call report_rt_main_summary(rtmo_a_lo, .true., .true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Free rt
   !-------------------------------------------------------------
-  call free_rt_main_comps(rtmi_rr_a)
-  call free_rt_main_comps(rtmi_rn_a)
-  call free_rt_main_comps(rtmi_ro_a)
+  call free_rt_main_data(rtmi_rr_a)
+  call free_rt_main_data(rtmi_rn_a)
+  call free_rt_main_data(rtmi_ro_a)
 
-  call free_rt_main_comps(rtmo_lr_a)
-  call free_rt_main_comps(rtmo_ln_a)
-  call free_rt_main_comps(rtmo_lo_a)
-  call free_rt_main_comps(rtmo_a_lr)
-  call free_rt_main_comps(rtmo_a_ln)
-  call free_rt_main_comps(rtmo_a_lo)
+  call free_rt_main_data(rtmo_lr_a)
+  call free_rt_main_data(rtmo_ln_a)
+  call free_rt_main_data(rtmo_lo_a)
+  call free_rt_main_data(rtmo_a_lr)
+  call free_rt_main_data(rtmo_a_ln)
+  call free_rt_main_data(rtmo_a_lo)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1344,7 +1361,7 @@ subroutine calc_grdara_from_rt(&
   !
   !-------------------------------------------------------------
   if( .not. is_rtm_associated )then
-    call free_rt_main_comps(rtm)
+    call free_rt_main_data(rtm)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1498,7 +1515,7 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
 !  call edbg('Reading area')
 !  call rbin(rtmi_ro_a%area, f%path, f%dtype, f%endian, f%rec)
 
-!  call get_rt_stats(rtmi_ro_a)
+!  call get_rt_main_stats(rtmi_ro_a)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1583,13 +1600,13 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
   call realloc(rtmo_lnv_a%tidx, rtmo_lnv_a%ijsize, clear=.false.)
   call realloc(rtmo_lnv_a%area, rtmo_lnv_a%ijsize, clear=.false.)
 
-  call get_rt_stats(rtmo_lnv_a)
+  call get_rt_main_stats(rtmo_lnv_a)
 
   call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main_comps(rtmi_ro_a)
+  call free_rt_main_data(rtmi_ro_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_noriv_virt_to_agcm
@@ -1641,7 +1658,7 @@ subroutine make_rt_lsm_noriv_to_agcm(&
     call calc_rt_coef_sum_modify_not_enabled(rtmo_ln_a, grdidx, grdara)
   endif
 
-  call get_rt_stats(rtmo_ln_a)
+  call get_rt_main_stats(rtmo_ln_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_noriv_to_agcm
@@ -1693,7 +1710,7 @@ subroutine make_rt_lsm_ocean_to_agcm(&
 !  call edbg('Reading area')
 !  call rbin(rtmi_ro_a%area, f%path, f%dtype, f%endian, f%rec)
 
-!  call get_rt_stats(rtmi_ro_a)
+!  call get_rt_main_stats(rtmi_ro_a)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1774,13 +1791,13 @@ subroutine make_rt_lsm_ocean_to_agcm(&
     call calc_rt_coef_sum_modify_not_enabled(rtmo_lo_a, grdidx, grdara)
   endif
 
-  call get_rt_stats(rtmo_lo_a)
+  call get_rt_main_stats(rtmo_lo_a)
 
   call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main_comps(rtmi_ro_a)
+  call free_rt_main_data(rtmi_ro_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_ocean_to_agcm
@@ -1937,9 +1954,9 @@ subroutine make_rt_lsm_river_to_agcm(&
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call get_rt_stats(rtm_lr_a)
+  call get_rt_main_stats(rtm_lr_a)
   !-------------------------------------------------------------
-  call free_rt_main_comps(rtm_rr_a)
+  call free_rt_main_data(rtm_rr_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_river_to_agcm
@@ -1974,7 +1991,7 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
     call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, grdara)
   endif
 
-  call get_rt_stats(rtm_a_l)
+  call get_rt_main_stats(rtm_a_l)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_agcm_to_lsm

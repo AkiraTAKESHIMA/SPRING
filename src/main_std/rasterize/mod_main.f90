@@ -5,51 +5,9 @@ module mod_main
   use lib_array
   use lib_io
   use common_const
-  use common_type
-  use common_gs, only: &
-        make_n_list_polygon, &
-        set_grids_latlon, &
-        set_grids_raster, &
-        set_grids_polygon, &
-        determine_zones_latlon, &
-        determine_zones_raster, &
-        determine_zones_polygon, &
-        make_idxmap_latlon, &
-        make_wgtmap_latlon, &
-        make_grdidx_latlon, &
-        make_grdara_latlon, &
-        make_grdwgt_latlon, &
-        make_idxmap_raster, &
-        make_wgtmap_raster, &
-        make_grdidx_raster, &
-        make_grdara_raster, &
-        make_grdwgt_raster, &
-        make_grdidx_polygon, &
-        make_grdara_polygon, &
-        make_grdwgt_polygon, &
-        clear_iZone, &
-        realloc_grid, &
-        free_grid, &
-        output_grid_im, &
-        read_grid_im, &
-        calc_relations_latlon, &
-        raise_warning_no_valid_zone, &
-        raise_error_no_valid_zone
-  use common_area_raster_polygon, only: &
-        initialize_core => initialize, &
-        finalize_core => finalize, &
-        set_modvars
+  use common_type_opt
+  use common_type_gs
   use def_type
-  use mod_data, only: &
-        get_stats_out, &
-        initialize, &
-        finalize, &
-        output, &
-        calc_ifrac_sum, &
-        make_mask, &
-        make_idxmap
-  use mod_rasterize_polygon, only: &
-        calc_iarea
   implicit none
   !-------------------------------------------------------------
   private
@@ -88,8 +46,33 @@ end subroutine run
 !
 !===============================================================
 subroutine driv_rasterize_latlon(s, t, dout, opt)
+  use common_gs_zone, only: &
+        determine_zones_latlon, &
+        determine_zones_raster, &
+        clear_iZone
+  use common_gs_grid_base, only: &
+        free_grid
+  use common_gs_grid_core, only: &
+        make_idxmap_latlon, &
+        make_wgtmap_latlon, &
+        make_grdidx_latlon, &
+        make_grdara_latlon, &
+        make_grdwgt_latlon
+  use common_gs_define, only: &
+        set_grids_latlon, &
+        set_grids_raster
+  use common_rt_llbnds, only: &
+        calc_relations_llbnds
   use mod_rasterize_latlon, only: &
-    calc_iarea
+        calc_iarea
+  use mod_data, only: &
+        get_stats_out, &
+        initialize, &
+        finalize, &
+        output, &
+        calc_ifrac_sum, &
+        make_mask, &
+        make_idxmap
   implicit none
   type(gs_), intent(inout), target :: s  ! src (latlon)
   type(gs_), intent(inout), target :: t  ! tgt (raster)
@@ -145,8 +128,8 @@ subroutine driv_rasterize_latlon(s, t, dout, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating relations of grid bounds.')
 
-  call calc_relations_latlon(sl, tr, opt%earth)
-  call calc_relations_latlon(tr, sl, opt%earth)
+  call calc_relations_llbnds(sl, tr, opt%earth)
+  call calc_relations_llbnds(tr, sl, opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -260,6 +243,37 @@ end subroutine driv_rasterize_latlon
 !
 !===============================================================
 subroutine driv_rasterize_polygon(s, t, dout, opt)
+  use common_gs_zone, only: &
+        determine_zones_raster, &
+        determine_zones_polygon, &
+        clear_iZone
+  use common_gs_grid_base, only: &
+        free_grid
+  use common_gs_grid_core, only: &
+        make_grdidx_polygon, &
+        make_grdara_polygon, &
+        make_grdwgt_polygon
+  use common_gs_define, only: &
+        set_grids_raster !, &
+        !set_grids_polygon, &
+        !make_n_list_polygon
+  use common_gs_define_polygon, only: &
+        make_n_list_polygon, &
+        set_grids_polygon
+  use common_area_raster_polygon, only: &
+        initialize_core => initialize, &
+        finalize_core => finalize, &
+        set_modvars
+  use mod_rasterize_polygon, only: &
+        calc_iarea
+  use mod_data, only: &
+        get_stats_out, &
+        initialize, &
+        finalize, &
+        output, &
+        calc_ifrac_sum, &
+        make_mask, &
+        make_idxmap
   implicit none
   type(gs_), intent(inout), target :: s  ! src (polygon)
   type(gs_), intent(inout), target :: t  ! tgt (raster)

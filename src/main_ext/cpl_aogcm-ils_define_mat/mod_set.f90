@@ -4,63 +4,24 @@ module mod_set
   use lib_log
   use lib_io
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_set
-  use common_file, only: &
-        open_report_file, &
-        close_report_file, &
-        set_opt_old_files, &
-        handle_old_file
-  use common_rt, only: &
-        init_rt
+  use common_type_opt
+  use common_type_gs
+  ! common2
+  use common_type_rt
+  ! this
   use def_const
   use def_type
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: read_settings
-  public :: finalize
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(clen_var), parameter :: block_name_input_rt_ogcm_ocean_to_agcm &
-                                            = 'input_rt_ogcm_ocean_to_agcm'
-  character(clen_var), parameter :: block_name_input_rt_ogcm_land_to_agcm &
-                                            = 'input_rt_ogcm_land_to_agcm'
-  character(clen_var), parameter :: block_name_input_rt_rm_river_to_agcm &
-                                            = 'input_rt_rm_river_to_agcm'
-  character(clen_var), parameter :: block_name_input_rt_rm_noriv_to_agcm &
-                                            = 'input_rt_rm_noriv_to_agcm'
-  character(clen_var), parameter :: block_name_input_rt_rm_ocean_to_agcm &
-                                            = 'input_rt_rm_ocean_to_agcm'
-  character(clen_var), parameter :: block_name_input_agcm &
-                                            = 'input_agcm'
-  character(clen_var), parameter :: block_name_input_rm &
-                                            = 'input_rm'
-  character(clen_var), parameter :: block_name_output_rt_opt_coef &
-                                            = 'output_rt_opt_coef'
-  character(clen_var), parameter :: block_name_output_rt_lsm_river_to_agcm &
-                                            = 'output_rt_lsm_river_to_agcm'
-  character(clen_var), parameter :: block_name_output_rt_lsm_noriv_to_agcm &
-                                            = 'output_rt_lsm_noriv_to_agcm'
-  character(clen_var), parameter :: block_name_output_rt_lsm_ocean_to_agcm &
-                                            = 'output_rt_lsm_ocean_to_agcm'
-  character(clen_var), parameter :: block_name_output_rt_agcm_to_lsm_river &
-                                            = 'output_rt_agcm_to_lsm_river'
-  character(clen_var), parameter :: block_name_output_rt_agcm_to_lsm_noriv &
-                                            = 'output_rt_agcm_to_lsm_noriv'
-  character(clen_var), parameter :: block_name_output_rt_agcm_to_lsm_ocean &
-                                            = 'output_rt_agcm_to_lsm_ocean'
-  character(clen_var), parameter :: block_name_output_agcm &
-                                            = 'output_agcm'
-  character(clen_var), parameter :: block_name_output_lsm &
-                                            = 'output_lsm'
-  character(clen_var), parameter :: block_name_options &
-                                            = 'options'
-
   character(clen_var), parameter :: block_name_log_input_rt    = 'Input of Regridding Tables'
   character(clen_var), parameter :: block_name_log_input_agcm  = 'Input of AGCM'
   character(clen_var), parameter :: block_name_log_input_ogcm  = 'Input of OGCM'
@@ -75,6 +36,22 @@ contains
 !
 !===============================================================
 subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
+  use common_set2, only: &
+        open_setting_file      , &
+        close_setting_file     , &
+        line_number            , &
+        read_path_report       , &
+        get_path_report        , &
+        find_block             , &
+        check_num_of_key       , &
+        bar                    , &
+        raise_error_invalid_key, &
+        msg_invalid_input
+  use common_file, only: &
+        open_report_file
+  use common_opt_set, only: &
+        set_default_values_opt_sys, &
+        set_default_values_opt_log
   implicit none
   type(rt_in_) , intent(out) :: rt_in
   type(rt_out_), intent(out) :: rt_out
@@ -104,61 +81,68 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
   end type
   type(counter_) :: counter
 
-  character(clen_var) :: block_name
+  character(CLEN_VAR) :: block_name
 
-  character(clen_path) :: path_report
-  !-------------------------------------------------------------
   type(rt_opt_coef_) :: rt_opt_coef
+
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM &
+                                            = 'input_rt_ogcm_ocean_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM &
+                                            = 'input_rt_ogcm_land_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM &
+                                            = 'input_rt_rm_river_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM &
+                                            = 'input_rt_rm_noriv_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM &
+                                            = 'input_rt_rm_ocean_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_AGCM &
+                                            = 'input_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RM &
+                                            = 'input_rm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_OPT_COEF &
+                                            = 'output_rt_opt_coef'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM &
+                                            = 'output_rt_lsm_river_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM &
+                                            = 'output_rt_lsm_noriv_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM &
+                                            = 'output_rt_lsm_ocean_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER &
+                                            = 'output_rt_agcm_to_lsm_river'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV &
+                                            = 'output_rt_agcm_to_lsm_noriv'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN &
+                                            = 'output_rt_agcm_to_lsm_ocean'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_AGCM &
+                                            = 'output_agcm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_LSM &
+                                            = 'output_lsm'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OPTIONS &
+                                            = 'options'
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
-  !
+  ! Init.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
+  call echo(code%ent, 'Initializing')
 
-  call set_default_values_rt(rt_in%ogcm_ocean_to_agcm, &
-                            'rt_in%ogcm_ocean_to_agcm', action_read)
-  call set_default_values_rt(rt_in%ogcm_land_to_agcm, &
-                            'rt_in%ogcm_land_to_agcm', action_read)
-  call set_default_values_rt(rt_in%rm_river_to_agcm, &
-                            'rt_in%rm_river_to_agcm', action_read)
-  call set_default_values_rt(rt_in%rm_noriv_to_agcm, &
-                            'rt_in%rm_noriv_to_agcm', action_read)
-  call set_default_values_rt(rt_in%rm_ocean_to_agcm, &
-                            'rt_in%rm_ocean_to_agcm', action_read)
-
-  call set_default_values_rt(rt_out%lsm_river_to_agcm, &
-                            'rt_out%lsm_river_to_agcm', action_write)
-  call set_default_values_rt(rt_out%lsm_noriv_to_agcm, &
-                            'rt_out%lsm_noriv_to_agcm', action_write)
-  call set_default_values_rt(rt_out%lsm_noriv_virt_to_agcm, &
-                            'rt_out%lsm_noriv_virt_to_agcm', action_write)
-  call set_default_values_rt(rt_out%lsm_ocean_to_agcm, &
-                            'rt_out%lsm_ocean_to_agcm', action_write)
-  call set_default_values_rt(rt_out%agcm_to_lsm_river, &
-                            'rt_out%agcm_to_lsm_river', action_write)
-  call set_default_values_rt(rt_out%agcm_to_lsm_noriv, &
-                            'rt_out%agcm_to_lsm_noriv', action_write)
-  call set_default_values_rt(rt_out%agcm_to_lsm_ocean, &
-                            'rt_out%actm_to_lsm_ocean', action_write)
-
-  call init_rt_opt_coef(rt_opt_coef)
-  call init_opt_sys(opt%sys)
+  call set_default_values_opt_sys(opt%sys)
+  call set_default_values_opt_log(opt%log)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   call open_setting_file()
 
   ! Open report file
   !-------------------------------------------------------------
-  call get_path_report(path_report)
-  call open_report_file(path_report)
+  call read_path_report()
+  call open_report_file(get_path_report())
 
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
   call init_counter()
 
@@ -166,78 +150,83 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
     call find_block(block_name)
 
     selectcase( block_name )
-
+    !-----------------------------------------------------------
+    ! Case: No more block
     case( '' )
       exit
-
-    case( block_name_input_rt_ogcm_ocean_to_agcm )
+    !-----------------------------------------------------------
+    ! Case: input rt
+    case( BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM )
       call update_counter(counter%input_rt_ogcm_ocean_to_agcm)
       call read_settings_input_rt(rt_in%ogcm_ocean_to_agcm)
 
-    case( block_name_input_rt_ogcm_land_to_agcm )
+    case( BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM )
       call update_counter(counter%input_rt_ogcm_land_to_agcm)
       call read_settings_input_rt(rt_in%ogcm_land_to_agcm)
 
-    case( block_name_input_rt_rm_river_to_agcm )
+    case( BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM )
       call update_counter(counter%input_rt_rm_river_to_agcm)
       call read_settings_input_rt(rt_in%rm_river_to_agcm)
 
-    case( block_name_input_rt_rm_noriv_to_agcm )
+    case( BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM )
       call update_counter(counter%input_rt_rm_noriv_to_agcm)
       call read_settings_input_rt(rt_in%rm_noriv_to_agcm)
 
-    case( block_name_input_rt_rm_ocean_to_agcm )
+    case( BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM )
       call update_counter(counter%input_rt_rm_ocean_to_agcm)
       call read_settings_input_rt(rt_in%rm_ocean_to_agcm)
 
-    case( block_name_input_agcm )
+    case( BLOCK_NAME_INPUT_AGCM )
       call update_counter(counter%input_agcm)
       call read_settings_input_agcm(agcm)
 
-    case( block_name_input_rm )
+    case( BLOCK_NAME_INPUT_RM )
       call update_counter(counter%input_rm)
       call read_settings_input_rm(rm)
-
-    case( block_name_output_rt_opt_coef )
+    !-----------------------------------------------------------
+    ! Case: rt_opt_coef
+    case( BLOCK_NAME_OUTPUT_RT_OPT_COEF )
       call update_counter(counter%output_rt_opt_coef)
       call read_settings_rt_coef_options(rt_opt_coef)
-
-    case( block_name_output_rt_lsm_river_to_agcm )
+    !-----------------------------------------------------------
+    ! Case: output rt
+    case( BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM )
       call update_counter(counter%output_rt_lsm_river_to_agcm)
       call read_settings_output_rt(rt_out%lsm_river_to_agcm)
 
-    case( block_name_output_rt_lsm_noriv_to_agcm )
+    case( BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM )
       call update_counter(counter%output_rt_lsm_noriv_to_agcm)
       call read_settings_output_rt(rt_out%lsm_noriv_to_agcm)
 
-    case( block_name_output_rt_lsm_ocean_to_agcm )
+    case( BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM )
       call update_counter(counter%output_rt_lsm_ocean_to_agcm)
       call read_settings_output_rt(rt_out%lsm_ocean_to_agcm)
 
-    case( block_name_output_rt_agcm_to_lsm_river )
+    case( BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER )
       call update_counter(counter%output_rt_agcm_to_lsm_river)
       call read_settings_output_rt(rt_out%agcm_to_lsm_river)
 
-    case( block_name_output_rt_agcm_to_lsm_noriv )
+    case( BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV )
       call update_counter(counter%output_rt_agcm_to_lsm_noriv)
       call read_settings_output_rt(rt_out%agcm_to_lsm_noriv)
 
-    case( block_name_output_rt_agcm_to_lsm_ocean )
+    case( BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN )
       call update_counter(counter%output_rt_agcm_to_lsm_ocean)
       call read_settings_output_rt(rt_out%agcm_to_lsm_ocean)
 
-    case( block_name_output_agcm )
+    case( BLOCK_NAME_OUTPUT_AGCM )
       call update_counter(counter%output_agcm)
       call read_settings_output_agcm(agcm)
 
-    case( block_name_output_lsm )
+    case( BLOCK_NAME_OUTPUT_LSM )
       call update_counter(counter%output_lsm)
       call read_settings_output_lsm(lsm)
 
-    case( block_name_options )
+    case( BLOCK_NAME_OPTIONS )
       call update_counter(counter%options)
       call read_settings_opt(opt)
-
+    !-----------------------------------------------------------
+    ! Case: ERROR
     case default
       call eerr(str(msg_invalid_value())//&
               '\n  block_name: '//str(block_name)//&
@@ -245,13 +234,13 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
     endselect
   enddo
 
-  call check_number_of_blocks()
-
   call close_setting_file()
+
+  call check_number_of_blocks()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Detect confliction
+  ! Detect conflictions
   !-------------------------------------------------------------
   !-------------------------------------------------------------
   ! Set some variables
@@ -320,9 +309,9 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Print settings
+  ! Print the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Printing settings', '-p -x2')
+  call echo(code%ent, 'Printing the settings', '-p -x2')
 
   call echo_settings_input_rt(rt_in%ogcm_ocean_to_agcm)
   call echo_settings_input_rt(rt_in%ogcm_land_to_agcm)
@@ -387,75 +376,75 @@ subroutine update_counter(n)
 
   call check_num_of_key(&
          counter%input_rt_ogcm_ocean_to_agcm, &
-         block_name_input_rt_ogcm_ocean_to_agcm, 0, 1)
+         BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_ogcm_land_to_agcm, &
-         block_name_input_rt_ogcm_land_to_agcm, 0, 1)
+         BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_river_to_agcm, &
-         block_name_input_rt_rm_river_to_agcm, 0, 1)
+         BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_noriv_to_agcm, &
-         block_name_input_rt_rm_noriv_to_agcm, 0, 1)
+         BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_ocean_to_agcm, &
-         block_name_input_rt_rm_ocean_to_agcm, 0, 1)
+         BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_agcm, &
-         block_name_input_agcm, 0, 1)
+         BLOCK_NAME_INPUT_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rm, &
-         block_name_input_rm, 0, 1)
+         BLOCK_NAME_INPUT_RM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_opt_coef, &
-         block_name_output_rt_opt_coef, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_OPT_COEF, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_river_to_agcm, &
-         block_name_output_rt_lsm_river_to_agcm, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_noriv_to_agcm, &
-         block_name_output_rt_lsm_noriv_to_agcm, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_ocean_to_agcm, &
-         block_name_output_rt_lsm_ocean_to_agcm, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_ocean_to_agcm, &
-         block_name_output_rt_lsm_ocean_to_agcm, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_river, &
-         block_name_output_rt_agcm_to_lsm_river, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_noriv, &
-         block_name_output_rt_agcm_to_lsm_noriv, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_ocean, &
-         block_name_output_rt_agcm_to_lsm_ocean, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN, 0, 1)
 
   call check_num_of_key(&
          counter%output_agcm, &
-         block_name_output_agcm, 0, 1)
+         BLOCK_NAME_OUTPUT_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_lsm, &
-         block_name_output_lsm, 0, 1)
+         BLOCK_NAME_OUTPUT_LSM, 0, 1)
 
   call check_num_of_key(&
          counter%options, &
-         block_name_options, 0, 1)
+         BLOCK_NAME_OPTIONS, 0, 1)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine update_counter
@@ -467,71 +456,71 @@ subroutine check_number_of_blocks()
   !-------------------------------------------------------------
   call check_num_of_key(&
          counter%input_rt_ogcm_ocean_to_agcm, &
-         block_name_input_rt_ogcm_ocean_to_agcm, 1, 1)
+         BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_ogcm_land_to_agcm, &
-         block_name_input_rt_ogcm_land_to_agcm, 1, 1)
+         BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_river_to_agcm, &
-         block_name_input_rt_rm_river_to_agcm, 1, 1)
+         BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_noriv_to_agcm, &
-         block_name_input_rt_rm_noriv_to_agcm, 1, 1)
+         BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_ocean_to_agcm, &
-         block_name_input_rt_rm_ocean_to_agcm, 1, 1)
+         BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_agcm, &
-         block_name_input_agcm, 1, 1)
+         BLOCK_NAME_INPUT_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_rm, &
-         block_name_input_rm, 1, 1)
+         BLOCK_NAME_INPUT_RM, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_opt_coef, &
-         block_name_output_rt_opt_coef, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_OPT_COEF, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_river_to_agcm, &
-         block_name_output_rt_lsm_river_to_agcm, 1, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_noriv_to_agcm, &
-         block_name_output_rt_lsm_noriv_to_agcm, 1, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_ocean_to_agcm, &
-         block_name_output_rt_lsm_ocean_to_agcm, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_river, &
-         block_name_output_rt_agcm_to_lsm_river, 1, 1)
+         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_noriv, &
-         block_name_output_rt_agcm_to_lsm_noriv, 1, 1)
+         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_ocean, &
-         block_name_output_rt_agcm_to_lsm_ocean, 0, 1)
+         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN, 0, 1)
 
   call check_num_of_key(&
          counter%output_agcm, &
-         block_name_output_agcm, 1, 1)
+         BLOCK_NAME_OUTPUT_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%output_lsm, &
-         block_name_output_lsm, 1, 1)
+         BLOCK_NAME_OUTPUT_LSM, 1, 1)
 
   call check_num_of_key(&
          counter%options, &
-         block_name_options, 0, 1)
+         BLOCK_NAME_OPTIONS, 0, 1)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_number_of_blocks
@@ -540,627 +529,415 @@ end subroutine read_settings
 !===============================================================
 !
 !===============================================================
-subroutine finalize()
-  implicit none
-
-  call echo(code%bgn, 'finalize', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call close_report_file()
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine finalize
-!===============================================================
-!
-!===============================================================
 subroutine read_settings_input_rt(rt)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_rt_base, only: &
+        set_default_values_rt_main
   implicit none
   type(rt_), intent(inout), target :: rt
 
-  type counter_
-    integer :: dir
-    integer :: length
-    integer :: f_sidx
-    integer :: f_tidx
-    integer :: f_area
-  end type
-
-  character(clen_var), parameter :: key_dir    = 'dir'
-  character(clen_var), parameter :: key_length = 'length'
-  character(clen_var), parameter :: key_f_sidx = 'f_sidx'
-  character(clen_var), parameter :: key_f_tidx = 'f_tidx'
-  character(clen_var), parameter :: key_f_area = 'f_area'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
   type(rt_main_), pointer :: rtm
+
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_input_rt')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_length )
-      call add(counter%length)
-
-    case( key_f_sidx )
-      call add(counter%f_sidx)
-
-    case( key_f_tidx )
-      call add(counter%f_tidx)
-
-    case( key_f_area )
-      call add(counter%f_area)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(5)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('length', 1, 1)
+  call set_keynum('sidx', 1, 1)
+  call set_keynum('tidx', 1, 1)
+  call set_keynum('area', 1, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   rtm => rt%main
-  rtm%id = trim(rt%id)//'%main'
 
-  rtm%grid_coef = grid_target
-  rtm%grid_sort = grid_none
-
-  rtm%ijsize = 0_8
-  rtm%nij = 0_8
-
-  rtm%f%sidx = file('', dtype_int4, 1, endian_default, action=action_read, &
-                    id=trim(rtm%id)//'%f%sidx')
-  rtm%f%tidx = file('', dtype_int4, 1, endian_default, action=action_read, &
-                    id=trim(rtm%id)//'%f%tidx')
-  rtm%f%area = file('', dtype_dble, 1, endian_default, action=action_read, &
-                    id=trim(rtm%id)//'%f%area')
+  call set_default_values_rt_main(rtm, status=STATUS_OLD)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    !
+    case( 'length' )
+      call read_value(rtm%nij)
 
-    case( key_dir )
-      call read_value(v_path=dir)
+    case( 'sidx' )
+      call read_value(rtm%f%sidx%path, is_path=.true., dir=dir)
 
-    case( key_length )
-      call read_value(v_int8=rtm%nij)
+    case( 'tidx' )
+      call read_value(rtm%f%tidx%path, is_path=.true., dir=dir)
 
-    case( key_f_sidx )
-      call read_value(v_file=rtm%f%sidx, get_length=.false.)
-      rtm%f%sidx%path = joined(dir, rtm%f%sidx%path)
-
-    case( key_f_tidx )
-      call read_value(v_file=rtm%f%tidx, get_length=.false.)
-      rtm%f%tidx%path = joined(dir, rtm%f%tidx%path)
-
-    case( key_f_area )
-      call read_value(v_file=rtm%f%area, get_length=.false.)
-      rtm%f%area%path = joined(dir, rtm%f%area%path)
-
+    case( 'area' )
+      call read_value(rtm%f%area%path, is_path=.true., dir=dir)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  !call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
   rtm%f%sidx%length = rtm%nij
   rtm%f%tidx%length = rtm%nij
   rtm%f%area%length = rtm%nij
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%dir = 0
-  counter%length = 0
-  counter%f_sidx = 0
-  counter%f_tidx = 0
-  counter%f_area = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  ! Free the external module variables
   !-------------------------------------------------------------
-  call check_num_of_key(counter%length, key_length, 1, 1)
-
-  call check_num_of_key(counter%f_sidx, key_f_sidx, 1, 1)
-  call check_num_of_key(counter%f_tidx, key_f_tidx, 1, 1)
-  call check_num_of_key(counter%f_area, key_f_area, 1, 1)
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_input_rt
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_input_agcm(agcm)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(agcm_), intent(inout) :: agcm
 
-  type counter_
-    integer :: dir
-    integer :: nij
-    integer :: f_grdidx
-    integer :: f_grdara
-    integer :: idx_miss
-    integer :: opt_thresh_lndfrc_noriv_virt_min
-    integer :: opt_thresh_lndfrc_excess
-    integer :: opt_thresh_lndfrc_noriv_virt_excess
-    integer :: opt_thresh_lndfrc_zero
-  end type
-
-  character(clen_var), parameter :: key_dir      = 'dir'
-  character(clen_var), parameter :: key_nij      = 'nij'
-  character(clen_var), parameter :: key_f_grdidx = 'f_grdidx'
-  character(clen_var), parameter :: key_f_grdara = 'f_grdara'
-  character(clen_var), parameter :: key_idx_miss = 'idx_miss'
-  character(clen_var), parameter :: key_opt_thresh_lndfrc_noriv_virt_min &
-                                     = 'opt_thresh_lndfrc_noriv_virt_min'
-  character(clen_var), parameter :: key_opt_thresh_lndfrc_excess &
-                                     = 'opt_thresh_lndfrc_excess'
-  character(clen_var), parameter :: key_opt_thresh_lndfrc_noriv_virt_excess &
-                                     = 'opt_thresh_lndfrc_noriv_virt_excess'
-  character(clen_var), parameter :: key_opt_thresh_lndfrc_zero &
-                                     = 'opt_thresh_lndfrc_zero'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_input_agcm')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_nij )
-      call add(counter%nij)
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_grdidx )
-      call add(counter%f_grdidx)
-
-    case( key_f_grdara )
-      call add(counter%f_grdara)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_opt_thresh_lndfrc_noriv_virt_min )
-      call add(counter%opt_thresh_lndfrc_noriv_virt_min)
-
-    case( key_opt_thresh_lndfrc_excess )
-      call add(counter%opt_thresh_lndfrc_excess)
-
-    case( key_opt_thresh_lndfrc_noriv_virt_excess )
-      call add(counter%opt_thresh_lndfrc_noriv_virt_excess)
-
-    case( key_opt_thresh_lndfrc_zero )
-      call add(counter%opt_thresh_lndfrc_zero)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(9)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('nij', 1, 1)
+  call set_keynum('f_grdidx', 0, 1)
+  call set_keynum('f_grdara', 1, 1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('opt_thresh_lndfrc_noriv_virt_min'   , 0, 1)
+  call set_keynum('opt_thresh_lndfrc_excess'           , 0, 1)
+  call set_keynum('opt_thresh_lndfrc_noriv_virt_excess', 0, 1)
+  call set_keynum('opt_thresh_lndfrc_zero'             , 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   agcm%nij = 0_8
-
-  agcm%fin_grdidx = file('', dtype_int4, 1, endian_default, action=action_read, &
+  agcm%fin_grdidx = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                          id='agcm%fin_grdidx')
-  agcm%fin_grdara = file('', dtype_dble, 1, endian_default, action=action_read, &
+  agcm%fin_grdara = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                          id='agcm%fin_grdara')
 
-  agcm%idx_miss = idx_miss_default
+  agcm%idx_miss = IDX_MISS_DEFAULT
 
-  agcm%opt_thresh_lndfrc_noriv_virt_min    = agcm_opt_thresh_lndfrc_noriv_virt_min_default
-  agcm%opt_thresh_lndfrc_excess            = agcm_opt_thresh_lndfrc_excess_default
-  agcm%opt_thresh_lndfrc_noriv_virt_excess = agcm_opt_thresh_lndfrc_noriv_virt_excess_default
-  agcm%opt_thresh_lndfrc_zero              = agcm_opt_thresh_lndfrc_zero_default
+  agcm%opt_thresh_lndfrc_noriv_virt_min    = AGCM_OPT_THRESH_LNDFRC_NORIV_VIRT_MIN_DEFAULT
+  agcm%opt_thresh_lndfrc_excess            = AGCM_OPT_THRESH_LNDFRC_EXCESS_DEFAULT
+  agcm%opt_thresh_lndfrc_noriv_virt_excess = AGCM_OPT_THRESH_LNDFRC_NORIV_VIRT_EXCESS_DEFAULT
+  agcm%opt_thresh_lndfrc_zero              = AGCM_OPT_THRESH_LNDFRC_ZERO_DEFAULT
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
-
-  call back_to_block_head()
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
+    !-----------------------------------------------------------
+    !
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
 
-    case( key_nij )
-      call read_value(v_int8=agcm%nij)
+    case( 'f_grdidx' )
+      call read_value(agcm%fin_grdidx, dir)
 
-    case( key_dir )
-      call read_value(v_path=dir)
+    case( 'f_grdara' )
+      call read_value(agcm%fin_grdara, dir)
 
-    case( key_f_grdidx )
-      call read_value(v_file=agcm%fin_grdidx, get_length=.false.)
-      agcm%fin_grdidx%path = joined(dir, agcm%fin_grdidx%path)
+    case( 'idx_miss' )
+      call read_value(agcm%idx_miss)
+    !-----------------------------------------------------------
+    ! Thresholds
+    case( 'opt_thresh_lndfrc_noriv_virt_min' )
+      call read_value(agcm%opt_thresh_lndfrc_noriv_virt_min)
 
-    case( key_f_grdara )
-      call read_value(v_file=agcm%fin_grdara, get_length=.false.)
-      agcm%fin_grdara%path = joined(dir, agcm%fin_grdara%path)
+    case( 'opt_thresh_lndfrc_excess' )
+      call read_value(agcm%opt_thresh_lndfrc_excess)
 
-    case( key_idx_miss )
-      call read_value(v_int8=agcm%idx_miss)
+    case( 'opt_thresh_lndfrc_noriv_virt_excess' )
+      call read_value(agcm%opt_thresh_lndfrc_noriv_virt_excess)
 
-    case( key_opt_thresh_lndfrc_noriv_virt_min )
-      call read_value(v_dble=agcm%opt_thresh_lndfrc_noriv_virt_min)
-
-    case( key_opt_thresh_lndfrc_excess )
-      call read_value(v_dble=agcm%opt_thresh_lndfrc_excess)
-
-    case( key_opt_thresh_lndfrc_noriv_virt_excess )
-      call read_value(v_dble=agcm%opt_thresh_lndfrc_noriv_virt_excess)
-
-    case( key_opt_thresh_lndfrc_zero )
-      call read_value(v_dble=agcm%opt_thresh_lndfrc_zero)
-
+    case( 'opt_thresh_lndfrc_zero' )
+      call read_value(agcm%opt_thresh_lndfrc_zero)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modyf values
+  call check_keynum()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
   agcm%fin_grdidx%length = agcm%nij
   agcm%fin_grdara%length = agcm%nij
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%nij = 0
-  counter%dir = 0
-  counter%f_grdidx = 0
-  counter%f_grdara = 0
-  counter%idx_miss = 0
-  counter%opt_thresh_lndfrc_noriv_virt_min = 0
-  counter%opt_thresh_lndfrc_excess = 0
-  counter%opt_thresh_lndfrc_noriv_virt_excess = 0
-  counter%opt_thresh_lndfrc_zero = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  ! Free the external module variables
   !-------------------------------------------------------------
-  call check_num_of_key(counter%nij, key_nij, 1, 1)
-  call check_num_of_key(counter%f_grdidx, key_f_grdidx, 0, 1)
-  call check_num_of_key(counter%f_grdara, key_f_grdara, 1, 1)
-
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
-  call check_num_of_key(counter%opt_thresh_lndfrc_noriv_virt_min, &
-                            key_opt_thresh_lndfrc_noriv_virt_min, 0, 1)
-  call check_num_of_key(counter%opt_thresh_lndfrc_excess, &
-                            key_opt_thresh_lndfrc_excess, 0, 1)
-  call check_num_of_key(counter%opt_thresh_lndfrc_noriv_virt_excess, &
-                            key_opt_thresh_lndfrc_noriv_virt_excess, 0, 1)
-  call check_num_of_key(counter%opt_thresh_lndfrc_zero, &
-                            key_opt_thresh_lndfrc_zero, 0, 1)
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_input_agcm
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_input_rm(rm)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(rm_), intent(inout) :: rm
 
-  type counter_
-    integer :: dir
-    integer :: nx_grid
-    integer :: ny_grid
-    integer :: nx_raster
-    integer :: ny_raster
-    integer :: f_grdidx_river
-    integer :: f_grdidx_noriv
-    integer :: f_grdidx_ocean
-    integer :: f_grdara_river
-    integer :: f_grdara_noriv
-    integer :: f_grdara_ocean
-    integer :: f_rstidx_river
-    integer :: f_rstidx_noriv
-    integer :: f_rstidx_ocean
-    integer :: idx_miss
-    integer :: ara_miss
-  end type
-
-  character(clen_var), parameter :: key_dir       = 'dir'
-  character(clen_var), parameter :: key_nx_grid   = 'nx_grid'
-  character(clen_var), parameter :: key_ny_grid   = 'ny_grid'
-  character(clen_var), parameter :: key_nx_raster = 'nx_raster'
-  character(clen_var), parameter :: key_ny_raster = 'ny_raster'
-  character(clen_var), parameter :: key_f_grdidx_river = 'f_grdidx_river'
-  character(clen_var), parameter :: key_f_grdidx_noriv = 'f_grdidx_noriv'
-  character(clen_var), parameter :: key_f_grdidx_ocean = 'f_grdidx_ocean'
-  character(clen_var), parameter :: key_f_grdara_river = 'f_grdara_river'
-  character(clen_var), parameter :: key_f_grdara_noriv = 'f_grdara_noriv'
-  character(clen_var), parameter :: key_f_grdara_ocean = 'f_grdara_ocean'
-  character(clen_var), parameter :: key_f_rstidx_river = 'f_rstidx_river'
-  character(clen_var), parameter :: key_f_rstidx_noriv = 'f_rstidx_noriv'
-  character(clen_var), parameter :: key_f_rstidx_ocean = 'f_rstidx_ocean'
-  character(clen_var), parameter :: key_idx_miss = 'idx_miss'
-  character(clen_var), parameter :: key_ara_miss = 'ara_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_input_rm')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_nx_grid )
-      call add(counter%nx_grid)
-
-    case( key_ny_grid )
-      call add(counter%ny_grid)
-
-    case( key_nx_raster )
-      call add(counter%nx_raster)
-
-    case( key_ny_raster )
-      call add(counter%ny_raster)
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_grdidx_river )
-      call add(counter%f_grdidx_river)
-
-    case( key_f_grdidx_noriv )
-      call add(counter%f_grdidx_noriv)
-
-    case( key_f_grdidx_ocean )
-      call add(counter%f_grdidx_ocean)
-
-    case( key_f_grdara_river )
-      call add(counter%f_grdara_river)
-
-    case( key_f_grdara_noriv )
-      call add(counter%f_grdara_noriv)
-
-    case( key_f_grdara_ocean )
-      call add(counter%f_grdara_ocean)
-
-    case( key_f_rstidx_river )
-      call add(counter%f_rstidx_river)
-
-    case( key_f_rstidx_noriv )
-      call add(counter%f_rstidx_noriv)
-
-    case( key_f_rstidx_ocean )
-      call add(counter%f_rstidx_ocean)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_ara_miss )
-      call add(counter%ara_miss)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(16)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('nx_grid', 1, 1)
+  call set_keynum('ny_grid', 1, 1)
+  call set_keynum('nx_raster', 1, 1)
+  call set_keynum('ny_raster', 1, 1)
+  call set_keynum('f_grdidx_river', 1, 1)
+  call set_keynum('f_grdidx_noriv', 1, 1)
+  call set_keynum('f_grdidx_ocean', 1, 1)
+  call set_keynum('f_grdara_river', 1, 1)
+  call set_keynum('f_grdara_noriv', 1, 1)
+  call set_keynum('f_grdara_ocean', 1, 1)
+  call set_keynum('f_grdidx_river', 1, 1)
+  call set_keynum('f_grdidx_noriv', 1, 1)
+  call set_keynum('f_grdidx_ocean', 1, 1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('ara_miss', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   rm%ncx = 0_8
   rm%ncy = 0_8
   rm%nkx = 0_8
   rm%nky = 0_8
 
-  rm%fin_grdidx_river = file('', dtype_int4, 1, endian_default, action=action_read, &
+  rm%fin_grdidx_river = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_grdidx_river')
-  rm%fin_grdidx_noriv = file('', dtype_int4, 1, endian_default, action=action_read, &
+  rm%fin_grdidx_noriv = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_grdidx_noriv')
-  rm%fin_grdidx_ocean = file('', dtype_int4, 1, endian_default, action=action_read, &
+  rm%fin_grdidx_ocean = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_grdidx_ocean')
 
-  rm%fin_grdara_river = file('', dtype_dble, 1, endian_default, action=action_read, &
+  rm%fin_grdara_river = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_grdara_river')
-  rm%fin_grdara_noriv = file('', dtype_dble, 1, endian_default, action=action_read, &
+  rm%fin_grdara_noriv = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_grdara_noriv')
-  rm%fin_grdara_ocean = file('', dtype_dble, 1, endian_default, action=action_read, &
+  rm%fin_grdara_ocean = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_grdara_ocean')
 
-  rm%fin_rstidx_river = file('', dtype_int4, 1, endian_default, action=action_read, &
+  rm%fin_rstidx_river = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_rstidx_river')
-  rm%fin_rstidx_noriv = file('', dtype_int4, 1, endian_default, action=action_read, &
+  rm%fin_rstidx_noriv = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_rstidx_noriv')
-  rm%fin_rstidx_ocean = file('', dtype_int4, 1, endian_default, action=action_read, &
+  rm%fin_rstidx_ocean = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
                              id='rm%fin_rstidx_ocean')
 
-  rm%idx_miss = idx_miss_default
-  rm%ara_miss = ara_miss_default
+  rm%idx_miss = IDX_MISS_DEFAULT
+  rm%ara_miss = ARA_MISS_DEFAULT
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
+    !-----------------------------------------------------------
+    ! Resolution
+    case( 'nx_grid' )
+      call read_value(rm%ncx)
+    case( 'ny_grid' )
+      call read_value(rm%ncy)
 
-    case( key_nx_grid )
-      call read_value(v_int8=rm%ncx)
+    case( 'nx_raster' )
+      call read_value(rm%nkx)
+    case( 'ny_raster' )
+      call read_value(rm%nky)
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    ! Grid index data
+    case( 'f_grdidx_river' )
+      call read_value(rm%fin_grdidx_river, dir)
 
-    case( key_ny_grid )
-      call read_value(v_int8=rm%ncy)
+    case( 'f_grdidx_noriv' )
+      call read_value(rm%fin_grdidx_noriv, dir)
 
-    case( key_nx_raster )
-      call read_value(v_int8=rm%nkx)
+    case( 'f_grdidx_ocean' )
+      call read_value(rm%fin_grdidx_ocean, dir)
+    !-----------------------------------------------------------
+    ! Grid area data
+    case( 'f_grdara_river' )
+      call read_value(rm%fin_grdara_river, dir)
 
-    case( key_ny_raster )
-      call read_value(v_int8=rm%nky)
+    case( 'f_grdara_noriv' )
+      call read_value(rm%fin_grdara_noriv, dir)
 
-    case( key_dir )
-      call read_value(v_path=dir)
+    case( 'f_grdara_ocean' )
+      call read_value(rm%fin_grdara_ocean, dir)
+    !-----------------------------------------------------------
+    ! Raster index data
+    case( 'f_rstidx_river' )
+      call read_value(rm%fin_rstidx_river, dir)
 
-    case( key_f_grdidx_river )
-      call read_value(v_file=rm%fin_grdidx_river, get_length=.false.)
-      rm%fin_grdidx_river%path = joined(dir, rm%fin_grdidx_river%path)
+    case( 'f_rstidx_noriv' )
+      call read_value(rm%fin_rstidx_noriv, dir)
 
-    case( key_f_grdidx_noriv )
-      call read_value(v_file=rm%fin_grdidx_noriv, get_length=.false.)
-      rm%fin_grdidx_noriv%path = joined(dir, rm%fin_grdidx_noriv%path)
+    case( 'f_rstidx_ocean' )
+      call read_value(rm%fin_rstidx_ocean, dir)
+    !-----------------------------------------------------------
+    ! Missing values
+    case( 'idx_miss' )
+      call read_value(rm%idx_miss)
 
-    case( key_f_grdidx_ocean )
-      call read_value(v_file=rm%fin_grdidx_ocean, get_length=.false.)
-      rm%fin_grdidx_ocean%path = joined(dir, rm%fin_grdidx_ocean%path)
-
-    case( key_f_grdara_river )
-      call read_value(v_file=rm%fin_grdara_river, get_length=.false.)
-      rm%fin_grdara_river%path = joined(dir, rm%fin_grdara_river%path)
-
-    case( key_f_grdara_noriv )
-      call read_value(v_file=rm%fin_grdara_noriv, get_length=.false.)
-      rm%fin_grdara_noriv%path = joined(dir, rm%fin_grdara_noriv%path)
-
-    case( key_f_grdara_ocean )
-      call read_value(v_file=rm%fin_grdara_ocean, get_length=.false.)
-      rm%fin_grdara_ocean%path = joined(dir, rm%fin_grdara_ocean%path)
-
-    case( key_f_rstidx_river )
-      call read_value(v_file=rm%fin_rstidx_river, get_length=.false.)
-      rm%fin_rstidx_river%path = joined(dir, rm%fin_rstidx_river%path)
-
-    case( key_f_rstidx_noriv )
-      call read_value(v_file=rm%fin_rstidx_noriv, get_length=.false.)
-      rm%fin_rstidx_noriv%path = joined(dir, rm%fin_rstidx_noriv%path)
-
-    case( key_f_rstidx_ocean )
-      call read_value(v_file=rm%fin_rstidx_ocean, get_length=.false.)
-      rm%fin_rstidx_ocean%path = joined(dir, rm%fin_rstidx_ocean%path)
-
-    case( key_idx_miss )
-      call read_value(v_int8=rm%idx_miss)
-
-    case( key_ara_miss )
-      call read_value(v_dble=rm%ara_miss)
-
+    case( 'ara_miss' )
+      call read_value(rm%ara_miss)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
   rm%nij = rm%ncx * rm%ncy
 
   rm%fin_grdidx_river%length = rm%nij
@@ -1177,1338 +954,687 @@ subroutine read_settings_input_rm(rm)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%nx_grid = 0
-  counter%ny_grid = 0
-  counter%nx_raster = 0
-  counter%ny_raster = 0
-
-  counter%dir = 0
-
-  counter%f_grdidx_river = 0
-  counter%f_grdidx_noriv = 0
-  counter%f_grdidx_ocean = 0
-  counter%f_grdara_river = 0
-  counter%f_grdara_noriv = 0
-  counter%f_grdara_ocean = 0
-  counter%f_rstidx_river = 0
-  counter%f_rstidx_noriv = 0
-  counter%f_rstidx_ocean = 0
-  counter%idx_miss = 0
-  counter%ara_miss = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  ! Free the external module variables
   !-------------------------------------------------------------
-  call check_num_of_key(counter%nx_grid, key_nx_grid, 1, 1)
-  call check_num_of_key(counter%ny_grid, key_ny_grid, 1, 1)
-  call check_num_of_key(counter%nx_raster, key_nx_raster, 1, 1)
-  call check_num_of_key(counter%ny_raster, key_ny_raster, 1, 1)
-
-  call check_num_of_key(counter%f_grdidx_river, key_f_grdidx_river, 1, 1)
-  call check_num_of_key(counter%f_grdidx_noriv, key_f_grdidx_noriv, 1, 1)
-  call check_num_of_key(counter%f_grdidx_ocean, key_f_grdidx_ocean, 1, 1)
-
-  call check_num_of_key(counter%f_grdara_river, key_f_grdara_river, 1, 1)
-  call check_num_of_key(counter%f_grdara_noriv, key_f_grdara_noriv, 1, 1)
-  call check_num_of_key(counter%f_grdara_ocean, key_f_grdara_ocean, 1, 1)
-
-  call check_num_of_key(counter%f_rstidx_river, key_f_rstidx_river, 1, 1)
-  call check_num_of_key(counter%f_rstidx_noriv, key_f_rstidx_noriv, 1, 1)
-  call check_num_of_key(counter%f_rstidx_ocean, key_f_rstidx_ocean, 1, 1)
-
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
-  call check_num_of_key(counter%ara_miss, key_ara_miss, 0, 1)
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_input_rm
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_rt_coef_options(opt_coef)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_rt_set, only: &
+        init_rt_opt_coef
   implicit none
   type(rt_opt_coef_), intent(inout) :: opt_coef
 
-  type counter_
-    integer :: opt_coef_sum_modify
-    integer :: opt_coef_sum_modify_ulim
-    integer :: opt_coef_zero_positive
-    integer :: opt_coef_zero_negative
-    integer :: opt_coef_error_excess
-    integer :: opt_coef_sum_error_excess
-  end type
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-
   call echo(code%bgn, 'read_settings_rt_coef_options')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-     exit
-
-    case( key_opt_coef_sum_modify )
-      call add(counter%opt_coef_sum_modify)
-
-    case( key_opt_coef_sum_modify_ulim )
-      call add(counter%opt_coef_sum_modify_ulim)
-
-    case( key_opt_coef_zero_positive )
-      call add(counter%opt_coef_zero_positive)
-
-    case( key_opt_coef_zero_negative )
-      call add(counter%opt_coef_zero_negative)
-
-    case( key_opt_coef_error_excess )
-      call add(counter%opt_coef_error_excess)
-
-    case( key_opt_coef_sum_error_excess )
-      call add(counter%opt_coef_sum_error_excess)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(6)
+  call set_keynum('opt_coef_sum_modify'      , 0, 1)
+  call set_keynum('opt_coef_sum_modify_ulim' , 0, 1)
+  call set_keynum('opt_coef_zero_positive'   , 0, 1)
+  call set_keynum('opt_coef_zero_negative'   , 0, 1)
+  call set_keynum('opt_coef_error_excess'    , 0, 1)
+  call set_keynum('opt_coef_sum_error_excess', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   call init_rt_opt_coef(opt_coef)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read inputs
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading inputs')
-
-  call back_to_block_head()
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
-
-    case( key_opt_coef_sum_modify )
-      call read_value(v_dble=opt_coef%sum_modify)
+    !-----------------------------------------------------------
+    !
+    case( 'opt_coef_sum_modify' )
+      call read_value(opt_coef%sum_modify)
       opt_coef%is_sum_modify_enabled = .true.
 
-    case( key_opt_coef_sum_modify_ulim )
-      call read_value(v_dble=opt_coef%sum_modify_ulim)
+    case( 'opt_coef_sum_modify_ulim' )
+      call read_value(opt_coef%sum_modify_ulim)
       opt_coef%is_sum_modify_ulim_enabled = .true.
 
-    case( key_opt_coef_zero_positive )
-      call read_value(v_dble=opt_coef%zero_positive)
+    case( 'opt_coef_zero_positive' )
+      call read_value(opt_coef%zero_positive)
       opt_coef%is_zero_positive_enabled = .true.
 
-    case( key_opt_coef_zero_negative )
-      call read_value(v_dble=opt_coef%zero_negative)
+    case( 'opt_coef_zero_negative' )
+      call read_value(opt_coef%zero_negative)
       opt_coef%is_zero_negative_enabled = .true.
 
-    case( key_opt_coef_error_excess )
-      call read_value(v_dble=opt_coef%error_excess)
+    case( 'opt_coef_error_excess' )
+      call read_value(opt_coef%error_excess)
       opt_coef%is_error_excess_enabled = .true.
 
-    case( key_opt_coef_sum_error_excess )
-      call read_value(v_dble=opt_coef%sum_error_excess)
+    case( 'opt_coef_sum_error_excess' )
+      call read_value(opt_coef%sum_error_excess)
       opt_coef%is_sum_error_excess_enabled = .true.
-
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify or check values
-  !-------------------------------------------------------------
-  call check_values_rt_opt_coef(opt_coef)
+  call check_keynum()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%opt_coef_sum_modify       = 0
-  counter%opt_coef_sum_modify_ulim  = 0
-  counter%opt_coef_zero_positive    = 0
-  counter%opt_coef_zero_negative    = 0
-  counter%opt_coef_error_excess     = 0
-  counter%opt_coef_sum_error_excess = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  ! Free the external module variable
   !-------------------------------------------------------------
-  call check_num_of_key(counter%opt_coef_sum_modify      , key_opt_coef_sum_modify      , 0, 1)
-  call check_num_of_key(counter%opt_coef_sum_modify_ulim , key_opt_coef_sum_modify_ulim , 0, 1)
-  call check_num_of_key(counter%opt_coef_zero_positive   , key_opt_coef_zero_positive   , 0, 1)
-  call check_num_of_key(counter%opt_coef_zero_negative   , key_opt_coef_zero_negative   , 0, 1)
-  call check_num_of_key(counter%opt_coef_error_excess    , key_opt_coef_error_excess    , 0, 1)
-  call check_num_of_key(counter%opt_coef_sum_error_excess, key_opt_coef_sum_error_excess, 0, 1)
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_rt_coef_options
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_output_rt(rt)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_rt_base, only: &
+        set_default_values_rt_main
   implicit none
   type(rt_), intent(inout), target :: rt
 
-  type counter_
-    integer :: dir
-    integer :: f_sidx
-    integer :: f_tidx
-    integer :: f_area
-    integer :: f_coef
-  end type
-
-  character(clen_var), parameter :: key_dir    = 'dir'
-  character(clen_var), parameter :: key_f_sidx = 'f_sidx'
-  character(clen_var), parameter :: key_f_tidx = 'f_tidx'
-  character(clen_var), parameter :: key_f_area = 'f_area'
-  character(clen_var), parameter :: key_f_coef = 'f_coef'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
   type(rt_main_), pointer :: rtm
+
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_output_rt')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_sidx )
-      call add(counter%f_sidx)
-
-    case( key_f_tidx )
-      call add(counter%f_tidx)
-
-    case( key_f_area )
-      call add(counter%f_area)
-
-    case( key_f_coef )
-      call add(counter%f_coef)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(5)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('sidx', 1, 1)
+  call set_keynum('tidx', 1, 1)
+  call set_keynum('area', 1, 1)
+  call set_keynum('coef', 1, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Read settings
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Setting the default values')
 
   rtm => rt%main
 
-  dir = ''
-
-  call back_to_block_head()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_dir )
-      call read_value(v_path=dir)
-
-    case( key_f_sidx )
-      call read_value(v_file=rtm%f%sidx, get_length=.false.)
-      rtm%f%sidx%path = joined(dir, rtm%f%sidx%path)
-
-    case( key_f_tidx )
-      call read_value(v_file=rtm%f%tidx, get_length=.false.)
-      rtm%f%tidx%path = joined(dir, rtm%f%tidx%path)
-
-    case( key_f_area )
-      call read_value(v_file=rtm%f%area, get_length=.false.)
-      rtm%f%area%path = joined(dir, rtm%f%area%path)
-
-    case( key_f_coef )
-      call read_value(v_file=rtm%f%coef, get_length=.false.)
-      rtm%f%coef%path = joined(dir, rtm%f%coef%path)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  ! Modify values
-  !-------------------------------------------------------------
+  call set_default_values_rt_main(rtm, id=rt%id, status=STATUS_REPLACE)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%dir = 0
-  counter%f_sidx = 0
-  counter%f_tidx = 0
-  counter%f_area = 0
-  counter%f_coef = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  ! Read the settings
   !-------------------------------------------------------------
-  call check_num_of_key(counter%f_sidx, key_f_sidx, 1, 1)
-  call check_num_of_key(counter%f_tidx, key_f_tidx, 1, 1)
-  call check_num_of_key(counter%f_area, key_f_area, 1, 1)
-  call check_num_of_key(counter%f_coef, key_f_coef, 1, 1)
+  call echo(code%ent, 'Reading the settings')
+
+  dir = ''
+
+  do
+    call read_input()
+    call update_keynum()
+
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
+    case( '' )
+      exit
+    !-----------------------------------------------------------
+    ! 
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    ! 
+    case( 'f_sidx' )
+      call read_value(rtm%f%sidx, dir)
+    case( 'f_tidx' )
+      call read_value(rtm%f%tidx, dir)
+    case( 'f_area' )
+      call read_value(rtm%f%area, dir)
+    case( 'f_coef' )
+      call read_value(rtm%f%coef, dir)
+    !-----------------------------------------------------------
+    ! ERROR
+    case default
+      call raise_error_invalid_key()
+    endselect
+  enddo
+
+  call check_keynum()
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free the external module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_output_rt
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_output_agcm(agcm)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(agcm_), intent(inout), target :: agcm
 
-  type counter_
-    integer :: dir
-    integer :: f_lndara_ogcm
-    integer :: f_lndara_river
-    integer :: f_lndara_noriv_real
-    integer :: f_lndara_noriv_virt
-    integer :: f_lndara_noriv
-  end type
-
-  character(clen_var), parameter :: key_dir       = 'dir'
-  character(clen_var), parameter :: key_f_lndara_ogcm       = 'f_lndara_ogcm'
-  character(clen_var), parameter :: key_f_lndara_river      = 'f_lndara_river'
-  character(clen_var), parameter :: key_f_lndara_noriv_real = 'f_lndara_noriv_real'
-  character(clen_var), parameter :: key_f_lndara_noriv_virt = 'f_lndara_noriv_virt'
-  character(clen_var), parameter :: key_f_lndara_noriv      = 'f_lndara_noriv'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(file_), pointer :: f
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_output_agcm')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_lndara_ogcm )
-      call add(counter%f_lndara_ogcm)
-
-    case( key_f_lndara_river )
-      call add(counter%f_lndara_river)
-
-    case( key_f_lndara_noriv_real )
-      call add(counter%f_lndara_noriv_real)
-
-    case( key_f_lndara_noriv_virt )
-      call add(counter%f_lndara_noriv_virt)
-
-    case( key_f_lndara_noriv )
-      call add(counter%f_lndara_noriv)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(6)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_lndara_ogcm'      , 0, 1)
+  call set_keynum('f_lndara_river'     , 0, 1)
+  call set_keynum('f_lndara_noriv_real', 0, 1)
+  call set_keynum('f_lndara_noriv_virt', 0, 1)
+  call set_keynum('f_lndara_noriv'     , 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
-  agcm%fout_lndara_ogcm       = file('', dtype_dble, 1, endian_default, action=action_write, &
+  agcm%fout_lndara_ogcm       = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
                                      id='agcm%fout_lndara_ogcm')
-  agcm%fout_lndara_river      = file('', dtype_dble, 1, endian_default, action=action_write, &
+  agcm%fout_lndara_river      = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
                                      id='agcm%fout_lndara_river')
-  agcm%fout_lndara_noriv_real = file('', dtype_dble, 1, endian_default, action=action_write, &
+  agcm%fout_lndara_noriv_real = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
                                      id='agcm%fout_lndara_noriv_real')
-  agcm%fout_lndara_noriv_virt = file('', dtype_dble, 1, endian_default, action=action_write, &
+  agcm%fout_lndara_noriv_virt = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
                                      id='agcm%fout_lndara_noriv_virt')
-  agcm%fout_lndara_noriv      = file('', dtype_dble, 1, endian_default, action=action_write, &
+  agcm%fout_lndara_noriv      = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
                                      id='agcm%fout_lndara_noriv')
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
-
-    case( key_dir )
-      call read_value(v_path=dir)
-
-    case( key_f_lndara_ogcm )
-      f => agcm%fout_lndara_ogcm
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_lndara_river )
-      f => agcm%fout_lndara_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_lndara_noriv_real )
-      f => agcm%fout_lndara_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_lndara_noriv_virt )
-      f => agcm%fout_lndara_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_lndara_noriv )
-      f => agcm%fout_lndara_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    ! 
+    case( 'f_lndara_ogcm' )
+      call read_value(agcm%fout_lndara_ogcm, dir)
+    case( 'f_lndara_river' )
+      call read_value(agcm%fout_lndara_river, dir)
+    case( 'f_lndara_noriv_real' )
+      call read_value(agcm%fout_lndara_noriv_real, dir)
+    case( 'f_lndara_noriv_virt' )
+      call read_value(agcm%fout_lndara_noriv_virt, dir)
+    case( 'f_lndara_noriv' )
+      call read_value(agcm%fout_lndara_noriv, dir)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
-  !-------------------------------------------------------------
+  call check_keynum()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%dir = 0
-  counter%f_lndara_ogcm = 0
-  counter%f_lndara_river = 0
-  counter%f_lndara_noriv_real = 0
-  counter%f_lndara_noriv_virt = 0
-  counter%f_lndara_noriv = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  ! Free the external module variable
   !-------------------------------------------------------------
-  call check_num_of_key(counter%f_lndara_ogcm      , key_f_lndara_ogcm      , 0, 1)
-  call check_num_of_key(counter%f_lndara_river     , key_f_lndara_river     , 0, 1)
-  call check_num_of_key(counter%f_lndara_noriv_real, key_f_lndara_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_lndara_noriv_virt, key_f_lndara_noriv_virt, 0, 1)
-  call check_num_of_key(counter%f_lndara_noriv     , key_f_lndara_noriv     , 0, 1)
-  !---------------------------------------
+  call free_keynum()
+  !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_output_agcm
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_output_lsm(lsm)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(lsm_), intent(inout), target :: lsm
 
-  type counter_
-    integer :: dir
-    integer :: f_grdmsk_river
-    integer :: f_grdmsk_noriv
-    integer :: f_grdmsk_noriv_real
-    integer :: f_grdmsk_noriv_virt
-    integer :: f_grdmsk_ocean
-    integer :: f_grdidx_river
-    integer :: f_grdidx_noriv
-    integer :: f_grdidx_noriv_real
-    integer :: f_grdidx_noriv_virt
-    integer :: f_grdidx_ocean
-    integer :: f_grdidx_bnd_river
-    integer :: f_grdidx_bnd_noriv
-    integer :: f_grdidx_bnd_noriv_real
-    integer :: f_grdidx_bnd_noriv_virt
-    integer :: f_grdara_river
-    integer :: f_grdara_noriv
-    integer :: f_grdara_noriv_real
-    integer :: f_grdara_noriv_virt
-    integer :: f_grdara_ocean
-    integer :: f_grdwgt_river
-    integer :: f_grdwgt_noriv
-    integer :: f_grdwgt_noriv_real
-    integer :: f_grdwgt_noriv_virt
-    integer :: f_grdwgt_ocean
-    integer :: f_rstidx_river
-    integer :: f_rstidx_noriv
-    integer :: f_rstidx_noriv_real
-    integer :: f_rstidx_noriv_virt
-    integer :: f_rstidx_ocean
-    integer :: f_rstidx_bnd_river
-    integer :: f_rstidx_bnd_noriv
-    integer :: f_rstidx_bnd_noriv_real
-    integer :: f_rstidx_bnd_noriv_virt
-    integer :: idx_miss
-    integer :: ara_miss
-    integer :: wgt_miss
-    integer :: opt_thresh_grdwgt_noriv_virt_excess
-  end type
-
-  character(clen_var), parameter :: key_dir = 'dir'
-  character(clen_var), parameter :: key_f_grdmsk_river          = 'f_grdmsk_river'
-  character(clen_var), parameter :: key_f_grdmsk_noriv          = 'f_grdmsk_noriv'
-  character(clen_var), parameter :: key_f_grdmsk_noriv_real     = 'f_grdmsk_noriv_real'
-  character(clen_var), parameter :: key_f_grdmsk_noriv_virt     = 'f_grdmsk_noriv_virt'
-  character(clen_var), parameter :: key_f_grdmsk_ocean          = 'f_grdmsk_ocean'
-  character(clen_var), parameter :: key_f_grdidx_river          = 'f_grdidx_river'
-  character(clen_var), parameter :: key_f_grdidx_noriv          = 'f_grdidx_noriv'
-  character(clen_var), parameter :: key_f_grdidx_noriv_real     = 'f_grdidx_noriv_real'
-  character(clen_var), parameter :: key_f_grdidx_noriv_virt     = 'f_grdidx_noriv_virt'
-  character(clen_var), parameter :: key_f_grdidx_ocean          = 'f_grdidx_ocean'
-  character(clen_var), parameter :: key_f_grdidx_bnd_river      = 'f_grdidx_bnd_river'
-  character(clen_var), parameter :: key_f_grdidx_bnd_noriv      = 'f_grdidx_bnd_noriv'
-  character(clen_var), parameter :: key_f_grdidx_bnd_noriv_real = 'f_grdidx_bnd_noriv_real'
-  character(clen_var), parameter :: key_f_grdidx_bnd_noriv_virt = 'f_grdidx_bnd_noriv_virt'
-  character(clen_var), parameter :: key_f_grdara_river          = 'f_grdara_river'
-  character(clen_var), parameter :: key_f_grdara_noriv          = 'f_grdara_noriv'
-  character(clen_var), parameter :: key_f_grdara_noriv_real     = 'f_grdara_noriv_real'
-  character(clen_var), parameter :: key_f_grdara_noriv_virt     = 'f_grdara_noriv_virt'
-  character(clen_var), parameter :: key_f_grdara_ocean          = 'f_grdara_ocean'
-  character(clen_var), parameter :: key_f_grdwgt_river          = 'f_grdwgt_river'
-  character(clen_var), parameter :: key_f_grdwgt_noriv          = 'f_grdwgt_noriv'
-  character(clen_var), parameter :: key_f_grdwgt_noriv_real     = 'f_grdwgt_noriv_real'
-  character(clen_var), parameter :: key_f_grdwgt_noriv_virt     = 'f_grdwgt_noriv_virt'
-  character(clen_var), parameter :: key_f_grdwgt_ocean          = 'f_grdwgt_ocean'
-  character(clen_var), parameter :: key_f_rstidx_river          = 'f_rstidx_river'
-  character(clen_var), parameter :: key_f_rstidx_noriv          = 'f_rstidx_noriv'
-  character(clen_var), parameter :: key_f_rstidx_noriv_real     = 'f_rstidx_noriv_real'
-  character(clen_var), parameter :: key_f_rstidx_noriv_virt     = 'f_rstidx_noriv_virt'
-  character(clen_var), parameter :: key_f_rstidx_ocean          = 'f_rstidx_ocean'
-  character(clen_var), parameter :: key_f_rstidx_bnd_river      = 'f_rstidx_bnd_river'
-  character(clen_var), parameter :: key_f_rstidx_bnd_noriv      = 'f_rstidx_bnd_noriv'
-  character(clen_var), parameter :: key_f_rstidx_bnd_noriv_real = 'f_rstidx_bnd_noriv_real'
-  character(clen_var), parameter :: key_f_rstidx_bnd_noriv_virt = 'f_rstidx_bnd_noriv_virt'
-  character(clen_var), parameter :: key_opt_thresh_grdwgt_noriv_virt_excess &
-                                     = 'opt_thresh_grdwgt_noriv_virt_excess'
-  character(clen_var), parameter :: key_idx_miss     = 'idx_miss'
-  character(clen_var), parameter :: key_ara_miss     = 'ara_miss'
-  character(clen_var), parameter :: key_wgt_miss     = 'wgt_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(file_), pointer :: f
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_output_lsm')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_grdmsk_river )
-      call add(counter%f_grdmsk_river)
-
-    case( key_f_grdmsk_noriv )
-      call add(counter%f_grdmsk_noriv)
-
-    case( key_f_grdmsk_noriv_real )
-      call add(counter%f_grdmsk_noriv_real)
-
-    case( key_f_grdmsk_noriv_virt )
-      call add(counter%f_grdmsk_noriv_virt)
-
-    case( key_f_grdmsk_ocean )
-      call add(counter%f_grdmsk_ocean)
-
-    case( key_f_grdidx_river )
-      call add(counter%f_grdidx_river)
-
-    case( key_f_grdidx_noriv )
-      call add(counter%f_grdidx_noriv)
-
-    case( key_f_grdidx_noriv_real )
-      call add(counter%f_grdidx_noriv_real)
-
-    case( key_f_grdidx_noriv_virt )
-      call add(counter%f_grdidx_noriv_virt)
-
-    case( key_f_grdidx_ocean )
-      call add(counter%f_grdidx_ocean)
-
-    case( key_f_grdidx_bnd_river )
-      call add(counter%f_grdidx_bnd_river)
-
-    case( key_f_grdidx_bnd_noriv )
-      call add(counter%f_grdidx_bnd_noriv)
-
-    case( key_f_grdidx_bnd_noriv_real )
-      call add(counter%f_grdidx_bnd_noriv_real)
-
-    case( key_f_grdidx_bnd_noriv_virt )
-      call add(counter%f_grdidx_bnd_noriv_virt)
-
-    case( key_f_grdara_river )
-      call add(counter%f_grdara_river)
-
-    case( key_f_grdara_noriv )
-      call add(counter%f_grdara_noriv)
-
-    case( key_f_grdara_noriv_real )
-      call add(counter%f_grdara_noriv_real)
-
-    case( key_f_grdara_noriv_virt )
-      call add(counter%f_grdara_noriv_virt)
-
-    case( key_f_grdara_ocean )
-      call add(counter%f_grdara_ocean)
-
-    case( key_f_grdwgt_river )
-      call add(counter%f_grdwgt_river)
-
-    case( key_f_grdwgt_noriv )
-      call add(counter%f_grdwgt_noriv)
-
-    case( key_f_grdwgt_noriv_real )
-      call add(counter%f_grdwgt_noriv_real)
-
-    case( key_f_grdwgt_noriv_virt )
-      call add(counter%f_grdwgt_noriv_virt)
-
-    case( key_f_grdwgt_ocean )
-      call add(counter%f_grdwgt_ocean)
-
-    case( key_f_rstidx_river )
-      call add(counter%f_rstidx_river)
-
-    case( key_f_rstidx_noriv )
-      call add(counter%f_rstidx_noriv)
-
-    case( key_f_rstidx_noriv_real )
-      call add(counter%f_rstidx_noriv_real)
-
-    case( key_f_rstidx_noriv_virt )
-      call add(counter%f_rstidx_noriv_virt)
-
-    case( key_f_rstidx_ocean )
-      call add(counter%f_rstidx_ocean)
-
-    case( key_f_rstidx_bnd_river )
-      call add(counter%f_rstidx_bnd_river)
-
-    case( key_f_rstidx_bnd_noriv )
-      call add(counter%f_rstidx_bnd_noriv)
-
-    case( key_f_rstidx_bnd_noriv_real )
-      call add(counter%f_rstidx_bnd_noriv_real)
-
-    case( key_f_rstidx_bnd_noriv_virt )
-      call add(counter%f_rstidx_bnd_noriv_virt)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_ara_miss )
-      call add(counter%ara_miss)
-
-    case( key_wgt_miss )
-      call add(counter%wgt_miss)
-
-    case( key_opt_thresh_grdwgt_noriv_virt_excess )
-      call add(counter%opt_thresh_grdwgt_noriv_virt_excess)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(38)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_grdmsk_river'     , 0, 1)
+  call set_keynum('f_grdmsk_noriv'     , 0, 1)
+  call set_keynum('f_grdmsk_noriv_real', 0, 1)
+  call set_keynum('f_grdmsk_noriv_virt', 0, 1)
+  call set_keynum('f_grdmsk_ocean'     , 0, 1)
+  call set_keynum('f_grdidx_river'     , 0, 1)
+  call set_keynum('f_grdidx_noriv'     , 0, 1)
+  call set_keynum('f_grdidx_noriv_real', 0, 1)
+  call set_keynum('f_grdidx_noriv_virt', 0, 1)
+  call set_keynum('f_grdidx_ocean'         , 0, 1)
+  call set_keynum('f_grdidx_bnd_river'     , 0, 1)
+  call set_keynum('f_grdidx_bnd_noriv'     , 0, 1)
+  call set_keynum('f_grdidx_bnd_noriv_real', 0, 1)
+  call set_keynum('f_grdidx_bnd_noriv_virt', 0, 1)
+  call set_keynum('f_grdara_river'     , 0, 1)
+  call set_keynum('f_grdara_noriv'     , 0, 1)
+  call set_keynum('f_grdara_noriv_real', 0, 1)
+  call set_keynum('f_grdara_noriv_virt', 0, 1)
+  call set_keynum('f_grdara_ocean'     , 0, 1)
+  call set_keynum('f_grdwgt_river'     , 0, 1)
+  call set_keynum('f_grdwgt_noriv'     , 0, 1)
+  call set_keynum('f_grdwgt_noriv_real', 0, 1)
+  call set_keynum('f_grdwgt_noriv_virt', 0, 1)
+  call set_keynum('f_grdwgt_ocean'     , 0, 1)
+  call set_keynum('f_rstidx_river'     , 0, 1)
+  call set_keynum('f_rstidx_noriv'     , 0, 1)
+  call set_keynum('f_rstidx_noriv_real', 0, 1)
+  call set_keynum('f_rstidx_noriv_virt', 0, 1)
+  call set_keynum('f_rstidx_ocean'     , 0, 1)
+  call set_keynum('f_rstidx_bnd_river'     , 0, 1)
+  call set_keynum('f_rstidx_bnd_noriv'     , 0, 1)
+  call set_keynum('f_rstidx_bnd_noriv_real', 0, 1)
+  call set_keynum('f_rstidx_bnd_noriv_virt', 0, 1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('ara_miss', 0, 1)
+  call set_keynum('wgt_miss', 0, 1)
+  call set_keynum('opt_thresh_grdwgt_noriv_virt_excess', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting default values')
 
-  lsm%fout_grdmsk_river      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdmsk_river')
-  lsm%fout_grdmsk_noriv      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdmsk_noriv')
-  lsm%fout_grdmsk_noriv_real = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdmsk_noriv_real')
-  lsm%fout_grdmsk_noriv_virt = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdmsk_noriv_virt')
-  lsm%fout_grdmsk_ocean      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdmsk_ocean')
+  call set_file_default(rec=1, action=ACTION_WRITE)
 
-  lsm%fout_grdidx_river      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdidx_river')
-  lsm%fout_grdidx_noriv      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdidx_noriv')
-  lsm%fout_grdidx_noriv_real = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdidx_noriv_real')
-  lsm%fout_grdidx_noriv_virt = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdidx_noriv_virt')
-  lsm%fout_grdidx_ocean      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdidx_ocean')
+  lsm%fout_grdmsk_river      = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_river')
+  lsm%fout_grdmsk_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_noriv')
+  lsm%fout_grdmsk_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_noriv_real')
+  lsm%fout_grdmsk_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_noriv_virt')
+  lsm%fout_grdmsk_ocean      = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_ocean')
 
-  lsm%fout_grdidx_bnd_river      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_grdidx_river')
-  lsm%fout_grdidx_bnd_noriv      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_grdidx_noriv')
-  lsm%fout_grdidx_bnd_noriv_real = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_grdidx_noriv_real')
-  lsm%fout_grdidx_bnd_noriv_virt = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_grdidx_noriv_virt')
+  lsm%fout_grdidx_river      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_river')
+  lsm%fout_grdidx_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv')
+  lsm%fout_grdidx_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_real')
+  lsm%fout_grdidx_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_virt')
+  lsm%fout_grdidx_ocean      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_ocean')
 
-  lsm%fout_grdara_river      = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdara_river')
-  lsm%fout_grdara_noriv      = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdara_noriv')
-  lsm%fout_grdara_noriv_real = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdara_noriv_real')
-  lsm%fout_grdara_noriv_virt = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdara_noriv_virt')
-  lsm%fout_grdara_ocean      = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdara_ocean')
+  lsm%fout_grdidx_bnd_river      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_river')
+  lsm%fout_grdidx_bnd_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv')
+  lsm%fout_grdidx_bnd_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_real')
+  lsm%fout_grdidx_bnd_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_virt')
 
-  lsm%fout_grdwgt_river      = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdwgt_river')
-  lsm%fout_grdwgt_noriv      = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdwgt_noriv')
-  lsm%fout_grdwgt_noriv_real = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdwgt_noriv_real')
-  lsm%fout_grdwgt_noriv_virt = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdwgt_noriv_virt')
-  lsm%fout_grdwgt_ocean      = file('', dtype_dble, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_grdwgt_ocean')
+  lsm%fout_grdara_river      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_river')
+  lsm%fout_grdara_noriv      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_noriv')
+  lsm%fout_grdara_noriv_real = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_noriv_real')
+  lsm%fout_grdara_noriv_virt = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_noriv_virt')
+  lsm%fout_grdara_ocean      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_ocean')
 
-  lsm%fout_rstidx_river      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_rstidx_river')
-  lsm%fout_rstidx_noriv      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_rstidx_noriv')
-  lsm%fout_rstidx_noriv_real = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_rstidx_noriv_real')
-  lsm%fout_rstidx_noriv_virt = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_rstidx_noriv_virt')
-  lsm%fout_rstidx_ocean      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                    id='lsm%fout_rstidx_ocean')
+  lsm%fout_grdwgt_river      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_river')
+  lsm%fout_grdwgt_noriv      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_noriv')
+  lsm%fout_grdwgt_noriv_real = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_noriv_real')
+  lsm%fout_grdwgt_noriv_virt = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_noriv_virt')
+  lsm%fout_grdwgt_ocean      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_ocean')
 
-  lsm%fout_rstidx_bnd_river      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_rstidx_bnd_river')
-  lsm%fout_rstidx_bnd_noriv      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_rstidx_bnd_noriv')
-  lsm%fout_rstidx_bnd_noriv_real = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_rstidx_bnd_noriv_real')
-  lsm%fout_rstidx_bnd_noriv_virt = file('', dtype_int4, 1, endian_default, action=action_write, &
-                                        id='lsm%fout_rstidx_bnd_noriv_virt')
+  lsm%fout_rstidx_river      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_river')
+  lsm%fout_rstidx_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_noriv')
+  lsm%fout_rstidx_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_noriv_real')
+  lsm%fout_rstidx_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_noriv_virt')
+  lsm%fout_rstidx_ocean      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_ocean')
 
-  lsm%idx_miss = idx_miss_default
-  lsm%ara_miss = ara_miss_default
-  lsm%wgt_miss = wgt_miss_default
+  lsm%fout_rstidx_bnd_river      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_river')
+  lsm%fout_rstidx_bnd_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_noriv')
+  lsm%fout_rstidx_bnd_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_noriv_real')
+  lsm%fout_rstidx_bnd_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_noriv_virt')
 
-  lsm%opt_thresh_grdwgt_noriv_virt_excess = lsm_opt_thresh_grdwgt_noriv_virt_excess_default
+  lsm%idx_miss = IDX_MISS_DEFAULT
+  lsm%ara_miss = ARA_MISS_DEFAULT
+  lsm%wgt_miss = WGT_MISS_DEFAULT
+
+  lsm%opt_thresh_grdwgt_noriv_virt_excess = LSM_OPT_THRESH_GRDWGT_NORIV_VIRT_EXCESS_DEFAULT
+
+  call reset_file_default()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
-
-    case( key_dir )
-      call read_value(v_path=dir)
     !-----------------------------------------------------------
-    ! grdmsk
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
-    case( key_f_grdmsk_river )
-      f => lsm%fout_grdmsk_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdmsk_noriv )
-      f => lsm%fout_grdmsk_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdmsk_noriv_real )
-      f => lsm%fout_grdmsk_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdmsk_noriv_virt )
-      f => lsm%fout_grdmsk_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdmsk_ocean )
-      f => lsm%fout_grdmsk_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Grid mask
     !-----------------------------------------------------------
-    ! grdidx
+    case( 'f_grdmsk_river' )
+      call read_value(lsm%fout_grdmsk_river, dir)
+    case( 'f_grdmsk_noriv' )
+      call read_value(lsm%fout_grdmsk_noriv, dir)
+    case( 'f_grdmsk_noriv_real' )
+      call read_value(lsm%fout_grdmsk_noriv_real, dir)
+    case( 'f_grdmsk_noriv_virt' )
+      call read_value(lsm%fout_grdmsk_noriv_virt, dir)
+    case( 'f_grdmsk_ocean' )
+      call read_value(lsm%fout_grdmsk_ocean, dir)
     !-----------------------------------------------------------
-    case( key_f_grdidx_river )
-      f => lsm%fout_grdidx_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_noriv )
-      f => lsm%fout_grdidx_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_noriv_real )
-      f => lsm%fout_grdidx_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_noriv_virt )
-      f => lsm%fout_grdidx_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_ocean )
-      f => lsm%fout_grdidx_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Grid index
     !-----------------------------------------------------------
-    ! grdidx_bnd
+    case( 'f_grdidx_river' )
+      call read_value(lsm%fout_grdidx_river, dir)
+    case( 'f_grdidx_noriv' )
+      call read_value(lsm%fout_grdidx_noriv, dir)
+    case( 'f_grdidx_noriv_real' )
+      call read_value(lsm%fout_grdidx_noriv_real, dir)
+    case( 'f_grdidx_noriv_virt' )
+      call read_value(lsm%fout_grdidx_noriv_virt, dir)
+    case( 'f_grdidx_ocean' )
+      call read_value(lsm%fout_grdidx_ocean, dir)
     !-----------------------------------------------------------
-    case( key_f_grdidx_bnd_river )
-      f => lsm%fout_grdidx_bnd_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_bnd_noriv )
-      f => lsm%fout_grdidx_bnd_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_bnd_noriv_real )
-      f => lsm%fout_grdidx_bnd_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdidx_bnd_noriv_virt )
-      f => lsm%fout_grdidx_bnd_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Grid index (bnd)
     !-----------------------------------------------------------
-    ! grdara
+    case( 'f_grdidx_bnd_river' )
+      call read_value(lsm%fout_grdidx_bnd_river, dir)
+    case( 'f_grdidx_bnd_noriv' )
+      call read_value(lsm%fout_grdidx_bnd_noriv, dir)
+    case( 'f_grdidx_bnd_noriv_real' )
+      call read_value(lsm%fout_grdidx_bnd_noriv_real, dir)
+    case( 'f_grdidx_bnd_noriv_virt' )
+      call read_value(lsm%fout_grdidx_bnd_noriv_virt, dir)
     !-----------------------------------------------------------
-    case( key_f_grdara_river )
-      f => lsm%fout_grdara_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdara_noriv )
-      f => lsm%fout_grdara_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdara_noriv_real )
-      f => lsm%fout_grdara_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdara_noriv_virt )
-      f => lsm%fout_grdara_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdara_ocean )
-      f => lsm%fout_grdara_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Grid area
     !-----------------------------------------------------------
-    ! grdwgt
+    case( 'f_grdara_river' )
+      call read_value(lsm%fout_grdara_river, dir)
+    case( 'f_grdara_noriv' )
+      call read_value(lsm%fout_grdara_noriv, dir)
+    case( 'f_grdara_noriv_real' )
+      call read_value(lsm%fout_grdara_noriv_real, dir)
+    case( 'f_grdara_noriv_virt' )
+      call read_value(lsm%fout_grdara_noriv_virt, dir)
+    case( 'f_grdara_ocean' )
+      call read_value(lsm%fout_grdara_ocean, dir)
     !-----------------------------------------------------------
-    case( key_f_grdwgt_river )
-      f => lsm%fout_grdwgt_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdwgt_noriv )
-      f => lsm%fout_grdwgt_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdwgt_noriv_real )
-      f => lsm%fout_grdwgt_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdwgt_noriv_virt )
-      f => lsm%fout_grdwgt_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_grdwgt_ocean )
-      f => lsm%fout_grdwgt_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Grid weight
     !-----------------------------------------------------------
-    ! rstidx
+    case( 'f_grdwgt_river' )
+      call read_value(lsm%fout_grdwgt_river, dir)
+    case( 'f_grdwgt_noriv' )
+      call read_value(lsm%fout_grdwgt_noriv, dir)
+    case( 'f_grdwgt_noriv_real' )
+      call read_value(lsm%fout_grdwgt_noriv_real, dir)
+    case( 'f_grdwgt_noriv_virt' )
+      call read_value(lsm%fout_grdwgt_noriv_virt, dir)
+    case( 'f_grdwgt_ocean' )
+      call read_value(lsm%fout_grdwgt_ocean, dir)
     !-----------------------------------------------------------
-    case( key_f_rstidx_river )
-      f => lsm%fout_rstidx_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_noriv )
-      f => lsm%fout_rstidx_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_noriv_real )
-      f => lsm%fout_rstidx_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_noriv_virt )
-      f => lsm%fout_rstidx_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_ocean )
-      f => lsm%fout_rstidx_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Raster index
     !-----------------------------------------------------------
-    ! rstidx_bnd
+    case( 'f_rstidx_river' )
+      call read_value(lsm%fout_rstidx_river, dir)
+    case( 'f_rstidx_noriv' )
+      call read_value(lsm%fout_rstidx_noriv, dir)
+    case( 'f_rstidx_noriv_real' )
+      call read_value(lsm%fout_rstidx_noriv_real, dir)
+    case( 'f_rstidx_noriv_virt' )
+      call read_value(lsm%fout_rstidx_noriv_virt, dir)
+    case( 'f_rstidx_ocean' )
+      call read_value(lsm%fout_rstidx_ocean, dir)
     !-----------------------------------------------------------
-    case( key_f_rstidx_bnd_river )
-      f => lsm%fout_rstidx_bnd_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_bnd_noriv )
-      f => lsm%fout_rstidx_bnd_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_bnd_noriv_real )
-      f => lsm%fout_rstidx_bnd_noriv_real
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_f_rstidx_bnd_noriv_virt )
-      f => lsm%fout_rstidx_bnd_noriv_virt
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    ! Raster index (bnd)
     !-----------------------------------------------------------
-    ! miss
+    case( 'f_rstidx_bnd_river' )
+      call read_value(lsm%fout_rstidx_bnd_river, dir)
+    case( 'f_rstidx_bnd_noriv' )
+      call read_value(lsm%fout_rstidx_bnd_noriv, dir)
+    case( 'f_rstidx_bnd_noriv_real' )
+      call read_value(lsm%fout_rstidx_bnd_noriv_real, dir)
+    case( 'f_rstidx_bnd_noriv_virt' )
+      call read_value(lsm%fout_rstidx_bnd_noriv_virt, dir)
     !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=lsm%idx_miss)
-
-    case( key_ara_miss )
-      call read_value(v_dble=lsm%ara_miss)
-
-    case( key_wgt_miss )
-      call read_value(v_dble=lsm%wgt_miss)
+    ! Missing values
+    case( 'idx_miss' )
+      call read_value(lsm%idx_miss)
+    case( 'ara_miss' )
+      call read_value(lsm%ara_miss)
+    case( 'wgt_miss' )
+      call read_value(lsm%wgt_miss)
     !-----------------------------------------------------------
-    ! opt
-    !-----------------------------------------------------------
-    case( key_opt_thresh_grdwgt_noriv_virt_excess )
-      call read_value(v_dble=lsm%opt_thresh_grdwgt_noriv_virt_excess)
+    ! Option
+    case( 'opt_thresh_grdwgt_noriv_virt_excess' )
+      call read_value(lsm%opt_thresh_grdwgt_noriv_virt_excess)
     !-----------------------------------------------------------
     ! ERROR
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
-  !-------------------------------------------------------------
+  call check_keynum()
 
   call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free the external module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%dir = 0
-
-  counter%f_grdmsk_river      = 0
-  counter%f_grdmsk_noriv      = 0
-  counter%f_grdmsk_noriv_real = 0
-  counter%f_grdmsk_noriv_virt = 0
-  counter%f_grdmsk_ocean      = 0
-
-  counter%f_grdidx_river      = 0
-  counter%f_grdidx_noriv      = 0
-  counter%f_grdidx_noriv_real = 0
-  counter%f_grdidx_noriv_virt = 0
-  counter%f_grdidx_ocean      = 0
-
-  counter%f_grdidx_bnd_river      = 0
-  counter%f_grdidx_bnd_noriv      = 0
-  counter%f_grdidx_bnd_noriv_real = 0
-  counter%f_grdidx_bnd_noriv_virt = 0
-
-  counter%f_grdara_river      = 0
-  counter%f_grdara_noriv      = 0
-  counter%f_grdara_noriv_real = 0
-  counter%f_grdara_noriv_virt = 0
-  counter%f_grdara_ocean      = 0
-
-  counter%f_grdwgt_river      = 0
-  counter%f_grdwgt_noriv      = 0
-  counter%f_grdwgt_noriv_real = 0
-  counter%f_grdwgt_noriv_virt = 0
-  counter%f_grdwgt_ocean      = 0
-
-  counter%f_rstidx_river      = 0
-  counter%f_rstidx_noriv      = 0
-  counter%f_rstidx_noriv_real = 0
-  counter%f_rstidx_noriv_virt = 0
-  counter%f_rstidx_ocean      = 0
-
-  counter%f_rstidx_bnd_river      = 0
-  counter%f_rstidx_bnd_noriv      = 0
-  counter%f_rstidx_bnd_noriv_real = 0
-  counter%f_rstidx_bnd_noriv_virt = 0
-
-  counter%idx_miss = 0
-  counter%ara_miss = 0
-  counter%wgt_miss = 0
-
-  counter%opt_thresh_grdwgt_noriv_virt_excess = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
-  !-------------------------------------------------------------
-  call check_num_of_key(counter%f_grdmsk_river     , key_f_grdmsk_river     , 0, 1)
-  call check_num_of_key(counter%f_grdmsk_noriv     , key_f_grdmsk_noriv     , 0, 1)
-  call check_num_of_key(counter%f_grdmsk_noriv_real, key_f_grdmsk_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_grdmsk_noriv_virt, key_f_grdmsk_noriv_virt, 0, 1)
-  call check_num_of_key(counter%f_grdmsk_ocean     , key_f_grdmsk_ocean     , 0, 1)
-
-  call check_num_of_key(counter%f_grdidx_river     , key_f_grdidx_river     , 0, 1)
-  call check_num_of_key(counter%f_grdidx_noriv     , key_f_grdidx_noriv     , 0, 1)
-  call check_num_of_key(counter%f_grdidx_noriv_real, key_f_grdidx_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_grdidx_noriv_virt, key_f_grdidx_noriv_virt, 0, 1)
-  call check_num_of_key(counter%f_grdidx_ocean     , key_f_grdidx_ocean     , 0, 1)
-
-  call check_num_of_key(counter%f_grdidx_bnd_river     , key_f_grdidx_bnd_river     , 0, 1)
-  call check_num_of_key(counter%f_grdidx_bnd_noriv     , key_f_grdidx_bnd_noriv     , 0, 1)
-  call check_num_of_key(counter%f_grdidx_bnd_noriv_real, key_f_grdidx_bnd_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_grdidx_bnd_noriv_virt, key_f_grdidx_bnd_noriv_virt, 0, 1)
-
-  call check_num_of_key(counter%f_grdara_river     , key_f_grdara_river     , 0, 1)
-  call check_num_of_key(counter%f_grdara_noriv     , key_f_grdara_noriv     , 0, 1)
-  call check_num_of_key(counter%f_grdara_noriv_real, key_f_grdara_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_grdara_noriv_virt, key_f_grdara_noriv_virt, 0, 1)
-  call check_num_of_key(counter%f_grdara_ocean     , key_f_grdara_ocean     , 0, 1)
-
-  call check_num_of_key(counter%f_grdwgt_river     , key_f_grdwgt_river     , 0, 1)
-  call check_num_of_key(counter%f_grdwgt_noriv     , key_f_grdwgt_noriv     , 0, 1)
-  call check_num_of_key(counter%f_grdwgt_noriv_real, key_f_grdwgt_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_grdwgt_noriv_virt, key_f_grdwgt_noriv_virt, 0, 1)
-  call check_num_of_key(counter%f_grdwgt_ocean     , key_f_grdwgt_ocean     , 0, 1)
-
-  call check_num_of_key(counter%f_rstidx_river     , key_f_rstidx_river     , 0, 1)
-  call check_num_of_key(counter%f_rstidx_noriv     , key_f_rstidx_noriv     , 0, 1)
-  call check_num_of_key(counter%f_rstidx_noriv_real, key_f_rstidx_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_rstidx_noriv_virt, key_f_rstidx_noriv_virt, 0, 1)
-  call check_num_of_key(counter%f_rstidx_ocean     , key_f_rstidx_ocean     , 0, 1)
-
-  call check_num_of_key(counter%f_rstidx_bnd_river     , key_f_rstidx_bnd_river     , 0, 1)
-  call check_num_of_key(counter%f_rstidx_bnd_noriv     , key_f_rstidx_bnd_noriv     , 0, 1)
-  call check_num_of_key(counter%f_rstidx_bnd_noriv_real, key_f_rstidx_bnd_noriv_real, 0, 1)
-  call check_num_of_key(counter%f_rstidx_bnd_noriv_virt, key_f_rstidx_bnd_noriv_virt, 0, 1)
-
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
-  call check_num_of_key(counter%ara_miss, key_ara_miss, 0, 1)
-  call check_num_of_key(counter%wgt_miss, key_wgt_miss, 0, 1)
-
-  call check_num_of_key(counter%opt_thresh_grdwgt_noriv_virt_excess, &
-                            key_opt_thresh_grdwgt_noriv_virt_excess, 0, 1)
-  !-------------------------------------------------------------
-  call echo(code%ext)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_output_lsm
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_opt_set, only: &
+        KEY_OLD_FILES           , &
+        KEY_DIR_INTERMEDIATES   , &
+        KEY_REMOVE_INTERMEDIATES, &
+        KEY_MEMORY_ULIM
   implicit none
   type(opt_), intent(inout) :: opt
 
-  type counter_
-    integer :: old_files
-    integer :: dir_intermediates
-    integer :: remove_intermediates
-    integer :: memory_ulim
-  end type
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-
   call echo(code%bgn, 'read_settings_opt')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
+  call alloc_keynum(4)
+  call set_keynum(KEY_OLD_FILES           , 0, 1)
+  call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
+  call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
+  call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Read the settings
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of the block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_old_files )
-      call add(counter%old_files)
+    case( KEY_OLD_FILES )
+      call read_value(opt%sys%old_files, is_keyword=.true.)
 
-    case( key_dir_intermediates )
-      call add(counter%dir_intermediates)
+    case( KEY_DIR_INTERMEDIATES )
+      call read_value(opt%sys%dir_im, is_path=.true.)
 
-    case( key_remove_intermediates )
-      call add(counter%remove_intermediates)
+    case( KEY_REMOVE_INTERMEDIATES )
+      call read_value(opt%sys%remove_im)
 
-    case( key_memory_ulim )
-      call add(counter%memory_ulim)
+    case( KEY_MEMORY_ULIM )
+      call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
     ! ERROR
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Check the number of inputs
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Check the number of inputs')
-
-  call check_number_of_inputs()
+  call check_keynum()
+  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Init. variables')
+  call echo(code%ent, 'Checking the values')
 
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Read inputs
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Read inputs')
-
-  call back_to_block_head()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_old_files )
-      call read_value(v_char=opt%sys%old_files, is_keyword=.true.)
-
-    case( key_dir_intermediates )
-      call read_value(v_char=opt%sys%dir_im, is_keyword=.false.)
-
-    case( key_remove_intermediates )
-      call read_value(v_log=opt%sys%remove_im)
-
-    case( key_memory_ulim )
-      call read_value(v_dble=opt%sys%memory_ulim)
-    !-----------------------------------------------------------
-    ! ERROR
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  ! Check values
-  !-------------------------------------------------------------
   selectcase( opt%sys%old_files )
-  case( opt_old_files_stop, &
-        opt_old_files_remove, &
-        opt_old_files_overwrite )
+  case( OPT_OLD_FILES_STOP, &
+        OPT_OLD_FILES_REMOVE, &
+        OPT_OLD_FILES_OVERWRITE )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "'//str(key_old_files)//'".')
+    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
+            '\nCheck the value of "old_files".')
   endselect
 
   call echo(code%ext)
   !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
+  !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%old_files            = 0
-  counter%dir_intermediates    = 0
-  counter%remove_intermediates = 0
-  counter%memory_ulim          = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%old_files           , key_old_files           , 0, 1)
-  call check_num_of_key(counter%dir_intermediates   , key_dir_intermediates   , 0, 1)
-  call check_num_of_key(counter%remove_intermediates, key_remove_intermediates, 0, 1)
-  call check_num_of_key(counter%memory_ulim         , key_memory_ulim         , 0, 1)
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_opt
 !===============================================================
 !
@@ -2522,6 +1648,8 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine echo_settings_input_rt(rt)
+  use common_set2, only: &
+        bar
   implicit none
   type(rt_), intent(in), target :: rt
 
@@ -2547,6 +1675,8 @@ end subroutine echo_settings_input_rt
 !
 !===============================================================
 subroutine echo_settings_input_agcm(agcm)
+  use common_set2, only: &
+        bar
   implicit none
   type(agcm_), intent(in) :: agcm
 
@@ -2581,6 +1711,8 @@ end subroutine echo_settings_input_agcm
 !
 !===============================================================
 subroutine echo_settings_input_rm(rm)
+  use common_set2, only: &
+        bar
   implicit none
   type(rm_), intent(in) :: rm
 
@@ -2618,6 +1750,10 @@ end subroutine echo_settings_input_rm
 !
 !===============================================================
 subroutine echo_settings_output_rt(rt)
+  use common_set2, only: &
+        bar
+  use common_rt_set, only: &
+        echo_settings_rt_opt_coef
   implicit none
   type(rt_), intent(in), target :: rt
 
@@ -2646,6 +1782,8 @@ end subroutine echo_settings_output_rt
 !
 !===============================================================
 subroutine echo_settings_output_agcm(agcm)
+  use common_set2, only: &
+        bar
   implicit none
   type(agcm_), intent(in) :: agcm
 
@@ -2668,6 +1806,8 @@ end subroutine echo_settings_output_agcm
 !
 !===============================================================
 subroutine echo_settings_output_lsm(lsm)
+  use common_set2, only: &
+        bar
   implicit none
   type(lsm_), intent(in) :: lsm
 
@@ -2804,40 +1944,10 @@ end subroutine echo_settings_output_lsm
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt(rt, id, action)
-  implicit none
-  type(rt_)   , intent(out), target :: rt
-  character(*), intent(in) :: id
-  character(*), intent(in) :: action
-
-  type(rt_main_), pointer :: rtm
-
-  rt%id = id
-
-  rtm => rt%main
-  rtm%id = trim(rt%id)//'%main'
-
-  rtm%grid_sort = grid_target
-  rtm%grid_coef = grid_target
-
-  rtm%ijsize = 0_8
-  rtm%nij = 0_8
-
-  rtm%f%sidx = file('', dtype_int4, 1, endian_default, action=action, &
-                    id=trim(rt%id)//'%main%f%sidx')
-  rtm%f%tidx = file('', dtype_int4, 1, endian_default, action=action, &
-                    id=trim(rt%id)//'%main%f%tidx')
-  rtm%f%area = file('', dtype_dble, 1, endian_default, action=action, &
-                    id=trim(rt%id)//'%main%f%area')
-  rtm%f%coef = file('', dtype_dble, 1, endian_default, action=action, &
-                    id=trim(rt%id)//'%main%f%coef')
-
-  call init_rt_opt_coef(rtm%opt_coef)
-end subroutine set_default_values_rt
-!===============================================================
-!
-!===============================================================
 subroutine check_paths(rt_in, rt_out, agcm, rm, lsm, opt)
+  use common_file, only: &
+        set_opt_old_files, &
+        handle_old_file
   implicit none
   type(rt_in_) , intent(in), target :: rt_in
   type(rt_out_), intent(in), target :: rt_out

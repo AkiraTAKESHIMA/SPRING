@@ -1,8 +1,9 @@
 module def_type
   use lib_const
   use lib_io
-  use common_type, only: &
+  use common_type_opt, only: &
         opt_sys_, &
+        opt_log_, &
         opt_earth_
   implicit none
   private
@@ -238,6 +239,7 @@ module def_type
 
   type opt_
     type(opt_sys_)   :: sys
+    type(opt_log_)   :: log
     type(opt_earth_) :: earth
     logical :: save_memory
   end type

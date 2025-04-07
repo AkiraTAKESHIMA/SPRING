@@ -9,6 +9,7 @@ mod_set.o\
 mod_check_input.o\
 mod_define_mat.o\
 mod_main.o\
+mod_finalize.o\
 main.o
 
 TARGET = main

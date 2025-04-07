@@ -5,10 +5,8 @@ module mod_set
   use lib_io
   use lib_math
   use common_const
-  use common_type
-  use common_set
-  use common_file
-  use common_gs
+  use common_type_opt
+  use common_type_gs
   use def_type
   implicit none
   private
@@ -16,13 +14,34 @@ module mod_set
   ! Public procedures
   !-------------------------------------------------------------
   public :: read_settings
-  public :: finalize
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine read_settings(src, tgt, dout, opt)
+  use common_set2, only: &
+        open_setting_file      , &
+        close_setting_file     , &
+        line_number            , &
+        read_path_report       , &
+        get_path_report        , &
+        find_block             , &
+        check_num_of_key       , &
+        bar                    , &
+        raise_error_invalid_key, &
+        msg_invalid_input
+  use common_file, only: &
+        open_report_file
+  use common_opt_set, only: &
+        set_default_values_opt_sys, &
+        set_default_values_opt_log, &
+        set_default_values_opt_earth
+  use common_gs_base, only: &
+        init_gs               , &
+        set_miss_file_grid_in , &
+        set_miss_file_grid_out, &
+        set_save_file_grid_out
   implicit none
   type(gs_)    , intent(out), target :: src
   type(gs_)    , intent(out), target :: tgt
@@ -38,7 +57,6 @@ subroutine read_settings(src, tgt, dout, opt)
   type(counter_) :: counter
 
   character(clen_var) :: block_name
-  character(clen_path) :: path_report
   !-------------------------------------------------------------
   character(clen_var), parameter :: block_name_gs_latlon  = 'grid_system_latlon'
   character(clen_var), parameter :: block_name_gs_raster  = 'grid_system_raster'
@@ -51,32 +69,37 @@ subroutine read_settings(src, tgt, dout, opt)
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Init.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initilizing variables')
+  call echo(code%ent, 'Initilizing')
 
   call init_gs(src)
   call init_gs(tgt)
-  src%id = 'src'
-  src%nam = src%id
-  tgt%id = 'tgt'
-  tgt%nam = tgt%id
 
-  call init_opt_sys(opt%sys)
-  call init_opt_earth(opt%earth)
+  src%id = 'src'
+  src%nam = GRID_SOURCE
+  src%is_source = .true.
+
+  tgt%id = 'tgt'
+  tgt%nam = GRID_TARGET
+  tgt%is_source = .false.
+
+  call set_default_values_opt_sys(opt%sys)
+  call set_default_values_opt_log(opt%log)
+  call set_default_values_opt_earth(opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   call open_setting_file()
 
   ! Open report file
   !-------------------------------------------------------------
-  call get_path_report(path_report)
-  call open_report_file(path_report)
+  call read_path_report()
+  call open_report_file(get_path_report())
 
   ! Read settings
   !-------------------------------------------------------------
@@ -130,15 +153,15 @@ subroutine read_settings(src, tgt, dout, opt)
     endselect
   enddo
 
-  call check_number_of_blocks()
-
   call close_setting_file()
+
+  call check_number_of_blocks()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Detect confliction
+  ! Detect conflictions
   !-------------------------------------------------------------
-  call echo(code%ent, 'Detecting confliction')
+  call echo(code%ent, 'Detecting conflictions')
 
   if( opt%earth%shp == earth_shape_ellips )then
     if( src%cmn%gs_type == gs_type_polygon )then
@@ -156,13 +179,16 @@ subroutine read_settings(src, tgt, dout, opt)
   call echo(code%ent, 'Setting some variables')
 
   if( opt%sys%dir_im == '' )then
-    opt%sys%dir_im = dirname(path_report)
-    call edbg('Directory of intermediates was not specified.'//&
+    opt%sys%dir_im = dirname(get_path_report())
+    call edbg('Directory of intermediates was not given.'//&
             '\nAutomatically set to "'//str(opt%sys%dir_im)//'".')
   endif
 
   sc => src%cmn
   tc => tgt%cmn
+print*, 'associated', associated(src%cmn)
+print*, 'associated', associated(sc)
+print*, src%cmn%idx_miss
 
   ! Missing values of grid data
   !-------------------------------------------------------------
@@ -176,6 +202,8 @@ subroutine read_settings(src, tgt, dout, opt)
          sc%idx_miss, sc%ara_miss, sc%wgt_miss, &
          sc%xyz_miss, sc%lonlat_miss, sc%val_miss)
 
+  call set_save_file_grid_out(sc%f_grid_out)
+
   call set_miss_file_grid_in(&
          tc%f_grid_in, &
          tc%idx_miss, tc%ara_miss, tc%wgt_miss, &
@@ -185,6 +213,8 @@ subroutine read_settings(src, tgt, dout, opt)
          tc%f_grid_out, &
          tc%idx_miss, tc%ara_miss, tc%wgt_miss, &
          tc%xyz_miss, tc%lonlat_miss, tc%val_miss)
+
+  call set_save_file_grid_out(tc%f_grid_out)
 
   ! Path of intermediates
   !-------------------------------------------------------------
@@ -216,7 +246,7 @@ subroutine read_settings(src, tgt, dout, opt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_paths(src, tgt, dout, opt)
+  call check_paths(src, tgt, dout, opt%sys)
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
@@ -240,7 +270,7 @@ subroutine update_counter(n)
   n = n + 1
 
   if( counter%src > 1 )then
-    call eerr(str(msg_syntax_error())//&
+    call eerr(str(msg_invalid_input())//&
             '\n@ line '//str(line_number())//&
             '\nBlocks of grid system (gs) appeared more than once:'//&
             '\n  "'//str(block_name_gs_latlon)//&
@@ -295,14 +325,6 @@ end subroutine read_settings
 !===============================================================
 !
 !===============================================================
-subroutine finalize()
-  implicit none
-
-  call close_report_file()
-end subroutine finalize
-!===============================================================
-!
-!===============================================================
 !
 !
 !
@@ -312,1403 +334,1019 @@ end subroutine finalize
 !
 !===============================================================
 subroutine read_settings_gs_latlon(u)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_gs_components         , &
+        set_gs_common_components    , &
+        set_default_values_gs_latlon, &
+        alloc_file_grid_in_val      , &
+        set_bounds_file_latlon_in   , &
+        set_bounds_file_grid_in     , &
+        set_bounds_file_grid_out
+  use common_gs_define, only: &
+        check_bounds_lon, &
+        check_bounds_lat
   implicit none
   type(gs_), intent(out), target :: u
 
-  type counter_
-    integer :: name
-
-    integer :: nx
-    integer :: ny
-
-    integer :: west
-    integer :: east
-    integer :: south
-    integer :: north
-
-    integer :: is_south_to_north
-
-    integer :: dir
-
-    integer :: f_lon_bound
-    integer :: f_lat_bound
-    integer :: coord_unit
-
-    integer :: fin_grdidx
-    integer :: fin_grdara
-    integer :: fin_grdwgt
-    integer :: fin_grdval
-    integer :: in_grid_sz
-    integer :: in_grid_lb
-    integer :: in_grid_ub
-
-    integer :: in_unit_ara
-
-    integer :: idx_miss
-    integer :: ara_miss
-    integer :: wgt_miss
-    integer :: val_miss
-  end type
-
-  character(clen_var), parameter :: key_name = 'name'
-
-  character(clen_var), parameter :: key_nx = 'nx'
-  character(clen_var), parameter :: key_ny = 'ny'
-
-  character(clen_var), parameter :: key_west  = 'west'
-  character(clen_var), parameter :: key_east  = 'east'
-  character(clen_var), parameter :: key_south = 'south'
-  character(clen_var), parameter :: key_north = 'north'
-
-  character(clen_var), parameter :: key_is_south_to_north = 'is_south_to_north'
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  character(clen_var), parameter :: key_f_lon_bound = 'f_lon_bound'
-  character(clen_var), parameter :: key_f_lat_bound = 'f_lat_bound'
-  character(clen_var), parameter :: key_coord_unit = 'coord_unit'
-
-  character(clen_var), parameter :: key_fin_grdidx = 'fin_grdidx'
-  character(clen_var), parameter :: key_fin_grdara = 'fin_grdara'
-  character(clen_var), parameter :: key_fin_grdwgt = 'fin_grdwgt'
-  character(clen_var), parameter :: key_fin_grdval = 'fin_grdval'
-  character(clen_var), parameter :: key_in_grid_sz = 'in_grid_sz'
-  character(clen_var), parameter :: key_in_grid_lb = 'in_grid_lb'
-  character(clen_var), parameter :: key_in_grid_ub = 'in_grid_ub'
-
-  character(clen_var), parameter :: key_in_unit_ara = 'in_unit_ara'
-
-  character(clen_var), parameter :: key_idx_miss = 'idx_miss'
-  character(clen_var), parameter :: key_ara_miss = 'ara_miss'
-  character(clen_var), parameter :: key_wgt_miss = 'wgt_miss'
-  character(clen_var), parameter :: key_val_miss = 'val_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(gs_common_)     , pointer :: uc
   type(gs_latlon_)     , pointer :: ul
   type(file_latlon_in_), pointer :: fl
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
-  type(file_), pointer :: f
+
+  character(clen_path) :: dir
 
   call echo(code%bgn, 'read_settings_gs_latlon')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the limits. of the number of each keyword
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_name )
-      call add(counter%name)
-
-    case( key_nx )
-      call add(counter%nx)
-
-    case( key_ny )
-      call add(counter%ny)
-
-    case( key_west )
-      call add(counter%west)
-
-    case( key_east )
-      call add(counter%east)
-
-    case( key_south )
-      call add(counter%south)
-
-    case( key_north )
-      call add(counter%north)
-
-    case( key_is_south_to_north )
-      call add(counter%is_south_to_north)
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_lon_bound )
-      call add(counter%f_lon_bound)
-
-    case( key_f_lat_bound )
-      call add(counter%f_lat_bound)
-
-    case( key_coord_unit )
-      call add(counter%coord_unit)
-
-    case( key_fin_grdidx )
-      call add(counter%fin_grdidx)
-
-    case( key_fin_grdara )
-      call add(counter%fin_grdara)
-
-    case( key_fin_grdwgt )
-      call add(counter%fin_grdwgt)
-
-    case( key_fin_grdval )
-      call add(counter%fin_grdval)
-
-    case( key_in_grid_sz )
-      call add(counter%in_grid_sz)
-
-    case( key_in_grid_lb )
-      call add(counter%in_grid_lb)
-
-    case( key_in_grid_ub )
-      call add(counter%in_grid_ub)
-
-    case( key_in_unit_ara )
-      call add(counter%in_unit_ara)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_ara_miss )
-      call add(counter%ara_miss)
-
-    case( key_wgt_miss )
-      call add(counter%wgt_miss)
-
-    case( key_val_miss )
-      call add(counter%val_miss)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(25)
+  call set_keynum('name', 0, 1)
+  call set_keynum('nx', 1, 1)
+  call set_keynum('ny', 1, 1)
+  call set_keynum('west' , 0, 1)
+  call set_keynum('east' , 0, 1)
+  call set_keynum('south', 0, 1)
+  call set_keynum('north', 0, 1)
+  call set_keynum('is_south_to_north', 0, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_lon_bound', 0, 1)
+  call set_keynum('f_lat_bound', 0, 1)
+  call set_keynum('coord_unit', 0, 1)
+  call set_keynum('idx_bgn', 0, 1)
+  call set_keynum('fin_grdidx', 0, 1)
+  call set_keynum('fin_grdara', 0, 1)
+  call set_keynum('fin_grdwgt', 0, 1)
+  call set_keynum('fin_grdval', 0, 1)
+  call set_keynum('in_grid_sz', 0, 1)
+  call set_keynum('in_grid_lb', 0, 1)
+  call set_keynum('in_grid_ub', 0, 1)
+  call set_keynum('in_unit_ara', 0, 1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('ara_miss', 0, 1)
+  call set_keynum('wgt_miss', 0, 1)
+  call set_keynum('val_miss', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, gs_type_latlon)
+  call alloc_gs_components(u, GS_TYPE_LATLON)
+  call set_default_values_gs_latlon(u%latlon)
 
   ul => u%latlon
-
-  call set_default_values_gs_latlon(ul)
-
   fl     => ul%f_latlon_in
   fg_in  => ul%f_grid_in
   fg_out => ul%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Count the number of each key
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Counting the number of each keyword')
 
-  allocate(fg_in%val(counter%fin_grdval))
+  fg_in%nFiles_val = 0
 
-  dir = ''
-
-  call back_to_block_head()
-
-  ! Read settings
-  !-------------------------------------------------------------
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_name )
-      call read_value(v_char=u%nam, is_keyword=.false.)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_nx )
-      call read_value(v_int8=ul%nx)
-
-    case( key_ny )
-      call read_value(v_int8=ul%ny)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_west )
-      call read_value(v_dble=ul%west)
-
-    case( key_east )
-      call read_value(v_dble=ul%east)
-
-    case( key_south )
-      call read_value(v_dble=ul%south)
-
-    case( key_north )
-      call read_value(v_dble=ul%north)
-
-    case( key_is_south_to_north )
-      call read_value(v_log=ul%is_south_to_north)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_f_lon_bound )
-      call read_value(v_file=fl%lon, get_length=.false.)
-      fl%lon%path = joined(dir, fl%lon%path)
-
-    case( key_f_lat_bound )
-      call read_value(v_file=fl%lat, get_length=.false.)
-      fl%lat%path = joined(dir, fl%lat%path)
-
-    case( key_coord_unit )
-      call read_value(v_char=ul%coord_unit, is_keyword=.true.)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_fin_grdidx )
-      call read_value(v_file=fg_in%idx, get_length=.false.)
-      fg_in%idx%path = joined(dir, fg_in%idx%path)
-
-    case( key_fin_grdara )
-      call read_value(v_file=fg_in%ara, get_length=.false.)
-      fg_in%ara%path = joined(dir, fg_in%ara%path)
-
-    case( key_fin_grdwgt )
-      call read_value(v_file=fg_in%wgt, get_length=.false.)
-      fg_in%wgt%path = joined(dir, fg_in%wgt%path)
-
-    case( key_fin_grdval )
+    case( 'fin_grdval' )
       call add(fg_in%nFiles_val)
-      f => fg_in%val(fg_in%nFiles_val)
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_in_grid_sz )
-      call read_value(v_int8=fg_in%sz(1), pos=1)
-      call read_value(v_int8=fg_in%sz(2), pos=2)
-
-    case( key_in_grid_lb )
-      call read_value(v_int8=fg_in%lb(1), pos=1)
-      call read_value(v_int8=fg_in%lb(2), pos=2)
-
-    case( key_in_grid_ub )
-      call read_value(v_int8=fg_in%ub(1), pos=1)
-      call read_value(v_int8=fg_in%ub(2), pos=2)
-
-    case( key_in_unit_ara )
-      call read_value(v_char=fg_in%unit_ara, is_keyword=.true.)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=ul%idx_miss)
-
-    case( key_ara_miss )
-      call read_value(v_dble=ul%ara_miss)
-
-    case( key_wgt_miss )
-      call read_value(v_dble=ul%wgt_miss)
-
-    case( key_val_miss )
-      call read_value(v_dble=ul%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      continue
     endselect
   enddo
-
-  ! Modify values
-  !-------------------------------------------------------------
-  call set_bounds_file_latlon_in(fl, ul%nx, ul%ny)
-
-  call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
-
-  call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
 
   call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  ul%nam = u%nam
-
-  ul%nh = ul%nx
-  ul%nv = ul%ny
-  ul%hi = 1_8
-  ul%hf = ul%nh
-  ul%vi = 1_8
-  ul%vf = ul%nv
+  call alloc_file_grid_in_val(fg_in)
   !-------------------------------------------------------------
-  !
+  ! Read the settings
   !-------------------------------------------------------------
-  uc => u%cmn
+  call echo(code%ent, 'Reading the settings')
 
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam = u%nam
-  uc%gs_type = u%gs_type
-  uc%is_source = u%is_source
-  uc%idx_miss    = ul%idx_miss
-  uc%ara_miss    = ul%ara_miss
-  uc%wgt_miss    = ul%wgt_miss
-  uc%xyz_miss    = ul%xyz_miss
-  uc%lonlat_miss = ul%lonlat_miss
-  uc%val_miss    = ul%val_miss
+  call back_to_block_head()
+  call reset_keynum()
 
-  uc%f_grid_in  => ul%f_grid_in
-  uc%f_grid_out => ul%f_grid_out
-  uc%grid       => ul%grid
+  dir = ''
+  fg_in%nFiles_val = 0
+
+  do
+    call read_input()
+    call update_keynum()
+
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
+    case( '' )
+      exit
+    !-----------------------------------------------------------
+    ! Name
+    case( 'name' )
+      call read_value(u%nam)
+    !-----------------------------------------------------------
+    ! Resolution
+    case( 'nx' )
+      call read_value(ul%nx)
+    case( 'ny' )
+      call read_value(ul%ny)
+    !-----------------------------------------------------------
+    ! Region
+    case( 'west' )
+      call read_value(ul%west)
+    case( 'east' )
+      call read_value(ul%east)
+    case( 'south' )
+      call read_value(ul%south)
+    case( 'north' )
+      call read_value(ul%north)
+    !-----------------------------------------------------------
+    ! Y-axis
+    case( 'is_south_to_north' )
+      call read_value(ul%is_south_to_north)
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    ! LonLat bounds.
+    case( 'f_lon_bound' )
+      call read_value(fl%lon, dir)
+    case( 'f_lat_bound' )
+      call read_value(fl%lat, dir)
+
+    case( 'coord_unit' )
+      call read_value(ul%coord_unit, is_keyword=.true.)
+    !-----------------------------------------------------------
+    ! Grid data
+    case( 'idx_bgn' )
+      call read_value(fg_in%idx_bgn)
+
+    case( 'fin_grdidx' )
+      call read_value(fg_in%idx, dir)
+    case( 'fin_grdara' )
+      call read_value(fg_in%ara, dir)
+    case( 'fin_grdwgt' )
+      call read_value(fg_in%wgt, dir)
+    case( 'fin_grdval' )
+      call add(fg_in%nFiles_val)
+      call read_value(fg_in%val(fg_in%nFiles_val), dir)
+
+    case( 'in_grid_sz' )
+      call read_value(fg_in%sz(1), pos=1)
+      call read_value(fg_in%sz(2), pos=2)
+    case( 'in_grid_lb' )
+      call read_value(fg_in%lb(1), pos=1)
+      call read_value(fg_in%lb(2), pos=2)
+    case( 'in_grid_ub' )
+      call read_value(fg_in%ub(1), pos=1)
+      call read_value(fg_in%ub(2), pos=2)
+
+    case( 'in_unit_ara' )
+      call read_value(fg_in%unit_ara, is_keyword=.true.)
+    !-----------------------------------------------------------
+    ! Missing values
+    case( 'idx_miss' )
+      call read_value(ul%idx_miss)
+    case( 'ara_miss' )
+      call read_value(ul%ara_miss)
+    case( 'wgt_miss' )
+      call read_value(ul%wgt_miss)
+    case( 'val_miss' )
+      call read_value(ul%val_miss)
+    !-----------------------------------------------------------
+    ! ERROR
+    case default
+      call raise_error_invalid_key()
+    endselect
+  enddo
+
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Check the values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
+
+  if( keynum('west' ) == 1 ) call check_bounds_lon(ul%west , ul%east )
+  if( keynum('south') == 1 ) call check_bounds_lat(ul%south, ul%north)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  call set_bounds_file_latlon_in(&
+         fl, ul%nx, ul%ny,                       & ! in
+         ul%nh, ul%hi, ul%hf, ul%nv, ul%vi, ul%vf) ! out
+  call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
+  call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
+
+  call set_gs_common_components(u)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free the external module variables
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  call echo(code%bgn, 'init_counter', '-p')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
   !-------------------------------------------------------------
-  counter%name = 0
-
-  counter%nx = 0
-  counter%ny = 0
-
-  counter%west = 0
-  counter%east = 0
-  counter%south = 0
-  counter%north = 0
-  counter%is_south_to_north = 0
-
-  counter%dir = 0
-
-  counter%f_lon_bound = 0
-  counter%f_lat_bound = 0
-  counter%coord_unit = 0
-
-  counter%fin_grdidx = 0
-  counter%fin_grdara = 0
-  counter%fin_grdwgt = 0
-  counter%fin_grdval = 0
-  counter%in_grid_sz = 0
-  counter%in_grid_lb = 0
-  counter%in_grid_ub = 0
-  counter%in_unit_ara = 0
-  counter%idx_miss = 0
-  counter%ara_miss = 0
-  counter%wgt_miss = 0
-  counter%val_miss = 0
+  ! Coords.
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p')
-  !-------------------------------------------------------------
-  ! Individual
-  !-------------------------------------------------------------
-  call check_num_of_key(counter%name, key_name, 0, 1)
-
-  call check_num_of_key(counter%nx, key_nx, 1, 1)
-  call check_num_of_key(counter%ny, key_ny, 1, 1)
-
-  call check_num_of_key(counter%west , key_west , 0, 1)
-  call check_num_of_key(counter%east , key_east , 0, 1)
-  call check_num_of_key(counter%south, key_south, 0, 1)
-  call check_num_of_key(counter%north, key_north, 0, 1)
-  call check_num_of_key(counter%is_south_to_north, key_is_south_to_north, 0, 1)
-
-  call check_num_of_key(counter%f_lon_bound, key_f_lon_bound, 0, 1)
-  call check_num_of_key(counter%f_lat_bound, key_f_lat_bound, 0, 1)
-  call check_num_of_key(counter%coord_unit, key_coord_unit, 0, 1)
-
-  call check_num_of_key(counter%fin_grdidx, key_fin_grdidx, 0, 1)
-  call check_num_of_key(counter%fin_grdara, key_fin_grdara, 0, 1)
-  call check_num_of_key(counter%fin_grdwgt, key_fin_grdwgt, 0, 1)
-  call check_num_of_key(counter%fin_grdval, key_fin_grdval, 0, 1)
-  call check_num_of_key(counter%in_grid_sz, key_in_grid_sz, 0, 1)
-  call check_num_of_key(counter%in_grid_lb, key_in_grid_lb, 0, 1)
-  call check_num_of_key(counter%in_grid_ub, key_in_grid_ub, 0, 1)
-  call check_num_of_key(counter%in_unit_ara, key_in_unit_ara, 0, 1)
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
-  call check_num_of_key(counter%ara_miss, key_ara_miss, 0, 1)
-  call check_num_of_key(counter%wgt_miss, key_wgt_miss, 0, 1)
-  call check_num_of_key(counter%val_miss, key_val_miss, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  if( counter%west == 0 .and. counter%east == 0 )then
-    if( counter%f_lon_bound == 0 )then
-      call eerr('None of "'//str(key_west)//'", "'//str(key_east)//'" or '//&
-                '"'//str(key_f_lon_bound)//'" was specified.')
+  if( keynum('west') == 0 .and. keynum('east') == 0 )then
+    if( keynum('f_lon_bound') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is missing.'//&
+                ' Give "west" and "east", or give "f_lon_bound".')
     endif
-  elseif( counter%west == 1 .and. counter%east == 1 )then
-    if( counter%f_lon_bound == 1 )then
-      call eerr('"'//str(key_f_lon_bound)//'" was specified but '//&
-                '"'//str(key_west)//'" and "'//str(key_east)//'" were also specified.')
+  elseif( keynum('west') == 1 .and. keynum('east') == 1 )then
+    if( keynum('f_lon_bound') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is duplicated.'//&
+                ' Give "west" and "east", or give "f_lon_bound".')
     endif
-  elseif( counter%west == 1 .neqv. counter%east == 1 )then
-    call eerr('It is not allowed to specify only one of "'//&
-              str(key_west)//'" and "'//str(key_east)//'".')
+  elseif( keynum('west') == 1 .neqv. keynum('east') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "west" or "east" is given, both must be given.')
   endif
 
-  if( counter%south == 0 .and. counter%north == 0 )then
-    if( counter%f_lat_bound == 0 )then
-      call eerr('None of "'//str(key_south)//'", "'//str(key_north)//'" or '//&
-                '"'//str(key_f_lat_bound)//'" was specified.')
+  if( keynum('south') == 0 .and. keynum('north') == 0 )then
+    if( keynum('f_lon_bound') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is missing.'//&
+                ' Give "south" and "north", or give "f_lon_bound".')
     endif
-  elseif( counter%south == 1 .and. counter%north == 1 )then
-    if( counter%f_lat_bound == 1 )then
-      call eerr('"'//str(key_f_lat_bound)//'" was specified but '//&
-                '"'//str(key_south)//'" and "'//str(key_north)//'" were also specified.')
+  elseif( keynum('south') == 1 .and. keynum('north') == 1 )then
+    if( keynum('f_lon_bound') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is duplicated.'//&
+                ' Give "south" and "north", or give "f_lon_bound".')
     endif
-  elseif( counter%south == 1 .neqv. counter%north == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  It is not allowed to specify only one of "'//&
-              str(key_south)//'" and "'//str(key_north)//'".')
+  elseif( keynum('south') == 1 .neqv. keynum('north') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "south" or "north" is given both must be given.')
   endif
 
-  if( counter%f_lon_bound == 0 .and. counter%f_lat_bound == 0 .and. &
-      counter%coord_unit == 1 )then
-    call eerr('"'//str(key_coord_unit)//'" was specified but '//&
-              'neither "'//str(key_f_lon_bound)//'" or "'//str(key_f_lat_bound)//'" '//&
-              'was specified.')
+  if( keynum('f_lon_bound') == 0 .and. keynum('f_lat_bound') == 0 .and. &
+      keynum('coord_unit') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"coord_unit" is given but '//&
+              'neither "f_lon_bound" or "f_lat_bound" is given.'//&
+              ' The input given by "coord_unit" is ignored.')
+  endif
+  !-------------------------------------------------------------
+  ! Grid data
+  !-------------------------------------------------------------
+  if( keynum('idx_bgn') == 1 .and. keynum('fin_grdidx') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"idx_bgn" is given although "fin_grdidx" is given.'//&
+              ' The input for "idx_bgn" is ignored.')
   endif
 
-  if( counter%fin_grdara == 1 .and. counter%fin_grdwgt == 1 )then
-    call eerr('"'//str(key_fin_grdara)//'" and "'//str(key_fin_grdwgt)//&
-              '" cannot be specified at the same time.')
+  if( keynum('fin_grdara') == 1 .and. keynum('fin_grdwgt') == 1 )then
+    call eerr('"fin_grdara" and "fin_grdwgt" must not be given at the same time.')
+  endif
+
+  if( keynum('fin_grdidx') == 0 .and. &
+      keynum('fin_grdara') == 0 .and. &
+      keynum('fin_grdwgt') == 0 .and. &
+      keynum('fin_grdval') == 0 .and. &
+      (keynum('in_grid_sz') == 1 .or. &
+       keynum('in_grid_lb') == 1 .or. &
+       keynum('in_grid_ub') == 1) )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\nAny value is given by the following keywords:'//&
+            '\n  "'//str('in_grid_sz')//'"'//&
+            '\n  "'//str('in_grid_lb')//'"'//&
+            '\n  "'//str('in_grid_ub')//'"'//&
+            '\nbut any value is not given by the following keywords:'//&
+            '\n  "'//str('fin_grdidx')//'"'//&
+            '\n  "'//str('fin_grdara')//'"'//&
+            '\n  "'//str('fin_grdwgt')//'"'//&
+            '\n  "'//str('fin_grdval')//'"'//&
+            '\nThe inputs given by the former keywords are ignored.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !---------------------------------------------------------------
 end subroutine read_settings_gs_latlon
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_gs_polygon(u)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_gs_components          , &
+        set_gs_common_components     , &
+        set_default_values_gs_polygon, &
+        alloc_file_grid_in_val       , &
+        set_bounds_file_polygon_in   , &
+        set_bounds_file_grid_in      , &
+        set_bounds_file_grid_out
   implicit none
   type(gs_), intent(out), target :: u
 
-  type counter_
-    integer :: name
-
-    integer :: np
-    integer :: nij
-
-    integer :: dir
-
-    integer :: f_lon_vertex
-    integer :: f_lat_vertex
-    integer :: f_x_vertex
-    integer :: f_y_vertex
-    integer :: f_z_vertex
-    integer :: coord_unit
-    integer :: coord_miss
-
-    integer :: f_arctyp
-    integer :: arc_parallel
-
-    integer :: fin_grdidx
-    integer :: fin_grdara
-    integer :: fin_grdwgt
-    integer :: fin_grdval
-    integer :: in_grid_sz
-    integer :: in_grid_lb
-    integer :: in_grid_ub
-    integer :: in_unit_ara
-
-    integer :: idx_miss
-    integer :: ara_miss
-    integer :: wgt_miss
-    integer :: val_miss
-  end type
-
-  character(clen_var), parameter :: key_name = 'name'
-
-  character(clen_var), parameter :: key_np  = 'np'
-  character(clen_var), parameter :: key_nij = 'nij'
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  character(clen_var), parameter :: key_f_lon_vertex = 'f_lon_vertex'
-  character(clen_var), parameter :: key_f_lat_vertex = 'f_lat_vertex'
-  character(clen_var), parameter :: key_f_x_vertex   = 'f_x_vertex'
-  character(clen_var), parameter :: key_f_y_vertex   = 'f_y_vertex'
-  character(clen_var), parameter :: key_f_z_vertex   = 'f_z_vertex'
-
-  character(clen_var), parameter :: key_coord_unit = 'coord_unit'
-  character(clen_var), parameter :: key_coord_miss = 'coord_miss'
-
-  character(clen_var), parameter :: key_f_arctyp     = 'f_arctyp'
-  character(clen_var), parameter :: key_arc_parallel = 'arc_parallel'
-
-  character(clen_var), parameter :: key_fin_grdidx = 'fin_grdidx'
-  character(clen_var), parameter :: key_fin_grdwgt = 'fin_grdwgt'
-  character(clen_var), parameter :: key_fin_grdval = 'fin_grdval'
-  character(clen_var), parameter :: key_in_grid_sz = 'in_grid_sz'
-  character(clen_var), parameter :: key_in_grid_lb = 'in_grid_lb'
-  character(clen_var), parameter :: key_in_grid_ub = 'in_grid_ub'
-  character(clen_var), parameter :: key_in_unit_ara = 'in_unit_ara'
-
-  character(clen_var), parameter :: key_idx_miss = 'idx_miss'
-  character(clen_var), parameter :: key_wgt_miss = 'wgt_miss'
-  character(clen_var), parameter :: key_val_miss = 'val_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-  real(8) :: coord_miss
-
-  type(gs_common_)      , pointer :: uc
   type(gs_polygon_)     , pointer :: up
   type(file_polygon_in_), pointer :: fp
   type(file_grid_in_)   , pointer :: fg_in
   type(file_grid_out_)  , pointer :: fg_out
-  type(file_), pointer :: f
+
+  character(CLEN_PATH) :: dir
+  real(8) :: coord_miss
 
   call echo(code%bgn, 'read_settings_gs_polygon')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the limits. of the number of each keyword
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_name )
-      call add(counter%name)
-
-    case( key_np )
-      call add(counter%np)
-
-    case( key_nij )
-      call add(counter%nij)
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_lon_vertex )
-      call add(counter%f_lon_vertex)
-
-    case( key_f_lat_vertex )
-      call add(counter%f_lat_vertex)
-
-    case( key_f_x_vertex )
-      call add(counter%f_x_vertex)
-
-    case( key_f_y_vertex )
-      call add(counter%f_y_vertex)
-
-    case( key_f_z_vertex )
-      call add(counter%f_z_vertex)
-
-    case( key_coord_unit )
-      call add(counter%coord_unit)
-
-    case( key_coord_miss )
-      call add(counter%coord_miss)
-
-    case( key_f_arctyp )
-      call add(counter%f_arctyp)
-
-    case( key_arc_parallel )
-      call add(counter%arc_parallel)
-
-    case( key_fin_grdidx )
-      call add(counter%fin_grdidx)
-
-    case( key_fin_grdwgt )
-      call add(counter%fin_grdwgt)
-
-    case( key_fin_grdval )
-      call add(counter%fin_grdval)
-
-    case( key_in_grid_sz )
-      call add(counter%in_grid_sz)
-
-    case( key_in_grid_lb )
-      call add(counter%in_grid_lb)
-
-    case( key_in_grid_ub )
-      call add(counter%in_grid_ub)
-
-    case( key_in_unit_ara )
-      call add(counter%in_unit_ara)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_wgt_miss )
-      call add(counter%wgt_miss)
-
-    case( key_val_miss )
-      call add(counter%val_miss)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(31)
+  call set_keynum('name', 0, 1)
+  call set_keynum('np', 1, 1)
+  call set_keynum('nij', 1, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_lon_vertex', 0, 1)
+  call set_keynum('f_lat_vertex', 0, 1)
+  call set_keynum('f_x_vertex'  , 0, 1)
+  call set_keynum('f_y_vertex'  , 0, 1)
+  call set_keynum('f_z_vertex'  , 0, 1)
+  call set_keynum('coord_unit'  , 0, 1)
+  call set_keynum('coord_miss'  , 0, 1)
+  call set_keynum('f_arctyp'    , 0, 1)
+  call set_keynum('arc_parallel', 0, 1)
+  call set_keynum('idx_bgn', 0, 1)
+  call set_keynum('fin_grdidx', 0, 1)
+  call set_keynum('fin_grdara', 0, 1)
+  call set_keynum('fin_grdwgt', 0, 1)
+  call set_keynum('fin_grdx'  , 0, 1)
+  call set_keynum('fin_grdy'  , 0, 1)
+  call set_keynum('fin_grdz'  , 0, 1)
+  call set_keynum('fin_grdlon', 0, 1)
+  call set_keynum('in_grid_sz', 0, 1)
+  call set_keynum('in_grid_lb', 0, 1)
+  call set_keynum('in_grid_ub', 0, 1)
+  call set_keynum('idx_miss'   , 0, 1)
+  call set_keynum('ara_miss'   , 0, 1)
+  call set_keynum('wgt_miss'   , 0, 1)
+  call set_keynum('xyz_miss'   , 0, 1)
+  call set_keynum('lonlat_miss', 0, 1)
+  call set_keynum('val_miss'   , 0, 1)
+  call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Set default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   call alloc_gs_components(u, gs_type_polygon)
+  call set_default_values_gs_polygon(u%polygon)
 
   up => u%polygon
-
-  call set_default_values_gs_polygon(up)
-
   fp     => up%f_polygon_in
   fg_in  => up%f_grid_in
   fg_out => up%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Count the number of times each keyword was used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Counting the number of times each keyword was used')
 
-  allocate(fg_in%val(counter%fin_grdval))
-
-  dir = ''
-
-  call back_to_block_head()
+  fg_in%nFiles_val = 0
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_name )
-      call read_value(v_char=u%nam, is_keyword=.false.)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_np )
-      call read_value(v_int8=up%np)
-
-    case( key_nij )
-      call read_value(v_int8=up%nij)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_f_lon_vertex )
-      call read_value(v_file=fp%lon, get_length=.false.)
-      fp%lon%path = joined(dir, fp%lon%path)
-
-    case( key_f_lat_vertex )
-      call read_value(v_file=fp%lat, get_length=.false.)
-      fp%lat%path = joined(dir, fp%lat%path)
-
-    case( key_f_x_vertex )
-      call read_value(v_file=fp%x, get_length=.false.)
-      fp%x%path = joined(dir, fp%x%path)
-
-    case( key_f_y_vertex )
-      call read_value(v_file=fp%y, get_length=.false.)
-      fp%y%path = joined(dir, fp%y%path)
-
-    case( key_f_z_vertex )
-      call read_value(v_file=fp%z, get_length=.false.)
-      fp%z%path = joined(dir, fp%z%path)
-
-    case( key_coord_unit )
-      call read_value(v_char=up%coord_unit, is_keyword=.true.)
-
-    case( key_coord_miss )
-      call read_value(v_dble=coord_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_f_arctyp )
-      call read_value(v_file=fp%arctyp, get_length=.false.)
-      fp%arctyp%path = joined(dir, fp%arctyp%path)
-
-    case( key_arc_parallel )
-      call read_value(v_log=up%arc_parallel)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_fin_grdidx )
-      call read_value(v_file=fg_in%idx, get_length=.false.)
-      fg_in%idx%path = joined(dir, fg_in%idx%path)
-
-    case( key_fin_grdwgt )
-      call read_value(v_file=fg_in%wgt, get_length=.false.)
-      fg_in%wgt%path = joined(dir, fg_in%wgt%path)
-
-    case( key_fin_grdval )
+    case( 'fin_grdval' )
       call add(fg_in%nFiles_val)
-      f => fg_in%val(fg_in%nFiles_val)
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_in_grid_sz )
-      call read_value(v_int8=fg_in%sz(1), pos=1)
-      !call read_value(v_int8=fg_in%sz(2), pos=2)
-
-    case( key_in_grid_lb )
-      call read_value(v_int8=fg_in%lb(1), pos=1)
-      !call read_value(v_int8=fg_in%lb(2), pos=2)
-
-    case( key_in_grid_ub )
-      call read_value(v_int8=fg_in%ub(1), pos=1)
-      !call read_value(v_int8=fg_in%ub(2), pos=2)
-
-    case( key_in_unit_ara )
-      call read_value(v_char=fg_in%unit_ara, is_keyword=.true.)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=up%idx_miss)
-
-    case( key_wgt_miss )
-      call read_value(v_dble=up%wgt_miss)
-
-    case( key_val_miss )
-      call read_value(v_dble=up%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      continue
     endselect
   enddo
-
-  ! Modify values
-  !-------------------------------------------------------------
-  call set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij)
-
-  call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
-
-  call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
-
-  ! Coords.
-  !-------------------------------------------------------------
-  if( fp%lon%path /= '' )then
-    up%coord_sys = coord_sys_spherical
-
-    if( counter%coord_unit == 0 )then
-      up%coord_unit = unit_degree
-    else
-      if( up%coord_unit /= unit_degree .and. &
-          up%coord_unit /= unit_radian )then
-        call eerr(str(msg_invalid_value())//&
-                '\n  up%coord_unit: '//str(up%coord_unit)//&
-                '\nThis value is invalid when "'//str(key_f_lon_vertex)//&
-                  '" was specified. Check the value of "'//str(key_coord_unit)//'".')
-      endif
-    endif
-
-    if( counter%coord_miss == 1 ) up%coord_miss_s = coord_miss
-  else
-    up%coord_sys = coord_sys_cartesian
-
-    if( counter%coord_unit == 0 )then
-      up%coord_unit = unit_meter
-    else
-      if( up%coord_unit /= unit_meter .and. &
-          up%coord_unit /= unit_kilometer )then
-        call eerr(str(msg_invalid_value())//&
-                '\n  up%coord_unit: '//str(up%coord_unit)//&
-                '\nThis value is invalid when "'//str(key_f_x_vertex)//&
-                  '" was specified. Check the value of "'//str(key_coord_unit)//'".')
-      endif
-    endif
-
-    if( counter%coord_miss == 1 ) up%coord_miss_c = coord_miss
-  endif
 
   call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  up%nam = u%nam
-
-  up%ijs = 1_8
-  up%ije = up%nij
+  call alloc_file_grid_in_val(fg_in)
   !-------------------------------------------------------------
-  !
+  ! Read the settings
   !-------------------------------------------------------------
-  uc => u%cmn
+  call echo(code%ent, 'Reading the settings')
 
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam = u%nam
-  uc%gs_type = u%gs_type
-  uc%is_source = u%is_source
-  uc%idx_miss    = up%idx_miss
-  uc%ara_miss    = up%ara_miss
-  uc%wgt_miss    = up%wgt_miss
-  uc%xyz_miss    = up%xyz_miss
-  uc%lonlat_miss = up%lonlat_miss
-  uc%val_miss    = up%val_miss
+  call back_to_block_head()
+  call reset_keynum()
 
-  uc%f_grid_in  => up%f_grid_in
-  uc%f_grid_out => up%f_grid_out
-  uc%grid       => up%grid
+  dir = ''
+  fg_in%nFiles_val = 0
+
+  do
+    call read_input()
+    call update_keynum()
+
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
+    case( '' )
+      exit
+    !-----------------------------------------------------------
+    ! Name
+    case( 'name' )
+      call read_value(u%nam)
+    !-----------------------------------------------------------
+    ! Shape
+    case( 'np' )
+      call read_value(up%np)
+    !-----------------------------------------------------------
+    ! Resolution
+    case( 'nij' )
+      call read_value(up%nij)
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    ! Vertex
+    case( 'f_lon_vertex' )
+      call read_value(fp%lon, dir)
+    case( 'f_lat_vertex' )
+      call read_value(fp%lat, dir)
+    case( 'f_x_vertex' )
+      call read_value(fp%x, dir)
+    case( 'f_y_vertex' )
+      call read_value(fp%y, dir)
+    case( 'f_z_vertex' )
+      call read_value(fp%z, dir)
+
+    case( 'coord_unit' )
+      call read_value(up%coord_unit, is_keyword=.true.)
+
+    case( 'coord_miss' )
+      call read_value(coord_miss)
+    !-----------------------------------------------------------
+    ! Arc type
+    case( 'f_arctyp' )
+      call read_value(fp%arctyp, dir)
+
+    case( 'arc_parallel' )
+      call read_value(up%arc_parallel)
+    !-----------------------------------------------------------
+    ! Grid data
+    case( 'idx_bgn' )
+      call read_value(fg_in%idx_bgn)
+
+    case( 'fin_grdidx' )
+      call read_value(fg_in%idx, dir)
+    case( 'fin_grdwgt' )
+      call read_value(fg_in%wgt, dir)
+    case( 'fin_grdval' )
+      call add(fg_in%nFiles_val)
+      call read_value(fg_in%val(fg_in%nFiles_val), dir)
+
+    case( 'in_grid_sz' )
+      call read_value(fg_in%sz(1), pos=1)
+      !call read_value(fg_in%sz(2), pos=2)
+    case( 'in_grid_lb' )
+      call read_value(fg_in%lb(1), pos=1)
+      !call read_value(fg_in%lb(2), pos=2)
+    case( 'in_grid_ub' )
+      call read_value(fg_in%ub(1), pos=1)
+      !call read_value(fg_in%ub(2), pos=2)
+
+    case( 'in_unit_ara' )
+      call read_value(fg_in%unit_ara, is_keyword=.true.)
+    !-----------------------------------------------------------
+    ! Missing values
+    case( 'idx_miss' )
+      call read_value(up%idx_miss)
+    case( 'wgt_miss' )
+      call read_value(up%wgt_miss)
+    case( 'val_miss' )
+      call read_value(up%val_miss)
+    !-----------------------------------------------------------
+    ! ERROR
+    case default
+      call raise_error_invalid_key()
+    endselect
+  enddo
+
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  call set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij)
+  call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
+  call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
+
+  call set_gs_common_components(u)
+
+  ! Coordinate system
+  !-------------------------------------------------------------
+  if( fp%lon%path /= '' )then
+    up%coord_sys = COORD_SYS_SPHERICAL
+
+    if( keynum('coord_unit') == 0 )then
+      up%coord_unit = UNIT_DEGREE
+    else
+      if( up%coord_unit /= UNIT_DEGREE .and. &
+          up%coord_unit /= UNIT_RADIAN )then
+        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
+                '\nThis is invalid when "f_lon_vertex" is given.')
+      endif
+    endif
+
+    if( keynum('coord_miss') == 1 ) up%coord_miss_s = coord_miss
+  else
+    up%coord_sys = COORD_SYS_CARTESIAN
+
+    if( keynum('coord_unit') == 0 )then
+      up%coord_unit = UNIT_METER
+    else
+      if( up%coord_unit /= UNIT_METER .and. &
+          up%coord_unit /= UNIT_KILOMETER )then
+        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
+                '\nThis is invalid when "f_x_vertex" is given.')
+      endif
+    endif
+
+    if( keynum('coord_miss') == 1 ) up%coord_miss_c = coord_miss
+  endif
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free the external module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  call echo(code%bgn, '__IP__init_counter', '-p')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
   !-------------------------------------------------------------
-  counter%name = 0
-
-  counter%np = 0
-  counter%nij = 0
-
-  counter%dir = 0
-  counter%f_lon_vertex = 0
-  counter%f_lat_vertex = 0
-  counter%f_x_vertex = 0
-  counter%f_y_vertex = 0
-  counter%f_z_vertex = 0
-
-  counter%coord_unit = 0
-  counter%coord_miss = 0
-
-  counter%f_arctyp = 0
-  counter%arc_parallel = 0
-
-  counter%fin_grdidx = 0
-  counter%fin_grdwgt = 0
-  counter%fin_grdval = 0
-  counter%in_grid_sz = 0
-  counter%in_grid_lb = 0
-  counter%in_grid_ub = 0
-  counter%in_unit_ara = 0
-  counter%idx_miss = 0
-  counter%wgt_miss = 0
-  counter%val_miss = 0
+  ! Coords.
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p')
-  !-------------------------------------------------------------
-  ! Individual
-  !-------------------------------------------------------------
-  call check_num_of_key(counter%name, key_name, 0, 1)
-
-  call check_num_of_key(counter%np , key_np , 1, 1)
-  call check_num_of_key(counter%nij, key_nij, 1, 1)
-
-  call check_num_of_key(counter%f_lon_vertex, key_f_lon_vertex, 0, 1)
-  call check_num_of_key(counter%f_lat_vertex, key_f_lat_vertex, 0, 1)
-  call check_num_of_key(counter%f_x_vertex, key_f_x_vertex, 0, 1)
-  call check_num_of_key(counter%f_y_vertex, key_f_y_vertex, 0, 1)
-  call check_num_of_key(counter%f_z_vertex, key_f_z_vertex, 0, 1)
-  call check_num_of_key(counter%coord_unit, key_coord_unit, 0, 1)
-  call check_num_of_key(counter%coord_miss, key_coord_miss, 0, 1)
-  call check_num_of_key(counter%arc_parallel, key_arc_parallel, 0, 1)
-  call check_num_of_key(counter%f_arctyp, key_f_arctyp, 0, 1)
-
-  call check_num_of_key(counter%fin_grdidx, key_fin_grdidx, 0, 1)
-  call check_num_of_key(counter%fin_grdwgt, key_fin_grdwgt, 0, 1)
-  call check_num_of_key(counter%fin_grdval, key_fin_grdval, 0, 1)
-  call check_num_of_key(counter%in_grid_sz, key_in_grid_sz, 0, 1)
-  call check_num_of_key(counter%in_grid_lb, key_in_grid_lb, 0, 1)
-  call check_num_of_key(counter%in_grid_ub, key_in_grid_ub, 0, 1)
-  call check_num_of_key(counter%in_unit_ara, key_in_unit_ara, 0, 1)
-
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
-  call check_num_of_key(counter%wgt_miss, key_wgt_miss, 0, 1)
-  call check_num_of_key(counter%val_miss, key_val_miss, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  if( counter%f_lon_vertex == 1 .neqv. counter%f_lat_vertex == 1 )then
-    call eerr('Only one of "'//str(key_f_lon_vertex)//'" and "'//str(key_f_lat_vertex)//'"'//&
-              ' was specified.')
+  if( .not. (keynum('f_lon_vertex') == 1 .and. &
+             keynum('f_lat_vertex') == 1) &
+      .and. &
+      .not. (keynum('f_lon_vertex') == 0 .and. &
+             keynum('f_lat_vertex') == 0) )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "f_lon_vertex" or "f_lat_vertex" is given'//&
+              ' both must be given.')
   endif
 
-  if( (counter%f_x_vertex == 1 .neqv. counter%f_y_vertex == 1) .or. &
-      (counter%f_x_vertex == 1 .neqv. counter%f_z_vertex == 1) )then
-    call eerr('Only one or two of "'//str(key_f_x_vertex)//'", "'//str(key_f_y_vertex)//'" '//&
-              ' and "'//str(key_f_z_vertex)//'" was specified.')
+  if( .not. (keynum('f_x_vertex') == 1 .and. &
+             keynum('f_y_vertex') == 1 .and. &
+             keynum('f_z_vertex') == 1) &
+      .and. &
+      .not. (keynum('f_x_vertex') == 0 .and. &
+             keynum('f_y_vertex') == 0 .and. &
+             keynum('f_z_vertex') == 0) )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf any of "f_x_vertex", "f_y_vertex" or "f_z_vertex" is given'//&
+              ' all of them must be given.')
   endif
 
-  if( counter%f_lon_vertex == 1 .and. counter%f_x_vertex == 1 )then
-    call eerr('"'//str(key_f_lon_vertex)//'" and "'//str(key_f_x_vertex)//'"'//&
-              ' cannot be specified at the same time.')
-  elseif( counter%f_lon_vertex == 0 .and. counter%f_x_vertex == 0 )then
-    call eerr('Neither "'//str(key_f_lon_vertex)//'" or "'//str(key_f_x_vertex)//'"'//&
-              ' was specified.')
+  if( keynum('f_lon_vertex') == 1 .and. keynum('f_x_vertex') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\n"f_lon_vertex" and "f_x_vertex" cannot be given at the same time.')
+  elseif( keynum('f_lon_vertex') == 0 .and. keynum('f_x_vertex') == 0 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nEither "f_lon_vertex" or "f_x_vertex" must be given.')
   endif
 
-  if( counter%arc_parallel == 1 .and. counter%f_arctyp == 1 )then
-    call eerr('"'//str(key_arc_parallel)//'" and "'//str(key_f_arctyp)//'"'//&
-              ' cannot be specified at the same time.')
+  if( keynum('arc_parallel') == 1 .and. keynum('f_arctyp') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nBoth "arc_parallel" and "f_arctyp" are given.')
   endif
   !--------------------------------------------------------------
+  ! Grid data
+  !--------------------------------------------------------------
+  if( keynum('idx_bgn') == 1 .and. keynum('fin_grdidx') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"idx_bgn" is given but "fin_grdidx" is also given.'//&
+              ' The input for "idx_bgn" is ignored.')
+  endif
+
+  if( keynum('fin_grdidx') == 0 .and. &
+      keynum('fin_grdara') == 0 .and. &
+      keynum('fin_grdwgt') == 0 .and. &
+      keynum('fin_grdx'  ) == 0 .and. &
+      keynum('fin_grdlon') == 0 .and. &
+      (keynum('in_grid_sz') == 1 .or. &
+       keynum('in_grid_lb') == 1 .or. &
+       keynum('in_grid_ub') == 1) )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\nAny value is given by the following keywords:'//&
+            '\n  "'//str('in_grid_sz')//'"'//&
+            '\n  "'//str('in_grid_lb')//'"'//&
+            '\n  "'//str('in_grid_ub')//'"'//&
+            '\nbut any value is not given by the following keywords:'//&
+            '\n  "'//str('fin_grdidx')//'"'//&
+            '\n  "'//str('fin_grdara')//'"'//&
+            '\n  "'//str('fin_grdwgt')//'"'//&
+            '\n  "'//str('fin_grdx')//'"'//&
+            '\n  "'//str('fin_grdlon')//'"'//&
+            '\nThe inputs given by the former keywords are ignored.')
+  endif
+  !-------------------------------------------------------------
+  ! Missing value
+  !-------------------------------------------------------------
+  if( keynum('fin_grdara') == 0 .and. keynum('ara_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"ara_miss" is given although "fin_grdara" is not given.'//&
+              ' The input for "ara_miss" is ignored.')
+  endif
+
+  if( keynum('fin_grdwgt') == 0 .and. keynum('wgt_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
+              ' The input for "wgt_miss" is ignored.')
+  endif
+
+  if( keynum('fin_grdx') == 0 .and. keynum('xyz_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"xyz_miss" is given although "fin_grdx" is not given.'//&
+              ' The input for "xyz_miss" is ignored.')
+  endif
+
+  if( keynum('fin_grdlon') == 0 .and. keynum('lonlat_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"lonlat_miss" is given although "fin_grdlon" is not given.'//&
+              ' The input for "lonlat_miss" is ignored.')
+  endif
+  !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_gs_polygon
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_raster(u)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_gs_components         , &
+        set_gs_common_components    , &
+        set_default_values_gs_raster, &
+        set_bounds_file_raster_in   , &
+        set_bounds_file_grid_in     , &
+        set_bounds_file_grid_out
+  use common_gs_define, only: &
+        check_bounds_lon, &
+        check_bounds_lat
   implicit none
   type(gs_), intent(out), target :: u
 
-  type counter_
-    integer :: nx
-    integer :: ny
-    integer :: west
-    integer :: east
-    integer :: south
-    integer :: north
-    integer :: is_south_to_north
-  end type
-
-  character(clen_var), parameter :: key_nx = 'nx'
-  character(clen_var), parameter :: key_ny = 'ny'
-  character(clen_var), parameter :: key_west = 'west'
-  character(clen_var), parameter :: key_east = 'east'
-  character(clen_var), parameter :: key_south = 'south'
-  character(clen_var), parameter :: key_north = 'north'
-  character(clen_var), parameter :: key_is_south_to_north = 'is_south_to_north'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(gs_common_)     , pointer :: uc
   type(gs_raster_)     , pointer :: ur
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
 
+  character(clen_path) :: dir
+
   call echo(code%bgn, 'read_settings_raster')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_nx )
-      call add(counter%nx)
-
-    case( key_ny )
-      call add(counter%ny)
-
-    case( key_west )
-      call add(counter%west)
-
-    case( key_east )
-      call add(counter%east)
-
-    case( key_south )
-      call add(counter%south)
-
-    case( key_north )
-      call add(counter%north)
-
-    case( key_is_south_to_north )
-      call add(counter%is_south_to_north)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(7)
+  call set_keynum('nx', 1, 1)
+  call set_keynum('ny', 1, 1)
+  call set_keynum('west' , 1, 1)
+  call set_keynum('east' , 1, 1)
+  call set_keynum('south', 1, 1)
+  call set_keynum('north', 1, 1)
+  call set_keynum('is_south_to_north', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   call alloc_gs_components(u, gs_type_raster)
+  call set_default_values_gs_raster(u%raster)
 
   ur => u%raster
-
-  call set_default_values_gs_raster(ur)
-
   fr     => ur%f_raster_in
   fg_in  => ur%f_grid_in
   fg_out => ur%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
+    ! Resolution
+    case( 'nx' )
+      call read_value(ur%nx)
+    case( 'ny' )
+      call read_value(ur%ny)
     !-----------------------------------------------------------
-    case( key_nx )
-      call read_value(v_int8=ur%nx)
+    ! Region
+    case( 'west' )
+      call read_value(ur%west)
+    case( 'east' )
+      call read_value(ur%east)
+    case( 'south' )
+      call read_value(ur%south)
+    case( 'north' )
+      call read_value(ur%north)
 
-    case( key_ny )
-      call read_value(v_int8=ur%ny)
+    case( 'is_south_to_north' )
+      call read_value(ur%is_south_to_north)
     !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_west )
-      call read_value(v_dble=ur%west)
-
-    case( key_east )
-      call read_value(v_dble=ur%east)
-
-    case( key_south )
-      call read_value(v_dble=ur%south)
-
-    case( key_north )
-      call read_value(v_dble=ur%north)
-
-    case( key_is_south_to_north )
-      call read_value(v_log=ur%is_south_to_north)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
-  !-------------------------------------------------------------
-  call set_bounds_file_raster_in(&
-         fr, &
-         ur%xi, ur%xf, ur%yi, ur%yf, &
-         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf, &
-         ur%nx, ur%ny, ur%is_south_to_north)
-
-  call set_bounds_file_grid_in(fg_in)
-
-  call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
+  call check_keynum()
+  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Check the values
   !-------------------------------------------------------------
-  ur%nam = u%nam
+  call echo(code%ent, 'Checking the values')
 
-  ur%nh = ur%nx
-  ur%nv = ur%ny
-  ur%hi = 1_8
-  ur%hf = ur%nh
-  ur%vi = 1_8
-  ur%vf = ur%nv
+  call check_bounds_lon(ur%west , ur%east )
+  call check_bounds_lat(ur%south, ur%north)
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Set the related values
   !-------------------------------------------------------------
-  uc => u%cmn
+  call echo(code%ent, 'Setting the related values')
 
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam = u%nam
-  uc%gs_type = u%gs_type
-  uc%is_source = u%is_source
-  uc%idx_miss    = ur%idx_miss
-  uc%ara_miss    = ur%ara_miss
-  uc%wgt_miss    = ur%wgt_miss
-  uc%xyz_miss    = ur%xyz_miss
-  uc%lonlat_miss = ur%lonlat_miss
-  uc%val_miss    = ur%val_miss
+  call set_bounds_file_raster_in(&
+         fr,                                     & ! inout
+         ur%nx, ur%ny, ur%is_south_to_north,     & ! in
+         ur%xi, ur%xf, ur%yi, ur%yf,             & ! out
+         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) ! out
+  call set_bounds_file_grid_in(fg_in)
+  call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
 
-  uc%f_grid_in  => ur%f_grid_in
-  uc%f_grid_out => ur%f_grid_out
-  uc%grid       => ur%grid
+  call set_gs_common_components(u)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free the external module variables
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%nx = 0
-  counter%ny = 0
-  counter%west = 0
-  counter%east = 0
-  counter%south = 0
-  counter%north = 0
-  counter%is_south_to_north = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !-------------------------------------------------------------
-  ! Individual
-  !-------------------------------------------------------------
-  call check_num_of_key(counter%nx, key_nx, 1, 1)
-  call check_num_of_key(counter%ny, key_ny, 1, 1)
-  call check_num_of_key(counter%west, key_west, 1, 1)
-  call check_num_of_key(counter%east, key_east, 1, 1)
-  call check_num_of_key(counter%south, key_south, 1, 1)
-  call check_num_of_key(counter%north, key_north, 1, 1)
-  call check_num_of_key(counter%is_south_to_north, key_is_south_to_north, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_raster
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_output(dout)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(output_), intent(out) :: dout
-
-  type counter_
-    integer :: include_min
-    integer :: include_max
-    integer :: frac_min
-    integer :: frac_max
-    integer :: thresh_frac_zero_positive
-    integer :: thresh_frac_sum_zero_positive
-    integer :: dir
-    integer :: f_area_sum
-    integer :: f_frac_sum
-    integer :: f_mask
-    integer :: f_idx
-    integer :: val_miss
-  end type
-
-  character(clen_var), parameter :: key_include_min = 'include_min'
-  character(clen_var), parameter :: key_include_max = 'include_max'
-  character(clen_var), parameter :: key_frac_min = 'frac_min'
-  character(clen_var), parameter :: key_frac_max = 'frac_max'
-  character(clen_var), parameter :: key_thresh_frac_zero_positive = 'thresh_frac_zero_positive'
-  character(clen_var), parameter :: key_thresh_frac_sum_zero_positive = 'thresh_frac_sum_zero_positive'
-  character(clen_var), parameter :: key_dir        = 'dir'
-  character(clen_var), parameter :: key_f_area_sum = 'f_area_sum'
-  character(clen_var), parameter :: key_f_frac_sum = 'f_frac_sum'
-  character(clen_var), parameter :: key_f_mask     = 'f_mask'
-  character(clen_var), parameter :: key_f_idx      = 'f_idx'
-  character(clen_var), parameter :: key_val_miss   = 'val_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
 
   character(clen_path) :: dir
   logical :: include_min, include_max
 
   call echo(code%bgn, 'read_settings_output')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_include_min )
-      call add(counter%include_min)
-
-    case( key_include_max )
-      call add(counter%include_max)
-
-    case( key_frac_min )
-      call add(counter%frac_min)
-
-    case( key_frac_max )
-      call add(counter%frac_max)
-
-    case( key_thresh_frac_zero_positive )
-      call add(counter%thresh_frac_zero_positive)
-
-    case( key_thresh_frac_sum_zero_positive )
-      call add(counter%thresh_frac_sum_zero_positive)
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_area_sum )
-      call add(counter%f_area_sum)
-
-    case( key_f_frac_sum )
-      call add(counter%f_frac_sum)
-
-    case( key_f_mask )
-      call add(counter%f_mask)
-
-    case( key_f_idx )
-      call add(counter%f_idx)
-
-    case( key_val_miss )
-      call add(counter%val_miss)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(12)
+  call set_keynum('frac_min', 0, 1)
+  call set_keynum('frac_max', 0, 1)
+  call set_keynum('include_min', 0, 1)
+  call set_keynum('include_max', 0, 1)
+  call set_keynum('thresh_frac_zero_positive'    , 0, 1)
+  call set_keynum('thresh_frac_sum_zero_positive', 0, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_area_sum', 0, 1)
+  call set_keynum('f_frac_sum', 0, 1)
+  call set_keynum('f_mask'    , 0, 1)
+  call set_keynum('f_idx'     , 0, 1)
+  call set_keynum('val_miss', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Set the default variables
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
+  call echo(code%ent, 'Setting the default values')
 
-  ! [0.5,1.0] in default
-  include_min = .true.
-  include_max = .true.
+  ! [0.5, 1.0] in default
   dout%frac_min = 0.5d0
   dout%frac_max = 1.d0
+  include_min = .true.
+  include_max = .true.
 
-  dout%thresh_frac_zero_positive = 0.d0
+  dout%thresh_frac_zero_positive     = 0.d0
   dout%thresh_frac_sum_zero_positive = 0.d0
 
   dout%f_area_sum = file('', dtype_dble, 1, endian_default, action=action_write, &
-                         id='output%f_area')
+                         id='output%f_area_sum')
   dout%f_frac_sum = file('', dtype_dble, 1, endian_default, action=action_write, &
-                         id='output%f_frac')
-  dout%f_mask = file('', dtype_int4, 1, endian_default, action=action_write, &
-                     id='output%f_mask')
-  dout%f_idx = file('', dtype_int4, 1, endian_default, action=action_write, &
-                    id='output%f_idx')
+                         id='output%f_frac_sum')
+  dout%f_mask     = file('', dtype_int4, 1, endian_default, action=action_write, &
+                         id='output%f_mask')
+  dout%f_idx      = file('', dtype_int4, 1, endian_default, action=action_write, &
+                         id='output%f_idx')
 
   dout%val_miss = -1d20
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
-  ! Read settings
-  !-------------------------------------------------------------
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
+    !-----------------------------------------------------------
+    ! Threshold
+    case( 'include_min' )
+      call read_value(include_min)
+    case( 'include_max' )
+      call read_value(include_max)
 
-    case( key_include_min )
-      call read_value(v_log=include_min)
-
-    case( key_include_max )
-      call read_value(v_log=include_max)
-
-    case( key_frac_min )
-      call read_value(v_dble=dout%frac_min)
-
-    case( key_frac_max )
-      call read_value(v_dble=dout%frac_max)
-
-    case( key_thresh_frac_zero_positive )
-      call read_value(v_dble=dout%thresh_frac_zero_positive)
-
-    case( key_thresh_frac_sum_zero_positive )
-      call read_value(v_dble=dout%thresh_frac_sum_zero_positive)
-
-    case( key_dir )
-      call read_value(v_path=dir)
-
-    case( key_f_area_sum )
-      call read_value(v_file=dout%f_area_sum, get_length=.false.)
-      dout%f_area_sum%path = joined(dir, dout%f_area_sum%path)
-
-    case( key_f_frac_sum )
-      call read_value(v_file=dout%f_frac_sum, get_length=.false.)
-      dout%f_frac_sum%path = joined(dir, dout%f_frac_sum%path)
-
-    case( key_f_mask )
-      call read_value(v_file=dout%f_mask, get_length=.false.)
-      dout%f_mask%path = joined(dir, dout%f_mask%path)
-
-    case( key_f_idx )
-      call read_value(v_file=dout%f_idx, get_length=.false.)
-      dout%f_idx%path = joined(dir, dout%f_idx%path)
-
-    case( key_val_miss )
-      call read_value(v_dble=dout%val_miss)
-
+    case( 'frac_min' )
+      call read_value(dout%frac_min)
+    case( 'frac_max' )
+      call read_value(dout%frac_max)
+    !-----------------------------------------------------------
+    ! Threshold for validation
+    case( 'thresh_frac_zero_positive' )
+      call read_value(dout%thresh_frac_zero_positive)
+    case( 'thresh_frac_sum_zero_positive' )
+      call read_value(dout%thresh_frac_sum_zero_positive)
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
+    !-----------------------------------------------------------
+    ! Output file
+    case( 'f_area_sum' )
+      call read_value(dout%f_area_sum, dir)
+    case( 'f_frac_sum' )
+      call read_value(dout%f_frac_sum, dir)
+    case( 'f_mask' )
+      call read_value(dout%f_mask, dir)
+    case( 'f_idx' )
+      call read_value(dout%f_idx, dir)
+    !-----------------------------------------------------------
+    ! Missing value
+    case( 'val_miss' )
+      call read_value(dout%val_miss)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  !call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  if( counter%frac_min == 0 )then
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  if( keynum('frac_min') == 0 )then
     dout%ineq_frac_min = inequality_none
   else
     if( include_min )then
@@ -1718,7 +1356,7 @@ subroutine read_settings_output(dout)
     endif
   endif
 
-  if( counter%frac_max == 0 )then
+  if( keynum('frac_max') == 0 )then
     dout%ineq_frac_max = inequality_none
   else
     if( include_max )then
@@ -1728,107 +1366,45 @@ subroutine read_settings_output(dout)
     endif
   endif
 
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Check the values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
+
   call check_values_frac_minmax(&
          dout%ineq_frac_min, dout%ineq_frac_max, dout%frac_min, dout%frac_max)
 
   call echo(code%ext)
   !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
+  !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
 contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%include_min = 0
-  counter%include_max = 0
-  counter%frac_min = 0
-  counter%frac_max = 0
-  counter%thresh_frac_zero_positive     = 0
-  counter%thresh_frac_sum_zero_positive = 0
-  counter%dir = 0
-  counter%f_area_sum = 0
-  counter%f_frac_sum = 0
-  counter%f_mask     = 0
-  counter%f_idx      = 0
-  counter%val_miss = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs')
-  !-------------------------------------------------------------
-  ! Individual
-  !-------------------------------------------------------------
-  call check_num_of_key(counter%include_min, key_include_min, 0, 1)
-  call check_num_of_key(counter%include_max, key_include_max, 0, 1)
-  call check_num_of_key(counter%frac_min, key_frac_min, 0, 1)
-  call check_num_of_key(counter%frac_max, key_frac_max, 0, 1)
-  call check_num_of_key(counter%thresh_frac_zero_positive, &
-                            key_thresh_frac_zero_positive, 0, 1)
-  call check_num_of_key(counter%thresh_frac_sum_zero_positive, &
-                            key_thresh_frac_sum_zero_positive, 0, 1)
-
-  call check_num_of_key(counter%f_area_sum, key_f_area_sum, 0, 1)
-  call check_num_of_key(counter%f_frac_sum, key_f_frac_sum, 0, 1)
-  call check_num_of_key(counter%f_mask    , key_f_mask    , 0, 1)
-  call check_num_of_key(counter%f_idx     , key_f_idx     , 0, 1)
-  call check_num_of_key(counter%val_miss, key_val_miss, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  if( counter%include_min == 0 )then
-    if( counter%frac_min == 1 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  "'//str(key_frac_min)//'" was specified although "'//&
-                str(key_include_min)//'" was not specified.')
-    endif
-  else
-    if( counter%frac_min == 0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  "'//str(key_frac_min)//'" was not specified although "'//&
-                str(key_include_min)//'" was specified.')
-    endif
-  endif
-
-  if( counter%include_max == 0 )then
-    if( counter%frac_max == 1 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  "'//str(key_frac_max)//'" was specified although "'//&
-                str(key_include_max)//'" was not specified.')
-    endif
-  else
-    if( counter%frac_max == 0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  "'//str(key_frac_max)//'" was not specified although "'//&
-                str(key_include_max)//'" was specified.')
-    endif
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
 !---------------------------------------------------------------
 subroutine check_values_frac_minmax(ineq_min, ineq_max, vmin, vmax)
   implicit none
   character(*), intent(in) :: ineq_min, ineq_max
   real(8)     , intent(in) :: vmin, vmax
 
-  call echo(code%bgn, 'check_values_frac_minmax')
+  call echo(code%bgn, '__IP__check_values_frac_minmax', '-p -x2')
   !-------------------------------------------------------------
-  if( ineq_min == inequality_none .or. ineq_max == inequality_none )then
+  if( ineq_min == INEQUALITY_NONE .or. ineq_max == INEQUALITY_NONE )then
     continue
-  elseif( ineq_min == inequality_ge .and. ineq_max == inequality_le )then
+  elseif( ineq_min == INEQUALITY_GE .and. ineq_max == INEQUALITY_LE )then
     if( vmin > vmax )then
       call eerr(str(msg_unexpected_condition())//&
-              '\nRange of frac is invalid.'//&
-              ' Check values of "'//str(key_frac_min)//'" and "'//str(key_frac_max)//'".')
+              '\nRange of fraction is invalid.'//&
+              ' Check the values of "frac_min", "frac_max", "include_min" and "include_max".')
     endif
   else
     if( vmin >= vmax )then
       call eerr(str(msg_unexpected_condition())//&
-              '\nRange of frac is invalid.'//&
-              ' Check values of "'//str(key_frac_min)//'" and "'//str(key_frac_max)//'".')
+              '\nRange of fraction is invalid.'//&
+              ' Check the values of "frac_min", "frac_max", "include_min" and "include_max".')
     endif
   endif
   !-------------------------------------------------------------
@@ -1840,188 +1416,129 @@ end subroutine read_settings_output
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_opt_set, only: &
+        KEY_OLD_FILES           , &
+        KEY_DIR_INTERMEDIATES   , &
+        KEY_REMOVE_INTERMEDIATES, &
+        KEY_MEMORY_ULIM         , &
+        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_R             , &
+        KEY_EARTH_E2
+  use common_opt_set, only: &
+        set_values_opt_earth
   implicit none
   type(opt_), intent(inout) :: opt
 
-  character(clen_var) :: key
-
-  type counter_
-    integer :: old_files
-    integer :: dir_im
-    integer :: remove_im
-    integer :: memory_ulim
-
-    integer :: earth_shape
-    integer :: earth_r
-    integer :: earth_e2
-  end type
-
-  type(counter_) :: counter
-
   call echo(code%bgn, 'read_settings_opt')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
+  call alloc_keynum(7)
+  call set_keynum(KEY_OLD_FILES           , 0, 1)
+  call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
+  call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
+  call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
+  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
+  call set_keynum(KEY_EARTH_R    , 0, 1)
+  call set_keynum(KEY_EARTH_E2   , 0, 1)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Read the settings
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of the block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_old_files )
-      call add(counter%old_files)
+    case( KEY_OLD_FILES )
+      call read_value(opt%sys%old_files, is_keyword=.true.)
 
-    case( key_dir_intermediates )
-      call add(counter%dir_im)
+    case( KEY_DIR_INTERMEDIATES )
+      call read_value(opt%sys%dir_im, is_path=.true.)
 
-    case( key_remove_intermediates )
-      call add(counter%remove_im)
+    case( KEY_REMOVE_INTERMEDIATES )
+      call read_value(opt%sys%remove_im)
 
-    case( key_memory_ulim )
-      call add(counter%memory_ulim)
+    case( KEY_MEMORY_ULIM )
+      call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_earth_shape )
-      call add(counter%earth_shape)
+    case( KEY_EARTH_SHAPE )
+      call read_value(opt%earth%shp, is_keyword=.true.)
 
-    case( key_earth_r )
-      call add(counter%earth_r )
+    case( KEY_EARTH_R )
+      call read_value(opt%earth%r)
 
-    case( key_earth_e2 )
-      call add(counter%earth_e2 )
+    case( KEY_EARTH_E2 )
+      call read_value(opt%earth%e2)
     !-----------------------------------------------------------
     ! ERROR
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  call check_number_of_inputs()
+  call check_keynum()
+  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Read settings
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
-
-  call back_to_block_head()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_old_files )
-      call read_value(v_char=opt%sys%old_files, is_keyword=.true.)
-
-    case( key_dir_intermediates )
-      call read_value(v_char=opt%sys%dir_im, is_keyword=.false.)
-
-    case( key_remove_intermediates )
-      call read_value(v_log=opt%sys%remove_im)
-
-    case( key_memory_ulim )
-      call read_value(v_dble=opt%sys%memory_ulim)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_earth_shape )
-      call read_value(v_char=opt%earth%shp, is_keyword=.true.)
-
-    case( key_earth_r )
-      call read_value(v_dble=opt%earth%r)
-
-    case( key_earth_e2 )
-      call read_value(v_dble=opt%earth%e2)
-    !-----------------------------------------------------------
-    ! ERROR
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Set variables
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Setting variables')
+  call echo(code%ent, 'Checking the values')
 
   selectcase( opt%sys%old_files )
-  case( opt_old_files_stop, &
-        opt_old_files_remove, &
-        opt_old_files_overwrite )
+  case( OPT_OLD_FILES_STOP, &
+        OPT_OLD_FILES_REMOVE, &
+        OPT_OLD_FILES_OVERWRITE )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "'//str(key_old_files)//'".')
+    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
+            '\nCheck the value of "old_files".')
   endselect
-
-  call set_values_opt_earth(opt%earth, counter%earth_r, counter%earth_e2)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  call set_values_opt_earth(opt%earth, keynum('earth_r'), keynum('earth_e2'))
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%old_files   = 0
-  counter%dir_im      = 0
-  counter%remove_im   = 0
-  counter%memory_ulim = 0
-
-  counter%earth_shape = 0
-  counter%earth_r     = 0
-  counter%earth_e2    = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  ! Indivisual
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%old_files  , key_old_files           , 0, 1)
-  call check_num_of_key(counter%dir_im     , key_dir_intermediates   , 0, 1)
-  call check_num_of_key(counter%remove_im  , key_remove_intermediates, 0, 1)
-  call check_num_of_key(counter%memory_ulim, key_memory_ulim         , 0, 1)
-
-  call check_num_of_key(counter%earth_shape, key_earth_shape, 0, 1)
-  call check_num_of_key(counter%earth_r    , key_earth_r    , 0, 1)
-  call check_num_of_key(counter%earth_e2   , key_earth_e2   , 0, 1)
-  !--------------------------------------------------------------
-  ! Relations
-  !--------------------------------------------------------------
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_opt
 !===============================================================
 !
@@ -2034,12 +1551,15 @@ end subroutine read_settings_opt
 !===============================================================
 !
 !===============================================================
-subroutine check_paths(src, tgt, dout, opt)
+subroutine check_paths(src, tgt, dout, opt_sys)
+  use common_file, only: &
+        set_opt_old_files, &
+        handle_old_file
   implicit none
-  type(gs_)    , intent(in), target :: src
-  type(gs_)    , intent(in), target :: tgt
-  type(output_), intent(in), target :: dout
-  type(opt_)   , intent(in)         :: opt
+  type(gs_)     , intent(in), target :: src
+  type(gs_)     , intent(in), target :: tgt
+  type(output_) , intent(in), target :: dout
+  type(opt_sys_), intent(in)         :: opt_sys
 
   type(file_latlon_in_), pointer :: sfl
   type(file_raster_in_) , pointer :: sfr
@@ -2105,7 +1625,7 @@ subroutine check_paths(src, tgt, dout, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking old output files')
 
-  call set_opt_old_files(opt%sys%old_files)
+  call set_opt_old_files(opt_sys%old_files)
 
   call handle_old_file(dout%f_area_sum)
   call handle_old_file(dout%f_frac_sum)
@@ -2146,6 +1666,8 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_gs_latlon(ul)
+  use common_set2, only: &
+        bar
   implicit none
   type(gs_latlon_), intent(in), target :: ul
 
@@ -2218,6 +1740,8 @@ end subroutine echo_settings_gs_latlon
 !
 !===============================================================
 subroutine echo_settings_gs_raster(ur)
+  use common_set2, only: &
+        bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
 
@@ -2244,6 +1768,8 @@ end subroutine echo_settings_gs_raster
 !
 !===============================================================
 subroutine echo_settings_gs_polygon(up)
+  use common_set2, only: &
+        bar
   implicit none
   type(gs_polygon_), target :: up
 
@@ -2329,6 +1855,8 @@ end subroutine echo_settings_gs_polygon
 !
 !===============================================================
 subroutine echo_settings_raster(ur)
+  use common_set2, only: &
+        bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
 
@@ -2361,6 +1889,8 @@ end subroutine echo_settings_raster
 !
 !===============================================================
 subroutine echo_settings_output(dout)
+  use common_set2, only: &
+        bar
   implicit none
   type(output_), intent(in), target :: dout
 
@@ -2426,6 +1956,12 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
+  use common_set2, only: &
+        bar
+  use common_opt_set, only: &
+        echo_settings_opt_sys, &
+        echo_settings_opt_log, &
+        echo_settings_opt_earth
   implicit none
   type(opt_), intent(in) :: opt
 
@@ -2439,13 +1975,12 @@ subroutine echo_settings_opt(opt)
   !-------------------------------------------------------------
   call echo_settings_opt_sys(opt%sys)
 
+  call echo_settings_opt_log(opt%log)
+
   call echo_settings_opt_earth(opt%earth)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_opt
-!===============================================================
-!
-!===============================================================
 !===============================================================
 !
 !===============================================================

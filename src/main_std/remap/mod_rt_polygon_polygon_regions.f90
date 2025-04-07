@@ -6,7 +6,7 @@ module mod_rt_polygon_polygon_regions
   use lib_io
   use lib_math
   use common_const
-  use common_type
+  use common_type_gs
   implicit none
   private
   !-------------------------------------------------------------

@@ -4,11 +4,11 @@ module common_file
   use lib_log
   use lib_io
   use common_const
-  use common_type
+  use common_type_gs
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public procedures
+  ! Public Procedures
   !-------------------------------------------------------------
   public :: open_report_file
   public :: close_report_file
@@ -22,7 +22,7 @@ module common_file
     module procedure handle_old_file_path
   end interface
   !-------------------------------------------------------------
-  ! Private variables
+  ! Private Variables
   !-------------------------------------------------------------
   integer, save :: un_report = 0
   character(clen_path), save :: path_report = ''

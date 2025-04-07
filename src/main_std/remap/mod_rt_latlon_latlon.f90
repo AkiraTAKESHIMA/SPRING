@@ -3,17 +3,20 @@ module mod_rt_latlon_latlon
   use lib_log
   use lib_math
   use common_const
-  use common_type
-  use common_gs, only: &
+  use common_type_gs
+  use common_gs_util, only: &
         print_gs_latlon, &
         print_latlon
-  use common_rt, only: &
-        calc_rt_im_nij_ulim, &
+  use common_type_rt
+  use common_rt1d, only: &
         init_rt1d, &
-        reshape_rt1d, &
-        free_rt1d_comps, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
         clear_rt_main, &
-        output_rt_im
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   use def_type
   implicit none
   private
@@ -54,6 +57,8 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
+  call echo(code%ent, 'Setting pointers')
+
   sgc => s%cmn
   tgc => t%cmn
 
@@ -73,7 +78,7 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
   szl => sgl%zone(sgl%iZone)
   tzl => tgl%zone(tgl%iZone)
 
-  if( sgc%is_source )then
+  if( sgc%is_source .and. .not. tgc%is_source )then
     call print_gs_latlon(&
            'Source', sgc%nam, &
            szl%typ, &
@@ -86,7 +91,7 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
            tzl%hi, tzl%hf, tzl%vi, tzl%vf, &
            tgl%hi, tgl%hf, tgl%vi, tgl%vf, &
            tzl%west, tzl%east, tzl%south, tzl%north)
-  else
+  elseif( .not. sgc%is_source .and. tgc%is_source )then
     call print_gs_latlon(&
            'Source', tgc%nam, &
            tzl%typ, &
@@ -99,13 +104,21 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
            szl%hi, szl%hf, szl%vi, szl%vf, &
            sgl%hi, sgl%hf, sgl%vi, sgl%vf, &
            szl%west, szl%east, szl%south, szl%north)
+  else
+    call eerr('Unexpected condition.'//&
+            '\n  Grid system s is source: '//str(sgc%is_source)//&
+            '\n  Grid system t is source: '//str(tgc%is_source))
   endif
 
   rtm => rt%main
   rtiz => rt%im%zone(rt%im%iZone)
+
+  call echo(code%ext)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call echo(code%ent, 'Initializing')
+
   allocate(iith(tgl%hi-1_8:tgl%hf+1_8))
   iith(:) = 0_8
 
@@ -117,10 +130,12 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
 
   rtm%nij = 0_8
   rtiz%nij = 0_8
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making regridding table')
+  call echo(code%ent, 'Making remapping table')
 
   !call edbg('th: '//str((/tzl%hi,tzl%hf/),' ~ '))
   !call edbg('tv: '//str((/tzl%vi,tzl%vf/),' ~ '))
@@ -179,12 +194,12 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij+rt1%mij > rt%im%nij_ulim )then
           call echo(code%ent, 'Outputting intermediates '//&
-                    '(sij: '//str((/sijs,sij-1_8/),' ~ ')//')')
+                    '(sij: '//str((/sijs,sij-1_8/),' - ')//')')
 
           call reshape_rt1d(rt1d(sijs:sij-1_8), sgc%is_source, rtm, opt%earth)
-          call output_rt_im(rtm, rt%im)
+          call write_rt_im(rtm, rt%im)
           call clear_rt_main(rtm)
-          call free_rt1d_comps(rt1d(sijs:sij-1_8))
+          call free_rt1d_data(rt1d(sijs:sij-1_8))
           sijs = sij
 
           call echo(code%ext)
@@ -225,8 +240,8 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
     call echo(code%ent, 'Outputting intermediates '//&
-              '(sij: '//str((/sijs,sij/),' ~ ')//')')
-    call output_rt_im(rtm, rt%im)
+              '(sij: '//str((/sijs,sij/),' - ')//')')
+    call write_rt_im(rtm, rt%im)
     call clear_rt_main(rtm)
     call echo(code%ext)
   endif
@@ -237,7 +252,7 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt)
   !-------------------------------------------------------------
   nullify(rt1)
 
-  call free_rt1d_comps(rt1d(sijs:sij))
+  call free_rt1d_data(rt1d(sijs:sij))
   deallocate(rt1d)
   nullify(rt1d)
 

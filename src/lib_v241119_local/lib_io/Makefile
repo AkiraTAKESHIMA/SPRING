@@ -33,8 +33,6 @@ else
   OBJ_ALL = $(OBJ_F)
 endif
 
-MOD_ALL = $(OBJ_F:.o=.mod)
-
 .PHONY: all
 all:
 	$(MAKE) -C shapefile

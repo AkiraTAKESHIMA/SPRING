@@ -11,7 +11,8 @@ TARGET = lib_proj.a
 
 OBJ_F = \
   lib_proj_sinusoidal.o\
-  lib_proj_lambertconformalconic.o
+  lib_proj_lambertconformalconic.o\
+  lib_proj.o
 
 OBJ_ALL = $(OBJ_F)
 

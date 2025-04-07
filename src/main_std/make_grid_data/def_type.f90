@@ -1,5 +1,5 @@
 module def_type
-  use common_type
+  use common_type_opt
   implicit none
   private
 

@@ -6,7 +6,7 @@ module mod_grid
   use lib_array
   use lib_math
   use common_const
-  use common_type
+  use common_type_opt
   use mod_utils, only: &
         open_file_grid_im, &
         close_file_grid_im

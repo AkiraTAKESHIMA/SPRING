@@ -23,7 +23,7 @@ module lib_const
   !=============================================================
   ! Data attributes
   !=============================================================
-  character(clen_path), parameter :: id_undef = 'id_undef'
+  character(clen_var), parameter :: id_undef = '(undef)'
 
   character(clen_key), parameter :: endian_big          = 'big_endian'
   character(clen_key), parameter :: endian_little       = 'little_endian'

@@ -6,9 +6,16 @@ module mod_remap
   use lib_array
   use lib_math
   use common_const
-  use common_type
+  use common_type_opt
+  use common_type_gs
+  use common_type_rt
   implicit none
-
+  private
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  public :: remap
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
