@@ -15,6 +15,9 @@ make_common1:
 make_common2:
 	$(MAKE) -C common2
 
+make_common3:
+	$(MAKE) -C common3
+
 make_main_std:
 	$(MAKE) -C main_std
 
@@ -38,6 +41,7 @@ clean:\
   clean_lib\
   clean_common1\
   clean_common2\
+  clean_common3\
   clean_main_std\
   clean_main_ext
 
@@ -50,6 +54,9 @@ clean_common1:
 
 clean_common2:
 	$(MAKE) -C common2 clean
+
+clean_common3:
+	$(MAKE) -C common3 clean
 
 clean_main_std:
 	$(MAKE) -C main_std clean
