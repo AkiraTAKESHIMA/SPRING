@@ -4,7 +4,7 @@ module mod_file
   use lib_log
   use lib_io
   use common_const
-  use common_type
+  use common_type_rt
   implicit none
   private
   !-------------------------------------------------------------

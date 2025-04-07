@@ -6,17 +6,23 @@ module mod_rt
   use lib_io
   use lib_math
   use common_const
-  use common_type
+  use common_type_gs
   use common_file, only: &
         handle_old_file
-  use common_gs, only: &
-        make_n_list_polygon, &
+  use common_gs_define, only: &
         set_grids_latlon, &
-        set_grids_raster, &
+        set_grids_raster
+  use common_gs_define_polygon, only: &
         set_grids_polygon, &
+        make_n_list_polygon
+  use common_gs_zone, only: &
         determine_zones_latlon, &
         determine_zones_raster, &
         determine_zones_polygon, &
+        clear_iZone, &
+        raise_warning_no_valid_zone, &
+        raise_error_no_valid_zone
+  use common_gs_grid_core, only: &
         make_idxmap_latlon, &
         make_wgtmap_latlon, &
         make_grdidx_latlon, &
@@ -32,22 +38,22 @@ module mod_rt
         make_grdidx_polygon, &
         make_grduwa_polygon, &
         make_grdara_polygon, &
-        make_grdwgt_polygon, &
-        clear_iZone, &
-        realloc_grid, &
-        free_grid, &
-        output_grid_im, &
-        read_grid_im, &
-        calc_relations_latlon, &
-        raise_warning_no_valid_zone, &
-        raise_error_no_valid_zone
-  use common_rt, only: &
+        make_grdwgt_polygon
+  use common_gs_grid_base, only: &
+        free_grid
+  use common_gs_grid_io, only: &
+        write_grid_im
+  use common_type_rt
+  use common_rt_llbnds, only: &
+        calc_relations_llbnds
+  use common_rt_base, only: &
         init_rt_im_zone, &
-        free_rt, &
-        clear_rt_main, &
-        free_rt_main_comps, &
+        free_rt_main_data, &
+        clear_rt_main
+  use common_rt_io, only: &
         open_file_rt_im, &
-        close_file_rt_im, &
+        close_file_rt_im
+  use common_rt_driv, only: &
         output_rt_final
   use common_area_raster_polygon, only: &
         initialize_raster_polygon => initialize, &
@@ -136,7 +142,8 @@ end subroutine make_rt
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
+subroutine make_rt_driv_latlon_latlon(&
+    gs_source, gs_target, rt, opt)
   implicit none
   type(gs_) , intent(inout), target :: gs_source, gs_target
   type(rt_) , intent(inout), target :: rt
@@ -198,8 +205,8 @@ subroutine make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating relations of grid bounds.')
 
-  call calc_relations_latlon(sl, tl, opt%earth)
-  call calc_relations_latlon(tl, sl, opt%earth)
+  call calc_relations_llbnds(sl, tl, opt%earth)
+  call calc_relations_llbnds(tl, sl, opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -247,9 +254,10 @@ subroutine make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
     call make_wgtmap_latlon(tl)
 
     if( tl%nZones > 1 )then
-      call output_grid_im(itz, tl%grid, tl%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+      call write_grid_im(&
+             itz, tl%grid, tl%f_grid_out, &
+             attr=.true., idx=.true., &
+             uwa=.true., ara=.true., wgt=.true., xyz=.false.)
     endif
 
     call echo(code%ext)
@@ -286,9 +294,10 @@ subroutine make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
       call make_wgtmap_latlon(sl)
 
       if( sl%nZones > 1 )then
-        call output_grid_im(isz, sl%grid, sl%f_grid_out, &
-                            attr=.true., idx=.true., &
-                            uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+        call write_grid_im(&
+               isz, sl%grid, sl%f_grid_out, &
+               attr=.true., idx=.true., &
+               uwa=.true., ara=.true., wgt=.true., xyz=.false.)
       endif
 
       call echo(code%ext)
@@ -325,7 +334,7 @@ subroutine make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
   call free_grid(sl%grid)
   call free_grid(tl%grid)
 
-  call free_rt_main_comps(rt%main)
+  call free_rt_main_data(rt%main)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_latlon_latlon
@@ -401,8 +410,8 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating relations of grid bounds.')
 
-  call calc_relations_latlon(sl, tr, opt%earth)
-  call calc_relations_latlon(tr, sl, opt%earth)
+  call calc_relations_llbnds(sl, tr, opt%earth)
+  call calc_relations_llbnds(tr, sl, opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -421,9 +430,9 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
       call make_grdidx_raster(tr)
       call make_grduwa_raster(tr, opt%earth)
       call make_grdara_raster(tr, opt%earth)
-      call output_grid_im(itz, tr%grid, tr%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.false., xyz=.false.)
+      call write_grid_im(itz, tr%grid, tr%f_grid_out, &
+                         attr=.true., idx=.true., &
+                         uwa=.true., ara=.true., wgt=.false., xyz=.false.)
       call echo(code%ext)
     enddo
 
@@ -433,9 +442,9 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
       call free_grid(tr%grid)
 
       call make_grdwgt_raster(tr)
-      call output_grid_im(itz, tr%grid, tr%f_grid_out, &
-                          attr=.false., idx=.false., &
-                          uwa=.false., ara=.false., wgt=.true., xyz=.false.)
+      call write_grid_im(itz, tr%grid, tr%f_grid_out, &
+                         attr=.false., idx=.false., &
+                         uwa=.false., ara=.false., wgt=.true., xyz=.false.)
       call echo(code%ext)
     enddo
 
@@ -490,9 +499,9 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
     call make_wgtmap_raster(tr, opt%earth)
 
     if( tr%nZones > 1 )then
-      call output_grid_im(itz, tr%grid, tr%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+      call write_grid_im(itz, tr%grid, tr%f_grid_out, &
+                         attr=.true., idx=.true., &
+                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
     endif
 
     call echo(code%ext)
@@ -530,9 +539,9 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
       call make_wgtmap_latlon(sl)
 
       if( sl%nZones > 1 )then
-        call output_grid_im(isz, sl%grid, sl%f_grid_out, &
-                            attr=.true., idx=.true., &
-                            uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+        call write_grid_im(isz, sl%grid, sl%f_grid_out, &
+                           attr=.true., idx=.true., &
+                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
       endif
 
       call echo(code%ext)
@@ -569,7 +578,7 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
   call free_grid(sl%grid)
   call free_grid(tr%grid)
 
-  call free_rt_main_comps(rt%main)
+  call free_rt_main_data(rt%main)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_latlon_raster
@@ -683,9 +692,9 @@ subroutine make_rt_driv_latlon_polygon(gs_source, gs_target, rt, opt)
     call make_grdwgt_polygon(tp)
 
     if( tp%nZones > 1 )then
-      call output_grid_im(itz, tp%grid, tp%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+      call write_grid_im(itz, tp%grid, tp%f_grid_out, &
+                         attr=.true., idx=.true., &
+                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
     endif
 
     call echo(code%ext)
@@ -723,9 +732,9 @@ subroutine make_rt_driv_latlon_polygon(gs_source, gs_target, rt, opt)
       call make_wgtmap_latlon(sl)
 
       if( sl%nZones > 1 )then
-        call output_grid_im(isz, sl%grid, sl%f_grid_out, &
-                            attr=.true., idx=.true., &
-                            uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+        call write_grid_im(isz, sl%grid, sl%f_grid_out, &
+                           attr=.true., idx=.true., &
+                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
       endif
 
       call echo(code%ext)
@@ -762,7 +771,7 @@ subroutine make_rt_driv_latlon_polygon(gs_source, gs_target, rt, opt)
   call free_grid(sl%grid)
   call free_grid(tp%grid)
 
-  call free_rt_main_comps(rt%main)
+  call free_rt_main_data(rt%main)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_latlon_polygon
@@ -848,9 +857,9 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
       call make_grdidx_raster(sr)
       call make_grduwa_raster(sr, opt%earth)
       call make_grdara_raster(sr, opt%earth)
-      call output_grid_im(isz, sr%grid, sr%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.false., xyz=.false.)
+      call write_grid_im(isz, sr%grid, sr%f_grid_out, &
+                         attr=.true., idx=.true., &
+                         uwa=.true., ara=.true., wgt=.false., xyz=.false.)
       call echo(code%ext)
     enddo
     do isz = 1, sr%nZones
@@ -859,9 +868,9 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
       call free_grid(sr%grid)
 
       call make_grdwgt_raster(sr)
-      call output_grid_im(isz, sr%grid, sr%f_grid_out, &
-                          attr=.false., idx=.false., &
-                          uwa=.false., ara=.false., wgt=.true., xyz=.false.)
+      call write_grid_im(isz, sr%grid, sr%f_grid_out, &
+                         attr=.false., idx=.false., &
+                         uwa=.false., ara=.false., wgt=.true., xyz=.false.)
       call echo(code%ext)
     enddo
 
@@ -921,9 +930,9 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
     call make_wgtmap_raster(sr, opt%earth)
 
     if( sr%nZones > 1 )then
-      call output_grid_im(isz, sr%grid, sr%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+      call write_grid_im(isz, sr%grid, sr%f_grid_out, &
+                         attr=.true., idx=.true., &
+                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
     endif
 
     call echo(code%ext)
@@ -960,9 +969,9 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
       call make_grdwgt_polygon(tp)
 
       if( tp%nZones > 1 )then
-        call output_grid_im(itz, tp%grid, tp%f_grid_out, &
-                            attr=.true., idx=.true., &
-                            uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+        call write_grid_im(itz, tp%grid, tp%f_grid_out, &
+                           attr=.true., idx=.true., &
+                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
       endif
 
       call echo(code%ext)
@@ -1003,7 +1012,7 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
   call free_grid(sr%grid)
   call free_grid(tp%grid)
 
-  call free_rt_main_comps(rt%main)
+  call free_rt_main_data(rt%main)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_raster_polygon
@@ -1110,9 +1119,9 @@ subroutine make_rt_driv_polygon_polygon(gs_source, gs_target, rt, opt)
     call make_grdwgt_polygon(sp)
 
     if( sp%nZones > 1 )then
-      call output_grid_im(isz, sp%grid, sp%f_grid_out, &
-                          attr=.true., idx=.true., &
-                          uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+      call write_grid_im(isz, sp%grid, sp%f_grid_out, &
+                         attr=.true., idx=.true., &
+                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
     endif
 
     call echo(code%ext)
@@ -1148,9 +1157,9 @@ subroutine make_rt_driv_polygon_polygon(gs_source, gs_target, rt, opt)
       call make_grdwgt_polygon(tp)
 
       if( tp%nZones > 1 )then
-        call output_grid_im(itz, tp%grid, tp%f_grid_out, &
-                            attr=.true., idx=.true., &
-                            uwa=.true., ara=.true., wgt=.true., xyz=.false.)
+        call write_grid_im(itz, tp%grid, tp%f_grid_out, &
+                           attr=.true., idx=.true., &
+                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
       endif
 
       call echo(code%ext)
@@ -1191,7 +1200,7 @@ subroutine make_rt_driv_polygon_polygon(gs_source, gs_target, rt, opt)
   call free_grid(sp%grid)
   call free_grid(tp%grid)
 
-  call free_rt_main_comps(rt%main)
+  call free_rt_main_data(rt%main)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_polygon_polygon

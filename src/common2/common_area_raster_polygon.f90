@@ -6,7 +6,8 @@ module common_area_raster_polygon
   use lib_array
   use lib_math
   use common_const
-  use common_type
+  use common_type_gs
+  use common_type_rt
   implicit none
   private
   !-------------------------------------------------------------
@@ -230,7 +231,7 @@ subroutine set_modvars(sgr, tgp, make_rt)
   type(file_raster_in_) , pointer :: sfr
   type(zone_latlon_)    , pointer :: szl
 
-  call echo(code%bgn, 'set_modvars')
+  call echo(code%bgn, 'set_modvars', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -270,7 +271,7 @@ subroutine alloc_iarea(iarea, buffer)
   real(8), pointer :: iarea(:,:)
   integer, intent(in) :: buffer
 
-  call echo(code%bgn, 'alloc_iarea')
+  call echo(code%bgn, 'alloc_iarea', '-p -x2')
   !-------------------------------------------------------------
   call realloc(iarea, (/sdhi-buffer,sdvi-buffer/), (/sdhf+buffer,sdvf+buffer/), &
                clear=.true., fill=0.d0)
@@ -571,7 +572,7 @@ subroutine fill_miss_iarea_sum(iarea_sum, sidxmap)
 
   integer(8) :: idh, idv
 
-  call echo(code%bgn, 'fill_miss_iarea_sum')
+  call echo(code%bgn, 'fill_miss_iarea_sum', '-p -x2')
   !-------------------------------------------------------------
   do idv = sdvi, sdvf
     do idh = sdhi, sdhf
@@ -594,7 +595,7 @@ subroutine calc_ifrac_sum(ifrac_sum, iarea_sum, sidxmap)
 
   integer(8) :: idh, idv
 
-  call echo(code%bgn, 'calc_ifrac_sum')
+  call echo(code%bgn, 'calc_ifrac_sum', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

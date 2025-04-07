@@ -6,7 +6,8 @@ module mod_rasterize_polygon
   use lib_math
   use lib_io
   use common_const
-  use common_type
+  use common_type_opt
+  use common_type_gs
   use common_area_raster_polygon, only: &
         update_iarea_polygon, &
         get_dhv_polygon

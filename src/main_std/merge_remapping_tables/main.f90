@@ -4,12 +4,13 @@ program main
   use mod_utils, only: &
         remove_im
   use mod_set, only: &
-        read_settings, &
-        finalize
+        read_settings
   use mod_grid, only: &
         merge_grid_data
   use mod_main, only: &
         merge_rt
+  use mod_finalize, only: &
+        finalize
   implicit none
   type(input_)  :: input
   type(output_) :: output

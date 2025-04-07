@@ -52,7 +52,7 @@ module lib_io_file
   !
   !-------------------------------------------------------------
   public :: file_
-  public :: filedim
+  public :: FILEDIM
 
   public :: joined
   public :: dirname
@@ -60,7 +60,11 @@ module lib_io_file
   public :: path_ins
   public :: filesize
 
-  public :: init_file
+  public :: file
+
+  public :: file_init
+  public :: set_file_default
+  public :: reset_file_default
   public :: update_file
   public :: set_path
   public :: set_dtype
@@ -71,8 +75,6 @@ module lib_io_file
   public :: set_size
   public :: set_lower
   public :: set_upper
-
-  public :: file
 
   public :: fileinfo
 
@@ -148,35 +150,47 @@ module lib_io_file
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  integer, parameter :: filedim = 3
+  integer, parameter :: FILEDIM = 3
 
   type file_
-    character(clen_path) :: id         = ''
-    character(clen_path) :: path       = ''
-    character(clen_key)  :: dtype      = dtype_undef
-    integer              :: rec        = rec_undef
-    character(clen_key)  :: endian     = ''
-    integer(8)           :: length     = 0
-    character(clen_key)  :: status     = ''
-    character(clen_key)  :: action     = action_undef
-    integer              :: permission = permission_undef
-    integer(8)           :: sz(filedim)  ! Size of each record
-    integer(8)           :: lb(filedim)  ! Lower bounds in the records
-    integer(8)           :: ub(filedim)  ! Upper bounds       "
+    character(CLEN_VAR)  :: id         = ID_UNDEF
+    character(CLEN_PATH) :: path       = ''
+    character(CLEN_KEY)  :: dtype      = DTYPE_UNDEF
+    integer              :: rec        = REC_UNDEF
+    character(CLEN_KEY)  :: endian     = ENDIAN_UNDEF
+    integer(8)           :: length     = 0_8
+    character(CLEN_KEY)  :: status     = STATUS_UNDEF
+    character(CLEN_KEY)  :: action     = ACTION_UNDEF
+    integer              :: permission = PERMISSION_UNDEF
+    integer(8)           :: sz(FILEDIM) = 0_8 ! Size of each record
+    integer(8)           :: lb(FILEDIM) = 0_8 ! Lower bounds in the records
+    integer(8)           :: ub(FILEDIM) = 0_8 ! Upper bounds       "
   end type
 
-  character(2)        , parameter :: opt_default_mkdir__hut = '+ '
-  character(clen_line), save      :: opt_mkdir__hut = opt_default_mkdir__hut
+  character(2), parameter :: OPT_DEFAULT_MKDIR__HUT = '+ '
+  integer, parameter :: OPT_DEFAULT_MKDIR__CLEN_HUT = 2
+  logical, parameter :: OPT_DEFAULT_MKDIR__OUTPUT = .false.
+  logical, parameter :: OPT_DEFAULT_CHECK_PERMISSION__ALLOW_EMPTY = .false.
 
-  integer, parameter :: opt_default_mkdir__clen_hut = 2
-  integer, save      :: opt_mkdir__clen_hut = opt_default_mkdir__clen_hut
-
-  logical, parameter :: opt_default_mkdir__output = .false.
-  logical, save      :: opt_mkdir__output = opt_default_mkdir__output
-
-  logical, parameter :: opt_default_check_permission__allow_empty = .false.
-  logical, save      :: opt_check_permission__allow_empty &
-                          = opt_default_check_permission__allow_empty
+  character(CLEN_LINE) :: opt_mkdir__hut = OPT_DEFAULT_MKDIR__HUT
+  integer :: opt_mkdir__clen_hut = OPT_DEFAULT_MKDIR__CLEN_HUT
+  logical :: opt_mkdir__output = OPT_DEFAULT_MKDIR__OUTPUT
+  logical :: opt_check_permission__allow_empty = OPT_DEFAULT_CHECK_PERMISSION__ALLOW_EMPTY
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  character(CLEN_VAR)  :: f_default_id = ''
+  character(CLEN_PATH) :: f_default_path = ''
+  character(CLEN_KEY)  :: f_default_dtype = DTYPE_DBLE
+  integer              :: f_default_rec = 1
+  character(CLEN_KEY)  :: f_default_endian = ENDIAN_DEFAULT
+  integer(8)           :: f_default_length = 0_8
+  character(CLEN_KEY)  :: f_default_status = STATUS_UNKNOWN
+  character(CLEN_KEY)  :: f_default_action = ACTION_READWRITE
+  integer              :: f_default_permission = PERMISSION_RW
+  integer(8)           :: f_default_sz(FILEDIM) = 0_8
+  integer(8)           :: f_default_lb(FILEDIM) = 0_8
+  integer(8)           :: f_default_ub(FILEDIM) = 0_8
 !---------------------------------------------------------------
 contains
 !===============================================================
@@ -373,9 +387,10 @@ end function path_ins
 !===============================================================
 !
 !===============================================================
-type(file_) function file(path, dtype, rec, endian, &
-                          length, status, action, permission, id, &
-                          sz1, sz2, sz3, lb1, lb2, lb3, ub1, ub2, ub3) result(f)
+type(file_) function file(&
+    path, dtype, rec, endian, &
+    length, status, action, permission, id, &
+    sz1, sz2, sz3, lb1, lb2, lb3, ub1, ub2, ub3) result(f)
   implicit none
   character(*), intent(in), optional :: path
   character(*), intent(in), optional :: dtype
@@ -390,7 +405,7 @@ type(file_) function file(path, dtype, rec, endian, &
   integer(8)  , intent(in), optional :: lb1, lb2, lb3
   integer(8)  , intent(in), optional :: ub1, ub2, ub3
 
-  call set_file_default(f)
+  f = file_default()
 
   if( present(path)       ) f%path       = path
   if( present(dtype)      ) f%dtype      = dtype
@@ -414,43 +429,99 @@ end function file
 !===============================================================
 !
 !===============================================================
-subroutine init_file(f)
+type(file_) function file_init() result(f)
   implicit none
-  type(FILE_), intent(out) :: f
 
-  f%id         = id_undef
+  f%id         = ID_UNDEF
   f%path       = ''
-  f%dtype      = dtype_undef
-  f%rec        = rec_undef
-  f%endian     = endian_undef
+  f%dtype      = DTYPE_UNDEF
+  f%rec        = REC_UNDEF
+  f%endian     = ENDIAN_UNDEF
   f%length     = 0_8
-  f%status     = status_undef
-  f%action     = action_undef
-  f%permission = permission_undef
+  f%status     = STATUS_UNDEF
+  f%action     = ACTION_UNDEF
+  f%permission = PERMISSION_UNDEF
   f%sz(:)      = 0_8
   f%lb(:)      = 0_8
   f%ub(:)      = 0_8
-end subroutine init_file
+end function file_init
 !===============================================================
 !
 !===============================================================
-subroutine set_file_default(f)
+type(file_) function file_default() result(f)
   implicit none
-  type(file_), intent(out) :: f
 
-  f%id         = id_undef
-  f%path       = ''
-  f%dtype      = dtype_dble
-  f%rec        = 1
-  f%endian     = endian_default
-  f%length     = 0_8
-  f%status     = status_unknown
-  f%action     = action_readwrite
-  f%permission = permission_rw
-  f%sz(:)      = 0_8
-  f%lb(:)      = 0_8
-  f%ub(:)      = 0_8
+  f%id         = f_default_id
+  f%path       = f_default_path
+  f%dtype      = f_default_dtype
+  f%rec        = f_default_rec
+  f%endian     = f_default_endian
+  f%length     = f_default_length
+  f%status     = f_default_status
+  f%action     = f_default_action
+  f%permission = f_default_permission
+  f%sz(:)      = f_default_sz(:)
+  f%lb(:)      = f_default_lb(:)
+  f%ub(:)      = f_default_ub(:)
+end function file_default
+!===============================================================
+!
+!===============================================================
+subroutine set_file_default(&
+    id, path, dtype, rec, endian, length, &
+    status, action, permission, sz, lb, ub)
+  implicit none
+  character(*), intent(in), optional :: id
+  character(*), intent(in), optional :: path
+  character(*), intent(in), optional :: dtype
+  integer     , intent(in), optional :: rec
+  character(*), intent(in), optional :: endian
+  integer(8)  , intent(in), optional :: length
+  character(*), intent(in), optional :: status
+  character(*), intent(in), optional :: action
+  integer     , intent(in), optional :: permission
+  integer(8)  , intent(in), optional :: sz(:)
+  integer(8)  , intent(in), optional :: lb(:)
+  integer(8)  , intent(in), optional :: ub(:)
+
+  call echo(code%bgn, 'set_file_default', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( present(id        ) ) f_default_id = id
+  if( present(path      ) ) f_default_path = path
+  if( present(dtype     ) ) f_default_dtype = dtype
+  if( present(rec       ) ) f_default_rec = rec
+  if( present(endian    ) ) f_default_endian = endian
+  if( present(length    ) ) f_default_length = length
+  if( present(status    ) ) f_default_status = status
+  if( present(action    ) ) f_default_action = action
+  if( present(permission) ) f_default_permission = permission
+  if( present(sz        ) ) f_default_sz(:size(sz)) = sz(:)
+  if( present(lb        ) ) f_default_lb(:size(lb)) = lb(:)
+  if( present(ub        ) ) f_default_ub(:size(ub)) = ub(:)
+  !-------------------------------------------------------------
+  call echo(code%ret)
 end subroutine set_file_default
+!===============================================================
+!
+!===============================================================
+subroutine reset_file_default()
+  implicit none
+
+  f_default_id         = ID_UNDEF
+  f_default_path       = ''
+  f_default_dtype      = DTYPE_DBLE
+  f_default_rec        = 1
+  f_default_endian     = ENDIAN_DEFAULT
+  f_default_length     = 0_8
+  f_default_status     = STATUS_UNKNOWN
+  f_default_action     = ACTION_READWRITE
+  f_default_permission = PERMISSION_RW
+  f_default_sz(:)      = 0_8
+  f_default_lb(:)      = 0_8
+  f_default_ub(:)      = 0_8
+end subroutine reset_file_default
 !===============================================================
 !
 !===============================================================

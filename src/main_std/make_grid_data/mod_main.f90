@@ -5,21 +5,30 @@ module mod_main
   use lib_array
   use lib_io
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_gs, only: &
+  use common_type_opt
+  use common_type_gs
+  use common_gs_grid_base, only: &
         init_grid, &
-        realloc_grid, &
         free_grid, &
-        output_grid_im, &
-        output_grid_data, &
-        make_n_list_polygon, &
+        realloc_grid, &
+        get_grid_calc_from_make
+  use common_gs_grid_io, only: &
+        write_grid_im
+  use common_gs_grid_driv, only: &
+        output_grid_data
+  use common_gs_define, only: &
         set_grids_latlon, &
         set_grids_raster, &
         set_grids_polygon, &
+        make_n_list_polygon
+  use common_gs_zone, only: &
         determine_zones_latlon, &
         determine_zones_raster, &
         determine_zones_polygon, &
+        clear_iZone
+  use common_gs_grid_core, only: &
         make_idxmap_latlon, &
         make_wgtmap_latlon, &
         make_grdidx_latlon, &
@@ -44,9 +53,8 @@ module mod_main
         make_grdxyz_latlon, &
         make_grdxyz_raster, &
         make_grdxyz_polygon, &
-        make_grdlonlat_polygon, &
-        clear_iZone, &
-        get_grid_calc_from_make
+        make_grdlonlat_polygon
+  ! this
   use def_type
   implicit none
   !-------------------------------------------------------------
@@ -167,7 +175,7 @@ subroutine make_grid_data_im(u, opt)
       call make_grdlonlat_latlon(ul)
 
       if( ul%nZones > 1 )then
-        call output_grid_im(&
+        call write_grid_im(&
                iuz, grid, fg_out, &
                attr=.true., &
                idx=.true., &
@@ -209,7 +217,7 @@ subroutine make_grid_data_im(u, opt)
         call make_grdara_raster(ur, opt%earth)
         call make_grdxyz_raster(ur, opt%earth)
 
-        call output_grid_im(&
+        call write_grid_im(&
                iuz, grid, fg_out, &
                attr=.true., &
                idx=.true., &
@@ -229,7 +237,7 @@ subroutine make_grid_data_im(u, opt)
         !-------------------------------------------------------
         call make_grdwgt_raster(ur)
 
-        call output_grid_im(&
+        call write_grid_im(&
                iuz, grid, fg_out, &
                attr=.false., &
                idx=.false., &
@@ -258,7 +266,7 @@ subroutine make_grid_data_im(u, opt)
         call make_grdlonlat_raster(ur)
 
         if( ur%nZones > 1 )then
-          call output_grid_im(&
+          call write_grid_im(&
                  iuz, grid, fg_out, &
                  attr=.true., &
                  idx=.true., &
@@ -313,7 +321,7 @@ subroutine make_grid_data_im(u, opt)
       call make_grdlonlat_polygon(up)
 
       if( up%nZones > 1 )then
-        call output_grid_im(&
+        call write_grid_im(&
                iuz, up%grid, up%f_grid_out, &
                attr=.true., &
                idx=.true., &

@@ -1,17 +1,31 @@
 module mod_set
+  ! lib
   use lib_const
   use lib_base
   use lib_log
   use lib_io
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_set
-  use common_file, only: &
-        open_report_file, &
-        close_report_file, &
-        set_opt_old_files, &
-        handle_old_file
+  use common_type_opt
+  use common_opt_set, only: &
+        KEY_OLD_FILES           , &
+        KEY_DIR_INTERMEDIATES   , &
+        KEY_REMOVE_INTERMEDIATES, &
+        KEY_MEMORY_ULIM         , &
+        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_R             , &
+        KEY_EARTH_E2
+  ! common2
+  use common_type_rt
+  use common_rt_set, only: &
+        KEY_OPT_COEF_SUM_MODIFY      , &
+        KEY_OPT_COEF_SUM_MODIFY_ULIM , &
+        KEY_OPT_COEF_ZERO_POSITIVE   , &
+        KEY_OPT_COEF_ZERO_NEGATIVE   , &
+        KEY_OPT_COEF_ERROR_EXCESS    , &
+        KEY_OPT_COEF_SUM_ERROR_EXCESS
+  ! this
   use def_type
   implicit none
   private
@@ -19,82 +33,122 @@ module mod_set
   ! Public procedures
   !-------------------------------------------------------------
   public :: read_settings
-  public :: finalize
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine read_settings(input, output, opt)
+  ! common1
+  use common_set2, only: &
+        open_setting_file      , &
+        close_setting_file     , &
+        line_number            , &
+        read_path_report       , &
+        get_path_report        , &
+        find_block             , &
+        check_num_of_key       , &
+        bar                    , &
+        raise_error_invalid_key, &
+        msg_invalid_input
+  use common_file, only: &
+        open_report_file
+  use common_opt_set, only: &
+        set_default_values_opt_sys, &
+        set_default_values_opt_log
+  ! common2
+  use common_rt_base, only: &
+        init_rt
   implicit none
   type(input_) , intent(out) :: input
   type(output_), intent(out) :: output
   type(opt_)   , intent(out) :: opt
 
+  type counter_
+    integer :: input
+    integer :: output
+    integer :: opt
+  end type
+
+  type(counter_) :: counter
+
   character(clen_var) :: block_name
-  character(clen_path) :: path_report
-  !-------------------------------------------------------------
+
   character(clen_var), parameter :: block_name_input  = 'input'
   character(clen_var), parameter :: block_name_output = 'output'
   character(clen_var), parameter :: block_name_opt    = 'options'
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Init.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
+  call echo(code%ent, 'Initializing')
 
-  call init_opt_sys(opt%sys)
+  output%rt%id = 'output%rt'
+
+  call init_rt(output%rt)
+
+  call set_default_values_opt_sys(opt%sys)
+  call set_default_values_opt_log(opt%log)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   call open_setting_file()
 
-  !
+  ! Open report file
   !-------------------------------------------------------------
-  call get_path_report(path_report)
-  call open_report_file(path_report)
+  call read_path_report()
+  call open_report_file(get_path_report())
+
+  ! Read the settings
+  !-------------------------------------------------------------
+  call init_counter()
 
   do
     call find_block(block_name)
 
     selectcase( block_name )
     !-----------------------------------------------------------
-    ! Case: No more block.
+    ! Case: No more block
     case( '' )
       exit
     !-----------------------------------------------------------
     ! Case: input
     case( block_name_input )
+      call update_counter(counter%input, block_name)
       call read_settings_input(input)
     !-----------------------------------------------------------
     ! Case: output
     case( block_name_output )
+      call update_counter(counter%output, block_name)
       call read_settings_output(output)
     !-----------------------------------------------------------
     ! Case: options
     case( block_name_opt )
+      call update_counter(counter%opt, block_name)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
       call eerr(str(msg_invalid_value())//&
               '\n  block_name: '//str(block_name)//&
-              '\nCheck name of the block.')
+              '\nCheck the names of the blocks.')
     endselect
   enddo
 
   call close_setting_file()
 
+  call check_number_of_blocks()
+
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Detect confliction
+  ! Detect conflictions
   !-------------------------------------------------------------
-  call echo(code%ent, 'Detecting confliction')
+  call echo(code%ent, 'Detecting conflictions')
 
   if( input%nFiles_grid > 0 .and. output%rt%main%opt_coef%is_sum_modify_enabled )then
     call eerr(str(msg_unexpected_condition())//&
@@ -110,7 +164,9 @@ subroutine read_settings(input, output, opt)
   call echo(code%ent, 'Setting some variables')
 
   if( opt%sys%dir_im == '' )then
-    opt%sys%dir_im = dirname(path_report)
+    opt%sys%dir_im = dirname(get_path_report())
+    call edbg('Directory of intermediates was not given.'//&
+            '\nAutomatically set to "'//str(opt%sys%dir_im)//'".')
   endif
 
   output%path_grid_im = joined(opt%sys%dir_im, 'spring.grid.im')
@@ -129,24 +185,57 @@ subroutine read_settings(input, output, opt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_paths(input, output, opt)
+  call check_paths(input, output, opt%sys)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine read_settings
-!===============================================================
-!
-!===============================================================
-subroutine finalize()
+!---------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine init_counter()
   implicit none
 
-  call echo(code%bgn, 'finalize', '-p -x2')
+  counter%input  = 0
+  counter%output = 0
+  counter%opt = 0
+end subroutine init_counter
+!---------------------------------------------------------------
+subroutine update_counter(n, block_name)
+  implicit none
+  integer, intent(inout) :: n
+  character(*), intent(in) :: block_name
+
+  call echo(code%bgn, '__IP__update_counter', '-p -x2')
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call close_report_file()
+  n = n + 1
+
+  selectcase( block_name )
+  case( BLOCK_NAME_INPUT , &
+        BLOCK_NAME_OUTPUT, &
+        BLOCK_NAME_OPT    )
+    if( n > 2 )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nBlock "'//str(block_name)//'" appeared more than once.')
+    endif
+  case default
+    call eerr('Invalid value in $block_name: '//str(block_name))
+  endselect
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine finalize
+end subroutine update_counter
+!---------------------------------------------------------------
+subroutine check_number_of_blocks()
+  implicit none
+
+  call echo(code%bgn, '__IP__check_number_of_blocks', '-p -x2')
+  !-------------------------------------------------------------
+  call check_num_of_key(counter%input , BLOCK_NAME_INPUT , 1, 1)
+  call check_num_of_key(counter%output, BLOCK_NAME_OUTPUT, 1, 1)
+  call check_num_of_key(counter%opt   , BLOCK_NAME_OPT   , 0, 1)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine check_number_of_blocks
+!---------------------------------------------------------------
+end subroutine read_settings
 !===============================================================
 !
 !===============================================================
@@ -159,234 +248,216 @@ end subroutine finalize
 !
 !===============================================================
 subroutine read_settings_input(input)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(input_), intent(inout) :: input
-
-  type counter_
-    integer :: dir
-    integer :: length_rt
-    integer :: f_rt_sidx
-    integer :: f_rt_tidx
-    integer :: f_rt_area
-    integer :: f_rt_coef
-    integer :: length_grid
-    integer :: f_grdidx
-    integer :: f_grdara
-    integer :: idx_miss
-    integer :: opt_idx_duplication
-  end type
-
-  character(clen_var), parameter :: key_dir = 'dir'
-  character(clen_var), parameter :: key_length_rt = 'length_rt'
-  character(clen_var), parameter :: key_f_rt_sidx = 'f_rt_sidx'
-  character(clen_var), parameter :: key_f_rt_tidx = 'f_rt_tidx'
-  character(clen_var), parameter :: key_f_rt_area = 'f_rt_area'
-  character(clen_var), parameter :: key_f_rt_coef = 'f_rt_coef'
-  character(clen_var), parameter :: key_length_grid = 'length_grid'
-  character(clen_var), parameter :: key_f_grdidx    = 'f_grdidx'
-  character(clen_var), parameter :: key_f_grdara    = 'f_grdara'
-  character(clen_var), parameter :: key_idx_miss    = 'idx_miss'
-  character(clen_var), parameter :: key_opt_idx_duplication = 'opt_idx_duplication'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
 
   type(f_rt_)  , pointer :: f_rt
   type(f_grid_), pointer :: f_grid
   integer :: iFile_rt
   integer :: iFile_grid
+  integer :: num_f_rt_sidx, num_f_rt_tidx, num_f_rt_area, num_f_rt_coef
+  integer :: num_f_grdidx, num_f_grdara
+  integer :: line_number_prev_length_rt
   character(clen_var) :: id
+
+  character(clen_path) :: dir
 
   call echo(code%bgn, 'read_settings_input')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call add(counter%dir)
-    !-----------------------------------------------------------
-    ! Remapping table
-    !-----------------------------------------------------------
-    case( key_length_rt )
-      call add(counter%length_rt)
-
-    case( key_f_rt_sidx )
-      call add(counter%f_rt_sidx)
-
-    case( key_f_rt_tidx )
-      call add(counter%f_rt_tidx)
-
-    case( key_f_rt_area )
-      call add(counter%f_rt_area)
-
-    case( key_f_rt_coef )
-      call add(counter%f_rt_coef)
-    !-----------------------------------------------------------
-    ! Grid data
-    !-----------------------------------------------------------
-    case( key_length_grid )
-      call add(counter%length_grid)
-
-    case( key_f_grdidx )
-      call add(counter%f_grdidx)
-
-    case( key_f_grdara )
-      call add(counter%f_grdara)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_opt_idx_duplication )
-      call add(counter%opt_idx_duplication)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(11)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('length_rt', 1, -1)
+  call set_keynum('f_rt_sidx', 1, -1)
+  call set_keynum('f_rt_tidx', 1, -1)
+  call set_keynum('f_rt_area', 1, -1)
+  call set_keynum('f_rt_coef', 1, -1)
+  call set_keynum('length_grid', 0, -1)
+  call set_keynum('f_grdidx', 0, -1)
+  call set_keynum('f_grdara', 0, -1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('opt_idx_duplication', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Count the number of times each keyword was used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Counting the number of times each keyword was used')
+
+  input%nFiles_rt = 0
+  input%nFiles_grid = 0
+  line_number_prev_length_rt = 0
+  num_f_rt_sidx = 0
+  num_f_rt_tidx = 0
+  num_f_rt_area = 0
+  num_f_rt_coef = 0
+  num_f_grdidx = 0
+  num_f_grdara = 0
+
+  do
+    call read_input()
+    call update_keynum()
+
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
+    case( '' )
+      exit
+    !-----------------------------------------------------------
+    ! Remapping table
+    case( 'length_rt' )
+      call update_num_rt(input%nFiles_rt)
+
+    case( 'f_rt_sidx' )
+      call update_num_f_rt(num_f_rt_sidx, input%nFiles_rt)
+    case( 'f_rt_tidx' )
+      call update_num_f_rt(num_f_rt_tidx, input%nFiles_rt)
+    case( 'f_rt_area' )
+      call update_num_f_rt(num_f_rt_area, input%nFiles_rt)
+    case( 'f_rt_coef' )
+      call update_num_f_rt(num_f_rt_coef, input%nFiles_rt)
+    !-----------------------------------------------------------
+    ! Grid data
+    case( 'length_grid' )
+      call add(input%nFiles_grid)
+
+    case( 'f_grdidx' )
+      call add(num_f_grdidx)
+    case( 'f_grdara' )
+      call add(num_f_grdara)
+    !-----------------------------------------------------------
+    endselect
+  enddo
+
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Set the default values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the default values')
 
   ! Remapping table
   !-------------------------------------------------------------
-  input%nFiles_rt = counter%length_rt
   allocate(input%list_f_rt(input%nFiles_rt))
   do iFile_rt = 1, input%nFiles_rt
+    f_rt => input%list_f_rt(iFile_rt)
     id = 'input%list_f_rt('//str(iFile_rt)//')'
-    input%list_f_rt(iFile_rt)%f_sidx &
-      = file('', dtype_int4, 1, endian_default, action=action_read, id=str(id)//'%f_sidx')
-    input%list_f_rt(iFile_rt)%f_tidx &
-      = file('', dtype_int4, 1, endian_default, action=action_read, id=str(id)//'%f_tidx')
-    input%list_f_rt(iFile_rt)%f_area &
-      = file('', dtype_dble, 1, endian_default, action=action_read, id=str(id)//'%f_area')
-    input%list_f_rt(iFile_rt)%f_coef &
-      = file('', dtype_dble, 1, endian_default, action=action_read, id=str(id)//'%f_coef')
+    call set_file_default(action=ACTION_READ)
+    f_rt%f_sidx = file(trim(id)//'%f_sidx', dtype=DTYPE_INT4)
+    f_rt%f_tidx = file(trim(id)//'%f_tidx', dtype=DTYPE_INT4)
+    f_rt%f_area = file(trim(id)//'%f_area', dtype=DTYPE_DBLE)
+    f_rt%f_coef = file(trim(id)//'%f_coef', dtype=DTYPE_DBLE)
+    call reset_file_default()
   enddo
 
   ! Grid data
   !-------------------------------------------------------------
-  input%nFiles_grid = counter%length_grid
-  allocate(input%list_f_grid(input%nFiles_grid))
-  do iFile_grid = 1, input%nFiles_grid
-    id = 'input%flist_f_grid('//str(iFile_grid)//')'
-    input%list_f_grid(iFile_grid)%f_idx &
-      = file('', dtype_int4, 1, endian_default, action=action_read, id=str(id)//'%f_idx')
-    input%list_f_grid(iFile_grid)%f_ara &
-      = file('', dtype_dble, 1, endian_default, action=action_read, id=str(id)//'%f_ara')
-  enddo
+  if( input%nFiles_grid > 0 )then
+    allocate(input%list_f_grid(input%nFiles_grid))
+    do iFile_grid = 1, input%nFiles_grid
+      f_grid => input%list_f_grid(iFile_grid)
+      id = 'input%list_f_grid('//str(iFile_grid)//')'
+      call set_file_default(action=ACTION_READ)
+      f_grid%f_idx = file(trim(id)//'%f_idx', dtype=DTYPE_INT4)
+      f_grid%f_ara = file(trim(id)//'%f_ara', dtype=DTYPE_DBLE)
+      call reset_file_default()
+    enddo
+  endif
 
-  input%idx_miss = idx_miss_default
-  input%opt_idx_dup = input_opt_idx_dup_stop
+  input%idx_miss = IDX_MISS_DEFAULT
+  input%opt_idx_dup = INPUT_OPT_IDX_DUP_STOP
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read inputs
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading inputs')
-
-  dir = ''
+  call echo(code%ent, 'Reading the settings')
 
   call back_to_block_head()
+  call reset_keynum()
 
-  call init_counter()
+  dir = ''
   input%nFiles_rt = 0
   input%nFiles_grid = 0
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Remapping table
-    !-----------------------------------------------------------
-    case( key_length_rt )
-      call update_num_f_rt(input%nFiles_rt)
+    case( 'length_rt' )
+      call add(input%nFiles_rt)
       f_rt => input%list_f_rt(input%nFiles_rt)
+      call read_value(f_rt%nij)
 
-      call read_value(v_int8=f_rt%nij)
-
-    case( key_f_rt_sidx )
-      call update_counter_f_rt(key, counter%f_rt_sidx, input%nFiles_rt)
-      call read_value(v_file=f_rt%f_sidx, get_length=.false.)
-      f_rt%f_sidx%path = joined(dir, f_rt%f_sidx%path)
-
-    case( key_f_rt_tidx )
-      call update_counter_f_rt(key, counter%f_rt_tidx, input%nFiles_rt)
-      call read_value(v_file=f_rt%f_tidx, get_length=.false.)
-      f_rt%f_tidx%path = joined(dir, f_rt%f_tidx%path)
-
-    case( key_f_rt_area )
-      call update_counter_f_rt(key, counter%f_rt_area, input%nFiles_rt)
-      call read_value(v_file=f_rt%f_area, get_length=.false.)
-      f_rt%f_area%path = joined(dir, f_rt%f_area%path)
-
-    case( key_f_rt_coef )
-      call update_counter_f_rt(key, counter%f_rt_coef, input%nFiles_rt)
-      call read_value(v_file=f_rt%f_coef, get_length=.false.)
-      f_rt%f_coef%path = joined(dir, f_rt%f_coef%path)
+    case( 'f_rt_sidx' )
+      call read_value(f_rt%f_sidx, dir)
+    case( 'f_rt_tidx' )
+      call read_value(f_rt%f_tidx, dir)
+    case( 'f_rt_area' )
+      call read_value(f_rt%f_area, dir)
+    case( 'f_rt_coef' )
+      call read_value(f_rt%f_coef, dir)
     !-----------------------------------------------------------
     ! Grid data
-    !-----------------------------------------------------------
-    case( key_length_grid )
+    case( 'length_grid' )
       call add(input%nFiles_grid)
       f_grid => input%list_f_grid(input%nFiles_grid)
+      call read_value(f_grid%nmax)
 
-      call read_value(v_int8=f_grid%nmax)
+    case( 'f_grdidx' )
+      call read_value(f_grid%f_idx, dir)
+    case( 'f_grdara' )
+      call read_value(f_grid%f_ara, dir)
 
-    case( key_f_grdidx )
-      call read_value(v_file=f_grid%f_idx, get_length=.false.)
-      f_grid%f_idx%path = joined(dir, f_grid%f_idx%path)
+    case( 'idx_miss' )
+      call read_value(input%idx_miss)
 
-    case( key_f_grdara )
-      call read_value(v_file=f_grid%f_ara, get_length=.false.)
-      f_grid%f_ara%path = joined(dir, f_grid%f_ara%path)
-
-    case( key_idx_miss )
-      call read_value(v_int8=input%idx_miss)
-
-    case( key_opt_idx_duplication )
-      call read_value(v_char=input%opt_idx_dup, is_keyword=.true.)
+    case( 'opt_idx_duplication' )
+      call read_value(input%opt_idx_dup, is_keyword=.true.)
     !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Modify values
+  ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying values')
+  call echo(code%ent, 'Setting the related values')
 
   ! Remapping table
   !-------------------------------------------------------------
@@ -415,151 +486,121 @@ subroutine read_settings_input(input)
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  input%opt_idx_dup: '//str(input%opt_idx_dup)//&
-            '\nCheck the value of "'//str(key_opt_idx_duplication)//'".')
+            '\nCheck the value of "opt_idx_duplication".')
   endselect
 
   call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free the external module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%dir = 0
-  counter%length_rt = 0
-  counter%f_rt_sidx = 0
-  counter%f_rt_tidx = 0
-  counter%f_rt_area = 0
-  counter%f_rt_coef = 0
-  counter%length_grid = 0
-  counter%f_grdara = 0
-  counter%f_grdidx = 0
-  counter%idx_miss = 0
-  counter%opt_idx_duplication = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  ! Individual
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%length_rt, key_length_rt, 1, 0)
-  call check_num_of_key(counter%length_grid, key_length_grid, 0, 0)
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
-  call check_num_of_key(counter%opt_idx_duplication, key_opt_idx_duplication, 0, 1)
-  !--------------------------------------------------------------
-  ! Relations
-  !--------------------------------------------------------------
-  if( counter%length_rt /= counter%f_rt_sidx .or. &
-      counter%length_rt /= counter%f_rt_tidx .or. &
-      counter%length_rt /= counter%f_rt_area .or. &
-      counter%length_rt /= counter%f_rt_coef )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  The number of inputs of "'//str(key_f_rt_sidx)//'", "'//&
-              str(key_f_rt_tidx)//'", "'//str(key_f_rt_area)//'" or "'//&
-              str(key_f_rt_coef)//'" mismatch with that of "'//str(key_length_rt)//'".'//&
-            '\n"'//str(key_length_rt)//'": '//str(counter%length_rt)//&
-            '\n"'//str(key_f_rt_sidx)//'": '//str(counter%f_rt_sidx)//&
-            '\n"'//str(key_f_rt_tidx)//'": '//str(counter%f_rt_tidx)//&
-            '\n"'//str(key_f_rt_area)//'": '//str(counter%f_rt_area)//&
-            '\n"'//str(key_f_rt_coef)//'": '//str(counter%f_rt_coef))
-  endif
-
-  if( counter%length_grid /= counter%f_grdidx .or. &
-      counter%length_grid /= counter%f_grdara )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  The number of inputs of "'//str(key_f_grdidx)//'" or "'//&
-              str(key_f_grdara)//'" mismatch with that of "'//str(key_length_grid)//'".'//&
-            '\n"'//str(key_length_grid)//'": '//str(counter%length_grid)//&
-            '\n"'//str(key_f_grdidx)//'": '//str(counter%f_grdidx)//&
-            '\n"'//str(key_f_grdara)//'": '//str(counter%f_grdara))
-  endif
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!----------------------------------------------------------------
-subroutine update_num_f_rt(n)
+subroutine update_num_rt(n)
   implicit none
   integer, intent(inout) :: n
 
-  call echo(code%bgn, 'update_num_f_rt', '-p -x2')
+  call echo(code%bgn, '__IP__update_num_rt', '-p -x2')
   !-------------------------------------------------------------
-  if( n /= counter%f_rt_sidx .or. &
-      n /= counter%f_rt_tidx .or. &
-      n /= counter%f_rt_area .or. &
-      n /= counter%f_rt_coef )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  @ line '//str(line_number())//&
-            '\n  "'//str(key_length_rt)//'" was specified too many times.')
+  if( n /= num_f_rt_sidx .or. &
+      n /= num_f_rt_tidx .or. &
+      n /= num_f_rt_area .or. &
+      n /= num_f_rt_coef )then
+    call eerr(str(msg_invalid_input())//&
+            '\n  Any of "f_rt_sidx", "f_rt_tidx", "f_rt_area" or "f_rt_coef" is missing'//&
+              ' in the group of regridding tables starts with "length_rt"'//&
+              ' @ line '//str(line_number_prev_length_rt)//'.')
   endif
 
+  line_number_prev_length_rt = line_number()
   n = n + 1
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine update_num_rt
+!---------------------------------------------------------------
+subroutine update_num_f_rt(n, n_rt)
+  implicit none
+  integer     , intent(inout) :: n
+  integer     , intent(in)    :: n_rt
+
+  call echo(code%bgn, '__IP__update_num_f_rt', '-p -x2')
+  !-------------------------------------------------------------
+  n = n + 1
+
+  if( n /= n_rt )then
+    call eerr(str(msg_invalid_input())//&
+            '\n  @ line '//str(line_number())//&
+            '\n  "'//str(key())//'" appeared too many times in the group of remapping tables,'//&
+              ' which start with "length_rt".')
+  endif
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine update_num_f_rt
 !---------------------------------------------------------------
-subroutine update_counter_f_rt(key, n, nFiles)
+subroutine check_keynum_relations()
   implicit none
-  character(*), intent(in) :: key
-  integer     , intent(inout) :: n
-  integer     , intent(in)    :: nFiles
 
-  call echo(code%bgn, 'update_counter_f_rt', '-p -x2')
-  !-------------------------------------------------------------
-  n = n + 1
-
-  if( n /= nFiles )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  @ line '//str(line_number())//&
-            '\n  "'//str(key)//'" was specified too many times.')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p -x2')
+  !--------------------------------------------------------------
+  ! Relations
+  !--------------------------------------------------------------
+  if( input%nFiles_rt /= num_f_rt_sidx .or. &
+      input%nFiles_rt /= num_f_rt_tidx .or. &
+      input%nFiles_rt /= num_f_rt_area .or. &
+      input%nFiles_rt /= num_f_rt_coef )then
+    call eerr(str(msg_invalid_input())//&
+            '\n  The number of inputs of "f_rt_sidx", "f_rt_tidx", '//&
+              '"f_rt_area" or "f_rt_coef" mismatch with that of "length_rt".'//&
+            '\n"length_rt": '//str(input%nFiles_rt)//&
+            '\n"f_rt_sidx": '//str(num_f_rt_sidx)//&
+            '\n"f_rt_tidx": '//str(num_f_rt_tidx)//&
+            '\n"f_rt_area": '//str(num_f_rt_area)//&
+            '\n"f_rt_coef": '//str(num_f_rt_coef))
   endif
-  !-------------------------------------------------------------
+
+  if( input%nFiles_grid /= num_f_grdidx .or. &
+      input%nFiles_grid /= num_f_grdara )then
+    call eerr(str(msg_invalid_input())//&
+            '\n  The number of inputs of "f_grdidx" or "f_grdara"'//&
+              ' mismatch with that of the groups of grid data,'//&
+              ' which start with "length_grid".'//&
+            '\n"length_grid": '//str(input%nFiles_grid)//&
+            '\n"f_grdidx"   : '//str(num_f_grdidx)//&
+            '\n"f_grdara"   : '//str(num_f_grdara))
+  endif
+  !--------------------------------------------------------------
   call echo(code%ret)
-end subroutine update_counter_f_rt
-!---------------------------------------------------------------
+end subroutine check_keynum_relations
+!----------------------------------------------------------------
 end subroutine read_settings_input
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_output(output)
+  use common_set2, only: &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_rt_base, only: &
+        set_default_values_rt
+  use common_rt_set, only: &
+        check_values_rt_opt_coef
   implicit none
   type(output_), intent(inout), target :: output
 
-  type counter_
-    integer :: dir
-    integer :: f_rt_sidx
-    integer :: f_rt_tidx
-    integer :: f_rt_area
-    integer :: f_rt_coef
-    integer :: grid_coef
-    integer :: grid_sort
-    integer :: opt_coef_sum_modify
-    integer :: opt_coef_sum_modify_ulim
-    integer :: opt_coef_zero_positive
-    integer :: opt_coef_zero_negative
-    integer :: opt_coef_error_excess
-    integer :: opt_coef_sum_error_excess
-    integer :: f_grdidx
-    integer :: f_grdara
-  end type
-
-  character(clen_var), parameter :: key_dir = 'dir'
-  character(clen_var), parameter :: key_f_rt_sidx = 'f_rt_sidx'
-  character(clen_var), parameter :: key_f_rt_tidx = 'f_rt_tidx'
-  character(clen_var), parameter :: key_f_rt_area = 'f_rt_area'
-  character(clen_var), parameter :: key_f_rt_coef = 'f_rt_coef'
-  character(clen_var), parameter :: key_grid_coef = 'grid_coef'
-  character(clen_var), parameter :: key_grid_sort = 'grid_sort'
-  character(clen_var), parameter :: key_f_grdidx  = 'f_grdidx'
-  character(clen_var), parameter :: key_f_grdara  = 'f_grdara'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
   type(rt_), pointer :: rt
   type(rt_main_), pointer :: rtm
 
@@ -567,200 +608,140 @@ subroutine read_settings_output(output)
 
   call echo(code%bgn, 'read_settings_output')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_grid_coef )
-      call add(counter%grid_coef)
-
-    case( key_grid_sort )
-      call add(counter%grid_sort)
-
-    case( key_f_rt_sidx )
-      call add(counter%f_rt_sidx)
-
-    case( key_f_rt_tidx )
-      call add(counter%f_rt_tidx)
-
-    case( key_f_rt_area )
-      call add(counter%f_rt_area)
-
-    case( key_f_rt_coef )
-      call add(counter%f_rt_coef)
-
-    case( key_opt_coef_sum_modify )
-      call add(counter%opt_coef_sum_modify)
-
-    case( key_opt_coef_sum_modify_ulim )
-      call add(counter%opt_coef_sum_modify_ulim)
-
-    case( key_opt_coef_zero_positive )
-      call add(counter%opt_coef_zero_positive)
-
-    case( key_opt_coef_zero_negative )
-      call add(counter%opt_coef_zero_negative)
-
-    case( key_opt_coef_error_excess )
-      call add(counter%opt_coef_error_excess)
-
-    case( key_opt_coef_sum_error_excess )
-      call add(counter%opt_coef_sum_error_excess)
-
-    case( key_f_grdidx )
-      call add(counter%f_grdidx)
-
-    case( key_f_grdara )
-      call add(counter%f_grdara)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(30)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('grid_coef', 0, 1)
+  call set_keynum('grid_sort', 0, 1)
+  call set_keynum('f_rt_sidx', 1, 1)
+  call set_keynum('f_rt_tidx', 1, 1)
+  call set_keynum('f_rt_area', 1, 1)
+  call set_keynum('f_rt_coef', 1, 1)
+  call set_keynum(KEY_OPT_COEF_SUM_MODIFY      , 0, 1)
+  call set_keynum(KEY_OPT_COEF_SUM_MODIFY_ULIM , 0, 1)
+  call set_keynum(KEY_OPT_COEF_ZERO_POSITIVE   , 0, 1)
+  call set_keynum(KEY_OPT_COEF_ZERO_NEGATIVE   , 0, 1)
+  call set_keynum(KEY_OPT_COEF_ERROR_EXCESS    , 0, 1)
+  call set_keynum(KEY_OPT_COEF_SUM_ERROR_EXCESS, 0, 1)
+  call set_keynum('f_grdidx', 0, 1)
+  call set_keynum('f_grdara', 0, 1)
+  !call set_keynum('f_grdcoef', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
   rt => output%rt
   rtm => rt%main
 
-  rt%id = 'output%rt'
-  rtm%id = trim(rt%id)//'%main'
+  call set_default_values_rt(rt)
 
-  rtm%grid_coef = grid_target
-  rtm%grid_sort = grid_target
+!!!
+!
+!  rtm%id = trim(rt%id)//'%main'
+!
+!  rtm%grid_coef = grid_target
+!  rtm%grid_sort = grid_target
+!
+!  rtm%f%sidx = file('', dtype_int4, 1, endian_default, action=action_write, &
+!                    id=trim(rtm%id)//'f%sidx')
+!  rtm%f%tidx = file('', dtype_int4, 1, endian_default, action=action_write, &
+!                    id=trim(rtm%id)//'f%tidx')
+!  rtm%f%area = file('', dtype_dble, 1, endian_default, action=action_write, &
+!                    id=trim(rtm%id)//'f%area')
+!  rtm%f%coef = file('', dtype_dble, 1, endian_default, action=action_write, &
+!                    id=trim(rtm%id)//'f%coef')
+!
+!  call init_rt_opt_coef(rtm%opt_coef)
+!!!
 
-  rtm%f%sidx = file('', dtype_int4, 1, endian_default, action=action_write, &
-                    id=trim(rtm%id)//'f%sidx')
-  rtm%f%tidx = file('', dtype_int4, 1, endian_default, action=action_write, &
-                    id=trim(rtm%id)//'f%tidx')
-  rtm%f%area = file('', dtype_dble, 1, endian_default, action=action_write, &
-                    id=trim(rtm%id)//'f%area')
-  rtm%f%coef = file('', dtype_dble, 1, endian_default, action=action_write, &
-                    id=trim(rtm%id)//'f%coef')
-
-  call init_rt_opt_coef(rtm%opt_coef)
-
-  output%f_grid%f_idx = file('', dtype_int4, 1, endian_default, action=action_write, &
-                             id='output%f_grid%f_idx')
-  output%f_grid%f_ara = file('', dtype_dble, 1, endian_default, action=action_write, &
-                             id='output%f_grid%f_ara')
+  output%f_grid%f_idx = file(dtype=DTYPE_INT4, action=ACTION_WRITE, id='output%f_grid%f_idx')
+  output%f_grid%f_ara = file(dtype=DTYPE_DBLE, action=ACTION_WRITE, id='output%f_grid%f_ara')
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read inputs
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading inputs')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    ! Remapping table
+    case( 'grid_coef' )
+      call read_value(rtm%grid_coef, is_keyword=.true.)
+
+    case( 'grid_sort' )
+      call read_value(rtm%grid_sort, is_keyword=.true.)
+
+    case( 'f_rt_sidx' )
+      call read_value(rtm%f%sidx, dir)
+    case( 'f_rt_tidx' )
+      call read_value(rtm%f%tidx, dir)
+    case( 'f_rt_area' )
+      call read_value(rtm%f%area, dir)
+    case( 'f_rt_coef' )
+      call read_value(rtm%f%coef, dir)
     !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_grid_coef )
-      call read_value(v_char=rtm%grid_coef, is_keyword=.true.)
-
-    case( key_grid_sort )
-      call read_value(v_char=rtm%grid_sort, is_keyword=.true.)
-
-    case( key_f_rt_sidx )
-      call read_value(v_file=rtm%f%sidx, get_length=.false.)
-      rtm%f%sidx%path = joined(dir, rtm%f%sidx%path)
-
-    case( key_f_rt_tidx )
-      call read_value(v_file=rtm%f%tidx, get_length=.false.)
-      rtm%f%tidx%path = joined(dir, rtm%f%tidx%path)
-
-    case( key_f_rt_area )
-      call read_value(v_file=rtm%f%area, get_length=.false.)
-      rtm%f%area%path = joined(dir, rtm%f%area%path)
-
-    case( key_f_rt_coef )
-      call read_value(v_file=rtm%f%coef, get_length=.false.)
-      rtm%f%coef%path = joined(dir, rtm%f%coef%path)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_opt_coef_sum_modify )
-      call read_value(v_dble=rtm%opt_coef%sum_modify)
-
+    ! Options of coef.
+    case( KEY_OPT_COEF_SUM_MODIFY )
+      call read_value(rtm%opt_coef%sum_modify)
       rtm%opt_coef%is_sum_modify_enabled = .true.
-
-    case( key_opt_coef_sum_modify_ulim )
-      call read_value(v_dble=rtm%opt_coef%sum_modify_ulim)
-
+    case( KEY_OPT_COEF_SUM_MODIFY_ULIM )
+      call read_value(rtm%opt_coef%sum_modify_ulim)
       rtm%opt_coef%is_sum_modify_ulim_enabled = .true.
-
-    case( key_opt_coef_zero_positive )
-      call read_value(v_dble=rtm%opt_coef%zero_positive)
-
+    case( KEY_OPT_COEF_ZERO_POSITIVE )
+      call read_value(rtm%opt_coef%zero_positive)
       rtm%opt_coef%is_zero_positive_enabled = .true.
-
-    case( key_opt_coef_zero_negative )
-      call read_value(v_dble=rtm%opt_coef%zero_negative)
-
+    case( KEY_OPT_COEF_ZERO_NEGATIVE )
+      call read_value(rtm%opt_coef%zero_negative)
       rtm%opt_coef%is_zero_negative_enabled = .true.
-
-    case( key_opt_coef_error_excess )
-      call read_value(v_dble=rtm%opt_coef%error_excess)
-
+    case( KEY_OPT_COEF_ERROR_EXCESS )
+      call read_value(rtm%opt_coef%error_excess)
       rtm%opt_coef%is_error_excess_enabled = .true.
-
-    case( key_opt_coef_sum_error_excess )
-      call read_value(v_dble=rtm%opt_coef%sum_error_excess)
-
+    case( KEY_OPT_COEF_SUM_ERROR_EXCESS )
+      call read_value(rtm%opt_coef%sum_error_excess)
       rtm%opt_coef%is_sum_error_excess_enabled = .true.
     !-----------------------------------------------------------
-    !
+    ! Grid data (output)
+    case( 'f_grdidx' )
+      call read_value(output%f_grid%f_idx, dir)
+    case( 'f_grdara' )
+      call read_value(output%f_grid%f_ara, dir)
     !-----------------------------------------------------------
-    case( key_f_grdidx )
-      call read_value(v_file=output%f_grid%f_idx, get_length=.false.)
-      output%f_grid%f_idx%path = joined(dir, output%f_grid%f_idx%path)
-
-    case( key_f_grdara )
-      call read_value(v_file=output%f_grid%f_ara, get_length=.false.)
-      output%f_grid%f_ara%path = joined(dir, output%f_grid%f_ara%path)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERORR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Check the values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
+
   call check_values_rt_opt_coef(rtm%opt_coef)
 
   selectcase( rtm%grid_coef )
@@ -771,7 +752,7 @@ subroutine read_settings_output(output)
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  rtm%grid_coef: '//str(rtm%grid_coef)//&
-            '\nCheck value of "'//str(key_grid_coef)//'".')
+            '\nCheck value of "grid_coef".')
   endselect
 
   selectcase( rtm%grid_sort )
@@ -782,198 +763,146 @@ subroutine read_settings_output(output)
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  rtm%grid_sort: '//str(rtm%grid_sort)//&
-            '\nCheck value of "'//str(key_grid_sort)//'".')
+            '\nCheck the value of "grid_sort".')
   endselect
 
   call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  counter%dir = 0
-  counter%grid_coef = 0
-  counter%grid_sort = 0
-  counter%f_rt_sidx = 0
-  counter%f_rt_tidx = 0
-  counter%f_rt_area = 0
-  counter%f_rt_coef = 0
-  counter%opt_coef_sum_modify       = 0
-  counter%opt_coef_sum_modify_ulim  = 0
-  counter%opt_coef_zero_positive    = 0
-  counter%opt_coef_zero_negative    = 0
-  counter%opt_coef_error_excess     = 0
-  counter%opt_coef_sum_error_excess = 0
-  counter%f_grdidx = 0
-  counter%f_grdara = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p -x2')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p -x2')
   !--------------------------------------------------------------
-  ! Individual
+  !
   !--------------------------------------------------------------
-  call check_num_of_key(counter%f_grdidx, key_f_grdidx, 0, 1)
-  call check_num_of_key(counter%f_grdara, key_f_grdara, 0, 1)
-
-  call check_num_of_key(counter%grid_coef, key_grid_coef, 0, 1)
-  call check_num_of_key(counter%grid_sort, key_grid_sort, 0, 1)
-
-  call check_num_of_key(counter%f_rt_sidx, key_f_rt_sidx, 1, 1)
-  call check_num_of_key(counter%f_rt_tidx, key_f_rt_tidx, 1, 1)
-  call check_num_of_key(counter%f_rt_area, key_f_rt_area, 1, 1)
-  call check_num_of_key(counter%f_rt_coef, key_f_rt_coef, 1, 1)
-
-  call check_num_of_key(counter%opt_coef_sum_modify, &
-                            key_opt_coef_sum_modify, 0, 1)
-  call check_num_of_key(counter%opt_coef_sum_modify_ulim, &
-                            key_opt_coef_sum_modify_ulim, 0, 1)
-  call check_num_of_key(counter%opt_coef_zero_positive, &
-                            key_opt_coef_zero_positive, 0, 1)
-  call check_num_of_key(counter%opt_coef_zero_negative, &
-                            key_opt_coef_zero_negative, 0, 1)
-  call check_num_of_key(counter%opt_coef_error_excess, &
-                            key_opt_coef_error_excess, 0, 1)
-  call check_num_of_key(counter%opt_coef_sum_error_excess, &
-                            key_opt_coef_sum_error_excess, 0, 1)
-  !--------------------------------------------------------------
-  ! Relation
-  !--------------------------------------------------------------
-  if( counter%opt_coef_sum_modify == 1 .and. &
-      counter%opt_coef_sum_modify_ulim == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  "'//str(key_opt_coef_sum_modify)//'" and "'//&
-              str(key_opt_coef_sum_modify_ulim)//'" cannot be specified at the same time.')
+  if( keynum(KEY_OPT_COEF_SUM_MODIFY) == 1 .and. &
+      keynum(KEY_OPT_COEF_SUM_MODIFY_ULIM) == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\n"'//str(KEY_OPT_COEF_SUM_MODIFY)//'" and "'//&
+              str(KEY_OPT_COEF_SUM_MODIFY_ULIM)//&
+              '" must not be given at the same time.')
   endif
   !--------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_output
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_set2, only: &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(opt_), intent(inout) :: opt
 
-  type counter_
-    integer :: old_files
-    integer :: dir_intermediates
-    integer :: remove_intermediates
-    integer :: memory_ulim
-  end type
-  type(counter_) :: counter
-  character(clen_var) :: key
-
   call echo(code%bgn, 'read_settings_opt')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Count the number of inputs.')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_old_files )
-      call add(counter%old_files)
-
-    case( key_dir_intermediates )
-      call add(counter%dir_intermediates)
-
-    case( key_remove_intermediates )
-      call add(counter%remove_intermediates)
-
-    case( key_memory_ulim )
-      call add(counter%memory_ulim)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(7)
+  call set_keynum(KEY_OLD_FILES           , 0, 1)
+  call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
+  call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
+  call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Read the settings
   !-------------------------------------------------------------
-  !-------------------------------------------------------------
-  ! Read settings
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
-
-  call back_to_block_head()
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of the block
     case( '' )
       exit
+    !-----------------------------------------------------------
+    ! System
+    case( KEY_OLD_FILES )
+      call read_value(opt%sys%old_files, is_keyword=.true.)
 
-    case( key_old_files )
-      call read_value(v_char=opt%sys%old_files, is_keyword=.true.)
+    case( KEY_DIR_INTERMEDIATES )
+      call read_value(opt%sys%dir_im, is_path=.true.)
 
-    case( key_dir_intermediates )
-      call read_value(v_char=opt%sys%dir_im, is_keyword=.false.)
+    case( KEY_REMOVE_INTERMEDIATES )
+      call read_value(opt%sys%remove_im)
 
-    case( key_remove_intermediates )
-      call read_value(v_log=opt%sys%remove_im)
-
-    case( key_memory_ulim )
-      call read_value(v_dble=opt%sys%memory_ulim)
-
+    case( KEY_MEMORY_ULIM )
+      call read_value(opt%sys%memory_ulim)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
+  call check_keynum()
+  call check_keynum_relations()
+
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Modify values
+  ! Check the values
   !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
+
+  selectcase( opt%sys%old_files )
+  case( OPT_OLD_FILES_STOP, &
+        OPT_OLD_FILES_REMOVE, &
+        OPT_OLD_FILES_OVERWRITE )
+    continue
+  case default
+    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
+            '\nCheck the value of "old_files".')
+  endselect
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  counter%old_files            = 0
-  counter%dir_intermediates    = 0
-  counter%remove_intermediates = 0
-  counter%memory_ulim          = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p -x2')
+  !--------------------------------------------------------------
+  !
+  !--------------------------------------------------------------
 
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  ! Indivisual
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%old_files           , key_old_files           , 0, 1)
-  call check_num_of_key(counter%dir_intermediates   , key_dir_intermediates   , 0, 1)
-  call check_num_of_key(counter%remove_intermediates, key_remove_intermediates, 0, 1)
-  call check_num_of_key(counter%memory_ulim         , key_memory_ulim         , 0, 1)
-  !--------------------------------------------------------------
-  ! Relation
   !--------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !---------------------------------------------------------------
 end subroutine read_settings_opt
 !===============================================================
@@ -987,11 +916,14 @@ end subroutine read_settings_opt
 !===============================================================
 !
 !===============================================================
-subroutine check_paths(input, output, opt)
+subroutine check_paths(input, output, opt_sys)
+  use common_file, only: &
+        set_opt_old_files, &
+        handle_old_file
   implicit none
-  type(input_) , intent(in)         :: input
-  type(output_), intent(in), target :: output
-  type(opt_)   , intent(in)         :: opt
+  type(input_)  , intent(in)         :: input
+  type(output_) , intent(in), target :: output
+  type(opt_sys_), intent(in)         :: opt_sys
 
   type(f_rt_)  , pointer :: f_rt
   type(f_grid_), pointer :: f_grid
@@ -1042,7 +974,7 @@ subroutine check_paths(input, output, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking old files of output')
 
-  call set_opt_old_files(opt%sys%old_files)
+  call set_opt_old_files(opt_sys%old_files)
 
   call handle_old_file(output%f_grid%f_idx%path, 'output%f_grid%f_idx%path' )
   call handle_old_file(output%f_grid%f_ara%path, 'output%f_grid%f_ara%path')
@@ -1092,6 +1024,8 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_input(input)
+  use common_set2, only: &
+        bar
   implicit none
   type(input_), intent(in) :: input
 
@@ -1150,6 +1084,10 @@ end subroutine echo_settings_input
 !
 !===============================================================
 subroutine echo_settings_output(output)
+  use common_set2, only: &
+        bar
+  use common_rt_set, only: &
+        echo_settings_rt_opt_coef
   implicit none
   type(output_), intent(in), target :: output
 
@@ -1189,6 +1127,11 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
+  use common_set2, only: &
+        bar
+  use common_opt_set, only: &
+        echo_settings_opt_sys, &
+        echo_settings_opt_log
   implicit none
   type(opt_), intent(in) :: opt
 
@@ -1201,6 +1144,7 @@ subroutine echo_settings_opt(opt)
   !
   !-------------------------------------------------------------
   call echo_settings_opt_sys(opt%sys)
+  call echo_settings_opt_log(opt%log)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_opt

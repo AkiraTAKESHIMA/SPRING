@@ -5,17 +5,20 @@ module mod_rt_polygon_polygon
   use lib_array
   use lib_math
   use common_const
-  use common_type
-  use common_gs, only: &
+  use common_type_gs
+  use common_gs_util, only: &
         print_gs_polygon, &
         print_polygon
-  use common_rt, only: &
-        calc_rt_im_nij_ulim, &
+  use common_type_rt
+  use common_rt1d, only: &
         init_rt1d, &
-        reshape_rt1d, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
         clear_rt_main, &
-        free_rt1d_comps, &
-        output_rt_im
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   use def_type
   implicit none
   private
@@ -143,8 +146,10 @@ subroutine make_rt_polygon_polygon(s, t, rt, regions, opt)
 
   rtm%nij = 0_8
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make remapping table
   !-------------------------------------------------------------
+  call echo(code%ent, 'Making remapping table')
+
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.true.)
   endif
@@ -256,12 +261,12 @@ subroutine make_rt_polygon_polygon(s, t, rt, regions, opt)
     enddo  ! ttij/
   enddo  ! iRegion/
 
-  ! Output intermediates
+  ! Reshape and output intermediates
   !-------------------------------------------------------------
   call reshape_rt1d(rt1d(tijs:tzp%mij), tgc%is_source, rtm, opt%earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call output_rt_im(rtm, rt%im)
+    call write_rt_im(rtm, rt%im)
     call clear_rt_main(rtm)
   endif
 
@@ -269,9 +274,11 @@ subroutine make_rt_polygon_polygon(s, t, rt, regions, opt)
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
   !-------------------------------------------------------------
+  call echo(code%ext)
+  !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt1d_comps(rt1d(tijs:tzp%mij))
+  call free_rt1d_data(rt1d(tijs:tzp%mij))
   deallocate(rt1d)
   !-------------------------------------------------------------
   call echo(code%ret)

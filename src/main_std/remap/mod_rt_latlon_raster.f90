@@ -5,19 +5,22 @@ module mod_rt_latlon_raster
   use lib_array
   use lib_math
   use common_const
-  use common_type
-  use common_gs, only: &
+  use common_type_gs
+  use common_gs_util, only: &
         print_gs_latlon, &
         print_gs_raster, &
         print_latlon!, &
         !print_raster
-  use common_rt, only: &
-        calc_rt_im_nij_ulim, &
+  use common_type_rt
+  use common_rt1d, only: &
         init_rt1d, &
-        reshape_rt1d, &
-        free_rt1d_comps, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
         clear_rt_main, &
-        output_rt_im
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   use def_type
   implicit none
   private
@@ -73,6 +76,8 @@ subroutine make_rt_latlon_raster(s, t, rt, opt)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
+  call echo(code%ent, 'Setting pointers')
+
   sgc => s%cmn
   tgc => t%cmn
 
@@ -122,9 +127,13 @@ subroutine make_rt_latlon_raster(s, t, rt, opt)
 
   rtm => rt%main
   rtiz => rt%im%zone(rt%im%iZone)
+
+  call echo(code%ext)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call echo(code%ent, 'Initializing')
+
   allocate(list_ij(tzl%mij))
   allocate(list_tloc(tzl%mij))
   list_ij(:) = 0_8
@@ -140,10 +149,12 @@ subroutine make_rt_latlon_raster(s, t, rt, opt)
 
   rtm%nij = 0_8
   rtiz%nij = 0_8
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making regridding table')
+  call echo(code%ent, 'Making remapping table')
 
   if( debug_t )then
     lapara_sum_t = 0.d0
@@ -244,13 +255,13 @@ subroutine make_rt_latlon_raster(s, t, rt, opt)
       !---------------------------------------------------------
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij+rt1%mij > rt%im%nij_ulim )then
-          call echo(code%ent, 'Outputting intermediates')
-          call edbg('sij: '//str((/sijs,sij-1_8/),' ~ '))
+          call echo(code%ent, 'Outputting intermediates '//&
+                    '(sij: '//str((/sijs,sij-1_8/),' - ')//')')
 
           call reshape_rt1d(rt1d(sijs:sij-1_8), sgc%is_source, rtm, opt%earth)
-          call output_rt_im(rtm, rt%im)
+          call write_rt_im(rtm, rt%im)
           call clear_rt_main(rtm)
-          call free_rt1d_comps(rt1d(sijs:sij-1_8))
+          call free_rt1d_data(rt1d(sijs:sij-1_8))
           sijs = sij
 
           call echo(code%ext)
@@ -337,25 +348,23 @@ subroutine make_rt_latlon_raster(s, t, rt, opt)
     call edbg('lapara_sum_t: '//str(lapara_sum_t,'es20.13'))
   endif
 
-  ! Output intermediates
+  ! Reshape and output intermediates
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting intermediates')
-  call edbg('sij: '//str((/sijs,sij/),' ~ '))
-
   call reshape_rt1d(rt1d(sijs:sij), sgc%is_source, rtm, opt%earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call output_rt_im(rtm, rt%im)
+    call echo(code%ent, 'Outputting intermediates '//&
+              '(sij: '//str((/sijs,sij/),' - ')//')')
+    call write_rt_im(rtm, rt%im)
     call clear_rt_main(rtm)
+    call echo(code%ext)
   endif
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
-  call free_rt1d_comps(rt1d(sijs:sij))
+  call free_rt1d_data(rt1d(sijs:sij))
   deallocate(rt1d)
 
   deallocate(iith)  ![add 2024/11/19]

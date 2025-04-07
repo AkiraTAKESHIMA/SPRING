@@ -7,7 +7,8 @@ module common_gs
   use lib_io
   use lib_math
   use common_const
-  use common_type
+  use common_type_gs
+  use common_type_opt
   implicit none
   private
   !-------------------------------------------------------------
@@ -16,29 +17,34 @@ module common_gs
   public :: init_gs
 
   public :: alloc_gs_components
+
   public :: set_default_values_gs_latlon
   public :: set_default_values_gs_raster
   public :: set_default_values_gs_polygon
+
   public :: alloc_file_grid_in_val
   public :: alloc_file_grid_out_val
 
   public :: set_bounds_file_latlon_in
   public :: set_bounds_file_raster_in
   public :: set_bounds_file_polygon_in
+
   public :: set_bounds_file_grid_in
   public :: set_bounds_file_grid_out
+
   public :: set_miss_file_grid_in
   public :: set_miss_file_grid_out
   public :: set_save_file_grid_out
+
+
+  public :: set_grids_latlon
+  public :: set_grids_raster
+  public :: set_grids_polygon
 
   public :: make_n_list_polygon
 
   public :: check_bounds_lon
   public :: check_bounds_lat
-
-  public :: set_grids_latlon
-  public :: set_grids_raster
-  public :: set_grids_polygon
 
   public :: calc_relations_latlon
 
@@ -133,8 +139,6 @@ module common_gs
   !-------------------------------------------------------------
   ! Private Module Variables
   !-------------------------------------------------------------
-  character(16) :: logopt_prc = ''
-  character(16) :: logopt_cnt = ''
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -185,16 +189,19 @@ subroutine alloc_gs_components(u, gs_type)
     allocate(u%latlon)
     allocate(character(1) :: u%latlon%nam)
     u%latlon%id = trim(u%id)//'%latlon'
+    u%latlon%nam = trim(u%nam)
     u%latlon%is_source = u%is_source
   case( gs_type_raster )
     allocate(u%raster)
     allocate(character(1) :: u%raster%nam)
     u%raster%id = trim(u%id)//'%raster'
+    u%raster%nam = trim(u%nam)
     u%raster%is_source = u%is_source
   case( gs_type_polygon )
     allocate(u%polygon)
     allocate(character(1) :: u%polygon%nam)
     u%polygon%id = trim(u%id)//'%polygon'
+    u%polygon%nam = trim(u%nam)
     u%polygon%is_source = u%is_source
   case default
     call eerr(str(msg_invalid_value())//&
@@ -202,9 +209,19 @@ subroutine alloc_gs_components(u, gs_type)
   endselect
 
   allocate(u%cmn)
+  allocate(character(1) :: u%cmn%nam)
+  u%cmn%nam = u%nam
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine alloc_gs_components
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
 !===============================================================
 !
 !===============================================================
@@ -682,7 +699,8 @@ subroutine alloc_file_grid_in_val(fg)
   do iFile = 1, fg%nFiles_val
     f => fg%val(iFile)
     f = file('', dtype_dble, 1, endian_default, &
-             id=trim(fg%id)//'%val('//str(iFile)//')', action=action_read)
+             id=trim(fg%id)//'%val('//str(iFile)//')', &
+             action=action_read)
 
     f%sz = fg%sz
     f%lb = fg%lb
@@ -708,7 +726,8 @@ subroutine alloc_file_grid_out_val(fg)
   do iFile = 1, fg%nFiles_val
     f => fg%val(iFile)
     f = file('', dtype_dble, 1, endian_default, &
-             id=trim(fg%id)//'%val('//str(iFile)//')', action=action_write)
+             id=trim(fg%id)//'%val('//str(iFile)//')', &
+             action=action_write)
 
     f%sz = fg%sz
     f%lb = fg%lb
@@ -1060,7 +1079,7 @@ subroutine set_miss_file_grid_out(&
   call echo(code%ret)
 end subroutine set_miss_file_grid_out
 !===============================================================
-!
+! Public
 !===============================================================
 subroutine set_save_file_grid_out(fg_out)
   implicit none
@@ -1080,7 +1099,7 @@ subroutine set_save_file_grid_out(fg_out)
   call echo(code%ret)
 end subroutine set_save_file_grid_out
 !===============================================================
-!
+! Private
 !===============================================================
 subroutine set_zones_file_grid_out(fg_out, nZones)
   implicit none
@@ -1223,14 +1242,6 @@ end subroutine check_bounds_lat
 !===============================================================
 !
 !===============================================================
-!subroutine 
-!
-!  type(file_latlon_in_), pointer :: fl
-!  fl => ul%f_latlon_in
-!
-!===============================================================
-!
-!===============================================================
 subroutine set_grids_latlon(ul, lon, lat)
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
@@ -1242,7 +1253,7 @@ subroutine set_grids_latlon(ul, lon, lat)
   real(8) :: lonrange, latrange
   real(8) :: coef
 
-  call echo(code%bgn, 'set_grids_latlon', logopt_prc)
+  call echo(code%bgn, 'set_grids_latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1326,7 +1337,7 @@ subroutine set_grids_latlon(ul, lon, lat)
   !-------------------------------------------------------------
   ! Case: Read from file
   else
-    call edbg('Reading lon '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading lon '//str(fileinfo(f)))
     call rbin(ul%lon, f%path, f%dtype, f%endian, f%rec)
 
     do ih = 0_8, ul%nh
@@ -1423,7 +1434,7 @@ subroutine set_grids_raster(ur)
   integer(8) :: lonrange, latrange
   integer(8) :: ih
 
-  call echo(code%bgn, 'set_grids_raster', logopt_prc)
+  call echo(code%bgn, 'set_grids_raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1437,7 +1448,7 @@ subroutine set_grids_raster(ur)
   !-------------------------------------------------------------
   ! Check if bounds are integer
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking if bounds are integer', logopt_prc)
+  call echo(code%ent, 'Checking if bounds are integer')
 
   call check_boundary_raster(ur%west, 'ur%west')
   call check_boundary_raster(ur%east, 'ur%east')
@@ -1448,7 +1459,7 @@ subroutine set_grids_raster(ur)
   !-------------------------------------------------------------
   ! Check number of rasters in 1 degree
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the number of rasters in 1 degree', logopt_prc)
+  call echo(code%ent, 'Checking the number of rasters in 1 degree')
 
   if( ur%west < ur%east )then
     lonrange = int(ur%east - ur%west,8)
@@ -1478,14 +1489,13 @@ subroutine set_grids_raster(ur)
              '\nThe number of raster in 1 degree must be integer.')
   endif
 
-  call edbg('h: '//str(ur%nh/lonrange)//', v: '//str(ur%nv/latrange)//' in 1 degree', &
-            logopt_prc)
+  call edbg('h: '//str(ur%nh/lonrange)//', v: '//str(ur%nv/latrange)//' in 1 degree')
 
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Calc. coords. of the boundaries
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating coords. of the boundaries', logopt_prc)
+  call echo(code%ent, 'Calculating coords. of the boundaries')
 
   call modify_lon_deg(ur%west, 'ur%west')
   call modify_lon_deg(ur%east, 'ur%east')
@@ -1672,7 +1682,7 @@ subroutine make_n_list_polygon(up)
 
   integer :: nmax, n
 
-  call echo(code%bgn, 'make_n_list_polygon', logopt_prc)
+  call echo(code%bgn, 'make_n_list_polygon')
   !-------------------------------------------------------------
   allocate(up%n_next(up%np,up%np), &
            up%n_prev(up%np,up%np))
@@ -1693,7 +1703,7 @@ subroutine make_n_list_polygon(up)
 
     call edbg('nmax '//str(nmax)//&
             '\n  n_prev '//str(up%n_prev(:nmax,nmax))//&
-            '\n  n_next '//str(up%n_next(:nmax,nmax)), logopt_cnt)
+            '\n  n_next '//str(up%n_next(:nmax,nmax)))
   enddo  ! nmax/
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1717,14 +1727,14 @@ subroutine set_grids_polygon(up)
   character(1), parameter :: str_coord_miss = '-'
   character(3), parameter :: str_3dots = '...'
 
-  call echo(code%bgn, 'set_grids_polygon', logopt_prc)
+  call echo(code%bgn, 'set_grids_polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call check_iZone(varname_polygon, up%iZone_polygon, up%iZone, .true.)
 
   if( up%iZone_polygon == up%iZone )then
-    call edbg('Nothing to do', logopt_cnt)
+    call edbg('Nothing to do')
     call echo(code%ret)
     return
   endif
@@ -1838,7 +1848,7 @@ subroutine read_data_plainbinary()
   integer(8) :: ij
   type(polygon_), pointer :: p
 
-  call echo(code%bgn, '__IP__read_data_plainbinary', logopt_prc)
+  call echo(code%bgn, '__IP__read_data_plainbinary')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1868,10 +1878,10 @@ subroutine read_data_plainbinary()
     !-----------------------------------------------------------
     ! Read coordinate data
     !-----------------------------------------------------------
-    call echo(code%ent, 'Reading coordinate data', logopt_prc)
+    call echo(code%ent, 'Reading coordinate data')
 
     f => fp%lon
-    call edbg('Reading lon '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading lon '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
                      sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
@@ -1880,7 +1890,7 @@ subroutine read_data_plainbinary()
     enddo
 
     f => fp%lat
-    call edbg('Reading lat '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading lat '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
               sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
@@ -1893,24 +1903,21 @@ subroutine read_data_plainbinary()
         p => up%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
                 '\n  lon: '//str_coords(p%lon,1.d0,up%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord), &
-                  logopt_cnt)
+                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord))
       enddo
       call edbg('...')
       do ij = ije-2_8, ije
         p => up%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
                 '\n  lon: '//str_coords(p%lon,1.d0,up%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord), &
-                  logopt_cnt)
+                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord))
       enddo
     else
       do ij = ijs, ije
         p => up%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
                 '\n  lon: '//str_coords(p%lon,1.d0,up%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord), &
-                  logopt_cnt)
+                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord))
       enddo
     endif
 
@@ -1927,10 +1934,10 @@ subroutine read_data_plainbinary()
     !-----------------------------------------------------------
     ! Read coordinate data
     !-----------------------------------------------------------
-    call echo(code%ent, 'Reading coordinate data', logopt_prc)
+    call echo(code%ent, 'Reading coordinate data')
 
     f => fp%x
-    call edbg('Reading x '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading x '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
               sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
@@ -1939,7 +1946,7 @@ subroutine read_data_plainbinary()
     enddo
 
     f => fp%y
-    call edbg('Reading y '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading y '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
               sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
@@ -1948,7 +1955,7 @@ subroutine read_data_plainbinary()
     enddo
 
     f => fp%z
-    call edbg('Reading z '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading z '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
               sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
@@ -1962,8 +1969,7 @@ subroutine read_data_plainbinary()
         call edbg('ij '//str(ij,dgt(ije))//&
                 '\n  x: '//str_coords(p%x,1.d0,up%coord_miss_c,wfmt_coord)//&
                 '\n  y: '//str_coords(p%y,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord), &
-                  logopt_cnt)
+                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord))
       enddo
       call edbg('...')
       do ij = ije-2_8, ije
@@ -1971,8 +1977,7 @@ subroutine read_data_plainbinary()
         call edbg('ij '//str(ij,dgt(ije))//&
                 '\n  x: '//str_coords(p%x,1.d0,up%coord_miss_c,wfmt_coord)//&
                 '\n  y: '//str_coords(p%y,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord), &
-                  logopt_cnt)
+                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord))
       enddo
     else
       do ij = ijs, ije
@@ -1980,8 +1985,7 @@ subroutine read_data_plainbinary()
         call edbg('ij '//str(ij,dgt(ije))//&
                 '\n  x: '//str_coords(p%x,1.d0,up%coord_miss_c,wfmt_coord)//&
                 '\n  y: '//str_coords(p%y,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord), &
-                  logopt_cnt)
+                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord))
       enddo
     endif
 
@@ -2003,19 +2007,19 @@ subroutine read_data_plainbinary()
   !-------------------------------------------------------------
   ! Read arc type data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading arc type data', logopt_prc)
+  call echo(code%ent, 'Reading arc type data')
 
   f => fp%arctyp
 
   if( f%path == '' )then
-    call edbg('File was not specified.', logopt_cnt)
+    call edbg('File was not specified.')
     do ij = ijs, ije
       up%polygon(ij)%arctyp(:) = arc_type_normal
     enddo
   else
     allocate(arctyp(up%np,ijs:ije))
 
-    call edbg('Reading arctyp '//str(fileinfo(f)), logopt_cnt)
+    call edbg('Reading arctyp '//str(fileinfo(f)))
     call rbin(arctyp, f%path, f%dtype, f%endian, f%rec, &
               sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
@@ -2038,7 +2042,7 @@ subroutine modify_coords()
   integer(8) :: n
   logical :: found_0deg, found_lt180deg
 
-  call echo(code%bgn, '__IP__modify_coords', logopt_prc)
+  call echo(code%bgn, '__IP__modify_coords')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2049,7 +2053,7 @@ subroutine modify_coords()
     !-----------------------------------------------------------
     ! Conv. unit
     !-----------------------------------------------------------
-    call echo(code%ent, 'Converting unit', logopt_prc)
+    call echo(code%ent, 'Converting unit')
 
     selectcase( up%coord_unit )
     case( unit_degree )
@@ -2076,7 +2080,7 @@ subroutine modify_coords()
     !-----------------------------------------------------------
     ! Calc. cartesian coords.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Calculating cartesian coords.', logopt_prc)
+    call echo(code%ent, 'Calculating cartesian coords.')
 
     do ij = ijs, ije
       p => up%polygon(ij)
@@ -2091,7 +2095,7 @@ subroutine modify_coords()
     !-----------------------------------------------------------
     ! Conv. unit
     !-----------------------------------------------------------
-    call echo(code%ent, 'Converting unit', logopt_prc)
+    call echo(code%ent, 'Converting unit')
 
     selectcase( up%coord_unit )
     case( unit_meter )
@@ -2116,7 +2120,7 @@ subroutine modify_coords()
     !-----------------------------------------------------------
     ! Calc. spherical coords.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Calculating spherical coords.', logopt_prc)
+    call echo(code%ent, 'Calculating spherical coords.')
 
     do ij = ijs, ije
       p => up%polygon(ij)
@@ -2134,8 +2138,7 @@ subroutine modify_coords()
   !-------------------------------------------------------------
   ! Modify spherical coords. of special points
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying spherical coords. of special points', &
-            logopt_prc)
+  call echo(code%ent, 'Modifying spherical coords. of special points')
 
   do ij = ijs, ije
     p => up%polygon(ij)
@@ -2155,7 +2158,7 @@ subroutine modify_coords()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying longit.', logopt_prc)
+  call echo(code%ent, 'Modifying longit.')
 
   do ij = ijs, ije
     p => up%polygon(ij)
@@ -2199,7 +2202,7 @@ subroutine count_vertices()
   real(8) :: lon1, lat1, lon2, lat2
   logical :: is_same
 
-  call echo(code%bgn, '__IP__count_vertices', logopt_prc)
+  call echo(code%bgn, '__IP__count_vertices')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2329,7 +2332,7 @@ subroutine modify_arctyp()
   integer(8) :: ij
   integer(8) :: n, nn
 
-  call echo(code%bgn, '__IP__modify_arctyp', logopt_prc)
+  call echo(code%bgn, '__IP__modify_arctyp')
   !-------------------------------------------------------------
   do ij = ijs, ije
     p => up%polygon(ij)
@@ -2356,7 +2359,7 @@ subroutine find_polar_vertex()
   logical :: is_ok
   character(16) :: opt
 
-  call echo(code%bgn, '__IP__find_polar_vertex', logopt_prc)
+  call echo(code%bgn, '__IP__find_polar_vertex')
   !-------------------------------------------------------------
   is_ok = .true.
   opt = '-q -b'
@@ -2394,7 +2397,7 @@ subroutine judge_status_of_arcs()
   integer(8) :: ij
   integer(8) :: n, n_next
 
-  call echo(code%bgn, '__IP__judge_status_of_arcs', logopt_prc)
+  call echo(code%bgn, '__IP__judge_status_of_arcs')
   !-------------------------------------------------------------
   do ij = ijs, ije
     p => up%polygon(ij)
@@ -2433,7 +2436,7 @@ subroutine judge_type_of_grids()
   integer(8) :: n
   integer :: counter_lon0
 
-  call echo(code%bgn, '__IP__judge_type_of_grids', logopt_prc)
+  call echo(code%bgn, '__IP__judge_type_of_grids')
   !-------------------------------------------------------------
   do ij = ijs, ije
     p => up%polygon(ij)
@@ -2479,7 +2482,7 @@ subroutine calc_coefs_of_arcs()
   integer(8) :: ij
   integer(8) :: n, n_next
 
-  call echo(code%bgn, '__IP__calc_coefs_of_arcs', logopt_prc)
+  call echo(code%bgn, '__IP__calc_coefs_of_arcs')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2526,7 +2529,7 @@ subroutine calc_range_of_longit()
   integer(8) :: ij
   integer(8) :: n
 
-  call echo(code%bgn, '__IP__calc_range_of_longit', logopt_prc)
+  call echo(code%bgn, '__IP__calc_range_of_longit')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2592,8 +2595,7 @@ subroutine calc_range_of_longit()
 
       call edbg('ij '//str(ij)//' intersect with lon0.'//&
                 ' West: '//str(p%west*r2d,'f12.8')//&
-                ' East: '//str(p%east*r2d,'f12.8'), &
-                logopt_cnt)
+                ' East: '//str(p%east*r2d,'f12.8'))
     !-----------------------------------------------------------
     ! Case: Polar
     case( polygon_position_polar )
@@ -2604,8 +2606,7 @@ subroutine calc_range_of_longit()
 
       call edbg('ij '//str(ij)//' include a pole.'//&
               '\n  lon: '//str(str_coords_lonlat(p%lon))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat)), &
-                logopt_cnt)
+              '\n  lat: '//str(str_coords_lonlat(p%lat)))
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
@@ -2624,7 +2625,7 @@ subroutine calc_range_of_latit()
   integer(8) :: n, n_next
   real(8) :: south, north
 
-  call echo(code%bgn, '__IP__calc_range_of_latit', logopt_prc)
+  call echo(code%bgn, '__IP__calc_range_of_latit')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2718,7 +2719,7 @@ subroutine modify_direction_of_loop()
   logical :: is_anticlockwise
   logical :: is_north
 
-  call echo(code%bgn, '__IP__modify_direction_of_loop', logopt_prc)
+  call echo(code%bgn, '__IP__modify_direction_of_loop')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2861,8 +2862,7 @@ subroutine print_info()
     endselect
   enddo
 
-  call edbg('Num. of valid grids: '//str(mij_valid)//' / '//str(mij), &
-            logopt_cnt)
+  call edbg('Num. of valid grids: '//str(mij_valid)//' / '//str(mij))
 
   if( mij_valid <= mij_print )then
     do ij = ijs, ije
@@ -2871,8 +2871,7 @@ subroutine print_info()
 
       call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(up%np))//&
               '\n  lon: '//str(str_coords_lonlat(p%lon))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat))//' (deg)', &
-                logopt_cnt)
+              '\n  lat: '//str(str_coords_lonlat(p%lat))//' (deg)')
     enddo  ! ij/
   else
     mij_valid = 0_8
@@ -2885,8 +2884,7 @@ subroutine print_info()
 
       call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(up%np))//&
               '\n  lon: '//str(str_coords_lonlat(p%lon))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat))//' (deg)', &
-                logopt_cnt)
+              '\n  lat: '//str(str_coords_lonlat(p%lat))//' (deg)')
     enddo
 
     call edbg('...')
@@ -2908,8 +2906,7 @@ subroutine print_info()
 
       call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(up%np))//&
               '\n  lon: '//str(str_coords_lonlat(p%lon))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat))//' (deg)', &
-                logopt_cnt)
+              '\n  lat: '//str(str_coords_lonlat(p%lat))//' (deg)')
     enddo
   endif
   !-------------------------------------------------------------
@@ -2944,9 +2941,9 @@ subroutine calc_relations_latlon_latlon_latlon(sl, tl, opt_earth)
   implicit none
   type(gs_latlon_), intent(inout) :: sl
   type(gs_latlon_), intent(inout) :: tl
-  type(opt_earth_) , intent(in)    :: opt_earth
+  type(opt_earth_) , intent(in)   :: opt_earth
 
-  call echo(code%bgn, 'calc_realtions_latlon_latlon_latlon', logopt_prc)
+  call echo(code%bgn, 'calc_realtions_latlon_latlon_latlon')
   !-------------------------------------------------------------
   call calc_relations_latlon_body(&
          sl%hrel, sl%vrel, sl%nam, tl%nam, &
@@ -2965,7 +2962,7 @@ subroutine calc_relations_latlon_latlon_raster(sl, tr, opt_earth)
   type(gs_raster_), intent(inout) :: tr
   type(opt_earth_), intent(in)    :: opt_earth
 
-  call echo(code%bgn, 'calc_relations_latlon_latlon_raster', logopt_prc)
+  call echo(code%bgn, 'calc_relations_latlon_latlon_raster')
   !-------------------------------------------------------------
   call calc_relations_latlon_body(&
          sl%hrel, sl%vrel, sl%nam, tr%nam, &
@@ -2984,7 +2981,7 @@ subroutine calc_relations_latlon_raster_latlon(sr, tl, opt_earth)
   type(gs_latlon_), intent(inout) :: tl
   type(opt_earth_), intent(in)    :: opt_earth
 
-  call echo(code%bgn, 'calc_relations_latlon_raster_latlon', logopt_prc)
+  call echo(code%bgn, 'calc_relations_latlon_raster_latlon')
   !-------------------------------------------------------------
   call calc_relations_latlon_body(&
          sr%hrel, sr%vrel, sr%nam, tl%nam, &
@@ -3003,7 +3000,7 @@ subroutine calc_relations_latlon_raster_raster(sr, tr, opt_earth)
   type(gs_raster_), intent(inout) :: tr
   type(opt_earth_), intent(in)    :: opt_earth
 
-  call echo(code%bgn, 'calc_relations_latlon_raster_raster', logopt_prc)
+  call echo(code%bgn, 'calc_relations_latlon_raster_raster')
   !-------------------------------------------------------------
   call calc_relations_latlon_body(&
          sr%hrel, sr%vrel, sr%nam, tr%nam, &
@@ -3086,7 +3083,7 @@ subroutine calc_relations_latlon_body(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating relations of meridians', logopt_prc)
+  call echo(code%ent, 'Calculating relations of meridians')
 
   do ish = shi, shf
     shrel(ish)%hi(:) = 0
@@ -3203,7 +3200,7 @@ subroutine calc_relations_latlon_body(&
   !-------------------------------------------------------------
   ! Calc. relations of parallels
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating relations of parallels', logopt_prc)
+  call echo(code%ent, 'Calculating relations of parallels')
 
   svrel(:)%vi = 0
   svrel(:)%vf = 0
@@ -3251,7 +3248,7 @@ subroutine calc_relations_latlon_body(&
   !-------------------------------------------------------------
   ! Adjust indices of the sides out of range
   !-------------------------------------------------------------
-  call echo(code%ent, 'Adjusting indices of the sides out of range', logopt_prc)
+  call echo(code%ent, 'Adjusting indices of the sides out of range')
 
   do ish = shi, shf
     shr => shrel(ish)
@@ -3267,7 +3264,7 @@ subroutine calc_relations_latlon_body(&
   !-------------------------------------------------------------
   ! Calc. longitudes of boundaries of intersection
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating longitudes of boundaries of intersection', logopt_prc)
+  call echo(code%ent, 'Calculating longitudes of boundaries of intersection')
 
   lonwidth_sum = 0.d0
 
@@ -3298,18 +3295,15 @@ subroutine calc_relations_latlon_body(&
       shr%hi(2) = 1_8
       shr%hf(2) = theast
 
-      call edbg('nr = 2 @ h = '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,wfmt,' ~ ')//')', &
-                logopt_cnt)
+      call edbg('nr = 2 @ h = '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,wfmt,' ~ ')//')')
       call edbg('  hi(1): '//str(thwest,dgt_th)//&
                 ' ('//str(tlon(thwest-1:thwest)*r2d,wfmt,' ~ ')//&
                 ') hf(1): '//str(thf,dgt_th)//&
-                ' ('//str(tlon(thf-1:thf)*r2d,wfmt,' ~ ')//')', &
-                logopt_cnt)
+                ' ('//str(tlon(thf-1:thf)*r2d,wfmt,' ~ ')//')')
       call edbg('  hi(2): '//str(thi,dgt_th)//&
                 ' ('//str(tlon(thi-1:thi)*r2d,wfmt,' ~ ')//&
                 ') hf(2): '//str(theast,dgt_th)//&
-                ' ('//str(tlon(theast-1:theast)*r2d,wfmt,' ~ ')//')', &
-                logopt_cnt)
+                ' ('//str(tlon(theast-1:theast)*r2d,wfmt,' ~ ')//')')
     endif
     !-----------------------------------------------------------
     shr%mh = mth
@@ -3360,13 +3354,12 @@ subroutine calc_relations_latlon_body(&
   enddo  ! ish/
 
   call edbg('Sum: '//str(lonwidth_sum,wfmt)//' (rad) = '//&
-            str(lonwidth_sum*r2d,wfmt)//' (deg)', &
-            logopt_cnt)
+            str(lonwidth_sum*r2d,wfmt)//' (deg)')
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Calc. latitudes of boundaries of intersection
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating latitudes of boundaries of intersection', logopt_prc)
+  call echo(code%ent, 'Calculating latitudes of boundaries of intersection')
 
   latwidth_sum = 0.d0
 
@@ -3402,8 +3395,7 @@ subroutine calc_relations_latlon_body(&
   enddo
 
   call edbg('Sum: '//str(latwidth_sum,wfmt)//' (rad) = '//&
-            str(latwidth_sum*r2d,wfmt)//' (deg)', &
-            logopt_cnt)
+            str(latwidth_sum*r2d,wfmt)//' (deg)')
 
   call print_info(print_print_info)
 
@@ -3415,7 +3407,7 @@ subroutine calc_relations_latlon_body(&
   !-------------------------------------------------------------
   ! Calc. intersection area per 1 radian
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating intersection area per 1 radian', logopt_prc)
+  call echo(code%ent, 'Calculating intersection area per 1 radian')
 
   lapara_1rad_sum = 0.d0
 
@@ -3443,7 +3435,7 @@ subroutine calc_relations_latlon_body(&
             '\n  opt_earth%shp: '//str(opt_earth%shp))
   endselect
 
-  call edbg('Total: '//str(lapara_1rad_sum)//' (m2)', logopt_cnt)
+  call edbg('Total: '//str(lapara_1rad_sum)//' (m2)')
   call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -3734,7 +3726,7 @@ subroutine determine_zones_latlon(ul, mem_ulim)
   type(gs_latlon_), intent(inout), target :: ul
   real(8)         , intent(in)            :: mem_ulim
 
-  call echo(code%bgn, 'determine_zones_latlon', logopt_prc)
+  call echo(code%bgn, 'determine_zones_latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3759,7 +3751,7 @@ subroutine determine_zones_raster(ur, mem_ulim)
   type(gs_raster_), intent(inout) :: ur
   real(8)         , intent(in)    :: mem_ulim
 
-  call echo(code%bgn, 'determine_zones_raster', logopt_prc)
+  call echo(code%bgn, 'determine_zones_raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3792,7 +3784,7 @@ subroutine determine_zones_polygon(up, mem_ulim)
   integer(8) :: ijs, ije
   integer :: iZone
 
-  call echo(code%bgn, 'determine_zones_polygon', logopt_prc)
+  call echo(code%bgn, 'determine_zones_polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3838,8 +3830,7 @@ subroutine determine_zones_polygon(up, mem_ulim)
     zp%ijs = ijs
     zp%ije = ije
     zp%mij = zp%ije - zp%ijs + 1_8
-    call edbg('zone('//str(iZone)//') ij: '//str((/zp%ijs,zp%ije/),' ~ '), &
-              logopt_cnt)
+    call edbg('zone('//str(iZone)//') ij: '//str((/zp%ijs,zp%ije/),' ~ '))
   enddo ! iZone/
   !-------------------------------------------------------------
   ! Set f_grid_out
@@ -3868,7 +3859,7 @@ subroutine divide_map_into_zones_raster(&
   integer(8) :: zhi, zhf, zvi, zvf
   integer    :: iZone_lon0
 
-  call echo(code%bgn, 'divide_map_into_zones_raster', logopt_prc)
+  call echo(code%bgn, 'divide_map_into_zones_raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3878,7 +3869,7 @@ subroutine divide_map_into_zones_raster(&
     do while( lon(ih_lon0) /= rad_0deg )
       call add(ih_lon0)
     enddo
-    call edbg('lon=0 @ h '//str(ih_lon0), logopt_cnt)
+    call edbg('lon=0 @ h '//str(ih_lon0))
 
     nZones = 0
     nullify(zone)
@@ -3897,7 +3888,7 @@ subroutine divide_map_into_zones_raster(&
 
       call edbg('Zone divided by lon0-line ('//str(iZone_lon0)//'):'//&
                 ' ['//str((/zhi,zhf/),dgt(hf),':')//&
-                ', '//str((/zvi,zvf/),dgt(vf),':')//']', logopt_cnt)
+                ', '//str((/zvi,zvf/),dgt(vf),':')//']')
 
       call divide_map_into_zones_latlon(&
              zhi, zhf, zvi, zvf, mem_ulim, &
@@ -3939,11 +3930,11 @@ subroutine divide_map_into_zones_latlon(&
   integer    :: nZones_h, nZones_v, iZone_h, iZone_v
   real(8)    :: mem
 
-  call echo(code%bgn, 'divide_map_into_zones_latlon', logopt_prc)
+  call echo(code%bgn, 'divide_map_into_zones_latlon')
   !-------------------------------------------------------------
   ! Divide into zones
   !-------------------------------------------------------------
-  call echo(code%ent, 'Divide into zones', logopt_prc)
+  call echo(code%ent, 'Divide into zones')
 
   mh = hf - hi + 1_8
   mv = vf - vi + 1_8
@@ -3968,11 +3959,10 @@ subroutine divide_map_into_zones_latlon(&
     enddo
 
     if( nZones_h*nZones_v == 1 )then
-      call edbg('Not divided into zones', logopt_cnt)
+      call edbg('Not divided into zones')
     else
       call edbg('Divided into '//str(nZones_h*nZones_v)//' zones '//&
-                '(h: '//str(nZones_h)//', v: '//str(nZones_v)//')', &
-                logopt_cnt)
+                '(h: '//str(nZones_h)//', v: '//str(nZones_v)//')')
     endif
   endif
 
@@ -3985,7 +3975,7 @@ subroutine divide_map_into_zones_latlon(&
   !-------------------------------------------------------------
   ! Calc. range of each zone
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calc. range of each zone', logopt_prc)
+  call echo(code%ent, 'Calc. range of each zone')
 
   call extend_zone_latlon(zone, nZones+nZones_h*nZones_v)
 
@@ -4050,7 +4040,7 @@ subroutine calc_bounds_zones_latlon(zone, lon, lat)
   integer :: nZones, iZone
   integer :: d
 
-  call echo(code%bgn, 'calc_bounds_zones_latlon', logopt_prc)
+  call echo(code%bgn, 'calc_bounds_zones_latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -4191,7 +4181,7 @@ subroutine print_zones_latlon(zone, nx, ny)
   nZones = size(zone)
 
   if( nZones == 1 )then
-    call edbg('Not divided into zones', logopt_cnt)
+    call edbg('Not divided into zones')
   else
     do iZone = 1, nZones
       z => zone(iZone)
@@ -4344,7 +4334,7 @@ subroutine make_idxmap_latlon(ul)
             '\nidx min: '//str(zl%idxmin,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max))//&
             '\n    max: '//str(zl%idxmax,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max)))
   else
-    call ewrn('No valid index was found.')
+    call ewrn('No valid index is found.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -4406,7 +4396,7 @@ subroutine make_wgtmap_latlon(ul)
   !-------------------------------------------------------------
   ! Case: Weighted area is input
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Weighted area is input')
+    call echo(code%ent, 'Case: Weighted area is input')
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -4741,7 +4731,7 @@ subroutine make_grduwa_latlon(ul, earth)
       call search(idx, g%idx, g%idxarg, loc)
       if( loc == 0_8 )then
         call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(idx)//' was not found.')
+                '\n  Index '//str(idx)//' is not found.')
       endif
 
       ! Divide equation to control the order of calculation
@@ -4751,8 +4741,8 @@ subroutine make_grduwa_latlon(ul, earth)
   enddo  ! iv/
 
   call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=ul%uwa_miss))//&
-          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ul%uwa_miss)))
-  call edbg('total: '//str(sum(g%uwa,mask=g%uwa/=ul%uwa_miss),'es20.13'))
+          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ul%uwa_miss))//&
+          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ul%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -4863,7 +4853,7 @@ subroutine make_grdara_latlon(ul)
         call search(idx, g%idx, g%idxarg, loc)
         if( loc == 0_8 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' was not found.')
+                  '\n  Index '//str(idx)//' is not found.')
         endif
 
         g%ara(g%idxarg(loc)) = aramap(ih,iv)
@@ -4883,7 +4873,7 @@ subroutine make_grdara_latlon(ul)
   !-------------------------------------------------------------
   ! Case: Weight is input
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Weight is input')
+    call echo(code%ent, 'Case: Weight is input')
     !-------------------------------------------------------------
     ! Prep. index
     !-------------------------------------------------------------
@@ -4922,7 +4912,7 @@ subroutine make_grdara_latlon(ul)
         call search(idx, g%idx, g%idxarg, loc)
         if( loc == 0_8 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' was not found.')
+                  '\n  Index '//str(idx)//' is not found.')
         endif
 
         g%ara(g%idxarg(loc)) = g%uwa(g%idxarg(loc)) * wgtmap(ih,iv)
@@ -4965,8 +4955,8 @@ subroutine make_grdara_latlon(ul)
   !
   !-------------------------------------------------------------
   call edbg('min: '//str(minval(g%ara,mask=g%ara/=ul%ara_miss))//&
-          ', max: '//str(maxval(g%ara,mask=g%ara/=ul%ara_miss)))
-  call edbg('total: '//str(sum(g%ara,mask=g%ara/=ul%ara_miss),'es20.13'))
+          ', max: '//str(maxval(g%ara,mask=g%ara/=ul%ara_miss))//&
+          '\ntotal: '//str(sum(g%ara,mask=g%ara/=ul%ara_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdara_latlon
@@ -5049,7 +5039,7 @@ subroutine make_grdwgt_latlon(ul)
         call search(idx, g%idx, g%idxarg, loc)
         if( loc == 0_8 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' was not found.')
+                  '\n  Index '//str(idx)//' is not found.')
         endif
 
         g%wgt(g%idxarg(loc)) = wgtmap(ih,iv)
@@ -5219,7 +5209,7 @@ subroutine make_grdxyz_latlon(ul, earth)
       call search(ul%idxmap(ih,iv), g%idx, g%idxarg, loc)
       if( loc == 0_8 )then
         call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(ul%idxmap(ih,iv))//' was not found.')
+                '\n  Index '//str(ul%idxmap(ih,iv))//' is not found.')
       endif
 
       g%x(g%idxarg(loc)) = cos_grdlat(iv) * cos_grdlon(ih)
@@ -5254,10 +5244,10 @@ subroutine make_grdxyz_latlon(ul, earth)
   !
   !-------------------------------------------------------------
   call edbg('x min: '//str(minval(g%x,mask=g%x/=ul%xyz_miss))//&
-            ', max: '//str(maxval(g%x,mask=g%x/=ul%xyz_miss)))
-  call edbg('y min: '//str(minval(g%y,mask=g%y/=ul%xyz_miss))//&
-            ', max: '//str(maxval(g%y,mask=g%y/=ul%xyz_miss)))
-  call edbg('z min: '//str(minval(g%z,mask=g%z/=ul%xyz_miss))//&
+            ', max: '//str(maxval(g%x,mask=g%x/=ul%xyz_miss))//&
+          '\ny min: '//str(minval(g%y,mask=g%y/=ul%xyz_miss))//&
+            ', max: '//str(maxval(g%y,mask=g%y/=ul%xyz_miss))//&
+          '\nz min: '//str(minval(g%z,mask=g%z/=ul%xyz_miss))//&
             ', max: '//str(maxval(g%z,mask=g%z/=ul%xyz_miss)))
   !-------------------------------------------------------------
   !
@@ -5368,7 +5358,7 @@ subroutine make_grdlonlat_latlon(ul)
         call search(idx, g%idx, g%idxarg, loc)
         if( loc == 0_8 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' was not found.')
+                  '\n  Index '//str(idx)//' is not found.')
         endif
 
         call conv_cartesian_to_spherical_rad(&
@@ -5426,8 +5416,8 @@ subroutine make_grdlonlat_latlon(ul)
   !
   !-------------------------------------------------------------
   call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ul%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=ul%lonlat_miss)))
-  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=ul%lonlat_miss))//&
+              ', max: '//str(maxval(g%lon,mask=g%lon/=ul%lonlat_miss))//&
+          '\nlat min: '//str(minval(g%lat,mask=g%lat/=ul%lonlat_miss))//&
               ', max: '//str(maxval(g%lat,mask=g%lat/=ul%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -5499,7 +5489,7 @@ subroutine make_idxmap_raster(ur)
             '\nidx min: '//str(zl%idxmin,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max))//&
             '\n    max: '//str(zl%idxmax,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max)))
   else
-    call ewrn('No valid index was found.')
+    call ewrn('No valid index is found.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -5570,7 +5560,7 @@ subroutine make_wgtmap_raster(ur, earth)
   !-------------------------------------------------------------
   ! Case: Grid data is input
   if( fg_in%ara%path /= '' .or. fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Grid data was input')
+    call echo(code%ent, 'Case: Grid data is input')
     !-----------------------------------------------------------
     ! Read index
     !-----------------------------------------------------------
@@ -5606,7 +5596,8 @@ subroutine make_wgtmap_raster(ur, earth)
           call search(idx, g%idx, g%idxarg, loc)
           if( loc == 0_8 )then
             call eerr(str(msg_unexpected_condition())//&
-                    '\n  Index '//str(idx)//' was not found in the intermediate data.')
+                    '\n  Index '//str(idx)//' is not found '//&
+                      'in the intermediate data.')
           endif
           idx_prev = idx
         endif
@@ -5622,7 +5613,7 @@ subroutine make_wgtmap_raster(ur, earth)
   !-------------------------------------------------------------
   ! Case: Raster data (weighted area) was input
   elseif( fr%ara%path /= '' )then
-    call echo(code%ent, 'Case: Raster data (weighted area) was input')
+    call echo(code%ent, 'Case: Raster data (weighted area) is input')
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -5672,7 +5663,7 @@ subroutine make_wgtmap_raster(ur, earth)
   !-------------------------------------------------------------
   ! Case: Raster data (weight) was input
   elseif( fr%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Raster data (weight) was input')
+    call echo(code%ent, 'Case: Raster data (weight) is input')
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -5989,7 +5980,7 @@ subroutine make_grduwa_raster(ur, earth)
           call search(idx, g%idx, g%idxarg, loc)
           if( loc == 0_8 )then
             call eerr(str(msg_unexpected_condition())//&
-                    '\n  Index '//str(idx)//' was not found')
+                    '\n  Index '//str(idx)//' is not found')
           endif
           idx_prev = idx
         endif
@@ -6015,8 +6006,8 @@ subroutine make_grduwa_raster(ur, earth)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call edbg('min: '//str(minval(g%uwa))//' max: '//str(maxval(g%uwa)))
-    call edbg('total: '//str(sum(g%uwa),'es20.13'))
+    call edbg('min: '//str(minval(g%uwa))//' max: '//str(maxval(g%uwa))//&
+            '\ntotal: '//str(sum(g%uwa),'es20.13'))
   endif
   !-------------------------------------------------------------
   !

@@ -5,16 +5,13 @@ module mod_set
   use lib_util
   use lib_io
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_set
-  use common_file, only: &
-        open_report_file, &
-        close_report_file, &
-        set_opt_old_files, &
-        handle_old_file
-  use common_gs
-  use common_rt
+  use common_type_opt
+  use common_type_gs
+  ! common2
+  use common_type_rt
+  ! this
   use def_type
   implicit none
   private
@@ -22,7 +19,6 @@ module mod_set
   ! Public procedures
   !-------------------------------------------------------------
   public :: read_settings
-  public :: finalize
   !-------------------------------------------------------------
   ! Private variables
   !-------------------------------------------------------------
@@ -33,6 +29,30 @@ contains
 !
 !===============================================================
 subroutine read_settings(gs_source, gs_target, rt, opt)
+  use common_set2, only: &
+        open_setting_file      , &
+        close_setting_file     , &
+        line_number            , &
+        read_path_report       , &
+        get_path_report        , &
+        find_block             , &
+        check_num_of_key       , &
+        bar                    , &
+        raise_error_invalid_key, &
+        msg_invalid_input
+  use common_file, only: &
+        open_report_file
+  use common_opt_set, only: &
+        set_default_values_opt_sys, &
+        set_default_values_opt_log, &
+        set_default_values_opt_earth
+  use common_gs_base, only: &
+        init_gs               , &
+        set_miss_file_grid_in , &
+        set_miss_file_grid_out, &
+        set_save_file_grid_out
+  use common_rt_base, only: &
+        init_rt
   implicit none
   type(gs_) , intent(out), target :: gs_source, gs_target
   type(rt_) , intent(out), target :: rt
@@ -46,9 +66,8 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   end type
   type(counter_) :: counter
 
-  character(clen_var) :: block_name
-  character(clen_path) :: path_report
-  !-------------------------------------------------------------
+  character(CLEN_VAR) :: block_name
+
   type(gs_)            , pointer :: u
   type(gs_common_)     , pointer :: uc
   type(file_raster_in_), pointer :: fr
@@ -59,19 +78,19 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   type(file_)          , pointer :: f
   integer :: iGs
   integer :: iFile_vrf
-  character(clen_path) :: path_head, path_tail
-  character(clen_key) :: grid
+  character(CLEN_PATH) :: path_head, path_tail
+  character(CLEN_KEY) :: grid
 
-  character(clen_var), parameter :: block_name_gs_latlon  = 'grid_system_latlon'
-  character(clen_var), parameter :: block_name_gs_raster  = 'grid_system_raster'
-  character(clen_var), parameter :: block_name_gs_polygon = 'grid_system_polygon'
-  character(clen_var), parameter :: block_name_remapping  = 'remapping'
-  character(clen_var), parameter :: block_name_opt        = 'options'
-  character(clen_var), parameter :: block_name_fig        = 'figures'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'grid_system_latlon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'grid_system_raster'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'grid_system_polygon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_REMAPPING  = 'remapping'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OPT        = 'options'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_FIG        = 'figures'
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Init.
   !-------------------------------------------------------------
   call echo(code%ent, 'Initializing')
 
@@ -80,32 +99,33 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   call init_rt(rt)
 
   gs_source%id = 'gs_source'
-  gs_source%nam = grid_source
+  gs_source%nam = GRID_SOURCE
   gs_source%is_source = .true.
 
   gs_target%id = 'gs_target'
-  gs_target%nam = grid_target
+  gs_target%nam = GRID_TARGET
   gs_target%is_source = .false.
 
   rt%id = 'rt'
 
-  call init_opt_sys(opt%sys)
-  call init_opt_earth(opt%earth)
+  call set_default_values_opt_sys(opt%sys)
+  call set_default_values_opt_log(opt%log)
+  call set_default_values_opt_earth(opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the setting file')
+  call echo(code%ent, 'Reading the settings')
 
   call open_setting_file()
 
   ! Open report file
   !-------------------------------------------------------------
-  call get_path_report(path_report)
-  call open_report_file(path_report)
+  call read_path_report()
+  call open_report_file(get_path_report())
 
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
   call init_counter()
 
@@ -119,35 +139,35 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
       exit
     !-----------------------------------------------------------
     ! Case: gs_latlon
-    case( block_name_gs_latlon )
+    case( BLOCK_NAME_GS_LATLON )
       call update_counter(counter%gs, block_name)
       call select_gs(counter%gs, gs_source, gs_target, u)
       call read_settings_gs_latlon(u)
     !-----------------------------------------------------------
     ! Case: gs_raster
-    case( block_name_gs_raster )
+    case( BLOCK_NAME_GS_RASTER )
       call update_counter(counter%gs, block_name)
       call select_gs(counter%gs, gs_source, gs_target, u)
       call read_settings_gs_raster(u)
     !-----------------------------------------------------------
     ! Case: gs_polygon
-    case( block_name_gs_polygon )
+    case( BLOCK_NAME_GS_POLYGON )
       call update_counter(counter%gs, block_name)
       call select_gs(counter%gs, gs_source, gs_target, u)
       call read_settings_gs_polygon(u)
     !-----------------------------------------------------------
     ! Case: rt
-    case( block_name_remapping )
+    case( BLOCK_NAME_REMAPPING )
       call update_counter(counter%rmp, block_name)
       call read_settings_remapping(rt, gs_source, gs_target)
     !-----------------------------------------------------------
     ! Case: opt
-    case( block_name_opt )
+    case( BLOCK_NAME_OPT )
       call update_counter(counter%opt, block_name)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: fig
-    case( block_name_fig )
+    case( BLOCK_NAME_FIG )
       call update_counter(counter%fig, block_name)
       call skip_unused_block()
     !-----------------------------------------------------------
@@ -155,7 +175,7 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
     case default
       call eerr(str(msg_invalid_value())//&
               '\n  block_name: '//str(block_name)//&
-              '\nCheck the name of blocks.')
+              '\nCheck the names of the blocks.')
     endselect
   enddo
 
@@ -165,23 +185,23 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Detect confliction
+  ! Detect conflictions
   !-------------------------------------------------------------
-  call echo(code%ent, 'Detecting confliction')
+  call echo(code%ent, 'Detecting conflictions')
 
   rtm => rt%main
 
   ! Earth's shape
   !-------------------------------------------------------------
-  if( opt%earth%shp == earth_shape_ellips )then
+  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
     do iGs = 1, 2
       call select_gs(iGs, gs_source, gs_target, u)
 
       selectcase( u%gs_type )
-      case( gs_type_latlon, &
-            gs_type_raster )
+      case( GS_TYPE_LATLON, &
+            GS_TYPE_RASTER )
         continue
-      case( gs_type_polygon )
+      case( GS_TYPE_POLYGON )
         call eerr(str(msg_unexpected_condition())//&
                 '\n  opt%earth%shp == '//str(opt%earth%shp)//&
                   ' .and. '//str(u%id)//'%gs_type == '//str(u%gs_type)//&
@@ -203,27 +223,27 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
       selectcase( fvrf%form )
       !---------------------------------------------------------
       ! Case: Auto
-      case( grid_form_auto )
+      case( GRID_FORM_AUTO )
         continue
       !---------------------------------------------------------
       ! Case: Index
-      case( grid_form_index )
+      case( GRID_FORM_INDEX )
         if( uc%f_grid_in%idx%path == '' )then
           call eerr(str(msg_unexpected_condition())//&
                   '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
                     ' .and. '//str(uc%f_grid_in%idx%id)//'%path == ""'//&
                   '\nForm of verification data for '//str(grid)//' grid is "'//&
-                    str(grid_form_index)//'", but file of grid index was not specified.')
+                    str(GRID_FORM_INDEX)//'", but file of grid index was not specified.')
         endif
       !---------------------------------------------------------
       ! Case: Raster
-      case( grid_form_raster )
-        if( uc%gs_type /= gs_type_raster )then
+      case( GRID_FORM_RASTER )
+        if( uc%gs_type /= GS_TYPE_RASTER )then
           call eerr(str(msg_unexpected_condition())//&
                   '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
-                    ' .and. '//str(uc%id)//'%gs_type /= '//str(gs_type_raster)//&
+                    ' .and. '//str(uc%id)//'%gs_type /= '//str(GS_TYPE_RASTER)//&
                   '\nForm of verification data for '//str(grid)//' grid is "'//&
-                    str(grid_form_raster)//'", but grid type is "'//str(uc%gs_type)//'".')
+                    str(GRID_FORM_RASTER)//'", but grid type is "'//str(uc%gs_type)//'".')
         endif
       !---------------------------------------------------------
       ! Case: ERROR
@@ -245,8 +265,8 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   ! Directory of interemdiates
   !-------------------------------------------------------------
   if( opt%sys%dir_im == '' )then
-    opt%sys%dir_im = dirname(path_report)
-    call edbg('Directory of intermediates was not specified.'//&
+    opt%sys%dir_im = dirname(get_path_report())
+    call edbg('Directory of intermediates was not given.'//&
             '\nAutomatically set to "'//str(opt%sys%dir_im)//'".')
   endif
 
@@ -317,15 +337,15 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
       selectcase( fvrf%form )
       !---------------------------------------------------------
       ! Auto
-      case( grid_form_auto )
+      case( GRID_FORM_AUTO )
         continue
       !---------------------------------------------------------
       ! Index
-      case( grid_form_index )
+      case( GRID_FORM_INDEX )
         continue
       !---------------------------------------------------------
       ! Raster
-      case( grid_form_raster )
+      case( GRID_FORM_RASTER )
         fr => u%raster%f_raster_in
 
         f => fvrf%out_iarea_sum
@@ -399,34 +419,31 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Print settings
+  ! Print the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Printing settings', '-p -x2')
+  call echo(code%ent, 'Printing the settings', '-p -x2')
 
   do iGs = 1, 2
     call select_gs(iGs, gs_source, gs_target, u)
 
     selectcase( u%gs_type )
-    case( gs_type_latlon )
+    case( GS_TYPE_LATLON )
       call echo_settings_gs_latlon(u%latlon)
 
-    case( gs_type_raster )
+    case( GS_TYPE_RASTER )
       call echo_settings_gs_raster(u%raster)
 
-    case( gs_type_polygon )
+    case( GS_TYPE_POLYGON )
       call echo_settings_gs_polygon(u%polygon)
 
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  '//str(u%id)//'%gs_type: '//str(u%gs_type))
+      call eerr('Invalid value in '//str(u%id)//'%gs_type: '//str(u%gs_type))
     endselect
   enddo
 
   call echo_settings_remapping(rt, gs_source, gs_target)
 
   call echo_settings_opt(opt)
-
-  call edbg(bar(''))
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -457,26 +474,24 @@ subroutine update_counter(n, block_name)
   n = n + 1
 
   selectcase( block_name )
-  case( block_name_gs_latlon, &
-        block_name_gs_raster, &
-        block_name_gs_polygon )
+  case( BLOCK_NAME_GS_LATLON, &
+        BLOCK_NAME_GS_RASTER, &
+        BLOCK_NAME_GS_POLYGON )
     if( n > 2 )then
-      call eerr(str(msg_syntax_error())//&
-              '\n  @ line '//str(line_number())//&
-              '\n  Blocks of grid system appeared more than twice:'//&
-              '\n    "'//str(block_name_gs_latlon)//'"'//&
-              '\n    "'//str(block_name_gs_raster)//'"'//&
-              '\n    "'//str(block_name_gs_polygon)//'"')
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nBlocks of grid system appeared more than twice:'//&
+              '\n  "'//str(BLOCK_NAME_GS_LATLON)//'"'//&
+              '\n  "'//str(BLOCK_NAME_GS_RASTER)//'"'//&
+              '\n  "'//str(BLOCK_NAME_GS_POLYGON)//'"')
     endif
-  case( block_name_remapping )
+  case( BLOCK_NAME_REMAPPING )
     call check_num_of_key(n, block_name, 0, 2)
-  case( block_name_opt )
+  case( BLOCK_NAME_OPT )
     call check_num_of_key(n, block_name, 0, 1)
-  case( block_name_fig )
+  case( BLOCK_NAME_FIG )
     call check_num_of_key(n, block_name, 0, 1)
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  block_name: '//str(block_name))
+    call eerr('Invalid value in $block_name: '//str(block_name))
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -488,37 +503,23 @@ subroutine check_number_of_blocks()
   call echo(code%bgn, '__IP__check_number_of_blocks', '-p -x2')
   !-------------------------------------------------------------
   if( counter%gs /= 2 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  The number of blocks of grid system is invalid:'//&
-            '\n  "'//str(block_name_gs_latlon)//'"'//&
-            '\n  "'//str(block_name_gs_raster)//'"'//&
-            '\n  "'//str(block_name_gs_polygon)//'"')
+    call eerr(str(msg_invalid_input())//&
+            '\nThe number of blocks of grid system is invalid:'//&
+            '\n  "'//str(BLOCK_NAME_GS_LATLON)//'"'//&
+            '\n  "'//str(BLOCK_NAME_GS_RASTER)//'"'//&
+            '\n  "'//str(BLOCK_NAME_GS_POLYGON)//'"')
   endif
 
-  call check_num_of_key(counter%rmp, block_name_remapping, 1, 1)
+  call check_num_of_key(counter%rmp, BLOCK_NAME_REMAPPING, 1, 1)
 
-  call check_num_of_key(counter%opt, block_name_opt, 0, 1)
+  call check_num_of_key(counter%opt, BLOCK_NAME_OPT, 0, 1)
 
-  call check_num_of_key(counter%fig, block_name_fig, 0, 1)
+  call check_num_of_key(counter%fig, BLOCK_NAME_FIG, 0, 1)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_number_of_blocks
 !---------------------------------------------------------------
 end subroutine read_settings
-!===============================================================
-!
-!===============================================================
-subroutine finalize()
-  implicit none
-
-  call echo(code%bgn, 'finalize', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call close_report_file()
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine finalize
 !===============================================================
 !
 !===============================================================
@@ -531,2817 +532,1718 @@ end subroutine finalize
 !
 !===============================================================
 subroutine read_settings_gs_latlon(u)
+  use common_set2, only: &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_gs_components         , &
+        set_gs_common_components    , &
+        set_default_values_gs_latlon, &
+        set_bounds_file_latlon_in   , &
+        set_bounds_file_grid_in     , &
+        set_bounds_file_grid_out
+  use common_gs_define, only: &
+        check_bounds_lon, &
+        check_bounds_lat
   implicit none
   type(gs_), intent(inout), target :: u
 
-  type counter_
-    integer :: name
-
-    integer :: nx
-    integer :: ny
-
-    integer :: west
-    integer :: east
-    integer :: south
-    integer :: north
-
-    integer :: is_south_to_north
-
-    integer :: dir
-
-    integer :: f_lon_bound
-    integer :: f_lat_bound
-    integer :: coord_unit
-
-    integer :: idx_bgn
-
-    integer :: fin_grdidx
-    integer :: fin_grdara
-    integer :: fin_grdwgt
-    integer :: fin_grdx
-    integer :: fin_grdy
-    integer :: fin_grdz
-    integer :: fin_grdlon
-    integer :: fin_grdlat
-    integer :: in_grid_sz
-    integer :: in_grid_lb
-    integer :: in_grid_ub
-
-    integer :: idx_miss
-    integer :: ara_miss
-    integer :: wgt_miss
-    integer :: xyz_miss
-    integer :: lonlat_miss
-    integer :: val_miss
-
-    integer :: idx_debug
-  end type
-
-  character(clen_var), parameter :: key_name = 'name'
-
-  character(clen_var), parameter :: key_nx = 'nx'
-  character(clen_var), parameter :: key_ny = 'ny'
-
-  character(clen_var), parameter :: key_west = 'west'
-  character(clen_var), parameter :: key_east = 'east'
-  character(clen_var), parameter :: key_south = 'south'
-  character(clen_var), parameter :: key_north = 'north'
-
-  character(clen_var), parameter :: key_is_south_to_north = 'is_south_to_north'
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  character(clen_var), parameter :: key_f_lon_bound  = 'f_lon_bound'
-  character(clen_var), parameter :: key_f_lat_bound  = 'f_lat_bound'
-  character(clen_var), parameter :: key_coord_unit = 'coord_unit'
-
-  character(clen_var), parameter :: key_idx_bgn = 'idx_bgn'
-
-  character(clen_var), parameter :: key_fin_grdidx = 'fin_grdidx'
-  character(clen_var), parameter :: key_fin_grdara = 'fin_grdara'
-  character(clen_var), parameter :: key_fin_grdwgt = 'fin_grdwgt'
-  character(clen_var), parameter :: key_fin_grdx   = 'fin_grdx'
-  character(clen_var), parameter :: key_fin_grdy   = 'fin_grdy'
-  character(clen_var), parameter :: key_fin_grdz   = 'fin_grdz'
-  character(clen_var), parameter :: key_fin_grdlon = 'fin_grdlon'
-  character(clen_var), parameter :: key_fin_grdlat = 'fin_grdlat'
-  character(clen_var), parameter :: key_in_grid_sz = 'in_grid_sz'
-  character(clen_var), parameter :: key_in_grid_lb = 'in_grid_lb'
-  character(clen_var), parameter :: key_in_grid_ub = 'in_grid_ub'
-
-  character(clen_var), parameter :: key_idx_miss    = 'idx_miss'
-  character(clen_var), parameter :: key_ara_miss    = 'ara_miss'
-  character(clen_var), parameter :: key_wgt_miss    = 'wgt_miss'
-  character(clen_var), parameter :: key_xyz_miss    = 'xyz_miss'
-  character(clen_var), parameter :: key_lonlat_miss = 'lonlat_miss'
-  character(clen_var), parameter :: key_val_miss    = 'val_miss'
-
-  character(clen_var), parameter :: key_idx_debug = 'idx_debug'
-
-  character(clen_var) :: key
-  type(counter_) :: counter
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(gs_common_)     , pointer :: uc
   type(gs_latlon_)     , pointer :: ul
   type(file_latlon_in_), pointer :: fl
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
 
+  character(CLEN_PATH) :: dir
+
   call echo(code%bgn, 'read_settings_gs_latlon')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_name )
-      call add(counter%name)
-
-    case( key_nx )
-      call add(counter%nx)
-
-    case( key_ny )
-      call add(counter%ny)
-
-    case( key_west )
-      call add(counter%west)
-
-    case( key_east )
-      call add(counter%east)
-
-    case( key_south )
-      call add(counter%south)
-
-    case( key_north )
-      call add(counter%north)
-
-    case( key_is_south_to_north )
-      call add(counter%is_south_to_north)
-
-    case( key_dir )
-      call add(counter%dir)
-
-    case( key_f_lon_bound )
-      call add(counter%f_lon_bound)
-
-    case( key_f_lat_bound )
-      call add(counter%f_lat_bound)
-
-    case( key_coord_unit )
-      call add(counter%coord_unit)
-
-    case( key_idx_bgn )
-      call add(counter%idx_bgn)
-
-    case( key_fin_grdidx )
-      call add(counter%fin_grdidx)
-
-    case( key_fin_grdara )
-      call add(counter%fin_grdara)
-
-    case( key_fin_grdwgt )
-      call add(counter%fin_grdwgt)
-
-    case( key_fin_grdx )
-      call add(counter%fin_grdx)
-
-    case( key_fin_grdy )
-      call add(counter%fin_grdy)
-
-    case( key_fin_grdz )
-      call add(counter%fin_grdz)
-
-    case( key_fin_grdlon )
-      call add(counter%fin_grdlon)
-
-    case( key_fin_grdlat )
-      call add(counter%fin_grdlat)
-
-    case( key_in_grid_sz )
-      call add(counter%in_grid_sz)
-
-    case( key_in_grid_lb )
-      call add(counter%in_grid_lb)
-
-    case( key_in_grid_ub )
-      call add(counter%in_grid_ub)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_ara_miss )
-      call add(counter%ara_miss)
-
-    case( key_wgt_miss )
-      call add(counter%wgt_miss)
-
-    case( key_xyz_miss )
-      call add(counter%xyz_miss)
-
-    case( key_lonlat_miss )
-      call add(counter%lonlat_miss)
-
-    case( key_val_miss )
-      call add(counter%val_miss)
-
-    case( key_idx_debug )
-      call add(counter%idx_debug)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(31)
+  call set_keynum('name', 0, 1)
+  call set_keynum('nx', 1, 1)
+  call set_keynum('ny', 1, 1)
+  call set_keynum('west' , 0, 1)
+  call set_keynum('east' , 0, 1)
+  call set_keynum('south', 0, 1)
+  call set_keynum('north', 0, 1)
+  call set_keynum('is_south_to_north', 0, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_lon_bound', 0, 1)
+  call set_keynum('f_lat_bound', 0, 1)
+  call set_keynum('coord_unit' , 0, 1)
+  call set_keynum('idx_bgn'   , 0, 1)
+  call set_keynum('fin_grdidx', 0, 1)
+  call set_keynum('fin_grdara', 0, 1)
+  call set_keynum('fin_grdwgt', 0, 1)
+  call set_keynum('fin_grdx'  , 0, 1)
+  call set_keynum('fin_grdy'  , 0, 1)
+  call set_keynum('fin_grdz'  , 0, 1)
+  call set_keynum('fin_grdlon', 0, 1)
+  call set_keynum('fin_grdlat', 0, 1)
+  call set_keynum('in_grid_sz', 0, 1)
+  call set_keynum('in_grid_lb', 0, 1)
+  call set_keynum('in_grid_ub', 0, 1)
+  call set_keynum('idx_miss'   , 0, 1)
+  call set_keynum('ara_miss'   , 0, 1)
+  call set_keynum('wgt_miss'   , 0, 1)
+  call set_keynum('xyz_miss'   , 0, 1)
+  call set_keynum('lonlat_miss', 0, 1)
+  call set_keynum('val_miss'   , 0, 1)
+  call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, gs_type_latlon)
+  call alloc_gs_components(u, GS_TYPE_LATLON)
+  call set_default_values_gs_latlon(u%latlon)
 
   ul => u%latlon
-
-  call set_default_values_gs_latlon(ul)
-
   fl     => ul%f_latlon_in
   fg_in  => ul%f_grid_in
   fg_out => ul%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
-  ! Read settings
-  !-------------------------------------------------------------
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
+    ! Name
+    case( 'name' )
+      call read_value(u%nam)
     !-----------------------------------------------------------
-    case( key_name )
-      call read_value(v_char=u%nam, is_keyword=.false.)
-
-    case( key_nx )
-      call read_value(v_int8=ul%nx)
-
-    case( key_ny )
-      call read_value(v_int8=ul%ny)
-
-    case( key_west )
-      call read_value(v_dble=ul%west)
-
-    case( key_east )
-      call read_value(v_dble=ul%east)
-
-    case( key_south )
-      call read_value(v_dble=ul%south)
-
-    case( key_north )
-      call read_value(v_dble=ul%north)
-
-    case( key_is_south_to_north )
-      call read_value(v_log=ul%is_south_to_north)
+    ! Resolution
+    case( 'nx' )
+      call read_value(ul%nx)
+    case( 'ny' )
+      call read_value(ul%ny)
     !-----------------------------------------------------------
-    !
+    ! Region
+    case( 'west' )
+      call read_value(ul%west)
+    case( 'east' )
+      call read_value(ul%east)
+    case( 'south' )
+      call read_value(ul%south)
+    case( 'north' )
+      call read_value(ul%north)
     !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    ! Y-axis
+    case( 'is_south_to_north' )
+      call read_value(ul%is_south_to_north)
+    !-----------------------------------------------------------
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! LonLat bounds.
-    !-----------------------------------------------------------
-    case( key_f_lon_bound )
-      call read_value(v_file=fl%lon, get_length=.false.)
-      fl%lon%path = joined(dir, fl%lon%path)
+    case( 'f_lon_bound' )
+      call read_value(fl%lon, dir)
+    case( 'f_lat_bound' )
+      call read_value(fl%lat, dir)
 
-    case( key_f_lat_bound )
-      call read_value(v_file=fl%lat, get_length=.false.)
-      fl%lat%path = joined(dir, fl%lat%path)
-
-    case( key_coord_unit )
-      call read_value(v_char=ul%coord_unit)
+    case( 'coord_unit' )
+      call read_value(ul%coord_unit, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Grid data
+    case( 'idx_bgn' )
+      call read_value(fg_in%idx_bgn)
+
+    case( 'fin_grdidx' )
+      call read_value(fg_in%idx, dir)
+    case( 'fin_grdara' )
+      call read_value(fg_in%ara, dir)
+    case( 'fin_grdwgt' )
+      call read_value(fg_in%wgt, dir)
+    case( 'fin_grdx' )
+      call read_value(fg_in%x, dir)
+    case( 'fin_grdy' )
+      call read_value(fg_in%y, dir)
+    case( 'fin_grdz' )
+      call read_value(fg_in%z, dir)
+    case( 'fin_grdlon' )
+      call read_value(fg_in%lon, dir)
+    case( 'fin_grdlat' )
+      call read_value(fg_in%lat, dir)
+
+    case( 'in_grid_sz' )
+      call read_value(fg_in%sz(1), pos=1)
+      call read_value(fg_in%sz(2), pos=2)
+    case( 'in_grid_lb' )
+      call read_value(fg_in%lb(1), pos=1)
+      call read_value(fg_in%lb(2), pos=2)
+    case( 'in_grid_ub' )
+      call read_value(fg_in%ub(1), pos=1)
+      call read_value(fg_in%ub(2), pos=2)
+
+    !case( 'unit_ara' )
+    !  call read_value(fg_in%unit_ara, is_keyword=.true.)
+    !case( 'unit_xyz' )
+    !  call read_value(fg_in%unit_xyz, is_keyword=.true.)
+    !case( 'unit_lonlat' )
+    !  call read_value(fg_in%unit_lonlat, is_keyword=.true.)
     !-----------------------------------------------------------
-    case( key_idx_bgn )
-      call read_value(v_int8=fg_in%idx_bgn)
-
-    case( key_fin_grdidx )
-      call read_value(v_file=fg_in%idx, get_length=.false.)
-      fg_in%idx%path = joined(dir, fg_in%idx%path)
-
-    case( key_fin_grdara )
-      call read_value(v_file=fg_in%ara, get_length=.false.)
-      fg_in%ara%path = joined(dir, fg_in%ara%path)
-
-    case( key_fin_grdwgt )
-      call read_value(v_file=fg_in%wgt, get_length=.false.)
-      fg_in%wgt%path = joined(dir, fg_in%wgt%path)
-
-    case( key_fin_grdx )
-      call read_value(v_file=fg_in%x, get_length=.false.)
-      fg_in%x%path = joined(dir, fg_in%x%path)
-
-    case( key_fin_grdy )
-      call read_value(v_file=fg_in%y, get_length=.false.)
-      fg_in%y%path = joined(dir, fg_in%y%path)
-
-    case( key_fin_grdz )
-      call read_value(v_file=fg_in%z, get_length=.false.)
-      fg_in%z%path = joined(dir, fg_in%z%path)
-
-    case( key_fin_grdlon )
-      call read_value(v_file=fg_in%lon, get_length=.false.)
-      fg_in%lon%path = joined(dir, fg_in%lon%path)
-
-    case( key_fin_grdlat )
-      call read_value(v_file=fg_in%lat, get_length=.false.)
-      fg_in%lat%path = joined(dir, fg_in%lat%path)
-
-    case( key_in_grid_sz )
-      call read_value(v_int8=fg_in%sz(1), pos=1)
-      call read_value(v_int8=fg_in%sz(2), pos=2)
-
-    case( key_in_grid_lb )
-      call read_value(v_int8=fg_in%lb(1), pos=1)
-      call read_value(v_int8=fg_in%lb(2), pos=2)
-
-    case( key_in_grid_ub )
-      call read_value(v_int8=fg_in%ub(1), pos=1)
-      call read_value(v_int8=fg_in%ub(2), pos=2)
+    ! Missing value
+    case( 'idx_miss' )
+      call read_value(ul%idx_miss)
+    case( 'ara_miss' )
+      call read_value(ul%ara_miss)
+    case( 'wgt_miss' )
+      call read_value(ul%wgt_miss)
+    case( 'xyz_miss' )
+      call read_value(ul%xyz_miss)
+    case( 'lonlat_miss' )
+      call read_value(ul%lonlat_miss)
+    case( 'val_miss' )
+      call read_value(ul%val_miss)
     !-----------------------------------------------------------
-    !
+    ! Debugging
+    case( 'idx_debug' )
+      call read_value(ul%idx_debug)
     !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=ul%idx_miss)
-
-    case( key_ara_miss )
-      call read_value(v_dble=ul%ara_miss)
-
-    case( key_wgt_miss )
-      call read_value(v_dble=ul%wgt_miss)
-
-    case( key_xyz_miss )
-      call read_value(v_dble=ul%xyz_miss)
-
-    case( key_lonlat_miss )
-      call read_value(v_dble=ul%lonlat_miss)
-
-    case( key_val_miss )
-      call read_value(v_dble=ul%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_debug )
-      call read_value(v_int8=ul%idx_debug)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Check values
-  !-------------------------------------------------------------
-  if( counter%west == 1 )  call check_bounds_lon(ul%west, ul%east)
-  if( counter%south == 1 ) call check_bounds_lat(ul%south, ul%north)
+  call check_keynum()
+  call check_keynum_relations()
 
-  ! Modify values
+  call echo(code%ext)
   !-------------------------------------------------------------
-  call set_bounds_file_latlon_in(fl, ul%nx, ul%ny)
+  ! Check the values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
 
+  if( keynum('west' ) == 1 ) call check_bounds_lon(ul%west , ul%east )
+  if( keynum('south') == 1 ) call check_bounds_lat(ul%south, ul%north)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  call set_bounds_file_latlon_in(&
+         fl, ul%nx, ul%ny,                       & ! in
+         ul%nh, ul%hi, ul%hf, ul%nv, ul%vi, ul%vf) ! out
   call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
-
   call set_bounds_file_grid_out(fg_out, ul%nx, ul%ny)
 
-  ! Update idx_debug
-  !-------------------------------------------------------------
-  ul%debug = counter%idx_debug == 1
+  call set_gs_common_components(u)
+
+  ul%debug = keynum('idx_debug') == 1
   if( .not. ul%debug ) ul%idx_debug = ul%idx_miss
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Free the external module variables
   !-------------------------------------------------------------
-  ul%nam = u%nam
-
-  ul%nh = ul%nx
-  ul%nv = ul%ny
-  ul%hi = 1_8
-  ul%hf = ul%nh
-  ul%vi = 1_8
-  ul%vf = ul%nv
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  uc => u%cmn
-
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam = u%nam
-  uc%gs_type = u%gs_type
-  uc%is_source = u%is_source
-  uc%idx_miss    = ul%idx_miss
-  uc%ara_miss    = ul%ara_miss
-  uc%wgt_miss    = ul%wgt_miss
-  uc%xyz_miss    = ul%xyz_miss
-  uc%lonlat_miss = ul%lonlat_miss
-  uc%val_miss    = ul%val_miss
-
-  uc%f_grid_in  => ul%f_grid_in
-  uc%f_grid_out => ul%f_grid_out
-  uc%grid       => ul%grid
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  call echo(code%bgn, 'init_counter', '-p')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p -x2')
   !-------------------------------------------------------------
-  counter%name = 0
-
-  counter%nx = 0
-  counter%ny = 0
-
-  counter%west = 0
-  counter%east = 0
-  counter%south = 0
-  counter%north = 0
-
-  counter%is_south_to_north = 0
-
-  counter%dir = 0
-
-  counter%f_lon_bound = 0
-  counter%f_lat_bound = 0
-  counter%coord_unit = 0
-
-  counter%idx_bgn = 0
-
-  counter%fin_grdidx = 0
-  counter%fin_grdara = 0
-  counter%fin_grdwgt = 0
-  counter%fin_grdx   = 0
-  counter%fin_grdy   = 0
-  counter%fin_grdz   = 0
-  counter%fin_grdlon = 0
-  counter%fin_grdlat = 0
-  counter%in_grid_sz = 0
-  counter%in_grid_lb = 0
-  counter%in_grid_ub = 0
-
-  counter%idx_miss    = 0
-  counter%ara_miss    = 0
-  counter%wgt_miss    = 0
-  counter%xyz_miss    = 0
-  counter%lonlat_miss = 0
-  counter%val_miss    = 0
-
-  counter%idx_debug = 0
+  ! Coords.
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, 'check_number_of_inputs', '-p')
-  !-------------------------------------------------------------
-  ! Individual
-  !-------------------------------------------------------------
-  call check_num_of_key(counter%name, key_name, 0, 1)
-
-  call check_num_of_key(counter%nx, key_nx, 1, 1)
-  call check_num_of_key(counter%ny, key_ny, 1, 1)
-
-  call check_num_of_key(counter%west , key_west , 0, 1)
-  call check_num_of_key(counter%east , key_east , 0, 1)
-  call check_num_of_key(counter%south, key_south, 0, 1)
-  call check_num_of_key(counter%north, key_north, 0, 1)
-
-  call check_num_of_key(counter%is_south_to_north, key_is_south_to_north, 0, 1)
-
-  call check_num_of_key(counter%f_lon_bound, key_f_lon_bound, 0, 1)
-  call check_num_of_key(counter%f_lat_bound, key_f_lat_bound, 0, 1)
-  call check_num_of_key(counter%coord_unit, key_coord_unit, 0, 1)
-
-  call check_num_of_key(counter%idx_bgn, key_idx_bgn, 0, 1)
-
-  call check_num_of_key(counter%fin_grdidx, key_fin_grdidx, 0, 1)
-  call check_num_of_key(counter%fin_grdara, key_fin_grdara, 0, 1)
-  call check_num_of_key(counter%fin_grdwgt, key_fin_grdwgt, 0, 1)
-  call check_num_of_key(counter%fin_grdx  , key_fin_grdx  , 0, 1)
-  call check_num_of_key(counter%fin_grdy  , key_fin_grdy  , 0, 1)
-  call check_num_of_key(counter%fin_grdz  , key_fin_grdz  , 0, 1)
-  call check_num_of_key(counter%fin_grdlon, key_fin_grdlon, 0, 1)
-  call check_num_of_key(counter%fin_grdlat, key_fin_grdlat, 0, 1)
-  call check_num_of_key(counter%in_grid_sz, key_in_grid_sz, 0, 1)
-  call check_num_of_key(counter%in_grid_lb, key_in_grid_lb, 0, 1)
-  call check_num_of_key(counter%in_grid_ub, key_in_grid_ub, 0, 1)
-
-  call check_num_of_key(counter%idx_miss   , key_idx_miss   , 0, 1)
-  call check_num_of_key(counter%ara_miss   , key_ara_miss   , 0, 1)
-  call check_num_of_key(counter%wgt_miss   , key_wgt_miss   , 0, 1)
-  call check_num_of_key(counter%xyz_miss   , key_xyz_miss   , 0, 1)
-  call check_num_of_key(counter%lonlat_miss, key_lonlat_miss, 0, 1)
-  call check_num_of_key(counter%val_miss   , key_val_miss   , 0, 1)
-
-  call check_num_of_key(counter%idx_debug, key_idx_debug, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  if( counter%west == 0 .and. counter%east == 0 )then
-    if( counter%f_lon_bound == 0 )then
-      call eerr('None of "'//str(key_west)//'", "'//str(key_east)//'" or '//&
-                '"'//str(key_f_lon_bound)//'" was specified.')
+  if( keynum('west') == 0 .and. keynum('east') == 0 )then
+    if( keynum('f_lon_bound') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is missing.'//&
+                ' Give "west" and "east", or give "f_lon_bound".')
     endif
-  elseif( counter%west == 1 .and. counter%east == 1 )then
-    if( counter%f_lon_bound == 1 )then
-      call eerr('"'//str(key_f_lon_bound)//'" was specified but '//&
-                '"'//str(key_west)//'" and "'//str(key_east)//'" were also specified.')
+  elseif( keynum('west') == 1 .and. keynum('east') == 1 )then
+    if( keynum('f_lon_bound') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is duplicated.'//&
+                ' Give "west" and "east", or give "f_lon_bound".')
     endif
-  elseif( counter%west == 1 .and. counter%east == 0 )then
-    call eerr('"'//str(key_west)//'" was specified but "'//str(key_east)//'" was not specified.')
-  elseif( counter%west == 0 .and. counter%east == 1 )then
-    call eerr('"'//str(key_east)//'" was specified but "'//str(key_west)//'" was not specified.')
+  elseif( keynum('west') == 1 .neqv. keynum('east') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "west" or "east" is given, both must be given.')
   endif
 
-  if( counter%south == 0 .and. counter%north == 0 )then
-    if( counter%f_lat_bound == 0 )then
-      call eerr('None of "'//str(key_south)//'", "'//str(key_north)//'" or '//&
-                '"'//str(key_f_lat_bound)//'" was specified.')
+  if( keynum('south') == 0 .and. keynum('north') == 0 )then
+    if( keynum('f_lon_bound') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is missing.'//&
+                ' Give "south" and "north", or give "f_lon_bound".')
     endif
-  elseif( counter%south == 1 .and. counter%north == 1 )then
-    if( counter%f_lat_bound == 1 )then
-      call eerr('"'//str(key_f_lat_bound)//'" was specified but '//&
-                '"'//str(key_south)//'" and "'//str(key_north)//'" were also specified.')
+  elseif( keynum('south') == 1 .and. keynum('north') == 1 )then
+    if( keynum('f_lon_bound') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\nInformation of longitude is duplicated.'//&
+                ' Give "south" and "north", or give "f_lon_bound".')
     endif
-  elseif( counter%south == 1 .and. counter%north == 0 )then
-    call eerr('"'//str(key_south)//'" was specified but "'//&
-              str(key_north)//'" was not specified.')
-  elseif( counter%south == 0 .and. counter%north == 1 )then
-    call eerr('"'//str(key_north)//'" was specified but "'//&
-              str(key_south)//'" was not specified.')
+  elseif( keynum('south') == 1 .neqv. keynum('north') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "south" or "north" is given both must be given.')
   endif
 
-  if( counter%f_lon_bound == 0 .and. counter%f_lat_bound == 0 .and. &
-      counter%coord_unit == 1 )then
-    call eerr('"'//str(key_coord_unit)//'" was specified but '//&
-              'neither "'//str(key_f_lon_bound)//'" or "'//str(key_f_lat_bound)//'" '//&
-              'was specified.')
+  if( keynum('f_lon_bound') == 0 .and. keynum('f_lat_bound') == 0 .and. &
+      keynum('coord_unit') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"coord_unit" is given although '//&
+              'neither "f_lon_bound" or "f_lat_bound" is given.'//&
+              ' The input for "coord_unit" is ignored.')
   endif
   !-------------------------------------------------------------
-  if( counter%idx_bgn == 1 .and. counter%fin_grdidx == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_idx_bgn)//'" and "'//str(key_fin_grdidx)//&
-              '" cannot be specified at the same time.')
+  ! Grid data
+  !-------------------------------------------------------------
+  if( keynum('idx_bgn') == 1 .and. keynum('fin_grdidx') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"idx_bgn" is given although "fin_grdidx" is given.'//&
+              ' The input for "idx_bgn" is ignored.')
   endif
 
-  if( counter%fin_grdidx == 0 .and. &
-      counter%fin_grdara == 0 .and. &
-      counter%fin_grdwgt == 0 .and. &
-      counter%fin_grdx   == 0 .and. &
-      counter%fin_grdlon == 0 .and. &
-      (counter%in_grid_sz == 1 .or. &
-       counter%in_grid_lb == 1 .or. &
-       counter%in_grid_ub == 1) )then
-    call eerr(str(msg_syntax_error())//&
-            '\nAny of the following keys cannot be specified:'//&
-            '\n  "'//str(key_in_grid_sz)//'"'//&
-            '\n  "'//str(key_in_grid_lb)//'"'//&
-            '\n  "'//str(key_in_grid_ub)//'"'//&
-              'when any of the following keys was not specified:'//&
-            '\n  "'//str(key_fin_grdidx)//'"'//&
-            '\n  "'//str(key_fin_grdara)//'"'//&
-            '\n  "'//str(key_fin_grdwgt)//'"'//&
-            '\n  "'//str(key_fin_grdx)//'"'//&
-            '\n  "'//str(key_fin_grdlon)//'"')
+  if( keynum('fin_grdara') == 1 .and. keynum('fin_grdwgt') == 1 )then
+    call eerr('"fin_grdara" and "fin_grdwgt" must not be given at the same time.')
   endif
 
-  if( counter%fin_grdidx == 0 .and. counter%idx_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_idx_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdidx)//'" was not specified.')
+  if( keynum('fin_grdidx') == 0 .and. &
+      keynum('fin_grdara') == 0 .and. &
+      keynum('fin_grdwgt') == 0 .and. &
+      keynum('fin_grdx'  ) == 0 .and. &
+      keynum('fin_grdlon') == 0 .and. &
+      (keynum('in_grid_sz') == 1 .or. &
+       keynum('in_grid_lb') == 1 .or. &
+       keynum('in_grid_ub') == 1) )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\nAny value is given by the following keywords:'//&
+            '\n  "'//str('in_grid_sz')//'"'//&
+            '\n  "'//str('in_grid_lb')//'"'//&
+            '\n  "'//str('in_grid_ub')//'"'//&
+            '\nbut any value is not given by the following keywords:'//&
+            '\n  "'//str('fin_grdidx')//'"'//&
+            '\n  "'//str('fin_grdara')//'"'//&
+            '\n  "'//str('fin_grdwgt')//'"'//&
+            '\n  "'//str('fin_grdx')//'"'//&
+            '\n  "'//str('fin_grdlon')//'"'//&
+            '\nThe inputs given by the former keywords are ignored.')
+  endif
+  !-------------------------------------------------------------
+  ! Missing value
+  !-------------------------------------------------------------
+  !! idx_miss might be refered in block "figures"
+  !if( keynum('fin_grdidx') == 0 .and. keynum('idx_miss') == 1 )then
+  !  call ewrn(str(msg_undesirable_input())//&
+  !          '\n"idx_miss" is given but "fin_grdidx" is given.'//&
+  !            ' The input given by "idx_miss" is ignored.')
+  !endif
+
+  if( keynum('fin_grdara') == 0 .and. keynum('ara_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"ara_miss" is given although "fin_grdara" is not given.'//&
+              ' The input given by "ara_miss" is ignored.')
   endif
 
-  if( counter%fin_grdara == 0 .and. counter%ara_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_ara_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdara)//'" was not specified.')
+  if( keynum('fin_grdwgt') == 0 .and. keynum('wgt_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
+              ' The input given by "wgt_miss" is ignored.')
   endif
 
-  if( counter%fin_grdwgt == 0 .and. counter%wgt_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_wgt_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdwgt)//'" was not specified.')
+  if( keynum('fin_grdx') == 0 .and. keynum('xyz_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"xyz_miss" is given although "fin_grdx" is not given.'//&
+              ' The input given by "xyz_miss" is ignored.')
   endif
 
-  if( counter%fin_grdx == 0 .and. counter%xyz_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_xyz_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdx)//'" was not specified.')
-  endif
-
-  if( counter%fin_grdlon == 0 .and. counter%lonlat_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_lonlat_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdlon)//'" was not specified.')
+  if( keynum('fin_grdlon') == 0 .and. keynum('lonlat_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"lonlat_miss" is given although "fin_grdlon" is not given.'//&
+              ' The input given by "lonlat_miss" is ignored.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !---------------------------------------------------------------
 end subroutine read_settings_gs_latlon
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_gs_raster(u)
+  use common_set2, only: &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_gs_components         , &
+        set_gs_common_components    , &
+        set_default_values_gs_raster, &
+        set_bounds_file_raster_in   , &
+        set_bounds_file_grid_in     , &
+        set_bounds_file_grid_out
+  use common_gs_define, only: &
+        check_bounds_lon, &
+        check_bounds_lat
   implicit none
   type(gs_), intent(inout), target :: u
 
-  type counter_
-    integer :: name
-
-    integer :: nx
-    integer :: ny
-    integer :: xi
-    integer :: xf
-    integer :: yi
-    integer :: yf
-
-    integer :: west
-    integer :: east
-    integer :: south
-    integer :: north
-
-    integer :: is_south_to_north
-
-    integer :: dir
-
-    integer :: fin_rstidx
-    integer :: fin_rstara
-    integer :: fin_rstwgt
-    integer :: in_raster_sz
-    integer :: in_raster_lb
-    integer :: in_raster_ub
-
-    integer :: fin_grdidx
-    integer :: fin_grdara
-    integer :: fin_grdwgt
-    integer :: fin_grdx
-    integer :: fin_grdy
-    integer :: fin_grdz
-    integer :: fin_grdlon
-    integer :: fin_grdlat
-    integer :: in_grid_sz
-    integer :: in_grid_lb
-    integer :: in_grid_ub
-
-    integer :: idx_miss
-    integer :: ara_miss
-    integer :: wgt_miss
-    integer :: xyz_miss
-    integer :: lonlat_miss
-    integer :: val_miss
-
-    integer :: idx_debug
-  end type
-
-  character(clen_var), parameter :: key_name = 'name'
-
-  character(clen_var), parameter :: key_nx  = 'nx'
-  character(clen_var), parameter :: key_ny  = 'ny'
-  character(clen_var), parameter :: key_xi  = 'xi'
-  character(clen_var), parameter :: key_xf  = 'xf'
-  character(clen_var), parameter :: key_yi  = 'yi'
-  character(clen_var), parameter :: key_yf  = 'yf'
-
-  character(clen_var), parameter :: key_west = 'west'
-  character(clen_var), parameter :: key_east = 'east'
-  character(clen_var), parameter :: key_south = 'south'
-  character(clen_var), parameter :: key_north = 'north'
-
-  character(clen_var), parameter :: key_is_south_to_north = 'is_south_to_north'
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  character(clen_var), parameter :: key_fin_rstidx   = 'fin_rstidx'
-  character(clen_var), parameter :: key_fin_rstara   = 'fin_rstara'
-  character(clen_var), parameter :: key_fin_rstwgt   = 'fin_rstwgt'
-  character(clen_var), parameter :: key_in_raster_sz = 'in_raster_sz'
-  character(clen_var), parameter :: key_in_raster_lb = 'in_raster_lb'
-  character(clen_var), parameter :: key_in_raster_ub = 'in_raster_ub'
-
-  character(clen_var), parameter :: key_fin_grdidx = 'fin_grdidx'
-  character(clen_var), parameter :: key_fin_grdara = 'fin_grdara'
-  character(clen_var), parameter :: key_fin_grdwgt = 'fin_grdwgt'
-  character(clen_var), parameter :: key_fin_grdx   = 'fin_grdx'
-  character(clen_var), parameter :: key_fin_grdy   = 'fin_grdy'
-  character(clen_var), parameter :: key_fin_grdz   = 'fin_grdz'
-  character(clen_var), parameter :: key_fin_grdlon = 'fin_grdlon'
-  character(clen_var), parameter :: key_fin_grdlat = 'fin_grdlat'
-  character(clen_var), parameter :: key_in_grid_sz = 'in_grid_sz'
-  character(clen_var), parameter :: key_in_grid_lb = 'in_grid_lb'
-  character(clen_var), parameter :: key_in_grid_ub = 'in_grid_ub'
-
-  character(clen_var), parameter :: key_idx_miss    = 'idx_miss'
-  character(clen_var), parameter :: key_ara_miss    = 'ara_miss'
-  character(clen_var), parameter :: key_wgt_miss    = 'wgt_miss'
-  character(clen_var), parameter :: key_xyz_miss    = 'xyz_miss'
-  character(clen_var), parameter :: key_lonlat_miss = 'lonlat_miss'
-  character(clen_var), parameter :: key_val_miss    = 'val_miss'
-
-  character(clen_var), parameter :: key_idx_debug = 'idx_debug'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(gs_common_)     , pointer :: uc
   type(gs_raster_)     , pointer :: ur
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
 
+  character(CLEN_PATH) :: dir
+
   call echo(code%bgn, 'read_settings_gs_raster')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_name )
-      call add(counter%name)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_nx )
-      call add(counter%nx)
-
-    case( key_ny )
-      call add(counter%ny)
-
-    case( key_xi )
-      call add(counter%xi)
-
-    case( key_xf )
-      call add(counter%xf)
-
-    case( key_yi )
-      call add(counter%yi)
-
-    case( key_yf )
-      call add(counter%yf)
-
-    case( key_west )
-      call add(counter%west)
-
-    case( key_east )
-      call add(counter%east)
-
-    case( key_south )
-      call add(counter%south)
-
-    case( key_north )
-      call add(counter%north)
-
-    case( key_is_south_to_north )
-      call add(counter%is_south_to_north)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call add(counter%dir)
-    !-----------------------------------------------------------
-    ! Raster data
-    !-----------------------------------------------------------
-    case( key_fin_rstidx )
-      call add(counter%fin_rstidx)
-
-    case( key_fin_rstara )
-      call add(counter%fin_rstara)
-
-    case( key_fin_rstwgt )
-      call add(counter%fin_rstwgt)
-
-    case( key_in_raster_sz )
-      call add(counter%in_raster_sz)
-
-    case( key_in_raster_lb )
-      call add(counter%in_raster_lb)
-
-    case( key_in_raster_ub )
-      call add(counter%in_raster_ub)
-    !-----------------------------------------------------------
-    ! Grid data
-    !-----------------------------------------------------------
-    case( key_fin_grdidx )
-      call add(counter%fin_grdidx)
-
-    case( key_fin_grdara )
-      call add(counter%fin_grdara)
-
-    case( key_fin_grdwgt )
-      call add(counter%fin_grdwgt)
-
-    case( key_fin_grdx )
-      call add(counter%fin_grdx)
-
-    case( key_fin_grdy )
-      call add(counter%fin_grdy)
-
-    case( key_fin_grdz )
-      call add(counter%fin_grdz)
-
-    case( key_fin_grdlon )
-      call add(counter%fin_grdlon)
-
-    case( key_fin_grdlat )
-      call add(counter%fin_grdlat)
-
-    case( key_in_grid_sz )
-      call add(counter%in_grid_sz)
-
-    case( key_in_grid_lb )
-      call add(counter%in_grid_lb)
-
-    case( key_in_grid_ub )
-      call add(counter%in_grid_ub)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_ara_miss )
-      call add(counter%ara_miss)
-
-    case( key_wgt_miss )
-      call add(counter%wgt_miss)
-
-    case( key_xyz_miss )
-      call add(counter%xyz_miss)
-
-    case( key_lonlat_miss )
-      call add(counter%lonlat_miss)
-
-    case( key_val_miss )
-      call add(counter%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_debug )
-      call add(counter%idx_debug)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(37)
+  call set_keynum('name', 0, 1)
+  call set_keynum('nx', 1, 1)
+  call set_keynum('ny', 1, 1)
+  call set_keynum('xi', 0, 1)
+  call set_keynum('xf', 0, 1)
+  call set_keynum('yi', 0, 1)
+  call set_keynum('yf', 0, 1)
+  call set_keynum('west' , 1, 1)
+  call set_keynum('east' , 1, 1)
+  call set_keynum('south', 1, 1)
+  call set_keynum('north', 1, 1)
+  call set_keynum('is_south_to_north', 0, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('fin_rstidx', 1, 1)
+  call set_keynum('fin_rstara', 0, 1)
+  call set_keynum('fin_rstwgt', 0, 1)
+  call set_keynum('in_raster_sz', 0, 1)
+  call set_keynum('in_raster_lb', 0, 1)
+  call set_keynum('in_raster_ub', 0, 1)
+  call set_keynum('fin_grdidx', 0, 1)
+  call set_keynum('fin_grdara', 0, 1)
+  call set_keynum('fin_grdwgt', 0, 1)
+  call set_keynum('fin_grdx'  , 0, 1)
+  call set_keynum('fin_grdy'  , 0, 1)
+  call set_keynum('fin_grdz'  , 0, 1)
+  call set_keynum('fin_grdlon', 0, 1)
+  call set_keynum('fin_grdlat', 0, 1)
+  call set_keynum('in_grid_sz', 0, 1)
+  call set_keynum('in_grid_lb', 0, 1)
+  call set_keynum('in_grid_ub', 0, 1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('ara_miss', 0, 1)
+  call set_keynum('wgt_miss', 0, 1)
+  call set_keynum('xyz_miss', 0, 1)
+  call set_keynum('lonlat_miss', 0, 1)
+  call set_keynum('val_miss', 0, 1)
+  call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, gs_type_raster)
+  call alloc_gs_components(u, GS_TYPE_RASTER)
+  call set_default_values_gs_raster(u%raster)
 
   ur => u%raster
-
-  call set_default_values_gs_raster(ur)
-
   fr     => ur%f_raster_in
   fg_in  => ur%f_grid_in
   fg_out => ur%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read inputs
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading inputs')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
-  ! Read inputs
-  !-------------------------------------------------------------
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
+    ! Name
+    case( 'name' )
+      call read_value(u%nam)
     !-----------------------------------------------------------
-    case( key_name )
-      call read_value(v_char=u%nam, is_keyword=.false.)
+    ! Resolution
+    case( 'nx' )
+      call read_value(ur%nx)
+    case( 'ny' )
+      call read_value(ur%ny)
+    case( 'xi' )
+      call read_value(ur%xi)
+    case( 'xf' )
+      call read_value(ur%xf)
+    case( 'yi' )
+      call read_value(ur%yi)
+    case( 'yf' )
+      call read_value(ur%yf)
     !-----------------------------------------------------------
-    !
+    ! Region
+    case( 'west' )
+      call read_value(ur%west)
+    case( 'east' )
+      call read_value(ur%east)
+    case( 'south' )
+      call read_value(ur%south)
+    case( 'north' )
+      call read_value(ur%north)
     !-----------------------------------------------------------
-    case( key_nx )
-      call read_value(v_int8=ur%nx)
-
-    case( key_ny )
-      call read_value(v_int8=ur%ny)
-
-    case( key_xi )
-      call read_value(v_int8=ur%xi)
-
-    case( key_xf )
-      call read_value(v_int8=ur%xf)
-
-    case( key_yi )
-      call read_value(v_int8=ur%yi)
-
-    case( key_yf )
-      call read_value(v_int8=ur%yf)
-
-    case( key_west )
-      call read_value(v_dble=ur%west)
-
-    case( key_east )
-      call read_value(v_dble=ur%east)
-
-    case( key_south )
-      call read_value(v_dble=ur%south)
-
-    case( key_north )
-      call read_value(v_dble=ur%north)
-
-    case( key_is_south_to_north )
-      call read_value(v_log=ur%is_south_to_north)
+    ! Y-axis
+    case( 'is_south_to_north' )
+      call read_value(ur%is_south_to_north)
     !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Raster data
-    !-----------------------------------------------------------
-    case( key_fin_rstidx )
-      call read_value(v_file=fr%idx, get_length=.false.)
-      fr%idx%path = joined(dir, fr%idx%path)
+    case( 'fin_rstidx' )
+      call read_value(fr%idx, dir)
+    case( 'fin_rstara' )
+      call read_value(fr%ara, dir)
+    case( 'fin_rstwgt' )
+      call read_value(fr%wgt, dir)
 
-    case( key_fin_rstara )
-      call read_value(v_file=fr%ara, get_length=.false.)
-      fr%ara%path = joined(dir, fr%ara%path)
-
-    case( key_fin_rstwgt )
-      call read_value(v_file=fr%wgt, get_length=.false.)
-      fr%wgt%path = joined(dir, fr%wgt%path)
-
-    case( key_in_raster_sz )
-      call read_value(v_int8=fr%sz(1), pos=1)
-      call read_value(v_int8=fr%sz(2), pos=2)
-
-    case( key_in_raster_lb )
-      call read_value(v_int8=fr%lb(1), pos=1)
-      call read_value(v_int8=fr%lb(2), pos=2)
-
-    case( key_in_raster_ub )
-      call read_value(v_int8=fr%ub(1), pos=1)
-      call read_value(v_int8=fr%ub(2), pos=2)
+    case( 'in_raster_sz' )
+      call read_value(fr%sz(1), pos=1)
+      call read_value(fr%sz(2), pos=2)
+    case( 'in_raster_lb' )
+      call read_value(fr%lb(1), pos=1)
+      call read_value(fr%lb(2), pos=2)
+    case( 'in_raster_ub' )
+      call read_value(fr%ub(1), pos=1)
+      call read_value(fr%ub(2), pos=2)
     !-----------------------------------------------------------
     ! Grid data
+    case( 'fin_grdidx' )
+      call read_value(fg_in%idx, dir)
+    case( 'fin_grdara' )
+      call read_value(fg_in%ara, dir)
+    case( 'fin_grdwgt' )
+      call read_value(fg_in%wgt, dir)
+
+    case( 'in_grid_sz' )
+      call read_value(fg_in%sz(1), pos=1)
+      call read_value(fg_in%sz(2), pos=2)
+    case( 'in_grid_lb' )
+      call read_value(fg_in%lb(1), pos=1)
+      call read_value(fg_in%lb(2), pos=2)
+    case( 'in_grid_ub' )
+      call read_value(fg_in%ub(1), pos=1)
+      call read_value(fg_in%ub(2), pos=2)
     !-----------------------------------------------------------
-    case( key_fin_grdidx )
-      call read_value(v_file=fg_in%idx, get_length=.false.)
-      fg_in%idx%path = joined(dir, fg_in%idx%path)
-
-    case( key_fin_grdara )
-      call read_value(v_file=fg_in%ara, get_length=.false.)
-      fg_in%ara%path = joined(dir, fg_in%ara%path)
-
-    case( key_fin_grdwgt )
-      call read_value(v_file=fg_in%wgt, get_length=.false.)
-      fg_in%wgt%path = joined(dir, fg_in%wgt%path)
-
-    case( key_in_grid_sz )
-      call read_value(v_int8=fg_in%sz(1), pos=1)
-      call read_value(v_int8=fg_in%sz(2), pos=2)
-
-    case( key_in_grid_lb )
-      call read_value(v_int8=fg_in%lb(1), pos=1)
-      call read_value(v_int8=fg_in%lb(2), pos=2)
-
-    case( key_in_grid_ub )
-      call read_value(v_int8=fg_in%ub(1), pos=1)
-      call read_value(v_int8=fg_in%ub(2), pos=2)
+    ! Missing values
+    case( 'idx_miss' )
+      call read_value(ur%idx_miss)
+    case( 'ara_miss' )
+      call read_value(ur%ara_miss)
+    case( 'wgt_miss' )
+      call read_value(ur%wgt_miss)
+    case( 'xyz_miss' )
+      call read_value(ur%xyz_miss)
+    case( 'lonlat_miss' )
+      call read_value(ur%lonlat_miss)
+    case( 'val_miss' )
+      call read_value(ur%val_miss)
     !-----------------------------------------------------------
-    !
+    ! Debugging
+    case( 'idx_debug' )
+      call read_value(ur%idx_debug)
     !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=ur%idx_miss)
-
-    case( key_ara_miss )
-      call read_value(v_dble=ur%ara_miss)
-
-    case( key_wgt_miss )
-      call read_value(v_dble=ur%wgt_miss)
-
-    case( key_xyz_miss )
-      call read_value(v_dble=ur%xyz_miss)
-
-    case( key_lonlat_miss )
-      call read_value(v_dble=ur%lonlat_miss)
-
-    case( key_val_miss )
-      call read_value(v_dble=ur%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_debug )
-      call read_value(v_int8=ur%idx_debug)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Check values
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  call check_bounds_lon(ur%west, ur%east)
+  ! Check the values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
+
+  call check_bounds_lon(ur%west , ur%east )
   call check_bounds_lat(ur%south, ur%north)
 
-  ! modify values
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
   call set_bounds_file_raster_in(&
-         fr, &                                       ! inout
-         ur%xi, ur%xf, ur%yi, ur%yf, &               ! out
-         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf, & ! out
-         ur%nx, ur%ny, ur%is_south_to_north)         ! in
-
+         fr,                                     & ! inout
+         ur%nx, ur%ny, ur%is_south_to_north,     & ! in
+         ur%xi, ur%xf, ur%yi, ur%yf,             & ! out
+         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) ! out
   call set_bounds_file_grid_in(fg_in)
-
   call set_bounds_file_grid_out(fg_out, fg_in%nx, fg_in%ny)
 
-  ! Update idx_debug
-  !-------------------------------------------------------------
-  ur%debug = counter%idx_debug == 1
+  call set_gs_common_components(u)
+
+  ur%debug = keynum('idx_debug') == 1
   if( .not. ur%debug ) ur%idx_debug = ur%idx_miss
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Free the external module variables
   !-------------------------------------------------------------
-  ur%nam = u%nam
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  uc => u%cmn
-
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam = u%nam
-  uc%gs_type = u%gs_type
-  uc%is_source = u%is_source
-  uc%idx_miss    = ur%idx_miss
-  uc%ara_miss    = ur%ara_miss
-  uc%wgt_miss    = ur%wgt_miss
-  uc%xyz_miss    = ur%xyz_miss
-  uc%lonlat_miss = ur%lonlat_miss
-  uc%val_miss    = ur%val_miss
-
-  uc%f_grid_in  => ur%f_grid_in
-  uc%f_grid_out => ur%f_grid_out
-  uc%grid       => ur%grid
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  counter%name = 0
-
-  counter%nx = 0
-  counter%ny = 0
-  counter%xi = 0
-  counter%xf = 0
-  counter%yi = 0
-  counter%yf = 0
-
-  counter%west = 0
-  counter%east = 0
-  counter%south = 0
-  counter%north = 0
-
-  counter%is_south_to_north = 0
-
-  counter%dir = 0
-
-  counter%fin_rstidx   = 0
-  counter%fin_rstara   = 0
-  counter%fin_rstwgt   = 0
-  counter%in_raster_sz = 0
-  counter%in_raster_lb = 0
-  counter%in_raster_ub = 0
-
-  counter%fin_grdidx = 0
-  counter%fin_grdara = 0
-  counter%fin_grdwgt = 0
-  counter%fin_grdx   = 0
-  counter%fin_grdy   = 0
-  counter%fin_grdz   = 0
-  counter%fin_grdlon = 0
-  counter%fin_grdlat = 0
-  counter%in_grid_sz = 0
-  counter%in_grid_lb = 0
-  counter%in_grid_ub = 0
-
-  counter%idx_miss = 0
-  counter%ara_miss = 0
-  counter%wgt_miss = 0
-  counter%xyz_miss = 0
-  counter%lonlat_miss = 0
-  counter%val_miss = 0
-
-  counter%idx_debug = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
   !-------------------------------------------------------------
-  ! Individual
+  ! Grid data
   !-------------------------------------------------------------
-  call check_num_of_key(counter%name, key_name, 0, 1)
-
-  call check_num_of_key(counter%nx, key_nx, 1, 1)
-  call check_num_of_key(counter%ny, key_ny, 1, 1)
-
-  call check_num_of_key(counter%west , key_west , 1, 1)
-  call check_num_of_key(counter%east , key_east , 1, 1)
-  call check_num_of_key(counter%south, key_south, 1, 1)
-  call check_num_of_key(counter%north, key_north, 1, 1)
-
-  call check_num_of_key(counter%is_south_to_north, key_is_south_to_north, 0, 1)
-
-  call check_num_of_key(counter%fin_rstidx, key_fin_rstidx, 1, 1)
-  call check_num_of_key(counter%fin_rstara, key_fin_rstara, 0, 1)
-  call check_num_of_key(counter%fin_rstwgt, key_fin_rstwgt, 0, 1)
-  call check_num_of_key(counter%in_raster_sz, key_in_raster_sz, 0, 1)
-  call check_num_of_key(counter%in_raster_sz, key_in_raster_lb, 0, 1)
-  call check_num_of_key(counter%in_raster_sz, key_in_raster_sz, 0, 1)
-
-  call check_num_of_key(counter%fin_grdidx, key_fin_grdidx, 0, 1)
-  call check_num_of_key(counter%fin_grdara, key_fin_grdara, 0, 1)
-  call check_num_of_key(counter%fin_grdwgt, key_fin_grdwgt, 0, 1)
-  call check_num_of_key(counter%fin_grdx  , key_fin_grdx  , 0, 1)
-  call check_num_of_key(counter%fin_grdy  , key_fin_grdy  , 0, 1)
-  call check_num_of_key(counter%fin_grdz  , key_fin_grdz  , 0, 1)
-  call check_num_of_key(counter%fin_grdlon, key_fin_grdlon, 0, 1)
-  call check_num_of_key(counter%fin_grdlat, key_fin_grdlat, 0, 1)
-  call check_num_of_key(counter%in_grid_sz, key_in_grid_sz, 0, 1)
-  call check_num_of_key(counter%in_grid_lb, key_in_grid_lb, 0, 1)
-  call check_num_of_key(counter%in_grid_ub, key_in_grid_ub, 0, 1)
-
-  call check_num_of_key(counter%idx_miss   , key_idx_miss   , 0, 1)
-  call check_num_of_key(counter%ara_miss   , key_ara_miss   , 0, 1)
-  call check_num_of_key(counter%wgt_miss   , key_wgt_miss   , 0, 1)
-  call check_num_of_key(counter%xyz_miss   , key_xyz_miss   , 0, 1)
-  call check_num_of_key(counter%lonlat_miss, key_lonlat_miss, 0, 1)
-  call check_num_of_key(counter%val_miss   , key_val_miss   , 0, 1)
-
-  call check_num_of_key(counter%idx_debug, key_idx_debug, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  if( counter%fin_grdidx == 0 .and. &
-      (counter%fin_grdara == 1 .or. &
-       counter%fin_grdwgt == 1) )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  "'//str(key_fin_grdara)//'" or "'//str(key_fin_grdwgt)//&
-              '" was specified but "'//str(key_fin_grdidx)//'" was not specified.')
+  if( keynum('fin_grdidx') == 0 .and. &
+      (keynum('fin_grdara') == 1 .or. &
+       keynum('fin_grdwgt') == 1 .or. &
+       keynum('fin_grdx'  ) == 1 .or. &
+       keynum('fin_grdlon') == 1) )then
+    call eerr(str(msg_invalid_input())//&
+            '\n"fin_grdara", "fin_grdwgt", "fin_grdx" or "fin_grdlon" is given'//&
+              ' although "fin_grdidx" is not given.')
   endif
 
-  if( counter%fin_grdidx == 0 .and. &
-      (counter%in_grid_sz == 1 .or. &
-       counter%in_grid_lb == 1 .or. &
-       counter%in_grid_ub == 1) )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  "'//str(key_in_grid_sz)//'", "'//&
-                     str(key_in_grid_lb)//'" or "'//&
-                     str(key_in_grid_ub)//'" was specified but '//&
-              '"'//str(key_fin_grdidx)//'" was not specified.')
+  if( .not. (keynum('fin_grdx') == 1 .and. &
+             keynum('fin_grdy') == 1 .and. &
+             keynum('fin_grdz') == 1) &
+      .and. &
+      .not. (keynum('fin_grdx') == 0 .and. &
+             keynum('fin_grdy') == 0 .and. &
+             keynum('fin_grdz') == 0) )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf any of "fin_grdx", "fin_grdy" or "fin_grdz" is given,'//&
+              ' all of them must be given.')
+  endif
+  if( .not. (keynum('fin_grdlon') == 1 .and. &
+             keynum('fin_grdlat') == 1) &
+      .and. &
+      .not. (keynum('fin_grdlon') == 0 .and. &
+             keynum('fin_grdlat') == 0) )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "fin_grdlon" or "fin_grdlat" is given,'//&
+              ' both must be given.')
   endif
 
-  if( counter%fin_grdidx == 1 .and. counter%in_grid_sz == 0 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  "'//str(key_fin_grdidx)//'" was specified but '//&
-              '"'//str(key_in_grid_sz)//'" was not specified.')
+  if( keynum('fin_grdara') == 1 .and. keynum('fin_grdwgt') == 1 )then
+    call eerr(str(msg_undesirable_input())//&
+            '\nBoth "fin_grdara" and "fin_grdwgt" must not be given'//&
+              ' at the same time.')
   endif
 
-  if( counter%fin_grdara == 1 .and. counter%fin_grdwgt == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  "'//str(key_fin_grdara)//'" and "'//str(key_fin_grdwgt)//&
-              '" cannot be specified at the same time.')
+  if( keynum('fin_grdidx') == 0 .and. &
+      (keynum('in_grid_sz') == 1 .or. &
+       keynum('in_grid_lb') == 1 .or. &
+       keynum('in_grid_ub') == 1) )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"in_grid_sz", "in_grid_lb" or "in_grid_ub" is given'//&
+              ' although "fin_grdidx" is not given.'//&
+              ' The inputs for "in_grid_*" are ignored.')
   endif
   !-------------------------------------------------------------
-  if( counter%fin_grdidx == 0 .and. &
-      counter%fin_grdara == 0 .and. &
-      counter%fin_grdwgt == 0 .and. &
-      counter%fin_grdx   == 0 .and. &
-      counter%fin_grdlon == 0 .and. &
-      (counter%in_grid_sz == 1 .or. &
-       counter%in_grid_lb == 1 .or. &
-       counter%in_grid_ub == 1) )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  Any of the following keys cannot be specified:'//&
-            '\n  "'//str(key_in_grid_sz)//'"'//&
-            '\n  "'//str(key_in_grid_lb)//'"'//&
-            '\n  "'//str(key_in_grid_ub)//'"'//&
-              'when any of the following keys was not specified:'//&
-            '\n  "'//str(key_fin_grdidx)//'"'//&
-            '\n  "'//str(key_fin_grdara)//'"'//&
-            '\n  "'//str(key_fin_grdwgt)//'"'//&
-            '\n  "'//str(key_fin_grdx)//'"'//&
-            '\n  "'//str(key_fin_grdlon)//'"')
+  ! Missing value
+  !-------------------------------------------------------------
+  if( (keynum('fin_grdara') == 0 .and. keynum('fin_rstara') == 0) .and. &
+      keynum('ara_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"ara_miss" is given although "fin_grdara" is not given.'//&
+              ' The input for "ara_miss" is ignored.')
   endif
 
-  if( (counter%fin_grdidx == 0 .and. counter%fin_rstidx == 0) .and. counter%idx_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_idx_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdidx)//'" was not specified.')
+  if( (keynum('fin_grdwgt') == 0 .and. keynum('fin_rstwgt') == 0) .and. &
+      keynum('wgt_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
+              ' The input for "wgt_miss" is ignored.')
   endif
 
-  if( (counter%fin_grdara == 0 .and. counter%fin_rstara == 0) .and. counter%ara_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_ara_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdara)//'" was not specified.')
+  if( keynum('fin_grdx') == 0 .and. keynum('xyz_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"xyz_miss" is given although "fin_grdx" is not given.'//&
+              ' The input for "xyz_miss" is ignored.')
   endif
 
-  if( (counter%fin_grdwgt == 0 .and. counter%fin_rstwgt == 0) .and. counter%wgt_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_wgt_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdwgt)//'" was not specified.')
-  endif
-
-  if( counter%fin_grdx == 0 .and. counter%xyz_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_xyz_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdx)//'" was not specified.')
-  endif
-
-  if( counter%fin_grdlon == 0 .and. counter%lonlat_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_lonlat_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdlon)//'" was not specified.')
+  if( keynum('fin_grdlon') == 0 .and. keynum('lonlat_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"lonlat_miss" is given although "fin_grdlon" is not given.'//&
+              ' The input for "lonlat_miss" is ignored.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !---------------------------------------------------------------
 end subroutine read_settings_gs_raster
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_gs_polygon(u)
+  use common_set2, only: &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_gs_components          , &
+        set_gs_common_components     , &
+        set_default_values_gs_polygon, &
+        set_bounds_file_polygon_in   , &
+        set_bounds_file_grid_in      , &
+        set_bounds_file_grid_out
   implicit none
   type(gs_), intent(inout), target :: u
 
-  type counter_
-    integer :: name
-
-    integer :: np
-    integer :: nij
-
-    integer :: dir
-
-    integer :: f_lon_vertex
-    integer :: f_lat_vertex
-    integer :: f_x_vertex
-    integer :: f_y_vertex
-    integer :: f_z_vertex
-    integer :: coord_unit
-    integer :: coord_miss
-
-    integer :: f_arctyp
-    integer :: arc_parallel
-
-    integer :: idx_bgn
-
-    integer :: fin_grdidx
-    integer :: fin_grdara
-    integer :: fin_grdwgt
-    integer :: fin_grdx
-    integer :: fin_grdy
-    integer :: fin_grdz
-    integer :: fin_grdlon
-    integer :: fin_grdlat
-    integer :: in_grid_sz
-    integer :: in_grid_lb
-    integer :: in_grid_ub
-
-    integer :: idx_miss
-    integer :: ara_miss
-    integer :: wgt_miss
-    integer :: xyz_miss
-    integer :: lonlat_miss
-    integer :: val_miss
-
-    integer :: idx_debug
-  end type
-
-  character(clen_var), parameter :: key_name = 'name'
-
-  character(clen_var), parameter :: key_np  = 'np'
-  character(clen_var), parameter :: key_nij = 'nij'
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  character(clen_var), parameter :: key_f_lon_vertex = 'f_lon_vertex'
-  character(clen_var), parameter :: key_f_lat_vertex = 'f_lat_vertex'
-  character(clen_var), parameter :: key_f_x_vertex   = 'f_x_vertex'
-  character(clen_var), parameter :: key_f_y_vertex   = 'f_y_vertex'
-  character(clen_var), parameter :: key_f_z_vertex   = 'f_z_vertex'
-  character(clen_var), parameter :: key_coord_unit = 'coord_unit'
-  character(clen_var), parameter :: key_coord_miss = 'coord_miss'
-
-  character(clen_var), parameter :: key_f_arctyp     = 'f_arctyp'
-  character(clen_var), parameter :: key_arc_parallel = 'arc_parallel'
-
-  character(clen_var), parameter :: key_idx_bgn = 'idx_bgn'
-
-  character(clen_var), parameter :: key_fin_grdidx = 'fin_grdidx'
-  character(clen_var), parameter :: key_fin_grdara = 'fin_grdara'
-  character(clen_var), parameter :: key_fin_grdwgt = 'fin_grdwgt'
-  character(clen_var), parameter :: key_fin_grdx   = 'fin_grdx'
-  character(clen_var), parameter :: key_fin_grdy   = 'fin_grdy'
-  character(clen_var), parameter :: key_fin_grdz   = 'fin_grdz'
-  character(clen_var), parameter :: key_fin_grdlon = 'fin_grdlon'
-  character(clen_var), parameter :: key_fin_grdlat = 'fin_grdlat'
-  character(clen_var), parameter :: key_in_grid_sz = 'in_grid_sz'
-  character(clen_var), parameter :: key_in_grid_lb = 'in_grid_lb'
-  character(clen_var), parameter :: key_in_grid_ub = 'in_grid_ub'
-
-  character(clen_var), parameter :: key_idx_miss    = 'idx_miss'
-  character(clen_var), parameter :: key_ara_miss    = 'ara_miss'
-  character(clen_var), parameter :: key_wgt_miss    = 'wgt_miss'
-  character(clen_var), parameter :: key_xyz_miss    = 'xyz_miss'
-  character(clen_var), parameter :: key_lonlat_miss = 'lonlat_miss'
-  character(clen_var), parameter :: key_val_miss    = 'val_miss'
-
-  character(clen_var), parameter :: key_idx_debug = 'idx_debug'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-  real(8) :: coord_miss
-
-  type(gs_common_)      , pointer :: uc
   type(gs_polygon_)     , pointer :: up
   type(file_polygon_in_), pointer :: fp
   type(file_grid_in_)   , pointer :: fg_in
   type(file_grid_out_)  , pointer :: fg_out
 
+  character(CLEN_PATH) :: dir
+  real(8) :: coord_miss
+
   call echo(code%bgn, 'read_settings_gs_polygon')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_name )
-      call add(counter%name)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_np )
-      call add(counter%np)
-
-    case( key_nij )
-      call add(counter%nij)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call add(counter%dir)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_f_lon_vertex )
-      call add(counter%f_lon_vertex)
-
-    case( key_f_lat_vertex )
-      call add(counter%f_lat_vertex)
-
-    case( key_f_x_vertex )
-      call add(counter%f_x_vertex)
-
-    case( key_f_y_vertex )
-      call add(counter%f_y_vertex)
-
-    case( key_f_z_vertex )
-      call add(counter%f_z_vertex)
-
-    case( key_coord_unit )
-      call add(counter%coord_unit)
-
-    case( key_coord_miss )
-      call add(counter%coord_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_f_arctyp )
-      call add(counter%f_arctyp)
-
-    case( key_arc_parallel )
-      call add(counter%arc_parallel)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_bgn )
-      call add(counter%idx_bgn)
-
-    case( key_fin_grdidx )
-      call add(counter%fin_grdidx)
-
-    case( key_fin_grdara )
-      call add(counter%fin_grdara)
-
-    case( key_fin_grdwgt )
-      call add(counter%fin_grdwgt)
-
-    case( key_fin_grdx )
-      call add(counter%fin_grdx)
-
-    case( key_fin_grdy )
-      call add(counter%fin_grdy)
-
-    case( key_fin_grdz )
-      call add(counter%fin_grdz)
-
-    case( key_fin_grdlon )
-      call add(counter%fin_grdlon)
-
-    case( key_fin_grdlat )
-      call add(counter%fin_grdlat)
-
-    case( key_in_grid_sz )
-      call add(counter%in_grid_sz)
-
-    case( key_in_grid_lb )
-      call add(counter%in_grid_lb)
-
-    case( key_in_grid_ub )
-      call add(counter%in_grid_ub)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_ara_miss )
-      call add(counter%ara_miss)
-
-    case( key_wgt_miss )
-      call add(counter%wgt_miss)
-
-    case( key_xyz_miss )
-      call add(counter%xyz_miss)
-
-    case( key_lonlat_miss )
-      call add(counter%lonlat_miss)
-
-    case( key_val_miss )
-      call add(counter%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_debug )
-      call add(counter%idx_debug)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(31)
+  call set_keynum('name', 0, 1)
+  call set_keynum('np', 1, 1)
+  call set_keynum('nij', 1, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('f_lon_vertex', 0, 1)
+  call set_keynum('f_lat_vertex', 0, 1)
+  call set_keynum('f_x_vertex'  , 0, 1)
+  call set_keynum('f_y_vertex'  , 0, 1)
+  call set_keynum('f_z_vertex'  , 0, 1)
+  call set_keynum('coord_unit'  , 0, 1)
+  call set_keynum('coord_miss'  , 0, 1)
+  call set_keynum('f_arctyp'    , 0, 1)
+  call set_keynum('arc_parallel', 0, 1)
+  call set_keynum('idx_bgn', 0, 1)
+  call set_keynum('fin_grdidx', 0, 1)
+  call set_keynum('fin_grdara', 0, 1)
+  call set_keynum('fin_grdwgt', 0, 1)
+  call set_keynum('fin_grdx'  , 0, 1)
+  call set_keynum('fin_grdy'  , 0, 1)
+  call set_keynum('fin_grdz'  , 0, 1)
+  call set_keynum('fin_grdlon', 0, 1)
+  call set_keynum('in_grid_sz', 0, 1)
+  call set_keynum('in_grid_lb', 0, 1)
+  call set_keynum('in_grid_ub', 0, 1)
+  call set_keynum('idx_miss'   , 0, 1)
+  call set_keynum('ara_miss'   , 0, 1)
+  call set_keynum('wgt_miss'   , 0, 1)
+  call set_keynum('xyz_miss'   , 0, 1)
+  call set_keynum('lonlat_miss', 0, 1)
+  call set_keynum('val_miss'   , 0, 1)
+  call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, gs_type_polygon)
+  call alloc_gs_components(u, GS_TYPE_POLYGON)
+  call set_default_values_gs_polygon(u%polygon)
 
   up => u%polygon
-
-  call set_default_values_gs_polygon(up)
-
   fp     => up%f_polygon_in
   fg_in  => up%f_grid_in
   fg_out => up%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
-  ! Read settings
-  !-------------------------------------------------------------
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
-
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
+    ! Name
+    case( 'name' )
+      call read_value(u%nam)
     !-----------------------------------------------------------
-    case( key_name )
-      call read_value(v_char=u%nam, is_keyword=.false.)
+    ! Shape
+    case( 'np' )
+      call read_value(up%np)
     !-----------------------------------------------------------
-    !
+    ! Resolution
+    case( 'nij' )
+      call read_value(up%nij)
     !-----------------------------------------------------------
-    case( key_np )
-      call read_value(v_int8=up%np)
-
-    case( key_nij )
-      call read_value(v_int8=up%nij)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Vertex
-    !-----------------------------------------------------------
-    case( key_f_lon_vertex )
-      call read_value(v_file=fp%lon, get_length=.false.)
-      fp%lon%path = joined(dir, fp%lon%path)
+    case( 'f_lon_vertex' )
+      call read_value(fp%lon, dir)
+    case( 'f_lat_vertex' )
+      call read_value(fp%lat, dir)
+    case( 'f_x_vertex' )
+      call read_value(fp%x, dir)
+    case( 'f_y_vertex' )
+      call read_value(fp%y, dir)
+    case( 'f_z_vertex' )
+      call read_value(fp%z, dir)
 
-    case( key_f_lat_vertex )
-      call read_value(v_file=fp%lat, get_length=.false.)
-      fp%lat%path = joined(dir, fp%lat%path)
+    case( 'coord_unit' )
+      call read_value(up%coord_unit, is_keyword=.true.)
 
-    case( key_f_x_vertex )
-      call read_value(v_file=fp%x, get_length=.false.)
-      fp%x%path = joined(dir, fp%x%path)
-
-    case( key_f_y_vertex )
-      call read_value(v_file=fp%y, get_length=.false.)
-      fp%y%path = joined(dir, fp%y%path)
-
-    case( key_f_z_vertex )
-      call read_value(v_file=fp%z, get_length=.false.)
-      fp%z%path = joined(dir, fp%z%path)
-
-    case( key_coord_unit )
-      call read_value(v_char=up%coord_unit)
-
-    case( key_coord_miss )
-      call read_value(v_dble=coord_miss)
+    case( 'coord_miss' )
+      call read_value(coord_miss)
     !-----------------------------------------------------------
     ! Arc type
-    !-----------------------------------------------------------
-    case( key_f_arctyp )
-      call read_value(v_file=fp%arctyp, get_length=.false.)
-      fp%arctyp%path = joined(dir, fp%arctyp%path)
+    case( 'f_arctyp' )
+      call read_value(fp%arctyp, dir)
 
-    case( key_arc_parallel )
-      call read_value(v_log=up%arc_parallel)
+    case( 'arc_parallel' )
+      call read_value(up%arc_parallel)
     !-----------------------------------------------------------
     ! Grid data
+    case( 'idx_bgn' )
+      call read_value(fg_in%idx_bgn)
+
+    case( 'fin_grdidx' )
+      call read_value(fg_in%idx, dir)
+    case( 'fin_grdara' )
+      call read_value(fg_in%ara, dir)
+    case( 'fin_grdwgt' )
+      call read_value(fg_in%wgt, dir)
+    case( 'fin_grdx' )
+      call read_value(fg_in%x, dir)
+    case( 'fin_grdy' )
+      call read_value(fg_in%y, dir)
+    case( 'fin_grdz' )
+      call read_value(fg_in%z, dir)
+    case( 'fin_grdlon' )
+      call read_value(fg_in%lon, dir)
+    case( 'fin_grdlat' )
+      call read_value(fg_in%lat, dir)
+
+    case( 'in_grid_sz' )
+      call read_value(fg_in%sz(1), pos=1)
+      !call read_value(fg_in%sz(2), pos=2)
+    case( 'in_grid_lb' )
+      call read_value(fg_in%lb(1), pos=1)
+      !call read_value(fg_in%lb(2), pos=2)
+    case( 'in_grid_ub' )
+      call read_value(fg_in%ub(1), pos=1)
+      !call read_value(fg_in%ub(2), pos=2)
     !-----------------------------------------------------------
-    case( key_idx_bgn )
-      call read_value(v_int8=fg_in%idx_bgn)
-
-    case( key_fin_grdidx )
-      call read_value(v_file=fg_in%idx, get_length=.false.)
-      fg_in%idx%path = joined(dir, fg_in%idx%path)
-
-    case( key_fin_grdara )
-      call read_value(v_file=fg_in%ara, get_length=.false.)
-      fg_in%ara%path = joined(dir, fg_in%ara%path)
-
-    case( key_fin_grdwgt )
-      call read_value(v_file=fg_in%wgt, get_length=.false.)
-      fg_in%wgt%path = joined(dir, fg_in%wgt%path)
-
-    case( key_fin_grdx )
-      call read_value(v_file=fg_in%x, get_length=.false.)
-      fg_in%x%path = joined(dir, fg_in%x%path)
-
-    case( key_fin_grdy )
-      call read_value(v_file=fg_in%y, get_length=.false.)
-      fg_in%y%path = joined(dir, fg_in%y%path)
-
-    case( key_fin_grdz )
-      call read_value(v_file=fg_in%z, get_length=.false.)
-      fg_in%z%path = joined(dir, fg_in%z%path)
-
-    case( key_fin_grdlon )
-      call read_value(v_file=fg_in%lon, get_length=.false.)
-      fg_in%lon%path = joined(dir, fg_in%lon%path)
-
-    case( key_fin_grdlat )
-      call read_value(v_file=fg_in%lat, get_length=.false.)
-      fg_in%lat%path = joined(dir, fg_in%lat%path)
-
-    case( key_in_grid_sz )
-      call read_value(v_int8=fg_in%sz(1), pos=1)
-      !call read_value(v_int8=fg_in%sz(2), pos=2)
-
-    case( key_in_grid_lb )
-      call read_value(v_int8=fg_in%lb(1), pos=1)
-      !call read_value(v_int8=fg_in%lb(2), pos=2)
-
-    case( key_in_grid_ub )
-      call read_value(v_int8=fg_in%ub(1), pos=1)
-      !call read_value(v_int8=fg_in%ub(2), pos=2)
+    ! Missing value
+    case( 'idx_miss' )
+      call read_value(up%idx_miss)
+    case( 'ara_miss' )
+      call read_value(up%ara_miss)
+    case( 'wgt_miss' )
+      call read_value(up%wgt_miss)
+    case( 'xyz_miss' )
+      call read_value(up%xyz_miss)
+    case( 'lonlat_miss' )
+      call read_value(up%lonlat_miss)
+    case( 'val_miss' )
+      call read_value(up%val_miss)
     !-----------------------------------------------------------
-    !
+    ! Debugging
+    case( 'idx_debug' )
+      call read_value(up%idx_debug)
     !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=up%idx_miss)
-
-    case( key_ara_miss )
-      call read_value(v_dble=up%ara_miss)
-
-    case( key_wgt_miss )
-      call read_value(v_dble=up%wgt_miss)
-
-    case( key_xyz_miss )
-      call read_value(v_dble=up%xyz_miss)
-
-    case( key_lonlat_miss )
-      call read_value(v_dble=up%lonlat_miss)
-
-    case( key_val_miss )
-      call read_value(v_dble=up%val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_idx_debug )
-      call read_value(v_int8=up%idx_debug)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
   call set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij)
-
   call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
-
   call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
+
+  call set_gs_common_components(u)
 
   ! Coordinate system
   !-------------------------------------------------------------
   if( fp%lon%path /= '' )then
-    up%coord_sys = coord_sys_spherical
+    up%coord_sys = COORD_SYS_SPHERICAL
 
-    if( counter%coord_unit == 0 )then
-      up%coord_unit = unit_degree
+    if( keynum('coord_unit') == 0 )then
+      up%coord_unit = UNIT_DEGREE
     else
-      if( up%coord_unit /= unit_degree .and. &
-          up%coord_unit /= unit_radian )then
-        call eerr(str(msg_invalid_value())//&
-                '\n  up%coord_unit: '//str(up%coord_unit)//&
-                '\nThis value is invalid when "'//str(key_f_lon_vertex)//&
-                  '" was specified. Check the value of "'//str(key_coord_unit)//'".')
+      if( up%coord_unit /= UNIT_DEGREE .and. &
+          up%coord_unit /= UNIT_RADIAN )then
+        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
+                '\nThis is invalid when "f_lon_vertex" is given.')
       endif
     endif
 
-    if( counter%coord_miss == 1 ) up%coord_miss_s = coord_miss
+    if( keynum('coord_miss') == 1 ) up%coord_miss_s = coord_miss
   else
-    up%coord_sys = coord_sys_cartesian
+    up%coord_sys = COORD_SYS_CARTESIAN
 
-    if( counter%coord_unit == 0 )then
-      up%coord_unit = unit_meter
+    if( keynum('coord_unit') == 0 )then
+      up%coord_unit = UNIT_METER
     else
-      if( up%coord_unit /= unit_meter .and. &
-          up%coord_unit /= unit_kilometer )then
-        call eerr(str(msg_invalid_value())//&
-                '\n  up%coord_unit: '//str(up%coord_unit)//&
-                '\nThis value is invalid when "'//str(key_f_x_vertex)//&
-                  '" was specified. Check the value of "'//str(key_coord_unit)//'".')
+      if( up%coord_unit /= UNIT_METER .and. &
+          up%coord_unit /= UNIT_KILOMETER )then
+        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
+                '\nThis is invalid when "f_x_vertex" is given.')
       endif
     endif
 
-    if( counter%coord_miss == 1 ) up%coord_miss_c = coord_miss
+    if( keynum('coord_miss') == 1 ) up%coord_miss_c = coord_miss
   endif
 
-  ! Update idx_debug
+  ! About debugging
   !-------------------------------------------------------------
-  up%debug = counter%idx_debug == 1
+  up%debug = keynum('idx_debug') == 1
   if( .not. up%debug ) up%idx_debug = up%idx_miss
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Free the external module variable
   !-------------------------------------------------------------
-  up%nam = u%nam
-
-  up%ijs = 1_8
-  up%ije = up%nij
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  uc => u%cmn
-
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam = u%nam
-  uc%gs_type = u%gs_type
-  uc%is_source = u%is_source
-  uc%idx_miss    = up%idx_miss
-  uc%ara_miss    = up%ara_miss
-  uc%wgt_miss    = up%wgt_miss
-  uc%xyz_miss    = up%xyz_miss
-  uc%lonlat_miss = up%lonlat_miss
-  uc%val_miss    = up%val_miss
-
-  uc%f_grid_in  => up%f_grid_in
-  uc%f_grid_out => up%f_grid_out
-  uc%grid       => up%grid
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  counter%name = 0
-
-  counter%np = 0
-  counter%nij = 0
-
-  counter%dir = 0
-
-  counter%f_lon_vertex = 0
-  counter%f_lat_vertex = 0
-  counter%f_x_vertex = 0
-  counter%f_y_vertex = 0
-  counter%f_z_vertex = 0
-
-  counter%coord_unit = 0
-  counter%coord_miss = 0
-
-  counter%f_arctyp = 0
-  counter%arc_parallel = 0
-
-  counter%idx_bgn = 0
-
-  counter%fin_grdidx = 0
-  counter%fin_grdara = 0
-  counter%fin_grdwgt = 0
-  counter%fin_grdx   = 0
-  counter%fin_grdy   = 0
-  counter%fin_grdz   = 0
-  counter%fin_grdlon = 0
-  counter%fin_grdlat = 0
-  counter%in_grid_sz = 0
-  counter%in_grid_lb = 0
-  counter%in_grid_ub = 0
-
-  counter%idx_miss    = 0
-  counter%ara_miss    = 0
-  counter%wgt_miss    = 0
-  counter%xyz_miss    = 0
-  counter%lonlat_miss = 0
-  counter%val_miss    = 0
-
-  counter%idx_debug = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
   !-------------------------------------------------------------
-  ! Individual
+  ! Coords.
   !-------------------------------------------------------------
-  call check_num_of_key(counter%name, key_name, 0, 1)
-
-  call check_num_of_key(counter%np, key_np, 1, 1)
-  call check_num_of_key(counter%nij, key_nij, 1, 1)
-
-  call check_num_of_key(counter%f_lon_vertex, key_f_lon_vertex, 0, 1)
-  call check_num_of_key(counter%f_lat_vertex, key_f_lat_vertex, 0, 1)
-  call check_num_of_key(counter%f_x_vertex  , key_f_z_vertex, 0, 1)
-  call check_num_of_key(counter%f_y_vertex  , key_f_y_vertex, 0, 1)
-  call check_num_of_key(counter%f_z_vertex  , key_f_z_vertex, 0, 1)
-  call check_num_of_key(counter%coord_unit, key_coord_unit, 0, 1)
-  call check_num_of_key(counter%coord_miss, key_coord_miss, 0, 1)
-
-  call check_num_of_key(counter%f_arctyp, key_f_arctyp, 0, 1)
-  call check_num_of_key(counter%arc_parallel, key_arc_parallel, 0, 1)
-
-  call check_num_of_key(counter%idx_bgn, key_idx_bgn, 0, 1)
-
-  call check_num_of_key(counter%fin_grdidx, key_fin_grdidx, 0, 1)
-  call check_num_of_key(counter%fin_grdara, key_fin_grdara, 0, 1)
-  call check_num_of_key(counter%fin_grdwgt, key_fin_grdwgt, 0, 1)
-  call check_num_of_key(counter%fin_grdx  , key_fin_grdx  , 0, 1)
-  call check_num_of_key(counter%fin_grdy  , key_fin_grdy  , 0, 1)
-  call check_num_of_key(counter%fin_grdz  , key_fin_grdz  , 0, 1)
-  call check_num_of_key(counter%fin_grdlon, key_fin_grdlon, 0, 1)
-  call check_num_of_key(counter%fin_grdlat, key_fin_grdlat, 0, 1)
-  call check_num_of_key(counter%in_grid_sz, key_in_grid_sz, 0, 1)
-  call check_num_of_key(counter%in_grid_lb, key_in_grid_lb, 0, 1)
-  call check_num_of_key(counter%in_grid_ub, key_in_grid_ub, 0, 1)
-
-  call check_num_of_key(counter%idx_miss   , key_idx_miss   , 0, 1)
-  call check_num_of_key(counter%ara_miss   , key_ara_miss   , 0, 1)
-  call check_num_of_key(counter%wgt_miss   , key_wgt_miss   , 0, 1)
-  call check_num_of_key(counter%xyz_miss   , key_xyz_miss   , 0, 1)
-  call check_num_of_key(counter%lonlat_miss, key_lonlat_miss, 0, 1)
-  call check_num_of_key(counter%val_miss   , key_val_miss   , 0, 1)
-
-  call check_num_of_key(counter%idx_debug, key_idx_debug, 0, 1)
-  !-------------------------------------------------------------
-  ! Relations
-  !-------------------------------------------------------------
-  if( counter%f_lon_vertex == 1 .neqv. counter%f_lat_vertex == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  Only one of "'//&
-              str(key_f_lon_vertex)//'" or "'//&
-              str(key_f_lat_vertex)//'"'//' was specified.')
+  if( .not. (keynum('f_lon_vertex') == 1 .and. &
+             keynum('f_lat_vertex') == 1) &
+      .and. &
+      .not. (keynum('f_lon_vertex') == 0 .and. &
+             keynum('f_lat_vertex') == 0) )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf either "f_lon_vertex" or "f_lat_vertex" is given'//&
+              ' both must be given.')
   endif
 
-  if( (counter%f_x_vertex == 1 .neqv. counter%f_y_vertex == 1) .or. &
-      (counter%f_x_vertex == 1 .neqv. counter%f_z_vertex == 1) )then
-    call eerr(str(msg_syntax_error())//&
-            '\nOnly one or two of "'//&
-              str(key_f_x_vertex)//'", "'//&
-              str(key_f_y_vertex)//'" and "'//&
-              str(key_f_z_vertex)//'" was specified.')
+  if( .not. (keynum('f_x_vertex') == 1 .and. &
+             keynum('f_y_vertex') == 1 .and. &
+             keynum('f_z_vertex') == 1) &
+      .and. &
+      .not. (keynum('f_x_vertex') == 0 .and. &
+             keynum('f_y_vertex') == 0 .and. &
+             keynum('f_z_vertex') == 0) )then
+    call eerr(str(msg_invalid_input())//&
+            '\nIf any of "f_x_vertex", "f_y_vertex" or "f_z_vertex" is given'//&
+              ' all of them must be given.')
   endif
 
-  if( counter%f_lon_vertex == 1 .and. counter%f_x_vertex == 1 )then
-    call eerr('"'//str(key_f_lon_vertex)//'" and "'//str(key_f_x_vertex)//'"'//&
-              ' cannot be specified at the same time.')
-  elseif( counter%f_lon_vertex == 0 .and. counter%f_x_vertex == 0 )then
-    call eerr('Neither "'//str(key_f_lon_vertex)//'" nor "'//str(key_f_x_vertex)//'"'//&
-              ' was specified.')
+  if( keynum('f_lon_vertex') == 1 .and. keynum('f_x_vertex') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\n"f_lon_vertex" and "f_x_vertex" must not be given at the same time.')
+  elseif( keynum('f_lon_vertex') == 0 .and. keynum('f_x_vertex') == 0 )then
+    call eerr(str(msg_invalid_input())//&
+            '\nEither "f_lon_vertex" or "f_x_vertex" must be given.')
   endif
 
-  if( counter%arc_parallel == 1 .and. counter%f_arctyp == 1 )then
-    call eerr('"'//str(key_arc_parallel)//'" and "'//str(key_f_arctyp)//'"'//&
-              ' cannot be specified at the same time.')
+  if( keynum('arc_parallel') == 1 .and. keynum('f_arctyp') == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\n"arc_parallel" and "f_arctyp" must not be given at the same time.')
   endif
   !--------------------------------------------------------------
-  if( counter%idx_bgn == 1 .and. counter%fin_grdidx == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  "'//str(key_idx_bgn)//'" and "'//str(key_fin_grdidx)//&
-              '" cannot be specified at the same time.')
+  ! Grid data
+  !--------------------------------------------------------------
+  if( keynum('idx_bgn') == 1 .and. keynum('fin_grdidx') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"idx_bgn" is given although "fin_grdidx" is given.'//&
+              ' The input for "idx_bgn" is ignored.')
   endif
 
-  if( counter%fin_grdidx == 0 .and. &
-      counter%fin_grdara == 0 .and. &
-      counter%fin_grdwgt == 0 .and. &
-      counter%fin_grdx   == 0 .and. &
-      counter%fin_grdlon == 0 .and. &
-      (counter%in_grid_sz == 1 .or. &
-       counter%in_grid_lb == 1 .or. &
-       counter%in_grid_ub == 1) )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  Any of the following keys cannot be specified:'//&
-            '\n  "'//str(key_in_grid_sz)//'"'//&
-            '\n  "'//str(key_in_grid_lb)//'"'//&
-            '\n  "'//str(key_in_grid_ub)//'"'//&
-              'when any of the following keys was not specified:'//&
-            '\n  "'//str(key_fin_grdidx)//'"'//&
-            '\n  "'//str(key_fin_grdara)//'"'//&
-            '\n  "'//str(key_fin_grdwgt)//'"'//&
-            '\n  "'//str(key_fin_grdx)//'"'//&
-            '\n  "'//str(key_fin_grdlon)//'"')
+  if( keynum('fin_grdidx') == 0 .and. &
+      keynum('fin_grdara') == 0 .and. &
+      keynum('fin_grdwgt') == 0 .and. &
+      keynum('fin_grdx'  ) == 0 .and. &
+      keynum('fin_grdlon') == 0 .and. &
+      (keynum('in_grid_sz') == 1 .or. &
+       keynum('in_grid_lb') == 1 .or. &
+       keynum('in_grid_ub') == 1) )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\nAny value is given by the following keywords:'//&
+            '\n  "'//str('in_grid_sz')//'"'//&
+            '\n  "'//str('in_grid_lb')//'"'//&
+            '\n  "'//str('in_grid_ub')//'"'//&
+            '\nbut any value is not given by the following keywords:'//&
+            '\n  "'//str('fin_grdidx')//'"'//&
+            '\n  "'//str('fin_grdara')//'"'//&
+            '\n  "'//str('fin_grdwgt')//'"'//&
+            '\n  "'//str('fin_grdx')//'"'//&
+            '\n  "'//str('fin_grdlon')//'"'//&
+            '\nThe inputs given by the former keywords are ignored.')
+  endif
+  !-------------------------------------------------------------
+  ! Missing value
+  !-------------------------------------------------------------
+  !! idx_miss might be refered in block "figures"
+  !if( keynum('fin_grdidx') == 0 .and. keynum('idx_miss') == 1 )then
+  !  call ewrn(str(msg_undesirable_input())//&
+  !          '\n"idx_miss" is given but "fin_grdidx" is given.'//&
+  !            ' The input for "idx_miss" is ignored.')
+  !endif
+
+  if( keynum('fin_grdara') == 0 .and. keynum('ara_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"ara_miss" is given although "fin_grdara" is not given.'//&
+              ' The input for "ara_miss" is ignored.')
   endif
 
-  if( counter%fin_grdidx == 0 .and. counter%idx_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_idx_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdidx)//'" was not specified.')
+  if( keynum('fin_grdwgt') == 0 .and. keynum('wgt_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
+              ' The input for "wgt_miss" is ignored.')
   endif
 
-  if( counter%fin_grdara == 0 .and. counter%ara_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_ara_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdara)//'" was not specified.')
+  if( keynum('fin_grdx') == 0 .and. keynum('xyz_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"xyz_miss" is given although "fin_grdx" is not given.'//&
+              ' The input for "xyz_miss" is ignored.')
   endif
 
-  if( counter%fin_grdwgt == 0 .and. counter%wgt_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_wgt_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdwgt)//'" was not specified.')
-  endif
-
-  if( counter%fin_grdx == 0 .and. counter%xyz_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_xyz_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdx)//'" was not specified.')
-  endif
-
-  if( counter%fin_grdlon == 0 .and. counter%lonlat_miss == 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\n"'//str(key_lonlat_miss)//'" was specified but '//&
-              '"'//str(key_fin_grdlon)//'" was not specified.')
+  if( keynum('fin_grdlon') == 0 .and. keynum('lonlat_miss') == 1 )then
+    call ewrn(str(msg_undesirable_input())//&
+            '\n"lonlat_miss" is given although "fin_grdlon" is not given.'//&
+              ' The input for "lonlat_miss" is ignored.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_gs_polygon
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_remapping(rt, s, t)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_gs_base, only: &
+        alloc_file_grid_in_val, &
+        alloc_file_grid_out_val
+  use common_rt_base, only: &
+        set_default_values_rt
+  use common_rt_set, only: &
+        KEY_OPT_COEF_SUM_MODIFY      , &
+        KEY_OPT_COEF_SUM_MODIFY_ULIM , &
+        KEY_OPT_COEF_ZERO_POSITIVE   , &
+        KEY_OPT_COEF_ZERO_NEGATIVE   , &
+        KEY_OPT_COEF_ERROR_EXCESS    , &
+        KEY_OPT_COEF_SUM_ERROR_EXCESS
+  use common_rt_set, only: &
+        check_values_rt_opt_coef
   implicit none
   type(rt_), intent(inout), target :: rt
   type(gs_), intent(inout), target :: s, t
 
-  type counter_
-    integer :: rt_status
-    integer :: mode
-    integer :: grid_coef
-    integer :: grid_sort
-    integer :: allow_empty
-
-    integer :: dir
-
-    integer :: fin_grdval
-    integer :: fout_grdval
-
-    integer :: fout_rt_sidx
-    integer :: fout_rt_tidx
-    integer :: fout_rt_area
-    integer :: fout_rt_coef
-
-    integer :: opt_coef_sum_modify
-    integer :: opt_coef_sum_modify_ulim
-    integer :: opt_coef_zero_positive
-    integer :: opt_coef_zero_negative
-    integer :: opt_coef_error_excess
-    integer :: opt_coef_sum_error_excess
-
-    integer :: vrf_source_form
-    integer :: vrf_target_form
-    integer :: fout_vrf_grdidx
-    integer :: fout_vrf_grdara_true
-    integer :: fout_vrf_grdara_rt
-    integer :: fout_vrf_rerr_grdara
-    integer :: fout_vrf_grdnum
-    integer :: fout_vrf_iarea_sum
-    integer :: fout_vrf_ifrac_sum
-    integer :: vrf_val_miss
-  end type
-
-  character(clen_var), parameter :: key_rt_status   = 'rt_status'
-  character(clen_var), parameter :: key_mode        = 'mode'
-  character(clen_var), parameter :: key_grid_coef   = 'grid_coef'
-  character(clen_var), parameter :: key_grid_sort   = 'grid_sort'
-  character(clen_var), parameter :: key_allow_empty = 'allow_empty'
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  character(clen_var), parameter :: key_fin_grdval  = 'fin_grdval'
-  character(clen_var), parameter :: key_fout_grdval = 'fout_grdval'
-
-  character(clen_var), parameter :: key_fout_rt_sidx = 'fout_rt_sidx'
-  character(clen_var), parameter :: key_fout_rt_tidx = 'fout_rt_tidx'
-  character(clen_var), parameter :: key_fout_rt_area = 'fout_rt_area'
-  character(clen_var), parameter :: key_fout_rt_coef = 'fout_rt_coef'
-
-  character(clen_var), parameter :: key_vrf_source_form      = 'vrf_source_form'
-  character(clen_var), parameter :: key_vrf_target_form      = 'vrf_target_form'
-  character(clen_var), parameter :: key_fout_vrf_grdidx      = 'fout_vrf_grdidx'
-  character(clen_var), parameter :: key_fout_vrf_grdara_true = 'fout_vrf_grdara_true'
-  character(clen_var), parameter :: key_fout_vrf_grdara_rt   = 'fout_vrf_grdara_rt'
-  character(clen_var), parameter :: key_fout_vrf_grdnum      = 'fout_vrf_grdnum'
-  character(clen_var), parameter :: key_fout_vrf_rerr_grdara = 'fout_vrf_rerr_grdara'
-  character(clen_var), parameter :: key_fout_vrf_iarea_sum   = 'fout_vrf_iarea_sum'
-  character(clen_var), parameter :: key_fout_vrf_ifrac_sum   = 'fout_vrf_ifrac_sum'
-  character(clen_var), parameter :: key_vrf_val_miss         = 'vrf_val_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
   type(rt_main_)    , pointer :: rtm
   type(file_rt_vrf_), pointer :: fvrf
   type(gs_common_)  , pointer :: sc, tc
 
-  character(clen_path) :: dir
-  type(file_), pointer :: f
+  character(CLEN_PATH) :: dir
+  character(CLEN_KEY) :: vrf_which
 
   call echo(code%bgn, 'read_settings_remapping')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
+  call alloc_keynum(30)
+  call set_keynum('rt_status', 0, 1)
+  call set_keynum('mode', 0, 1)
+  call set_keynum('grid_coef', 0, 1)
+  call set_keynum('grid_sort', 0, 1)
+  call set_keynum('allow_empty', 0, 1)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('fin_grdval' , 0, -1)
+  call set_keynum('fout_grdval', 0, -1)
+  call set_keynum('fout_rt_sidx', 0, 1)
+  call set_keynum('fout_rt_tidx', 0, 1)
+  call set_keynum('fout_rt_area', 0, 1)
+  call set_keynum('fout_rt_coef', 0, 1)
+  call set_keynum('opt_coef_sum_modify'      , 0, 1)
+  call set_keynum('opt_coef_sum_modify_ulim' , 0, 1)
+  call set_keynum('opt_coef_zero_positive'   , 0, 1)
+  call set_keynum('opt_coef_zero_negative'   , 0, 1)
+  call set_keynum('opt_coef_error_excess'    , 0, 1)
+  call set_keynum('opt_coef_sum_error_excess', 0, 1)
+  call set_keynum('vrf_source_form'     , 0, -1)
+  call set_keynum('vrf_target_form'     , 0, -1)
+  call set_keynum('fout_vrf_grdidx'     , 0, -1)
+  call set_keynum('fout_vrf_grdara_true', 0, -1)
+  call set_keynum('fout_vrf_grdara_rt'  , 0, -1)
+  call set_keynum('fout_vrf_rerr_grdara', 0, -1)
+  call set_keynum('fout_vrf_grdnum'     , 0, -1)
+  call set_keynum('fout_vrf_iarea_sum'  , 0, -1)
+  call set_keynum('fout_vrf_ifrac_sum'  , 0, -1)
+  call set_keynum('vrf_val_miss'        , 0, 1)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Count the number of times each keyword is used
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Counting the number of times each keyword is used')
+
+  rt%vrf_source%nFiles = 0
+  rt%vrf_target%nFiles = 0
+
+  sc => s%cmn
+  tc => t%cmn
+  sc%f_grid_in%nFiles_val = 0
+  tc%f_grid_out%nFiles_val = 0
 
   do
-    call read_input(key)
+    call read_input()
 
-    selectcase( key )
+    call update_keynum()
+
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_rt_status )
-      call add(counter%rt_status)
-
-    case( key_mode )
-      call add(counter%mode)
-
-    case( key_grid_coef )
-      call add(counter%grid_coef)
-
-    case( key_grid_sort )
-      call add(counter%grid_sort)
-
-    case( key_allow_empty )
-      call add(counter%allow_empty)
+    case( 'fin_grdval' )
+      call add(sc%f_grid_in%nFiles_val)
+    case( 'fout_grdval' )
+      call add(tc%f_grid_out%nFiles_val)
+    case( 'vrf_source_form' )
+      call add(rt%vrf_source%nFiles)
+    case( 'vrf_target_form' )
+      call add(rt%vrf_target%nFiles)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call add(counter%dir)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_fin_grdval )
-      call add(counter%fin_grdval)
-
-    case( key_fout_grdval )
-      call add(counter%fout_grdval)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_fout_rt_sidx )
-      call add(counter%fout_rt_sidx)
-
-    case( key_fout_rt_tidx )
-      call add(counter%fout_rt_tidx)
-
-    case( key_fout_rt_area )
-      call add(counter%fout_rt_area)
-
-    case( key_fout_rt_coef )
-      call add(counter%fout_rt_coef)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_opt_coef_sum_modify )
-      call add(counter%opt_coef_sum_modify)
-
-    case( key_opt_coef_sum_modify_ulim )
-      call add(counter%opt_coef_sum_modify_ulim)
-
-    case( key_opt_coef_zero_positive )
-      call add(counter%opt_coef_zero_positive)
-
-    case( key_opt_coef_zero_negative )
-      call add(counter%opt_coef_zero_negative)
-
-    case( key_opt_coef_error_excess )
-      call add(counter%opt_coef_error_excess)
-
-    case( key_opt_coef_sum_error_excess )
-      call add(counter%opt_coef_sum_error_excess)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_vrf_source_form )
-      call add(counter%vrf_source_form)
-
-    case( key_vrf_target_form )
-      call add(counter%vrf_target_form)
-
-    case( key_fout_vrf_grdidx )
-      call add(counter%fout_vrf_grdidx)
-
-    case( key_fout_vrf_grdara_true )
-      call add(counter%fout_vrf_grdara_true)
-
-    case( key_fout_vrf_grdara_rt )
-      call add(counter%fout_vrf_grdara_rt)
-
-    case( key_fout_vrf_rerr_grdara )
-      call add(counter%fout_vrf_rerr_grdara)
-
-    case( key_fout_vrf_grdnum )
-      call add(counter%fout_vrf_grdnum)
-
-    case( key_fout_vrf_iarea_sum )
-      call add(counter%fout_vrf_iarea_sum)
-
-    case( key_fout_vrf_ifrac_sum )
-      call add(counter%fout_vrf_ifrac_sum)
-
-    case( key_vrf_val_miss )
-      call add(counter%vrf_val_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      continue
     endselect
   enddo
 
-  call check_number_of_inputs()
-
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default variables
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting default values')
+  call echo(code%ent, 'Setting the default values')
 
-  call set_default_values_rt(rt, counter%vrf_source_form, counter%vrf_target_form)
+  call set_default_values_rt(rt)
 
-  sc => s%cmn
-  tc => t%cmn
-  sc%f_grid_in%nFiles_val  = counter%fin_grdval
-  tc%f_grid_out%nFiles_val = counter%fout_grdval
+  rtm => rt%main
+
   call alloc_file_grid_in_val(sc%f_grid_in)
   call alloc_file_grid_out_val(tc%f_grid_out)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read inputs
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading inputs')
+  call echo(code%ent, 'Reading the settings')
 
   call back_to_block_head()
+  call reset_keynum()
 
   dir = ''
   rt%vrf_source%nFiles = 0
   rt%vrf_target%nFiles = 0
   sc%f_grid_in%nFiles_val = 0
   tc%f_grid_out%nFiles_val = 0
-
-  rtm => rt%main
+  vrf_which = ''
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_rt_status )
-      call read_value(v_char=rtm%status, is_keyword=.true.)
+    case( 'rt_status' )
+      call read_value(rtm%status, is_keyword=.true.)
 
-    case( key_mode )
-      call read_value(v_char=rtm%mode, is_keyword=.true.)
+    case( 'mode' )
+      call read_value(rtm%mode, is_keyword=.true.)
 
-    case( key_grid_coef )
-      call read_value(v_char=rtm%grid_coef, is_keyword=.true.)
+    case( 'grid_coef' )
+      call read_value(rtm%grid_coef, is_keyword=.true.)
 
-    case( key_grid_sort )
-      call read_value(v_char=rtm%grid_sort, is_keyword=.true.)
+    case( 'grid_sort' )
+      call read_value(rtm%grid_sort, is_keyword=.true.)
 
-    case( key_allow_empty )
-      call read_value(v_log=rtm%allow_empty)
+    case( 'allow_empty' )
+      call read_value(rtm%allow_empty)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_char=dir, is_keyword=.false.)
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_fin_grdval )
+    case( 'fin_grdval' )
       call add(sc%f_grid_in%nFiles_val)
-      f => sc%f_grid_in%val(sc%f_grid_in%nFiles_val)
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdval )
+      call read_value(sc%f_grid_in%val(sc%f_grid_in%nFiles_val), dir)
+    case( 'fout_grdval' )
       call add(tc%f_grid_out%nfiles_val)
-      f => tc%f_grid_out%val(tc%f_grid_out%nFiles_val)
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+      call read_value(tc%f_grid_out%val(tc%f_grid_out%nFiles_val), dir)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_fout_rt_sidx )
-      call read_value(v_file=rtm%f%sidx, get_length=.false.)
-      rtm%f%sidx%path = joined(dir, rtm%f%sidx%path)
-
-    case( key_fout_rt_tidx )
-      call read_value(v_file=rtm%f%tidx, get_length=.false.)
-      rtm%f%tidx%path = joined(dir, rtm%f%tidx%path)
-
-    case( key_fout_rt_area )
-      call read_value(v_file=rtm%f%area, get_length=.false.)
-      rtm%f%area%path = joined(dir, rtm%f%area%path)
-
-    case( key_fout_rt_coef )
-      call read_value(v_file=rtm%f%coef, get_length=.false.)
-      rtm%f%coef%path = joined(dir, rtm%f%coef%path)
+    case( 'fout_rt_sidx' )
+      call read_value(rtm%f%sidx, dir)
+    case( 'fout_rt_tidx' )
+      call read_value(rtm%f%tidx, dir)
+    case( 'fout_rt_area' )
+      call read_value(rtm%f%area, dir)
+    case( 'fout_rt_coef' )
+      call read_value(rtm%f%coef, dir)
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_opt_coef_sum_modify )
-      call read_value(v_dble=rtm%opt_coef%sum_modify)
+    case( KEY_OPT_COEF_SUM_MODIFY )
+      call read_value(rtm%opt_coef%sum_modify)
       rtm%opt_coef%is_sum_modify_enabled = .true.
-
-    case( key_opt_coef_sum_modify_ulim )
-      call read_value(v_dble=rtm%opt_coef%sum_modify_ulim)
+    case( KEY_OPT_COEF_SUM_MODIFY_ULIM )
+      call read_value(rtm%opt_coef%sum_modify_ulim)
       rtm%opt_coef%is_sum_modify_ulim_enabled = .true.
-
-    case( key_opt_coef_zero_positive )
-      call read_value(v_dble=rtm%opt_coef%zero_positive)
+    case( KEY_OPT_COEF_ZERO_POSITIVE )
+      call read_value(rtm%opt_coef%zero_positive)
       rtm%opt_coef%is_zero_positive_enabled = .true.
-
-    case( key_opt_coef_zero_negative )
-      call read_value(v_dble=rtm%opt_coef%zero_negative)
+    case( KEY_OPT_COEF_ZERO_NEGATIVE )
+      call read_value(rtm%opt_coef%zero_negative)
       rtm%opt_coef%is_zero_negative_enabled = .true.
-
-    case( key_opt_coef_error_excess )
-      call read_value(v_dble=rtm%opt_coef%error_excess)
+    case( KEY_OPT_COEF_ERROR_EXCESS )
+      call read_value(rtm%opt_coef%error_excess)
       rtm%opt_coef%is_error_excess_enabled = .true.
-
-    case( key_opt_coef_sum_error_excess )
-      call read_value(v_dble=rtm%opt_coef%sum_error_excess)
+    case( KEY_OPT_COEF_SUM_ERROR_EXCESS )
+      call read_value(rtm%opt_coef%sum_error_excess)
       rtm%opt_coef%is_sum_error_excess_enabled = .true.
     !-----------------------------------------------------------
     !
+    case( 'vrf_source_form' )
+      call read_value_fvrfForm(rt%vrf_source, sc, GRID_SOURCE)
+    case( 'vrf_target_form' )
+      call read_value_fvrfForm(rt%vrf_target, tc, GRID_TARGET)
+
+    case( 'fout_vrf_grdidx' )
+      call read_value_fvrf_file(fvrf%out_grdidx)
+    case( 'fout_vrf_grdara_true' )
+      call read_value_fvrf_file(fvrf%out_grdara_true)
+    case( 'fout_vrf_grdara_rt' )
+      call read_value_fvrf_file(fvrf%out_grdara_rt)
+    case( 'fout_vrf_rerr_grdara' )
+      call read_value_fvrf_file(fvrf%out_rerr_grdara)
+    case( 'fout_vrf_grdnum' )
+      call read_value_fvrf_file(fvrf%out_grdnum)
+    case( 'fout_vrf_iarea_sum' )
+      call read_value_fvrf_file(fvrf%out_iarea_sum)
+    case( 'fout_vrf_ifrac_sum' )
+      call read_value_fvrf_file(fvrf%out_ifrac_sum)
+
+    case( 'vrf_val_miss' )
+      call read_value(rt%vrf_source%dval_miss)
+      call read_value(rt%vrf_target%dval_miss)
     !-----------------------------------------------------------
-    case( key_vrf_source_form )
-      call add(rt%vrf_source%nFiles)
-      fvrf => rt%vrf_source%f(rt%vrf_source%nFiles)
-      call read_value(v_char=fvrf%form, is_keyword=.true.)
-      call check_value_vrf_form(fvrf%form, key, sc%gs_type)
-
-    case( key_vrf_target_form )
-      call add(rt%vrf_target%nFiles)
-      fvrf => rt%vrf_target%f(rt%vrf_target%nFiles)
-      call read_value(v_char=fvrf%form, is_keyword=.true.)
-      call check_value_vrf_form(fvrf%form, key, tc%gs_type)
-
-    case( key_fout_vrf_grdidx )
-      call check_form_and_file_path(fvrf%out_grdidx, fvrf%form, key)
-      call read_value(v_file=fvrf%out_grdidx, get_length=.false.)
-      fvrf%out_grdidx%path = joined(dir, fvrf%out_grdidx%path)
-
-    case( key_fout_vrf_grdara_true )
-      call check_form_and_file_path(fvrf%out_grdara_true, fvrf%form, key)
-      call read_value(v_file=fvrf%out_grdara_true, get_length=.false.)
-      fvrf%out_grdara_true%path = joined(dir, fvrf%out_grdara_true%path)
-
-    case( key_fout_vrf_grdara_rt )
-      call check_form_and_file_path(fvrf%out_grdara_rt, fvrf%form, key)
-      call read_value(v_file=fvrf%out_grdara_rt, get_length=.false.)
-      fvrf%out_grdara_rt%path = joined(dir, fvrf%out_grdara_rt%path)
-
-    case( key_fout_vrf_rerr_grdara )
-      call check_form_and_file_path(fvrf%out_rerr_grdara, fvrf%form, key)
-      call read_value(v_file=fvrf%out_rerr_grdara, get_length=.false.)
-      fvrf%out_rerr_grdara%path = joined(dir, fvrf%out_rerr_grdara%path)
-
-    case( key_fout_vrf_grdnum )
-      call check_form_and_file_path(fvrf%out_grdnum, fvrf%form, key)
-      call read_value(v_file=fvrf%out_grdnum, get_length=.false.)
-      fvrf%out_grdnum%path = joined(dir, fvrf%out_grdnum%path)
-
-    case( key_fout_vrf_iarea_sum )
-      call check_form_and_file_path(fvrf%out_iarea_sum, fvrf%form, key)
-      call read_value(v_file=fvrf%out_iarea_sum, get_length=.false.)
-      fvrf%out_iarea_sum%path = joined(dir, fvrf%out_iarea_sum%path)
-
-    case( key_fout_vrf_ifrac_sum )
-      call check_form_and_file_path(fvrf%out_ifrac_sum, fvrf%form, key)
-      call read_value(v_file=fvrf%out_ifrac_sum, get_length=.false.)
-      fvrf%out_ifrac_sum%path = joined(dir, fvrf%out_ifrac_sum%path)
-
-    case( key_vrf_val_miss )
-      call read_value(v_dble=rt%vrf_source%dval_miss)
-      call read_value(v_dble=rt%vrf_target%dval_miss)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  rtm => rt%main
+  ! Check the values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
 
   call check_values_rt_opt_coef(rtm%opt_coef)
 
   call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !--------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
+subroutine assert_cst_vrfForm_gsType(gsType)
   implicit none
+  character(*), intent(in) :: gsType
 
-  counter%rt_status = 0
-  counter%mode = 0
-  counter%allow_empty = 0
-  counter%grid_coef = 0
-  counter%grid_sort = 0
-
-  counter%dir = 0
-
-  counter%fin_grdval  = 0
-  counter%fout_grdval = 0
-
-  counter%fout_rt_sidx = 0
-  counter%fout_rt_tidx = 0
-  counter%fout_rt_area = 0
-  counter%fout_rt_coef = 0
-
-  counter%opt_coef_sum_modify       = 0
-  counter%opt_coef_sum_modify_ulim  = 0
-  counter%opt_coef_zero_positive    = 0
-  counter%opt_coef_zero_negative    = 0
-  counter%opt_coef_error_excess     = 0
-  counter%opt_coef_sum_error_excess = 0
-
-  counter%vrf_source_form      = 0
-  counter%vrf_target_form      = 0
-  counter%fout_vrf_grdidx      = 0
-  counter%fout_vrf_grdara_true = 0
-  counter%fout_vrf_grdara_rt   = 0
-  counter%fout_vrf_rerr_grdara = 0
-  counter%fout_vrf_grdnum      = 0
-  counter%fout_vrf_iarea_sum   = 0
-  counter%fout_vrf_ifrac_sum   = 0
-  counter%vrf_val_miss         = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  ! Individual
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%rt_status, key_rt_status, 0, 1)
-  call check_num_of_key(counter%mode, key_mode, 0, 1)
-  call check_num_of_key(counter%allow_empty, key_allow_empty, 0, 1)
-  call check_num_of_key(counter%grid_coef, key_grid_coef, 0, 1)
-  call check_num_of_key(counter%grid_sort, key_grid_sort, 0, 1)
-
-  call check_num_of_key(counter%dir, key_dir, 0, 0)
-
-  call check_num_of_key(counter%fin_grdval , key_fin_grdval , 0, 0)
-  call check_num_of_key(counter%fout_grdval, key_fout_grdval, 0, 0)
-
-  call check_num_of_key(counter%fout_rt_sidx, key_fout_rt_sidx, 1, 1)
-  call check_num_of_key(counter%fout_rt_tidx, key_fout_rt_tidx, 1, 1)
-  call check_num_of_key(counter%fout_rt_area, key_fout_rt_area, 0, 1)
-  call check_num_of_key(counter%fout_rt_coef, key_fout_rt_coef, 0, 1)
-
-  call check_num_of_key(counter%opt_coef_sum_modify      , key_opt_coef_sum_modify      , 0, 1)
-  call check_num_of_key(counter%opt_coef_sum_modify_ulim , key_opt_coef_sum_modify_ulim , 0, 1)
-  call check_num_of_key(counter%opt_coef_zero_positive   , key_opt_coef_zero_positive   , 0, 1)
-  call check_num_of_key(counter%opt_coef_zero_negative   , key_opt_coef_zero_negative   , 0, 1)
-  call check_num_of_key(counter%opt_coef_error_excess    , key_opt_coef_error_excess    , 0, 1)
-  call check_num_of_key(counter%opt_coef_sum_error_excess, key_opt_coef_sum_error_excess, 0, 1)
-
-  call check_num_of_key(counter%fout_vrf_grdidx     , key_fout_vrf_grdidx     , 0, 0)
-  call check_num_of_key(counter%fout_vrf_grdara_true, key_fout_vrf_grdara_true, 0, 0)
-  call check_num_of_key(counter%fout_vrf_grdara_rt  , key_fout_vrf_grdara_rt  , 0, 0)
-  call check_num_of_key(counter%fout_vrf_rerr_grdara, key_fout_vrf_rerr_grdara, 0, 0)
-  call check_num_of_key(counter%fout_vrf_grdnum     , key_fout_vrf_grdnum     , 0, 0)
-  call check_num_of_key(counter%fout_vrf_iarea_sum, key_fout_vrf_iarea_sum, 0, 0)
-  call check_num_of_key(counter%fout_vrf_ifrac_sum, key_fout_vrf_ifrac_sum, 0, 0)
-
-  call check_num_of_key(counter%vrf_val_miss, key_vrf_val_miss, 0, 1)
-  !--------------------------------------------------------------
-  ! Relations
-  !--------------------------------------------------------------
-
-  ! Remapping data
-  !--------------------------------------------------------------
-  if( counter%fin_grdval /= counter%fout_grdval )then
-    call eerr('The number of input data and that of output data mismatch.'//&
-            '\n  in : '//str(counter%fin_grdval)//&
-            '\n  out: '//str(counter%fout_grdval))
-  endif
-
-  ! Remapping data and remapping table
-  !-------------------------------------------------------------
-  if( counter%fin_grdval > 0 )then
-    if( counter%fout_rt_sidx == 0 .or. &
-        counter%fout_rt_tidx == 0 .or. &
-        counter%fout_rt_coef == 0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  Output file of sidx, tidx, coef of the remapping table '//&
-                'cannnot be omitted when the remapping data was specified.'//&
-              '\n  Please specify "'//str(key_fout_rt_sidx)//&
-                '", "'//str(key_fout_rt_tidx)//'", "'//str(key_fout_rt_coef)//'".')
-    endif
-  endif
-
-  ! Options for coef
-  !--------------------------------------------------------------
-  if( counter%fout_rt_coef == 0 )then
-    if( counter%grid_coef == 1 )then
-      call eerr('"'//str(key_grid_coef)//'" was specified '//&
-                'although "'//str(key_fout_rt_coef)//'" was not specified.')
-    endif
-
-    if( counter%opt_coef_sum_modify       == 1 .or. &
-        counter%opt_coef_sum_modify_ulim  == 1 .or. &
-        counter%opt_coef_zero_positive    == 1 .or. &
-        counter%opt_coef_zero_negative    == 1 .or. &
-        counter%opt_coef_error_excess     == 1 .or. &
-        counter%opt_coef_sum_error_excess == 1 )then
-      call eerr('Any of the following keys cannot be specified when "'//&
-                str(key_fout_rt_coef)//'" was not specified:'//&
-              '\n  "'//str(key_opt_coef_sum_modify)//'"'//&
-              '\n  "'//str(key_opt_coef_sum_modify_ulim)//'"'//&
-              '\n  "'//str(key_opt_coef_zero_positive)//'"'//&
-              '\n  "'//str(key_opt_coef_zero_negative)//'"'//&
-              '\n  "'//str(key_opt_coef_error_excess)//'"'//&
-              '\n  "'//str(key_opt_coef_sum_error_excess)//'"')
-    endif
-  endif
-
-  if( counter%opt_coef_sum_modify == 1 .and. &
-      counter%opt_coef_sum_modify_ulim == 1 )then
-    call eerr('"'//str(key_opt_coef_sum_modify)//'" and "'//&
-              str(key_opt_coef_sum_modify_ulim)//'"'//&
-              ' cannot be specified at the same time.')
-  endif
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!----------------------------------------------------------------
-subroutine check_value_vrf_form(val, key, gs_type)
-  implicit none
-  character(*), intent(in) :: val
-  character(*), intent(in) :: key
-  character(*), intent(in) :: gs_type
-
-  call echo(code%bgn, '__IP__check_value_vrf_form', '-p -x2')
+  call echo(code%bgn, '__IP__assert_cst_vrfForm_gsType', '-p -x2')
   !---------------------------------------------------------------
-  if( val /= grid_form_auto .and. &
-      val /= grid_form_index .and. &
-      val /= grid_form_raster )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  @ line '//str(line_number())//&
-            '\n  key  : '//str(key)//&
-            '\n  value: '//str(val)//&
-            '\nOnly "'//str(grid_form_auto)//'", "'//str(grid_form_index)//&
-              '" or "'//str(grid_form_raster)//'" is valid for this key.')
+  if( fvrf%form /= GRID_FORM_AUTO .and. &
+      fvrf%form /= GRID_FORM_INDEX .and. &
+      fvrf%form /= GRID_FORM_RASTER )then
+    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+            '\n"'//str(fvrf%form)//'" is invalid for the keyword "'//str(key())//'".')
   endif
 
-  selectcase( gs_type )
-  case( gs_type_latlon, &
-        gs_type_polygon )
-    if( val == grid_form_raster )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  @ line '//str(line_number())//&
-              '\n  key  : '//str(key)//&
-              '\n  value: '//str(val)//&
-              '\nThis value is invalid for grid type "'//str(gs_type)//'."')
+  selectcase( gsType )
+  case( GS_TYPE_LATLON, &
+        GS_TYPE_POLYGON )
+    if( key() == GRID_FORM_RASTER )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\n  key: '//str(key())//&
+              '\n  val: '//str(fvrf%form)//&
+              '\nThis value is invalid for grid type "'//str(gsType)//'."')
     endif
-  case( gs_type_raster )
-    if( val == grid_form_auto )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  @ line '//str(line_number())//&
-              '\n  key  : '//str(key)//&
-              '\n  value: '//str(val)//&
-              '\nThis value is invalid for grid type "'//str(gs_type)//'."')
+  case( GS_TYPE_RASTER )
+    if( key() == GRID_FORM_AUTO )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\n  key: '//str(key())//&
+              '\n  val: '//str(fvrf%form)//&
+              '\nThis value is invalid for grid type "'//str(gsType)//'."')
     endif
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  gs_type: '//str(gs_type))
+    call eerr('Invalid value in $gs_type: '//str(gsType))
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_value_vrf_form
+end subroutine assert_cst_vrfForm_gsType
 !----------------------------------------------------------------
-subroutine check_form_and_file_path(f, form, key)
+subroutine read_value_fvrfForm(rt_vrf, uc, grid)
   implicit none
-  type(file_) , intent(in) :: f
-  character(*), intent(in) :: form
-  character(*), intent(in) :: key
+  type(rt_vrf_), intent(inout), target :: rt_vrf
+  type(gs_common_), intent(in), target :: uc
+  character(*), intent(in) :: grid
 
-  call echo(code%bgn, '__IP__check_form_and_file_path', '-p -x2')
+  call echo(code%bgn, '__IP__read_value_fvrfForm', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( form )
+  vrf_which = grid
+  call add(rt_vrf%nFiles)
+  fvrf => rt_vrf%f(rt_vrf%nFiles)
+  call read_value(fvrf%form, is_keyword=.true.)
+  call assert_cst_vrfForm_gsType(uc%gs_type)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine read_value_fvrfForm
+!----------------------------------------------------------------
+subroutine read_value_fvrf_file(f)
+  implicit none
+  type(file_), intent(inout) :: f
+
+  call echo(code%bgn, '__IP__read_value_fvrf_file', '-p -x2')
+  !-------------------------------------------------------------
+  call assert_cst_vrfForm_vrfData()
+  call assert_file_is_undefined(f)
+  call read_value(f, dir=dir)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine read_value_fvrf_file
+!----------------------------------------------------------------
+subroutine assert_cst_vrfForm_vrfData()
+  implicit none
+
+  call echo(code%bgn, '__IP__assert_cst_vrfForm_vrfData', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( fvrf%form )
   case( '' )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n@ line '//str(line_number())//&
-            '\nNone of "'//str(key_vrf_source_form)//'" or "'//str(key_vrf_target_form)//&
-              '" has been specified for "'//str(key)//'".')
+    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+            '\nNo value is given for the keyword "'//str(key())//'".')
   !-------------------------------------------------------------
   ! Auto
-  case( grid_form_auto )
-    if( key /= key_fout_vrf_grdidx      .and. &
-        key /= key_fout_vrf_grdara_true .and. &
-        key /= key_fout_vrf_grdara_rt   .and. &
-        key /= key_fout_vrf_rerr_grdara .and. &
-        key /= key_fout_vrf_grdnum      )then
-      call eerr(str(msg_syntax_error())//&
-              '\n@ line '//str(line_number())//&
-              '\nOnly the following keys can be specified for the group of'//&
-                ' verification data whose formatting mode is "'//str(form)//'":'//&
-              '\n  '//str(key_fout_vrf_grdidx)//&
-              '\n  '//str(key_fout_vrf_grdara_true)//&
-              '\n  '//str(key_fout_vrf_grdara_rt)//&
-              '\n  '//str(key_fout_vrf_rerr_grdara)//&
-              '\n  '//str(key_fout_vrf_grdnum))
+  case( GRID_FORM_AUTO )
+    if( key() /= 'fout_vrf_grdidx'      .and. &
+        key() /= 'fout_vrf_grdara_true' .and. &
+        key() /= 'fout_vrf_grdara_rt'   .and. &
+        key() /= 'fout_vrf_rerr_grdara' .and. &
+        key() /= 'fout_vrf_grdnum'      )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nOnly the following keywords can be used for the group of'//&
+                ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
+              '\n  "fout_vrf_grdidx"'//&
+              '\n  "fout_vrf_grdara_true"'//&
+              '\n  "fout_vrf_grdara_rt"'//&
+              '\n  "fout_vrf_rerr_grdara"'//&
+              '\n  "fout_vrf_grdnum"')
     endif
   !-------------------------------------------------------------
   ! Index
-  case( grid_form_index )
-    if( key /= key_fout_vrf_grdidx      .and. &
-        key /= key_fout_vrf_grdara_true .and. &
-        key /= key_fout_vrf_grdara_rt   .and. &
-        key /= key_fout_vrf_rerr_grdara .and. &
-        key /= key_fout_vrf_grdnum      )then
-      call eerr(str(msg_syntax_error())//&
-              '\n@ line '//str(line_number())//&
-              '\nOnly the following keys can be specified for the group of'//&
-                ' verification data whose formatting mode is "'//str(form)//'":'//&
-              '\n  '//str(key_fout_vrf_grdidx)//&
-              '\n  '//str(key_fout_vrf_grdara_true)//&
-              '\n  '//str(key_fout_vrf_grdara_rt)//&
-              '\n  '//str(key_fout_vrf_rerr_grdara)//&
-              '\n  '//str(key_fout_vrf_grdnum))
+  case( GRID_FORM_INDEX )
+    if( key() /= 'fout_vrf_grdidx'      .and. &
+        key() /= 'fout_vrf_grdara_true' .and. &
+        key() /= 'fout_vrf_grdara_rt'   .and. &
+        key() /= 'fout_vrf_rerr_grdara' .and. &
+        key() /= 'fout_vrf_grdnum'      )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nOnly the following keys can be used for the group of'//&
+                ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
+              '\n  "fout_vrf_grdidx"'//&
+              '\n  "fout_vrf_grdara_true"'//&
+              '\n  "fout_vrf_grdara_rt"'//&
+              '\n  "fout_vrf_rerr_grdara"'//&
+              '\n  "fout_vrf_grdnum"')
     endif
   !-------------------------------------------------------------
   ! Raster
-  case( grid_form_raster )
-    if( key /= key_fout_vrf_iarea_sum .and. &
-        key /= key_fout_vrf_ifrac_sum )then
-      call eerr(str(msg_syntax_error())//&
-              '\n@ line '//str(line_number())//&
-              '\nOnly the following keys can be specified for the group of'//&
-                ' verification data whose formatting mode is "'//str(form)//'":'//&
-              '\n  '//str(key_fout_vrf_iarea_sum)//&
-              '\n  '//str(key_fout_vrf_ifrac_sum))
+  case( GRID_FORM_RASTER )
+    if( key() /= 'fout_vrf_iarea_sum' .and. &
+        key() /= 'fout_vrf_ifrac_sum' )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nOnly the following keys can be used for the group of'//&
+                ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
+              '\n  fout_vrf_iarea_sum"'//&
+              '\n  fout_vrf_ifrac_sum"')
     endif
   !-------------------------------------------------------------
   ! ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-             '\n  form: '//str(form))
+    call eerr('Invalid value in $fvrf%form: '//str(fvrf%form))
   endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine assert_cst_vrfForm_vrfData
+!----------------------------------------------------------------
+subroutine assert_file_is_undefined(f)
+  implicit none
+  type(file_), intent(in) :: f
 
+  character(CLEN_VAR) :: key_vrf_form
+  integer :: iFile
+
+  call echo(code%bgn, '__IP__assert_file_is_undefined', '-p -x2')
+  !-------------------------------------------------------------
   if( f%path /= '' )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n@ line '//str(line_number())//&
-            '\nKey "'//str(key)//'" appeared more than once'//&
-              ' for one group of verification data.')
+    selectcase( vrf_which )
+    case( GRID_SOURCE )
+      key_vrf_form = 'vrf_source_form'
+      iFile = rt%vrf_source%nFiles
+    case( GRID_TARGET )
+      key_vrf_form = 'vrf_target_form'
+      iFile = rt%vrf_target%nFiles
+    case default
+      call eerr('Invalid value in $vrf_which: '//str(vrf_which))
+    endselect
+
+    call eerr(str(msg_invalid_input())//&
+            '\n  @ line '//str(line_number())//&
+              '; duplicated input for "'//str(key())//'"'//&
+              ' in the '//str(iFile)//'th group of "'//str(key_vrf_form)//'".')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_form_and_file_path
+end subroutine assert_file_is_undefined
+!----------------------------------------------------------------
+subroutine check_keynum_relations()
+  implicit none
+
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p -x2')
+  !--------------------------------------------------------------
+  ! Remapping data
+  !--------------------------------------------------------------
+  if( keynum('fin_grdval') /= keynum('fout_grdval') )then
+    call eerr(str(msg_invalid_input())//&
+            '\nThe number of input and output data does not match.'//&
+            '\n  "fin_grdval"  (in) : '//str(keynum('fin_grdval'))//&
+            '\n  "fout_grdval" (out): '//str(keynum('fout_grdval')))
+  endif
+  !--------------------------------------------------------------
+  ! Remapping data and remapping table
+  !-------------------------------------------------------------
+!  if( keynum('fin_grdval') > 0 )then
+!    if( keynum('fout_rt_sidx') == 0 .or. &
+!        keynum('fout_rt_tidx') == 0 .or. &
+!        keynum('fout_rt_coef') == 0 )then
+!      call eerr(str(msg_invalid_input())//&
+!              '\n  Output file of sidx, tidx, coef of the remapping table '//&
+!                'cannnot be omitted when the remapping data was specified.'//&
+!              '\n  Please specify "'//str(key_fout_rt_sidx)//&
+!                '", "'//str(key_fout_rt_tidx)//'", "'//str(key_fout_rt_coef)//'".')
+!    endif
+!  endif
+  !--------------------------------------------------------------
+  ! Options for coef
+  !--------------------------------------------------------------
+  if( keynum('fout_rt_coef') == 0 )then
+    if( keynum('grid_coef') == 1 )then
+      call ewrn(str(msg_undesirable_input())//&
+             '\n"grid_coef is given although "fout_rt_coef" is not given.'//&
+                ' The input given by "grid_coef" is ignored.')
+    endif
+
+    if( keynum(KEY_OPT_COEF_SUM_MODIFY)       == 1 .or. &
+        keynum(KEY_OPT_COEF_SUM_MODIFY_ULIM)  == 1 .or. &
+        keynum(KEY_OPT_COEF_ZERO_POSITIVE)    == 1 .or. &
+        keynum(KEY_OPT_COEF_ZERO_NEGATIVE)    == 1 .or. &
+        keynum(KEY_OPT_COEF_ERROR_EXCESS)     == 1 .or. &
+        keynum(KEY_OPT_COEF_SUM_ERROR_EXCESS) == 1 )then
+      call ewrn(str(msg_undesirable_input())//&
+              '\nAny of the following keywords is given:'//&
+              '\n  "'//str(KEY_OPT_COEF_SUM_ERROR_EXCESS)//'"'//&
+              '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY_ULIM)//'"'//&
+              '\n  "'//str(KEY_OPT_COEF_ZERO_POSITIVE)//'"'//&
+              '\n  "'//str(KEY_OPT_COEF_ZERO_NEGATIVE)//'"'//&
+              '\n  "'//str(KEY_OPT_COEF_ERROR_EXCESS)//'"'//&
+              '\n  "'//str(KEY_OPT_COEF_SUM_ERROR_EXCESS)//'"'//&
+              '\nalthough "fout_rt_coef" is not given.'//&
+              '\nThe inputs for these keywords are ignored.')
+    endif
+  endif
+
+  if( keynum(KEY_OPT_COEF_SUM_MODIFY) == 1 .and. &
+      keynum(KEY_OPT_COEF_SUM_MODIFY_ULIM) == 1 )then
+    call eerr(str(msg_invalid_input())//&
+            '\n"'//str(KEY_OPT_COEF_SUM_MODIFY)//'" and "'//&
+              str(KEY_OPT_COEF_SUM_MODIFY_ULIM)//&
+              '" must not be given at the same time.')
+  endif
+  !--------------------------------------------------------------
+  call echo(code%ret)
+end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_remapping
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_set2, only: &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_opt_set, only: &
+        KEY_OLD_FILES           , &
+        KEY_DIR_INTERMEDIATES   , &
+        KEY_REMOVE_INTERMEDIATES, &
+        KEY_MEMORY_ULIM         , &
+        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_R             , &
+        KEY_EARTH_E2
+  use common_opt_set, only: &
+        set_values_opt_earth
   implicit none
   type(opt_), intent(inout) :: opt
 
-  type counter_
-    integer :: old_files
-    integer :: dir_intermediates
-    integer :: remove_intermediates
-    integer :: memory_ulim
-
-    integer :: earth_shape
-    integer :: earth_r
-    integer :: earth_e2
-  end type
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-
   call echo(code%bgn, 'read_settings_opt')
   !-------------------------------------------------------------
-  ! Count the number of inputs
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Countting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
+  call alloc_keynum(7)
+  call set_keynum(KEY_OLD_FILES           , 0, 1)
+  call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
+  call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
+  call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
+  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
+  call set_keynum(KEY_EARTH_R    , 0, 1)
+  call set_keynum(KEY_EARTH_E2   , 0, 1)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Read the settings
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of the block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
+    case( KEY_OLD_FILES )
+      call read_value(opt%sys%old_files, is_keyword=.true.)
+
+    case( KEY_DIR_INTERMEDIATES )
+      call read_value(opt%sys%dir_im, is_path=.true.)
+
+    case( KEY_REMOVE_INTERMEDIATES )
+      call read_value(opt%sys%remove_im)
+
+    case( KEY_MEMORY_ULIM )
+      call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
-    case( key_old_files )
-      call add(counter%old_files)
-
-    case( key_dir_intermediates )
-      call add(counter%dir_intermediates)
-
-    case( key_remove_intermediates )
-      call add(counter%remove_intermediates)
-
-    case( key_memory_ulim )
-      call add(counter%memory_ulim)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_earth_shape )
-      call add(counter%earth_shape)
-
-    case( key_earth_r )
-      call add(counter%earth_r )
-
-    case( key_earth_e2 )
-      call add(counter%earth_e2 )
+    ! Earth's shape
+    case( KEY_EARTH_SHAPE )
+      call read_value(opt%earth%shp, is_keyword=.true.)
+    case( KEY_EARTH_R )
+      call read_value(opt%earth%r)
+    case( KEY_EARTH_E2 )
+      call read_value(opt%earth%e2)
     !-----------------------------------------------------------
     ! ERROR
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  call check_number_of_inputs()
+  call check_keynum()
+  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Init. variables
+  ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
+  call echo(code%ent, 'Checking the values')
 
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Read inputs
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Reading inputs')
-
-  call back_to_block_head()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_old_files )
-      call read_value(v_char=opt%sys%old_files, is_keyword=.true.)
-
-    case( key_dir_intermediates )
-      call read_value(v_char=opt%sys%dir_im, is_keyword=.false.)
-
-    case( key_remove_intermediates )
-      call read_value(v_log=opt%sys%remove_im)
-
-    case( key_memory_ulim )
-      call read_value(v_dble=opt%sys%memory_ulim)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_earth_shape )
-      call read_value(v_char=opt%earth%shp, is_keyword=.true.)
-
-    case( key_earth_r )
-      call read_value(v_dble=opt%earth%r)
-
-    case( key_earth_e2 )
-      call read_value(v_dble=opt%earth%e2)
-    !-----------------------------------------------------------
-    ! ERROR
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  ! Modify values
-  !-------------------------------------------------------------
   selectcase( opt%sys%old_files )
-  case( opt_old_files_stop, &
-        opt_old_files_remove, &
-        opt_old_files_overwrite )
+  case( OPT_OLD_FILES_STOP, &
+        OPT_OLD_FILES_REMOVE, &
+        OPT_OLD_FILES_OVERWRITE )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "'//str(key_old_files)//'".')
+    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
+            '\nCheck the value of "old_files".')
   endselect
-
-  call set_values_opt_earth(opt%earth, counter%earth_r, counter%earth_e2)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  call set_values_opt_earth(opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2))
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%old_files            = 0
-  counter%dir_intermediates    = 0
-  counter%remove_intermediates = 0
-  counter%memory_ulim          = 0
-
-  counter%earth_shape = 0
-  counter%earth_r     = 0
-  counter%earth_e2    = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%old_files           , key_old_files           , 0, 1)
-  call check_num_of_key(counter%dir_intermediates   , key_dir_intermediates   , 0, 1)
-  call check_num_of_key(counter%remove_intermediates, key_remove_intermediates, 0, 1)
-  call check_num_of_key(counter%memory_ulim         , key_memory_ulim         , 0, 1)
-
-  call check_num_of_key(counter%earth_shape, key_earth_shape, 0, 1)
-  call check_num_of_key(counter%earth_r    , key_earth_r    , 0, 1)
-  call check_num_of_key(counter%earth_e2   , key_earth_e2   , 0, 1)
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_opt
 !===============================================================
 !
 !===============================================================
 subroutine skip_unused_block()
+  use common_set2, only: &
+        key       , &
+        read_input
   implicit none
-
-  character(clen_var) :: key
 
   call echo(code%bgn, 'skip_unused_block')
   !-------------------------------------------------------------
   do
-    call read_input(key)
+    call read_input()
 
-    selectcase( key )
+    selectcase( key() )
     case( '' )
       exit
     case default
@@ -3363,6 +2265,9 @@ end subroutine skip_unused_block
 !
 !===============================================================
 subroutine check_paths(gs_source, gs_target, rt, opt_sys)
+  use common_file, only: &
+        set_opt_old_files, &
+        handle_old_file
   implicit none
   type(gs_)     , intent(in), target :: gs_source, gs_target
   type(rt_)     , intent(in), target :: rt
@@ -3628,6 +2533,8 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_gs_latlon(ul)
+  use common_set, only: &
+        bar
   implicit none
   type(gs_latlon_), intent(in), target :: ul
 
@@ -3710,6 +2617,8 @@ end subroutine echo_settings_gs_latlon
 !
 !===============================================================
 subroutine echo_settings_gs_raster(ur)
+  use common_set, only: &
+        bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
 
@@ -3782,6 +2691,8 @@ end subroutine echo_settings_gs_raster
 !
 !===============================================================
 subroutine echo_settings_gs_polygon(up)
+  use common_set, only: &
+        bar
   implicit none
   type(gs_polygon_), intent(in), target :: up
 
@@ -3878,6 +2789,17 @@ end subroutine echo_settings_gs_polygon
 !
 !===============================================================
 subroutine echo_settings_remapping(rt, s, t)
+  use common_set, only: &
+        bar
+  use common_rt_set, only: &
+        KEY_OPT_COEF_SUM_MODIFY      , &
+        KEY_OPT_COEF_SUM_MODIFY_ULIM , &
+        KEY_OPT_COEF_ZERO_POSITIVE   , &
+        KEY_OPT_COEF_ZERO_NEGATIVE   , &
+        KEY_OPT_COEF_ERROR_EXCESS    , &
+        KEY_OPT_COEF_SUM_ERROR_EXCESS
+  use common_rt_set, only: &
+        echo_settings_rt_opt_coef
   implicit none
   type(rt_), intent(in), target :: rt
   type(gs_), intent(in), target :: s, t
@@ -3892,7 +2814,7 @@ subroutine echo_settings_remapping(rt, s, t)
 
   integer :: iGs
   integer :: iFile
-  character(clen_key) :: grid
+  character(CLEN_KEY) :: grid
 
   call echo(code%bgn, 'echo_settings_remapping', '-p -x2')
   !-------------------------------------------------------------
@@ -4018,6 +2940,12 @@ end subroutine echo_settings_remapping
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
+  use common_set, only: &
+        bar
+  use common_opt_set, only: &
+        echo_settings_opt_sys, &
+        echo_settings_opt_log, &
+        echo_settings_opt_earth
   implicit none
   type(opt_), intent(in) :: opt
 
@@ -4030,11 +2958,7 @@ subroutine echo_settings_opt(opt)
   !
   !-------------------------------------------------------------
   call echo_settings_opt_sys(opt%sys)
-
-  call edbg('')
   call echo_settings_opt_log(opt%log)
-
-  call edbg('')
   call echo_settings_opt_earth(opt%earth)
   !-------------------------------------------------------------
   call echo(code%ret)

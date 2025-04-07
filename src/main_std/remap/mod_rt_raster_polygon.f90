@@ -7,19 +7,22 @@ module mod_rt_raster_polygon
   use lib_io
   use lib_math
   use common_const
-  use common_type
-  use common_gs, only: &
+  use common_type_gs
+  use common_gs_util, only: &
         print_gs_raster, &
         print_gs_polygon, &
         !print_raster, &
         print_polygon
-  use common_rt, only: &
-        calc_rt_im_nij_ulim, &
+  use common_type_rt
+  use common_rt1d, only: &
         init_rt1d, &
-        reshape_rt1d, &
-        free_rt1d_comps, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
         clear_rt_main, &
-        output_rt_im
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   use common_area_raster_polygon, only: &
         set_modvars, &
         alloc_iarea, &
@@ -184,11 +187,9 @@ subroutine make_rt_raster_polygon(job, s, t, rt, opt)
     call alloc_iarea(iarea_sum, buffer_iarea_sum)
   endif
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making regridding table')
-
-  call echo(code%bgn, 'make regridding table (core)')
+  call echo(code%ent, 'Making remapping table')
 
   tijs = 1_8
 
@@ -217,13 +218,13 @@ subroutine make_rt_raster_polygon(job, s, t, rt, opt)
     if( is_iarea_updated )then
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij > rt%im%nij_ulim )then
-          call echo(code%ent, 'Outputting intermediates')
-          call edbg('tij: '//str((/tijs,tij-1_8/),' ~ '))
+          call echo(code%ent, 'Outputting intermediates '//&
+                    '(tij: '//str((/tijs,tij-1_8/),' - ')//')')
 
           call reshape_rt1d(rt1d(tijs:tij-1_8), tgp%is_source, rtm, opt%earth)
-          call output_rt_im(rtm, rt%im)
+          call write_rt_im(rtm, rt%im)
           call clear_rt_main(rtm)
-          call free_rt1d_comps(rt1d(tijs:tij-1_8))
+          call free_rt1d_data(rt1d(tijs:tij-1_8))
           tijs = tij
 
           call echo(code%ext)
@@ -237,21 +238,18 @@ subroutine make_rt_raster_polygon(job, s, t, rt, opt)
 !<time_measurement/>
   enddo  ! tij/
 
-  call echo(code%ret)
-
-  ! Output intermediates
+  ! Reshape and output intermediates
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting intermediates')
-
   call reshape_rt1d(rt1d(tijs:tzp%mij), tgp%is_source, rtm, opt%earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call output_rt_im(rtm, rt%im)
+    call echo(code%ent, 'Outputting intermediates '//&
+              '(tij: '//str((/tijs,tij/),' - ')//')')
+    call write_rt_im(rtm, rt%im)
     call clear_rt_main(rtm)
-    call free_rt1d_comps(rt1d(tijs:tzp%mij))
+    call free_rt1d_data(rt1d(tijs:tzp%mij))
+    call echo(code%ext)
   endif
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ext)
   !-------------------------------------------------------------

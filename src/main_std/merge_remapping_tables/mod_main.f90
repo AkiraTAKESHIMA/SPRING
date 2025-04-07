@@ -1,26 +1,33 @@
 module mod_main
+  ! lib
   use lib_const
   use lib_base
   use lib_log
   use lib_io
   use lib_array
   use lib_math
+  ! common1
   use common_const
-  use common_type
+  use common_type_opt
   use common_file, only: &
         report
-  use common_rt, only: &
+  ! common2
+  use common_type_rt
+  use common_rt_main_core, only: &
         merge_elems_same_index, &
         calc_rt_coef_sum_modify_enabled, &
         calc_rt_coef_sum_modify_not_enabled, &
-        sort_rt, &
-        get_rt_stats, &
-        report_rt_summary, &
+        sort_rt
+  use common_rt_stats, only: &
+        get_rt_main_stats, &
+        report_rt_main_summary
+  use common_rt_error, only: &
         raise_error_coef_negative, &
         raise_error_coef_small, &
         raise_error_coef_above_thresh, &
         raise_error_coef_sum_above_thresh, &
         raise_error_val_sum_non_positive
+  ! this
   use def_type
   use mod_utils, only: &
         open_file_grid_im, &
@@ -139,7 +146,7 @@ subroutine merge_rt(input, output, opt)
       call edbg('Read '//str(fileinfo(f)))
       call rbin(rtm%area(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec)
 
-      call get_rt_stats(rtm, ije+1_8, ije+f_rt%nij)
+      call get_rt_main_stats(rtm, ije+1_8, ije+f_rt%nij)
 
       call add(ije, f_rt%nij)
 
@@ -249,9 +256,9 @@ subroutine merge_rt(input, output, opt)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call get_rt_stats(rtm)
+    call get_rt_main_stats(rtm)
 
-    call report_rt_summary(rtm, .true., .true.)
+    call report_rt_main_summary(rtm, .true., .true.)
     !-----------------------------------------------------------
     ! Output
     !-----------------------------------------------------------

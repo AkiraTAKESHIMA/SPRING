@@ -4,10 +4,10 @@ module mod_set
   use lib_log
   use lib_io
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_set
-  use common_file
+  use common_type_gs
+  ! this
   use def_const
   use def_type
   implicit none
@@ -19,28 +19,45 @@ module mod_set
   !-------------------------------------------------------------
   ! Private variables
   !-------------------------------------------------------------
-  character(clen_var), parameter :: block_name_cmn = 'common'
-  character(clen_var), parameter :: block_name_cmf = 'cama-flood'
-  character(clen_var), parameter :: block_name_mat = 'matsiro'
-  character(clen_var), parameter :: block_name_opt = 'options'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_CMN = 'common'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_CMF = 'cama-flood'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_MAT = 'matsiro'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OPT = 'options'
 
-  character(clen_var), parameter :: block_name_log_cmn = 'Common'
-  character(clen_var), parameter :: block_name_log_cmf = 'CaMa-Flood'
-  character(clen_var), parameter :: block_name_log_mat = 'MATSIRO'
-  character(clen_var), parameter :: block_name_log_opt = 'Options'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_LOG_CMN = 'Common'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_LOG_CMF = 'CaMa-Flood'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_LOG_MAT = 'MATSIRO'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_LOG_OPT = 'Options'
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine read_settings(cmn, cmf, mat, opt)
+  use common_set2, only: &
+        open_setting_file      , &
+        close_setting_file     , &
+        line_number            , &
+        read_path_report       , &
+        get_path_report        , &
+        find_block             , &
+        check_num_of_key       , &
+        bar                    , &
+        raise_error_invalid_key, &
+        msg_invalid_input
+  use common_file, only: &
+        open_report_file
+  use common_opt_set, only: &
+        set_default_values_opt_sys, &
+        set_default_values_opt_log, &
+        set_default_values_opt_earth
   implicit none
   type(cmn_), intent(out) :: cmn
   type(cmf_), intent(out) :: cmf
   type(mat_), intent(out) :: mat
   type(opt_), intent(out) :: opt
 
-  character(clen_var) :: block_name
+  character(CLEN_VAR) :: block_name
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
@@ -51,7 +68,11 @@ subroutine read_settings(cmn, cmf, mat, opt)
   call set_default_values_cmf(cmf)
   call set_default_values_mat(mat)
 
-  call set_default_values_opt(opt)
+  call set_default_values_opt_sys(opt%sys)
+  call set_default_values_opt_log(opt%log)
+  call set_default_values_opt_earth(opt%earth)
+
+  opt%save_memory = .false.
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -71,19 +92,19 @@ subroutine read_settings(cmn, cmf, mat, opt)
       exit
     !-----------------------------------------------------------
     ! Case: cmn
-    case( block_name_cmn )
+    case( BLOCK_NAME_CMN )
       call read_settings_cmn(cmn)
     !-----------------------------------------------------------
     ! Case: cmf
-    case( block_name_cmf )
+    case( BLOCK_NAME_CMF )
       call read_settings_cmf(cmn, cmf)
     !-----------------------------------------------------------
     ! Case: matsiro
-    case( block_name_mat )
+    case( BLOCK_NAME_MAT )
       call read_settings_mat(cmn, mat)
     !-----------------------------------------------------------
     ! Case: options
-    case( block_name_opt )
+    case( BLOCK_NAME_OPT )
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: ERROR
@@ -102,7 +123,25 @@ subroutine read_settings(cmn, cmf, mat, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Detecting confliction')
 
-  call check_inputs(cmn, cmf, mat)
+  if( mat%f_grdidx_river%path /= '' )then
+    if( cmf%f_grdidx_river%path == '' )then
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  mat%f_grdidx_river%path /= "" .and. cmf%f_grdidx_river%path == ""'//&
+              '\n"f_grdidx_river" in the block "'//str(BLOCK_NAME_CMF)//&
+                '" must be given when "f_grdidx_river" in the block "'//&
+                str(BLOCK_NAME_MAT)//'" is given.')
+    endif
+  endif
+
+  if( mat%f_grdidx_noriv%path /= '' )then
+    if( cmf%f_grdidx_noriv%path == '' )then
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  mat%f_grdidx_noriv%path /= "" .and. cmf%f_grdidx_noriv%path == ""'//&
+              '\n"f_grdidx_noriv" in the block "'//str(BLOCK_NAME_CMF)//&
+                '" must be given when "f_grdidx_noriv" in the block "'//&
+                str(BLOCK_NAME_MAT)//'" is given.')
+    endif
+  endif
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -132,98 +171,49 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_cmn(cmn)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(cmn_), intent(out) :: cmn
 
-  type counter_
-    integer :: nx_grid
-    integer :: ny_grid
-    integer :: nx_raster
-    integer :: ny_raster
-    integer :: nx_tile
-    integer :: ny_tile
-    integer :: nTiles
-    integer :: west
-    integer :: east
-    integer :: south
-    integer :: north
-  end type
-
-  character(clen_var), parameter :: key_nx_grid   = 'nx_grid'
-  character(clen_var), parameter :: key_ny_grid   = 'ny_grid'
-  character(clen_var), parameter :: key_nx_raster = 'nx_raster'
-  character(clen_var), parameter :: key_ny_raster = 'ny_raster'
-  character(clen_var), parameter :: key_nx_tile   = 'nx_tile'
-  character(clen_var), parameter :: key_ny_tile   = 'ny_tile'
-  character(clen_var), parameter :: key_nTiles    = 'ntiles'
-  character(clen_var), parameter :: key_west      = 'west'
-  character(clen_var), parameter :: key_east      = 'east'
-  character(clen_var), parameter :: key_south     = 'south'
-  character(clen_var), parameter :: key_north     = 'north'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-
   call echo(code%bgn, 'read_settings_cmn')
   !-------------------------------------------------------------
-  !
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-
-    case( key_nx_grid )
-      call add(counter%nx_grid)
-
-    case( key_ny_grid )
-      call add(counter%ny_grid)
-
-    case( key_nx_raster )
-      call add(counter%nx_raster)
-
-    case( key_ny_raster )
-      call add(counter%ny_raster)
-
-    case( key_nx_tile )
-      call add(counter%nx_tile)
-
-    case( key_ny_tile )
-      call add(counter%ny_tile)
-
-    case( key_nTiles )
-      call add(counter%nTiles)
-
-    case( key_west )
-      call add(counter%west)
-
-    case( key_east )
-      call add(counter%east)
-
-    case( key_south )
-      call add(counter%south)
-
-    case( key_north )
-      call add(counter%north)
-
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(11)
+  call set_keynum('nx_grid', 1, 1)
+  call set_keynum('ny_grid', 1, 1)
+  call set_keynum('nx_raster', 1, 1)
+  call set_keynum('ny_raster', 1, 1)
+  call set_keynum('nx_tile', 0, 1)
+  call set_keynum('ny_tile', 0, 1)
+  call set_keynum('ntiles', 0, 1)
+  call set_keynum('west' , 0, 1)
+  call set_keynum('east' , 0, 1)
+  call set_keynum('south', 0, 1)
+  call set_keynum('north', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
+  call echo(code%ent, 'Setting the default values')
 
   cmn%is_raster_input = .false.
 
@@ -244,59 +234,66 @@ subroutine read_settings_cmn(cmn)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read inputs.
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
-
-  call back_to_block_head()
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
+    !-----------------------------------------------------------
+    ! Resolution (model grid)
+    case( 'nx_grid' )
+      call read_value(cmn%ncgx)
+    case( 'ny_grid' )
+      call read_value(cmn%ncgy)
+    !-----------------------------------------------------------
+    ! Resolution (raster)
+    case( 'nx_raster' )
+      call read_value(cmn%nkgx)
+    case( 'ny_raster' )
+      call read_value(cmn%nkgy)
+    !-----------------------------------------------------------
+    ! Tiling
+    case( 'nx_tile' )
+      call read_value(cmn%ntx)
+    case( 'ny_tile' )
+      call read_value(cmn%nty)
 
-    case( key_nx_grid )
-      call read_value(v_int8=cmn%ncgx)
-
-    case( key_ny_grid )
-      call read_value(v_int8=cmn%ncgy)
-
-    case( key_nx_raster )
-      call read_value(v_int8=cmn%nkgx)
-
-    case( key_ny_raster )
-      call read_value(v_int8=cmn%nkgy)
-
-    case( key_nx_tile )
-      call read_value(v_int4=cmn%ntx)
-
-    case( key_ny_tile )
-      call read_value(v_int4=cmn%nty)
-
-    case( key_nTiles )
-      call read_value(v_int4=cmn%nTiles)
-
-    case( key_west )
-      call read_value(v_int4=cmn%west)
-
-    case( key_east )
-      call read_value(v_int4=cmn%east)
-
-    case( key_south )
-      call read_value(v_int4=cmn%south)
-
-    case( key_north )
-      call read_value(v_int4=cmn%north)
-
+    case( 'nTiles' )
+      call read_value(cmn%nTiles)
+    !-----------------------------------------------------------
+    ! Region
+    case( 'west' )
+      call read_value(cmn%west)
+    case( 'east' )
+      call read_value(cmn%east)
+    case( 'south' )
+      call read_value(cmn%south)
+    case( 'north' )
+      call read_value(cmn%north)
+    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  !call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
   if( cmn%west < cmn%east )then
     cmn%size_lon = cmn%east - cmn%west
   else
@@ -332,336 +329,93 @@ subroutine read_settings_cmn(cmn)
 
   call echo(code%ext)
   !-------------------------------------------------------------
+  ! Free the external module variables
+  !-------------------------------------------------------------
+  call free_keynum()
+  !-------------------------------------------------------------
   call echo(code%ret)
-!----------------------------------------------------------------
-contains
-!----------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%nx_grid   = 0
-  counter%ny_grid   = 0
-  counter%nx_raster = 0
-  counter%ny_raster = 0
-  counter%nx_tile   = 0
-  counter%ny_tile   = 0
-  counter%nTiles    = 0
-  counter%west      = 0
-  counter%east      = 0
-  counter%south     = 0
-  counter%north     = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
-  !--------------------------------------------------------------
-  ! Individual
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%nx_grid, key_nx_grid, 1, 1)
-  call check_num_of_key(counter%ny_grid, key_ny_grid, 1, 1)
-  call check_num_of_key(counter%nx_raster, key_nx_raster, 1, 1)
-  call check_num_of_key(counter%ny_raster, key_ny_raster, 1, 1)
-  call check_num_of_key(counter%nx_tile, key_nx_tile, 0, 1)
-  call check_num_of_key(counter%ny_tile, key_ny_tile, 0, 1)
-  call check_num_of_key(counter%nTiles, key_nTiles, 0, 1)
-  call check_num_of_key(counter%west , key_west , 0, 1)
-  call check_num_of_key(counter%east , key_east , 0, 1)
-  call check_num_of_key(counter%south, key_south, 0, 1)
-  call check_num_of_key(counter%north, key_north, 0, 1)
-  !--------------------------------------------------------------
-  ! Relations
-  !--------------------------------------------------------------
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!----------------------------------------------------------------
 end subroutine read_settings_cmn
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_cmf(cmn, cmf)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(cmn_), intent(inout)         :: cmn
   type(cmf_), intent(inout), target :: cmf
 
-  type counter_
-    integer :: dir
-    integer :: fin_nextxy
-    integer :: fin_basin
-    integer :: fin_catmxy
-    integer :: fin_list_catmxy
-    integer :: dtype_catmxy
-    integer :: endian_catmxy
-    integer :: fout_grdidx_river
-    integer :: fout_grdidx_river_end
-    integer :: fout_grdidx_river_mouth
-    integer :: fout_grdidx_river_inland
-    integer :: fout_grdidx_noriv
-    integer :: fout_grdidx_ocean
-    integer :: fout_rstidx_river
-    integer :: fout_rstidx_river_end
-    integer :: fout_rstidx_river_mouth
-    integer :: fout_rstidx_river_inland
-    integer :: fout_rstidx_noriv
-    integer :: fout_rstidx_ocean
-    integer :: fout_rstbsn
-    integer :: dirout_rstidx_river
-    integer :: dirout_rstidx_river_end
-    integer :: dirout_rstidx_river_mouth
-    integer :: dirout_rstidx_river_inland
-    integer :: dirout_rstidx_noriv
-    integer :: dirout_rstidx_ocean
-    integer :: dirout_rstbsn
-    integer :: dtype_rstidx
-    integer :: endian_rstidx
-    integer :: dtype_rstbsn
-    integer :: endian_rstbsn
-    integer :: catmxy_noriv_coastal
-    integer :: catmxy_noriv_inland
-    integer :: catmxy_ocean
-    integer :: nextxy_river_mouth
-    integer :: nextxy_river_inland
-    integer :: nextxy_ocean
-    integer :: idx_miss
-    integer :: bsn_miss
-    integer :: opt_invalid_grdidx_catmxy
-  end type
-
-  character(clen_var), parameter :: key_dir = 'dir'
-  character(clen_var), parameter :: key_fin_nextxy       = 'fin_nextxy'
-  character(clen_var), parameter :: key_fin_basin        = 'fin_basin'
-  character(clen_var), parameter :: key_fin_catmxy       = 'fin_catmxy'
-  character(clen_var), parameter :: key_fin_list_catmxy  = 'fin_list_catmxy'
-  character(clen_var), parameter :: key_dtype_catmxy     = 'dtype_catmxy'
-  character(clen_var), parameter :: key_endian_catmxy    = 'endian_catmxy'
-  character(clen_var), parameter :: key_fout_grdidx_river        = 'fout_grdidx_river'
-  character(clen_var), parameter :: key_fout_grdidx_river_end    = 'fout_grdidx_river_end'
-  character(clen_var), parameter :: key_fout_grdidx_river_mouth  = 'fout_grdidx_river_mouth'
-  character(clen_var), parameter :: key_fout_grdidx_river_inland = 'fout_grdidx_river_inland'
-  character(clen_var), parameter :: key_fout_grdidx_noriv        = 'fout_grdidx_noriv'
-  character(clen_var), parameter :: key_fout_grdidx_ocean        = 'fout_grdidx_ocean'
-  character(clen_var), parameter :: key_fout_rstidx_river        = 'fout_rstidx_river'
-  character(clen_var), parameter :: key_fout_rstidx_river_end    = 'fout_rstidx_river_end'
-  character(clen_var), parameter :: key_fout_rstidx_river_mouth  = 'fout_rstidx_river_mouth'
-  character(clen_var), parameter :: key_fout_rstidx_river_inland = 'fout_rstidx_river_inland'
-  character(clen_var), parameter :: key_fout_rstidx_noriv        = 'fout_rstidx_noriv'
-  character(clen_var), parameter :: key_fout_rstidx_ocean        = 'fout_rstidx_ocean'
-  character(clen_var), parameter :: key_fout_rstbsn              = 'fout_rstbsn'
-  character(clen_var), parameter :: key_dirout_rstidx_river        = 'dirout_rstidx_river'
-  character(clen_var), parameter :: key_dirout_rstidx_river_end    = 'dirout_rstidx_river_end'
-  character(clen_var), parameter :: key_dirout_rstidx_river_mouth  = 'dirout_rstidx_river_mouth'
-  character(clen_var), parameter :: key_dirout_rstidx_river_inland = 'dirout_rstidx_river_inland'
-  character(clen_var), parameter :: key_dirout_rstidx_noriv        = 'dirout_rstidx_noriv'
-  character(clen_var), parameter :: key_dirout_rstidx_ocean        = 'dirout_rstidx_ocean'
-  character(clen_var), parameter :: key_dirout_rstbsn              = 'dirout_rstbsn'
-  character(clen_var), parameter :: key_dtype_rstidx  = 'dtype_rstidx'
-  character(clen_var), parameter :: key_endian_rstidx = 'endian_rstidx'
-  character(clen_var), parameter :: key_dtype_rstbsn  = 'dtype_rstbsn'
-  character(clen_var), parameter :: key_endian_rstbsn = 'endian_rstbsn'
-  character(clen_var), parameter :: key_catmxy_noriv_coastal = 'catmxy_noriv_coastal'
-  character(clen_var), parameter :: key_catmxy_noriv_inland  = 'catmxy_noriv_inland'
-  character(clen_var), parameter :: key_catmxy_ocean         = 'catmxy_ocean'
-  character(clen_var), parameter :: key_nextxy_river_mouth   = 'nextxy_river_mouth'
-  character(clen_var), parameter :: key_nextxy_river_inland  = 'nextxy_river_inland'
-  character(clen_var), parameter :: key_nextxy_ocean         = 'nextxy_ocean'
-  character(clen_var), parameter :: key_idx_miss             = 'idx_miss'
-  character(clen_var), parameter :: key_bsn_miss             = 'bsn_miss'
-  character(clen_var), parameter :: key_opt_invalid_grdidx_catmxy = 'opt_invalid_grdidx_catmxy'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(file_), pointer :: f
-  character(clen_path), pointer :: path
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_cmf')
   !-------------------------------------------------------------
-  !
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call add(counter%dir)
-    !-----------------------------------------------------------
-    ! Input grid data
-    !-----------------------------------------------------------
-    case( key_fin_nextxy )
-      call add(counter%fin_nextxy)
-
-    case( key_fin_basin )
-      call add(counter%fin_basin)
-    !-----------------------------------------------------------
-    ! catmxy (untiled)
-    !-----------------------------------------------------------
-    case( key_fin_catmxy )
-      call add(counter%fin_catmxy)
-    !-----------------------------------------------------------
-    ! catmxy (tiled)
-    !-----------------------------------------------------------
-    case( key_fin_list_catmxy )
-      call add(counter%fin_list_catmxy)
-
-    case( key_dtype_catmxy )
-      call add(counter%dtype_catmxy)
-
-    case( key_endian_catmxy )
-      call add(counter%endian_catmxy)
-    !-----------------------------------------------------------
-    ! Output grid data
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_river )
-      call add(counter%fout_grdidx_river)
-
-    case( key_fout_grdidx_river_end )
-      call add(counter%fout_grdidx_river_end)
-
-    case( key_fout_grdidx_river_mouth )
-      call add(counter%fout_grdidx_river_mouth)
-
-    case( key_fout_grdidx_river_inland )
-      call add(counter%fout_grdidx_river_inland)
-
-    case( key_fout_grdidx_noriv )
-      call add(counter%fout_grdidx_noriv)
-
-    case( key_fout_grdidx_ocean )
-      call add(counter%fout_grdidx_ocean)
-    !-----------------------------------------------------------
-    ! Output raster data (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_river )
-      call add(counter%fout_rstidx_river)
-
-    case( key_fout_rstidx_river_end )
-      call add(counter%fout_rstidx_river_end)
-
-    case( key_fout_rstidx_river_mouth )
-      call add(counter%fout_rstidx_river_mouth)
-
-    case( key_fout_rstidx_river_inland )
-      call add(counter%fout_rstidx_river_inland)
-
-    case( key_fout_rstidx_noriv )
-      call add(counter%fout_rstidx_noriv)
-
-    case( key_fout_rstidx_ocean )
-      call add(counter%fout_rstidx_ocean)
-
-    case( key_fout_rstbsn )
-      call add(counter%fout_rstbsn)
-    !-----------------------------------------------------------
-    ! Output raster data (tiled)
-    !-----------------------------------------------------------
-    case( key_dirout_rstidx_river )
-      call add(counter%dirout_rstidx_river)
-
-    case( key_dirout_rstidx_river_end )
-      call add(counter%dirout_rstidx_river_end)
-
-    case( key_dirout_rstidx_river_mouth )
-      call add(counter%dirout_rstidx_river_mouth)
-
-    case( key_dirout_rstidx_river_inland )
-      call add(counter%dirout_rstidx_river_inland)
-
-    case( key_dirout_rstidx_noriv )
-      call add(counter%dirout_rstidx_noriv)
-
-    case( key_dirout_rstidx_ocean )
-      call add(counter%dirout_rstidx_ocean)
-
-    case( key_dtype_rstidx )
-      call add(counter%dtype_rstidx)
-
-    case( key_endian_rstidx )
-      call add(counter%endian_rstidx)
-
-    case( key_dirout_rstbsn )
-      call add(counter%dirout_rstbsn)
-
-    case( key_dtype_rstbsn )
-      call add(counter%dtype_rstbsn)
-
-    case( key_endian_rstbsn )
-      call add(counter%endian_rstbsn)
-    !-----------------------------------------------------------
-    ! Special values
-    !-----------------------------------------------------------
-    case( key_catmxy_noriv_coastal )
-      call add(counter%catmxy_noriv_coastal)
-
-    case( key_catmxy_noriv_inland )
-      call add(counter%catmxy_noriv_inland)
-
-    case( key_catmxy_ocean )
-      call add(counter%catmxy_ocean)
-
-    case( key_nextxy_river_mouth )
-      call add(counter%nextxy_river_mouth)
-
-    case( key_nextxy_river_inland )
-      call add(counter%nextxy_river_inland)
-
-    case( key_nextxy_ocean )
-      call add(counter%nextxy_ocean)
-
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-
-    case( key_bsn_miss )
-      call add(counter%bsn_miss)
-    !-----------------------------------------------------------
-    ! Options
-    !-----------------------------------------------------------
-    case( key_opt_invalid_grdidx_catmxy )
-      call add(counter%opt_invalid_grdidx_catmxy)
-    !-----------------------------------------------------------
-    ! ERROR
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  ! Modify values
-  !-------------------------------------------------------------
-  if( .not. cmn%is_tiled )then
-    if( counter%fin_catmxy == 1 )then
-      cmn%is_raster_input = .true.
-    endif
-  else
-    if( counter%fin_list_catmxy == 1 )then
-      cmn%is_raster_input = .true.
-    else
-      call eerr(str(msg_unexpected_condition())//&
-              '\nData is tiled but list of raster data, catmxy, is not specified.')
-    endif
-  endif
-
-  ! Check num. of inputs
-  !-------------------------------------------------------------
-  call check_number_of_inputs()
+  call alloc_keynum(40)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('fin_nextxy'     , 1, 1)
+  call set_keynum('fin_basin'      , 0, 1)
+  call set_keynum('fin_catmxy'     , 0, 1)
+  call set_keynum('fin_list_catmxy', 0, 1)
+  call set_keynum('dtype_catmxy'   , 0, 1)
+  call set_keynum('endian_catmxy'  , 0, 1)
+  call set_keynum('fout_grdidx_river'       , 1, 1)
+  call set_keynum('fout_grdidx_river_end'   , 0, 1)
+  call set_keynum('fout_grdidx_river_mouth' , 0, 1)
+  call set_keynum('fout_grdidx_river_inland', 0, 1)
+  call set_keynum('fout_grdidx_noriv'       , 0, 1)
+  call set_keynum('fout_grdidx_ocean'       , 0, 1)
+  call set_keynum('fout_rstidx_river'       , 0, 1)
+  call set_keynum('fout_rstidx_river_end'   , 0, 1)
+  call set_keynum('fout_rstidx_river_mouth' , 0, 1)
+  call set_keynum('fout_rstidx_river_inland', 0, 1)
+  call set_keynum('fout_rstidx_noriv'       , 0, 1)
+  call set_keynum('fout_rstidx_ocean'       , 0, 1)
+  call set_keynum('fout_rstbsn'             , 0, 1)
+  call set_keynum('dirout_rstidx_river'       , 0, 1)
+  call set_keynum('dirout_rstidx_river_end'   , 0, 1)
+  call set_keynum('dirout_rstidx_river_mouth' , 0, 1)
+  call set_keynum('dirout_rstidx_river_inland', 0, 1)
+  call set_keynum('dirout_rstidx_noriv'       , 0, 1)
+  call set_keynum('dirout_rstidx_ocean'       , 0, 1)
+  call set_keynum('dirout_rstbsn'             , 0, 1)
+  call set_keynum('dtype_rstidx' , 0, 1)
+  call set_keynum('endian_rstidx', 0, 1)
+  call set_keynum('dtype_rstbsn' , 0, 1)
+  call set_keynum('endian_rstbsn', 0, 1)
+  call set_keynum('catmxy_noriv_coastal', 0, 1)
+  call set_keynum('catmxy_noriv_inland' , 0, 1)
+  call set_keynum('catmxy_ocean'        , 0, 1)
+  call set_keynum('nextxy_river_mouth' , 0, 1)
+  call set_keynum('nextxy_river_inland', 0, 1)
+  call set_keynum('nextxy_ocean'       , 0, 1)
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('bsn_miss', 0, 1)
+  call set_keynum('opt_invalid_grdidx_catmxy', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
+  !call echo(code%ent, 'Setting the default values')
 
+  !call echo(code%ext)
   !-------------------------------------------------------------
   ! Read settings
   !-------------------------------------------------------------
@@ -669,222 +423,178 @@ subroutine read_settings_cmf(cmn, cmf)
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    ! Parent directory
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Input grid data
     !-----------------------------------------------------------
-    case( key_fin_nextxy )
-      call read_value(v_file=cmf%f_nextxy, get_length=.false.)
-      cmf%f_nextxy%path = joined(dir, cmf%f_nextxy%path)
-
-    case( key_fin_basin )
-      call read_value(v_file=cmf%f_basin, get_length=.false.)
-      cmf%f_basin%path = joined(dir, cmf%f_basin%path)
+    case( 'fin_nextxy' )
+      call read_value(cmf%f_nextxy, dir)
+    case( 'fin_basin' )
+      call read_value(cmf%f_basin, dir)
     !-----------------------------------------------------------
     ! catmxy (untiled)
     !-----------------------------------------------------------
-    case( key_fin_catmxy )
-      call read_value(v_file=cmf%f_catmxy, get_length=.false.)
-      cmf%f_catmxy%path = joined(dir, cmf%f_catmxy%path)
+    case( 'fin_catmxy' )
+      call read_value(cmf%f_catmxy, dir)
     !-----------------------------------------------------------
     ! catmxy (tiled)
     !-----------------------------------------------------------
-    case( key_fin_list_catmxy )
-      call read_value(v_path=cmf%path_list_catmxy)
-      cmf%path_list_catmxy = joined(dir, cmf%path_list_catmxy)
-
-    case( key_dtype_catmxy )
-      call read_value(v_char=cmf%dtype_catmxy, is_keyword=.true.)
-
-    case( key_endian_catmxy )
-      call read_value(v_char=cmf%endian_catmxy, is_keyword=.true.)
+    case( 'fin_list_catmxy' )
+      call read_value(cmf%path_list_catmxy, is_path=.true., dir=dir)
+    case( 'dtype_catmxy' )
+      call read_value(cmf%dtype_catmxy, is_keyword=.true.)
+    case( 'endian_catmxy' )
+      call read_value(cmf%endian_catmxy, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Output grid data (untiled)
     !-----------------------------------------------------------
-    case( key_fout_grdidx_river )
-      f => cmf%f_grdidx_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_river_end )
-      f => cmf%f_grdidx_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_river_mouth )
-      f => cmf%f_grdidx_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_river_inland )
-      f => cmf%f_grdidx_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_noriv )
-      f => cmf%f_grdidx_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_ocean )
-      f => cmf%f_grdidx_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_grdidx_river' )
+      call read_value(cmf%f_grdidx_river, dir)
+    case( 'fout_grdidx_river_end' )
+      call read_value(cmf%f_grdidx_river_end, dir)
+    case( 'fout_grdidx_river_mouth' )
+      call read_value(cmf%f_grdidx_river_mouth, dir)
+    case( 'fout_grdidx_river_inland' )
+      call read_value(cmf%f_grdidx_river_inland, dir)
+    case( 'fout_grdidx_noriv' )
+      call read_value(cmf%f_grdidx_noriv, dir)
+    case( 'fout_grdidx_ocean' )
+      call read_value(cmf%f_grdidx_ocean, dir)
     !-----------------------------------------------------------
     ! Output raster data (untiled)
     !-----------------------------------------------------------
-    case( key_fout_rstidx_river )
-      f => cmf%f_rstidx_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_river_end )
-      f => cmf%f_rstidx_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_river_mouth )
-      f => cmf%f_rstidx_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_river_inland )
-      f => cmf%f_rstidx_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_noriv )
-      f => cmf%f_rstidx_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_ocean )
-      f => cmf%f_rstidx_ocean
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstbsn )
-      f => cmf%f_rstbsn
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_rstidx_river' )
+      call read_value(cmf%f_rstidx_river, dir)
+    case( 'fout_rstidx_river_end' )
+      call read_value(cmf%f_rstidx_river_end, dir)
+    case( 'fout_rstidx_river_mouth' )
+      call read_value(cmf%f_rstidx_river_mouth, dir)
+    case( 'fout_rstidx_river_inland' )
+      call read_value(cmf%f_rstidx_river_inland, dir)
+    case( 'fout_rstidx_noriv' )
+      call read_value(cmf%f_rstidx_noriv, dir)
+    case( 'fout_rstidx_ocean' )
+      call read_value(cmf%f_rstidx_ocean, dir)
+    case( 'fout_rstbsn' )
+      call read_value(cmf%f_rstbsn, dir)
     !-----------------------------------------------------------
     ! Output raster data (tiled)
     !-----------------------------------------------------------
-    case( key_dirout_rstidx_river )
-      path => cmf%dir_rstidx_river
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dirout_rstidx_river' )
+      call read_value(cmf%dir_rstidx_river, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_river_end' )
+      call read_value(cmf%dir_rstidx_river_end, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_river_mouth' )
+      call read_value(cmf%dir_rstidx_river_mouth, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_river_inland' )
+      call read_value(cmf%dir_rstidx_river_inland, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_noriv' )
+      call read_value(cmf%dir_rstidx_noriv, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_ocean' )
+      call read_value(cmf%dir_rstidx_ocean, is_path=.true., dir=dir)
 
-    case( key_dirout_rstidx_river_end )
-      path => cmf%dir_rstidx_river_end
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dtype_rstidx' )
+      call read_value(cmf%dtype_rstidx, is_keyword=.true.)
 
-    case( key_dirout_rstidx_river_mouth )
-      path => cmf%dir_rstidx_river_mouth
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'endian_rstidx' )
+      call read_value(cmf%endian_rstidx, is_keyword=.true.)
 
-    case( key_dirout_rstidx_river_inland )
-      path => cmf%dir_rstidx_river_inland
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dirout_rstbsn' )
+      call read_value(cmf%dir_rstbsn, is_path=.true., dir=dir)
 
-    case( key_dirout_rstidx_noriv )
-      path => cmf%dir_rstidx_noriv
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dtype_rstbsn' )
+      call read_value(cmf%dtype_rstbsn, is_keyword=.true.)
 
-    case( key_dirout_rstidx_ocean )
-      path => cmf%dir_rstidx_ocean
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dtype_rstidx )
-      call read_value(v_char=cmf%dtype_rstidx, is_keyword=.true.)
-
-    case( key_endian_rstidx )
-      call read_value(v_char=cmf%endian_rstidx, is_keyword=.true.)
-
-    case( key_dirout_rstbsn )
-      path => cmf%dir_rstbsn
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dtype_rstbsn )
-      call read_value(v_char=cmf%dtype_rstbsn, is_keyword=.true.)
-
-    case( key_endian_rstbsn )
-      call read_value(v_char=cmf%endian_rstbsn, is_keyword=.true.)
+    case( 'endian_rstbsn' )
+      call read_value(cmf%endian_rstbsn, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Special values
     !-----------------------------------------------------------
-    case( key_catmxy_noriv_coastal )
-      call read_value(v_int8=cmf%catmxy_noriv_coastal)
+    case( 'catmxy_noriv_coastal' )
+      call read_value(cmf%catmxy_noriv_coastal)
+    case( 'catmxy_noriv_inland' )
+      call read_value(cmf%catmxy_noriv_inland)
+    case( 'catmxy_ocean' )
+      call read_value(cmf%catmxy_ocean)
 
-    case( key_catmxy_noriv_inland )
-      call read_value(v_int8=cmf%catmxy_noriv_inland)
+    case( 'nextxy_river_mouth' )
+      call read_value(cmf%nextxy_river_mouth)
+    case( 'nextxy_river_inland' )
+      call read_value(cmf%nextxy_river_inland)
+    case( 'nextxy_ocean' )
+      call read_value(cmf%nextxy_ocean)
 
-    case( key_catmxy_ocean )
-      call read_value(v_int8=cmf%catmxy_ocean)
-
-    case( key_nextxy_river_mouth )
-      call read_value(v_int8=cmf%nextxy_river_mouth)
-
-    case( key_nextxy_river_inland )
-      call read_value(v_int8=cmf%nextxy_river_inland)
-
-    case( key_nextxy_ocean )
-      call read_value(v_int8=cmf%nextxy_ocean)
-
-    case( key_idx_miss )
-      call read_value(v_int8=cmf%idx_miss)
-
-    case( key_bsn_miss )
-      call read_value(v_int8=cmf%bsn_miss)
+    case( 'idx_miss' )
+      call read_value(cmf%idx_miss)
+    case( 'bsn_miss' )
+      call read_value(cmf%bsn_miss)
     !-----------------------------------------------------------
-    ! Options
-    !-----------------------------------------------------------
-    case( key_opt_invalid_grdidx_catmxy )
-      call read_value(v_char=cmf%opt_invalid_grdidx_catmxy)
+    ! Option
+    case( 'opt_invalid_grdidx_catmxy' )
+      call read_value(cmf%opt_invalid_grdidx_catmxy, is_keyword=.true.)
     !-----------------------------------------------------------
     ! ERROR
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
   ! Check values
   !-------------------------------------------------------------
+  call echo(code%ent, 'Checking the values')
+
   selectcase( cmf%opt_invalid_grdidx_catmxy )
-  case( opt_invalid_grdidx_catmxy_allow_all, &
-        opt_invalid_grdidx_catmxy_allow_end, &
-        opt_invalid_grdidx_catmxy_allow_nothing )
+  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL, &
+        OPT_INVALID_GRDIDX_CATMXY_ALLOW_END, &
+        OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING )
     continue
   case default
     call eerr(str(msg_invalid_value())//&
-            '\nOnly the folowing values are allowed for the key "'//&
-              str(key_opt_invalid_grdidx_catmxy)//'":'//&
-            '\n  '//str(opt_invalid_grdidx_catmxy_allow_all)//&
-            '\n  '//str(opt_invalid_grdidx_catmxy_allow_end)//&
-            '\n  '//str(opt_invalid_grdidx_catmxy_allow_nothing))
+            '\nOnly the folowing values are allowed for the key '//&
+              '"opt_invalid_grdidx_catmxy":'//&
+            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL)//&
+            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_END)//&
+            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING))
   endselect
 
-  ! Modify values
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
+
+  if( .not. cmn%is_tiled )then
+    if( keynum('fin_catmxy') == 1 )then
+      cmn%is_raster_input = .true.
+    endif
+  else
+    if( keynum('fin_list_catmxy') == 1 )then
+      cmn%is_raster_input = .true.
+    else
+      call eerr(str(msg_unexpected_condition())//&
+              '\nData are tiled but no input of the list of raster data catmxy, '//&
+                'which is given by "fin_list_catmxy".')
+    endif
+  endif
+  print*, cmn%is_raster_input
+
   if( cmn%is_tiled )then
     cmf%dir_catmxy = dirname(cmf%path_list_catmxy)
   endif
@@ -922,877 +632,452 @@ subroutine read_settings_cmf(cmn, cmf)
 
   call echo(code%ext)
   !-------------------------------------------------------------
+  ! Free the external module variables
+  !-------------------------------------------------------------
+  call free_keynum()
+  !-------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  counter%dir = 0
-  counter%fin_nextxy = 0
-  counter%fin_basin  = 0
-  counter%fin_catmxy = 0
-  counter%fin_list_catmxy = 0
-  counter%dtype_catmxy  = 0
-  counter%endian_catmxy = 0
-  counter%fout_grdidx_river        = 0
-  counter%fout_grdidx_river_end    = 0
-  counter%fout_grdidx_river_mouth  = 0
-  counter%fout_grdidx_river_inland = 0
-  counter%fout_grdidx_noriv        = 0
-  counter%fout_grdidx_ocean        = 0
-  counter%fout_rstidx_river        = 0
-  counter%fout_rstidx_river_end    = 0
-  counter%fout_rstidx_river_mouth  = 0
-  counter%fout_rstidx_river_inland = 0
-  counter%fout_rstidx_noriv        = 0
-  counter%fout_rstidx_ocean        = 0
-  counter%fout_rstbsn              = 0
-  counter%dirout_rstidx_river        = 0
-  counter%dirout_rstidx_river_end    = 0
-  counter%dirout_rstidx_river_mouth  = 0
-  counter%dirout_rstidx_river_inland = 0
-  counter%dirout_rstidx_noriv        = 0
-  counter%dirout_rstidx_ocean        = 0
-  counter%dtype_rstidx  = 0
-  counter%endian_rstidx = 0
-  counter%dirout_rstbsn = 0
-  counter%dtype_rstbsn  = 0
-  counter%endian_rstbsn = 0
-  counter%catmxy_noriv_coastal = 0
-  counter%catmxy_noriv_inland  = 0
-  counter%catmxy_ocean         = 0
-  counter%nextxy_river_mouth   = 0
-  counter%nextxy_river_inland  = 0
-  counter%nextxy_ocean         = 0
-  counter%idx_miss             = 0
-  counter%bsn_miss             = 0
-  counter%opt_invalid_grdidx_catmxy = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
   !--------------------------------------------------------------
-  ! Individual
+  ! Files or directories activated depending on whether or not 
+  ! data are tiled
   !--------------------------------------------------------------
-  call check_num_of_key(counter%fin_nextxy, key_fin_nextxy, 1, 1)
-  call check_num_of_key(counter%fin_basin , key_fin_basin , 0, 1)
-
-  call check_num_of_key(counter%fout_grdidx_river       , key_fout_grdidx_river       , 1, 1)
-  call check_num_of_key(counter%fout_grdidx_river_end   , key_fout_grdidx_river_end   , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_river_mouth , key_fout_grdidx_river_mouth , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_river_inland, key_fout_grdidx_river_inland, 0, 1)
-  call check_num_of_key(counter%fout_grdidx_noriv       , key_fout_grdidx_noriv       , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_ocean       , key_fout_grdidx_ocean       , 0, 1)
-
+  ! Case: Not tiled
   if( .not. cmn%is_tiled )then
-    call check_num_of_key(counter%fin_catmxy     , key_fin_catmxy     , 0, 1)
-    call check_num_of_key(counter%fin_list_catmxy, key_fin_list_catmxy, 0, 0)
-    call check_num_of_key(counter%dtype_catmxy   , key_dtype_catmxy   , 0, 0)
-    call check_num_of_key(counter%endian_catmxy  , key_endian_catmxy  , 0, 0)
+    if( keynum('fin_catmxy') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fin_catmxy" must be given if not tiled.')
+    endif
+    if( keynum('fin_list_catmxy') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fin_list_catmxy" is used for tiled data.')
+    elseif( keynum('dtype_catmxy') == 1 .or. keynum('endian_catmxy') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dtype_catmxy" and "endian_catmxy" are used for tiled data'//&
+               ' with "fin_list_catmxy".')
+    endif
 
-    call check_num_of_key(counter%fout_rstidx_river       , key_fout_rstidx_river       , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_river_end   , key_fout_rstidx_river_end   , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_river_mouth , key_fout_rstidx_river_mouth , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_river_inland, key_fout_rstidx_river_inland, 0, 1)
-    call check_num_of_key(counter%fout_rstidx_noriv       , key_fout_rstidx_noriv       , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_ocean       , key_fout_rstidx_ocean       , 0, 1)
+    if( keynum('dirout_rstidx_river'       ) == 1 .or. &
+        keynum('dirout_rstidx_river_end'   ) == 1 .or. &
+        keynum('dirout_rstidx_river_mouth' ) == 1 .or. &
+        keynum('dirout_rstidx_river_inland') == 1 .or. &
+        keynum('dirout_rstidx_noriv'       ) == 1 .or. &
+        keynum('dirout_rstidx_ocean'       ) == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dirout_rstidx_*" is used for tiled data'//&
+                ' (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    elseif( keynum('dtype_rstidx') == 1 .or. keynum('endian_rstidx') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dtype_rstidx" and "endian_rstidx" are used for tiled data'//&
+                ' with "dirout_rstidx_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    endif
 
-    call check_num_of_key(counter%fout_rstbsn, key_fout_rstbsn, 0, 1)
-
-    call check_num_of_key(counter%dirout_rstidx_river       , key_dirout_rstidx_river       , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_river_end   , key_dirout_rstidx_river_end   , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_river_mouth , key_dirout_rstidx_river_mouth , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_river_inland, key_dirout_rstidx_river_inland, 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_noriv       , key_dirout_rstidx_noriv       , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_ocean       , key_dirout_rstidx_ocean       , 0, 0)
-    call check_num_of_key(counter%dtype_rstidx, key_dtype_rstidx, 0, 0)
-    call check_num_of_key(counter%endian_rstidx, key_endian_rstidx, 0, 0)
-
-    call check_num_of_key(counter%dirout_rstbsn, key_dirout_rstbsn, 0, 0)
-    call check_num_of_key(counter%dtype_rstbsn , key_dtype_rstbsn, 0, 0)
-    call check_num_of_key(counter%endian_rstbsn, key_endian_rstbsn, 0, 0)
+    if( keynum('dirout_rstbsn') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+               '\n"dirout_rstbsn" is used for tiled data.')
+    elseif( keynum('dtype_rstbsn') == 1 .or. keynum('endian_rstbsn') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dtype_rstbsn" and "endian_rstbsn" are used for tiled data'//&
+                ' with "dirout_rstbsn_*".')
+    endif
+  !-------------------------------------------------------------
+  ! Case: Tiled
   else
-    call check_num_of_key(counter%fin_catmxy     , key_fin_catmxy     , 0, 0)
-    call check_num_of_key(counter%fin_list_catmxy, key_fin_list_catmxy, 1, 1)
-    call check_num_of_key(counter%dtype_catmxy   , key_dtype_catmxy   , 0, 1)
-    call check_num_of_key(counter%endian_catmxy  , key_endian_catmxy  , 0, 1)
+    if( keynum('fin_list_catmxy') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fin_list_catmxy" must be given if tiled.')
+    endif
+    if( keynum('fin_catmxy') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fin_catmxy" is used for untiled data.')
+    endif
 
-    call check_num_of_key(counter%fout_rstidx_river       , key_fout_rstidx_river       , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_river_end   , key_fout_rstidx_river_end   , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_river_mouth , key_fout_rstidx_river_mouth , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_river_inland, key_fout_rstidx_river_inland, 0, 0)
-    call check_num_of_key(counter%fout_rstidx_noriv       , key_fout_rstidx_noriv       , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_ocean       , key_fout_rstidx_ocean       , 0, 0)
+    if( keynum('fout_rstidx_river'       ) == 1 .or. &
+        keynum('fout_rstidx_river_end'   ) == 1 .or. &
+        keynum('fout_rstidx_river_mouth' ) == 1 .or. &
+        keynum('fout_rstidx_river_inland') == 1 .or. &
+        keynum('fout_rstidx_noriv'       ) == 1 .or. &
+        keynum('fout_rstidx_ocean'       ) == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fout_rstidx_*" is used for untiled data'//&
+                ' (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    endif
 
-    call check_num_of_key(counter%fout_rstbsn, key_fout_rstbsn, 0, 0)
-
-    call check_num_of_key(counter%dirout_rstidx_river       , key_dirout_rstidx_river       , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_river_end   , key_dirout_rstidx_river_end   , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_river_mouth , key_dirout_rstidx_river_mouth , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_river_inland, key_dirout_rstidx_river_inland, 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_noriv       , key_dirout_rstidx_noriv       , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_ocean       , key_dirout_rstidx_ocean       , 0, 1)
-    call check_num_of_key(counter%dtype_rstidx, key_dtype_rstidx, 0, 1)
-    call check_num_of_key(counter%endian_rstidx, key_endian_rstidx, 0, 1)
-
-    call check_num_of_key(counter%dirout_rstbsn, key_dirout_rstbsn, 0, 1)
-    call check_num_of_key(counter%dtype_rstbsn , key_dtype_rstbsn , 0, 1)
-    call check_num_of_key(counter%endian_rstbsn, key_endian_rstbsn, 0, 1)
-  endif
-
-  call check_num_of_key(counter%catmxy_noriv_coastal, key_catmxy_noriv_coastal, 0, 1)
-  call check_num_of_key(counter%catmxy_noriv_inland , key_catmxy_noriv_inland , 0, 1)
-  call check_num_of_key(counter%catmxy_ocean        , key_catmxy_ocean        , 0, 1)
-  call check_num_of_key(counter%nextxy_river_mouth  , key_nextxy_river_mouth  , 0, 1)
-  call check_num_of_key(counter%nextxy_river_inland , key_nextxy_river_inland , 0, 1)
-  call check_num_of_key(counter%nextxy_ocean        , key_nextxy_ocean        , 0, 1)
-  call check_num_of_key(counter%idx_miss            , key_idx_miss            , 0, 1)
-  call check_num_of_key(counter%bsn_miss            , key_bsn_miss            , 0, 1)
-
-  call check_num_of_key(counter%opt_invalid_grdidx_catmxy, key_opt_invalid_grdidx_catmxy, 0, 1)
-  !--------------------------------------------------------------
-  ! Relations
-  !--------------------------------------------------------------
-  if( counter%fout_grdidx_river == 0 .and. &
-      (counter%fout_grdidx_river_end    == 1 .or. &
-       counter%fout_grdidx_river_mouth  == 1 .or. &
-       counter%fout_grdidx_river_inland == 1) )then
-    call eerr('"'//str(key_fout_grdidx_river)//'" must be specified when any of "'//&
-              str(key_fout_grdidx_river_end)//'", "'//&
-              str(key_fout_grdidx_river_mouth)//'" or "'//&
-              str(key_fout_grdidx_river_inland)//'" is specified.')
-  endif
-
-  if( counter%fin_basin == 0 )then
-    if( .not. cmn%is_tiled )then
-      if( counter%fout_rstbsn == 1 )then
-        call eerr('"'//str(key_fin_basin)//'" must be specified when "'//&
-                str(key_fout_rstbsn)//'" is specified.')
-      endif
-    else
-      if( counter%dirout_rstbsn == 1 )then
-        call eerr('"'//str(key_fin_basin)//'" must be specified when "'//&
-                  str(key_dirout_rstbsn)//'" is specified.')
-      endif
+    if( keynum('fout_rstbsn') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+               '\n"fout_rstbsn" is used for untiled data.')
     endif
   endif
-
+  !-------------------------------------------------------------
+  ! Input of basin id
+  !-------------------------------------------------------------
   if( .not. cmn%is_tiled )then
-    if( .not. cmn%is_raster_input .and. &
-        (counter%fout_grdidx_noriv == 1 .or. &
-         counter%fout_grdidx_ocean == 1) )then
-      call eerr('"'//str(key_fin_catmxy)//'" must be specified when "'//&
-                str(key_fout_grdidx_noriv)//'" or "'//&
-                str(key_fout_grdidx_ocean)//'" is specified.')
-    endif
-!  else
-!    if( .not. cmn%is_raster_input .and. &
-!        (counter%fout_grdidx_noriv == 1 .or. &
-!         counter%fout_grdidx_ocean == 1) )then
-!      call eerr('"'//str(key_fin_list_catmxy)//'" must be specified when "'//&
-!                str(key_fout_grdidx_noriv)//'" or "'//&
-!                str(key_fout_grdidx_ocean)//'" is specified.')
-!    endif
-  endif
-
-  if( .not. cmn%is_tiled )then
-    if( .not. cmn%is_raster_input .and. &
-        (counter%fout_rstidx_river        == 1 .or. &
-         counter%fout_rstidx_river_end    == 1 .or. &
-         counter%fout_rstidx_river_mouth  == 1 .or. &
-         counter%fout_rstidx_river_inland == 1 .or. &
-         counter%fout_rstidx_noriv        == 1 .or. &
-         counter%fout_rstidx_ocean        == 1 .or. &
-         counter%fout_rstbsn              == 1) )then
-      call eerr('"'//str(key_fin_catmxy)//'" must be specified when '//&
-                'any of following output raster data is specified:'//&
-              '\n  "'//str(key_fout_rstidx_river)//'"'//&
-              '\n  "'//str(key_fout_rstidx_river_end)//'"'//&
-              '\n  "'//str(key_fout_rstidx_river_mouth)//'"'//&
-              '\n  "'//str(key_fout_rstidx_river_inland)//'"'//&
-              '\n  "'//str(key_fout_rstidx_noriv)//'"'//&
-              '\n  "'//str(key_fout_rstidx_ocean)//'"'//&
-              '\n  "'//str(key_fout_rstbsn)//'"')
-    endif
-!  else
-!    if( .not. cmn%is_raster_input .and. &
-!        (counter%dirout_rstidx_river        == 1 .or. &
-!         counter%dirout_rstidx_river_end    == 1 .or. &
-!         counter%dirout_rstidx_river_mouth  == 1 .or. &
-!         counter%dirout_rstidx_river_inland == 1 .or. &
-!         counter%dirout_rstidx_noriv        == 1 .or. &
-!         counter%dirout_rstidx_ocean        == 1 .or. &
-!         counter%dirout_rstbsn              == 1) )then
-!      call eerr('"'//str(key_fin_list_catmxy)//'" must be specified when '//&
-!                'any of following output raster data is specified:'//&
-!              '\n  "'//str(key_dirout_rstidx_river)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_river_end)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_river_mouth)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_river_inland)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_noriv)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_ocean)//'"'//&
-!              '\n  "'//str(key_dirout_rstbsn)//'"')
-!    endif
-  endif
-
-  if( .not. cmn%is_tiled )then
-    if( counter%fout_rstidx_river == 0 .and. &
-        (counter%fout_rstidx_river_end    == 1 .or. &
-         counter%fout_rstidx_river_mouth  == 1 .or. &
-         counter%fout_rstidx_river_inland == 1) )then
-      call eerr('"'//str(key_fout_rstidx_river)//'" must be specified when any of "'//&
-                str(key_fout_rstidx_river_end)//'", "'//&
-                str(key_fout_rstidx_river_mouth)//'" or "'//&
-                str(key_fout_rstidx_river_inland)//'" is specified.')
+    if( keynum('fin_basin') == 0 .and. keynum('fout_rstbsn') == 1 )then
+        call eerr('"fin_basin" must be given when "fout_rstbsn" is given.')
     endif
   else
-    if( counter%dirout_rstidx_river == 0 .and. &
-        (counter%dirout_rstidx_river_end    == 1 .or. &
-         counter%dirout_rstidx_river_mouth  == 1 .or. &
-         counter%dirout_rstidx_river_inland == 1) )then
-      call eerr('"'//str(key_dirout_rstidx_river)//'" must be specified when any of "'//&
-                str(key_dirout_rstidx_river_end)//'", "'//&
-                str(key_dirout_rstidx_river_mouth)//'" or "'//&
-                str(key_dirout_rstidx_river_inland)//'" is specified.')
+    if( keynum('fin_basin') == 0 .and. keynum('dirout_rstbsn') == 1 )then
+      call eerr('"fin_basin" must be given when "dirout_rstbsn" is given.')
+    endif
+  endif
+  !-------------------------------------------------------------
+  ! Input of catmxy
+  !-------------------------------------------------------------
+  ! Case: Not tiled
+  if( .not. cmn%is_tiled )then
+    if( keynum('fin_catmxy') == 0 .and. &
+        (keynum('fout_grdidx_noriv') == 1 .or. &
+         keynum('fout_grdidx_ocean') == 1) )then
+      call eerr('"fin_catmxy" must be given when '//&
+                '"fout_grdidx_noriv" or "fout_grdidx_ocean" is given.')
+    endif
+
+    if( keynum('fin_catmxy') == 0 .and. &
+        (keynum('fout_rstidx_river'       ) == 1 .or. &
+         keynum('fout_rstidx_river_end'   ) == 1 .or. &
+         keynum('fout_rstidx_river_mouth' ) == 1 .or. &
+         keynum('fout_rstidx_river_inland') == 1 .or. &
+         keynum('fout_rstidx_noriv'       ) == 1 .or. &
+         keynum('fout_rstidx_ocean'       ) == 1 .or. &
+         keynum('fout_rstbsn'             ) == 1) )then
+      call eerr('"fin_catmxy" must be given when '//&
+                'any of the following keys for output raster data is given:'//&
+              '\n  "fout_rstidx_river",'//&
+              '\n  "fout_rstidx_river_end",'//&
+              '\n  "fout_rstidx_river_mouth",'//&
+              '\n  "fout_rstidx_river_inland",'//&
+              '\n  "fout_rstidx_noriv",'//&
+              '\n  "fout_rstidx_ocean" or'//&
+              '\n  "fout_rstbsn".')
+    endif
+  !-------------------------------------------------------------
+  ! Case: Tiled
+  else
+    if( keynum('fin_list_catmxy') == 0 .and. &
+        (keynum('fout_grdidx_noriv') == 1 .or. &
+         keynum('fout_grdidx_ocean') == 1) )then
+      call eerr('"fin_list_catmxy" must be given when'//&
+                ' "key_fout_grdidx_noriv" or'//&
+                ' "key_fout_grdidx_ocean" is given.')
+    endif
+
+    if( keynum('fin_list_catmxy') == 0 .and. &
+        (keynum('dirout_rstidx_river'       ) == 1 .or. &
+         keynum('dirout_rstidx_river_end'   ) == 1 .or. &
+         keynum('dirout_rstidx_river_mouth' ) == 1 .or. &
+         keynum('dirout_rstidx_river_inland') == 1 .or. &
+         keynum('dirout_rstidx_noriv'       ) == 1 .or. &
+         keynum('dirout_rstidx_ocean'       ) == 1 .or. &
+         keynum('dirout_rstbsn'             ) == 1) )then
+      call eerr('"fin_list_catmxy" must be given when '//&
+                'any of following output raster data is given:'//&
+              '\n  "dirout_rstidx_river"'//&
+              '\n  "dirout_rstidx_river_end"'//&
+              '\n  "dirout_rstidx_river_mouth"'//&
+              '\n  "dirout_rstidx_river_inland"'//&
+              '\n  "dirout_rstidx_noriv"'//&
+              '\n  "dirout_rstidx_ocean"'//&
+              '\n  "dirout_rstbsn"')
+    endif
+  endif
+  !--------------------------------------------------------------
+  ! Output data
+  !--------------------------------------------------------------
+  if( keynum('fout_grdidx_river') == 0 .and. &
+      (keynum('fout_grdidx_river_end'   ) == 1 .or. &
+       keynum('fout_grdidx_river_mouth' ) == 1 .or. &
+       keynum('fout_grdidx_river_inland') == 1) )then
+    call eerr('"fout_grdidx_river" must be given when any of '//&
+              '"fout_grdidx_river_end", "fout_grdidx_river_mouth" or '//&
+              '"fout_grdidx_river_inland" is given.')
+  endif
+
+  if( .not. cmn%is_tiled )then
+    if( keynum('fout_rstidx_river') == 0 .and. &
+        (keynum('fout_rstidx_river_end'   ) == 1 .or. &
+         keynum('fout_rstidx_river_mouth' ) == 1 .or. &
+         keynum('fout_rstidx_river_inland') == 1) )then
+      call eerr('"fout_rstidx_river" must be given when any of '//&
+                '"fout_rstidx_river_end", "fout_rstidx_river_mouth" or '//&
+                '"fout_rstidx_river_inland" is given.')
+    endif
+  else
+    if( keynum('dirout_rstidx_river') == 0 .and. &
+        (keynum('dirout_rstidx_river_end'   ) == 1 .or. &
+         keynum('dirout_rstidx_river_mouth' ) == 1 .or. &
+         keynum('dirout_rstidx_river_inland') == 1) )then
+      call eerr('"dirout_rstidx_river" must be given when any of '//&
+                '"dirout_rstidx_river_end", "dirout_rstidx_river_mouth" or '//&
+                '"dirout_rstidx_river_inland" is given.')
     endif
   endif
 
-  if( counter%fout_rstidx_ocean == 1 .and. &
-      counter%fout_grdidx_ocean == 0 )then
-    call eerr('"'//str(key_fout_grdidx_ocean)//'" must be specified when "'//&
-              str(key_fout_rstidx_ocean)//'" is specified.')
+  if( keynum('fout_rstidx_ocean') == 1 .and. &
+      keynum('fout_grdidx_ocean') == 0 )then
+    call eerr('"fout_grdidx_ocean" must be given when '//&
+              '"fout_rstidx_ocean" is given.')
   endif
   !--------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_cmf
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_mat(cmn, mat)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
   implicit none
   type(cmn_), intent(in)            :: cmn
   type(mat_), intent(inout), target :: mat
 
-  type counter_
-    integer :: dir
-    integer :: fout_grdmsk_river
-    integer :: fout_grdmsk_river_end
-    integer :: fout_grdmsk_river_mouth
-    integer :: fout_grdmsk_river_inland
-    integer :: fout_grdmsk_noriv
-    integer :: fout_grdidx_river
-    integer :: fout_grdidx_river_end
-    integer :: fout_grdidx_river_mouth
-    integer :: fout_grdidx_river_inland
-    integer :: fout_grdidx_noriv
-    integer :: fout_grdidx_bnd_river
-    integer :: fout_grdidx_bnd_river_end
-    integer :: fout_grdidx_bnd_river_mouth
-    integer :: fout_grdidx_bnd_river_inland
-    integer :: fout_grdidx_bnd_noriv
-    integer :: fout_grdidx_mkbnd_river
-    integer :: fout_grdidx_mkbnd_noriv
-    integer :: fout_rstidx_river
-    integer :: fout_rstidx_river_end
-    integer :: fout_rstidx_river_mouth
-    integer :: fout_rstidx_river_inland
-    integer :: fout_rstidx_noriv
-    integer :: fout_rstidx_bnd_river
-    integer :: fout_rstidx_bnd_river_end
-    integer :: fout_rstidx_bnd_river_mouth
-    integer :: fout_rstidx_bnd_river_inland
-    integer :: fout_rstidx_bnd_noriv
-    integer :: fout_rstidx_mkbnd_river
-    integer :: fout_rstidx_mkbnd_noriv
-    integer :: dirout_rstidx_river
-    integer :: dirout_rstidx_river_end
-    integer :: dirout_rstidx_river_mouth
-    integer :: dirout_rstidx_river_inland
-    integer :: dirout_rstidx_noriv
-    integer :: dtype_rstidx
-    integer :: endian_rstidx
-    integer :: dirout_rstidx_bnd_river
-    integer :: dirout_rstidx_bnd_river_end
-    integer :: dirout_rstidx_bnd_river_mouth
-    integer :: dirout_rstidx_bnd_river_inland
-    integer :: dirout_rstidx_bnd_noriv
-    integer :: dtype_rstidx_bnd
-    integer :: endian_rstidx_bnd
-    integer :: dirout_rstidx_mkbnd_river
-    integer :: dirout_rstidx_mkbnd_noriv
-    integer :: dtype_rstidx_mkbnd
-    integer :: endian_rstidx_mkbnd
-    integer :: idx_miss
-  end type
-
-  character(clen_var), parameter :: key_dir = 'dir'
-
-  ! cmf (used only for error messages)
-  character(clen_var), parameter :: key_fin_catmxy       = 'fin_catmxy'
-  character(clen_var), parameter :: key_fin_list_catmxy  = 'fin_list_catmxy'
-
-  ! grdmsk
-  character(clen_var), parameter :: key_fout_grdmsk_river        = 'fout_grdmsk_river'
-  character(clen_var), parameter :: key_fout_grdmsk_river_end    = 'fout_grdmsk_river_end'
-  character(clen_var), parameter :: key_fout_grdmsk_river_mouth  = 'fout_grdmsk_river_mouth'
-  character(clen_var), parameter :: key_fout_grdmsk_river_inland = 'fout_grdmsk_river_inland'
-  character(clen_var), parameter :: key_fout_grdmsk_noriv        = 'fout_grdmsk_noriv'
-
-  ! grdidx
-  character(clen_var), parameter :: key_fout_grdidx_river            = 'fout_grdidx_river'
-  character(clen_var), parameter :: key_fout_grdidx_river_end        = 'fout_grdidx_river_end'
-  character(clen_var), parameter :: key_fout_grdidx_river_mouth      = 'fout_grdidx_river_mouth'
-  character(clen_var), parameter :: key_fout_grdidx_river_inland     = 'fout_grdidx_river_inland'
-  character(clen_var), parameter :: key_fout_grdidx_noriv            = 'fout_grdidx_noriv'
-
-  ! grdidx_bnd
-  character(clen_var), parameter :: key_fout_grdidx_bnd_river        = 'fout_grdidx_bnd_river'
-  character(clen_var), parameter :: key_fout_grdidx_bnd_river_end    = 'fout_grdidx_bnd_river_end'
-  character(clen_var), parameter :: key_fout_grdidx_bnd_river_mouth  = 'fout_grdidx_bnd_river_mouth'
-  character(clen_var), parameter :: key_fout_grdidx_bnd_river_inland = 'fout_grdidx_bnd_river_inland'
-  character(clen_var), parameter :: key_fout_grdidx_bnd_noriv        = 'fout_grdidx_bnd_noriv'
-
-  ! grdidx_bnd
-  character(clen_var), parameter :: key_fout_grdidx_mkbnd_river = 'fout_grdidx_mkbnd_river'
-  character(clen_var), parameter :: key_fout_grdidx_mkbnd_noriv = 'fout_grdidx_mkbnd_noriv'
-
-  ! rstidx (untiled)
-  character(clen_var), parameter :: key_fout_rstidx_river        = 'fout_rstidx_river'
-  character(clen_var), parameter :: key_fout_rstidx_river_end    = 'fout_rstidx_river_end'
-  character(clen_var), parameter :: key_fout_rstidx_river_mouth  = 'fout_rstidx_river_mouth'
-  character(clen_var), parameter :: key_fout_rstidx_river_inland = 'fout_rstidx_river_inland'
-  character(clen_var), parameter :: key_fout_rstidx_noriv        = 'fout_rstidx_noriv'
-
-  ! rstidx_bnd (untiled)
-  character(clen_var), parameter :: key_fout_rstidx_bnd_river        = 'fout_rstidx_bnd_river'
-  character(clen_var), parameter :: key_fout_rstidx_bnd_river_end    = 'fout_rstidx_bnd_river_end'
-  character(clen_var), parameter :: key_fout_rstidx_bnd_river_mouth  = 'fout_rstidx_bnd_river_mouth'
-  character(clen_var), parameter :: key_fout_rstidx_bnd_river_inland = 'fout_rstidx_bnd_river_inland'
-  character(clen_var), parameter :: key_fout_rstidx_bnd_noriv        = 'fout_rstidx_bnd_noriv'
-
-  ! rstidx_bnd (untiled)
-  character(clen_var), parameter :: key_fout_rstidx_mkbnd_river = 'fout_rstidx_mkbnd_river'
-  character(clen_var), parameter :: key_fout_rstidx_mkbnd_noriv = 'fout_rstidx_mkbnd_noriv'
-
-  ! rstidx (tiled)
-  character(clen_var), parameter :: key_dirout_rstidx_river        = 'dirout_rstidx_river'
-  character(clen_var), parameter :: key_dirout_rstidx_river_end    = 'dirout_rstidx_river_end'
-  character(clen_var), parameter :: key_dirout_rstidx_river_mouth  = 'dirout_rstidx_river_mouth'
-  character(clen_var), parameter :: key_dirout_rstidx_river_inland = 'dirout_rstidx_river_inland'
-  character(clen_var), parameter :: key_dirout_rstidx_noriv        = 'dirout_rstidx_noriv'
-  character(clen_var), parameter :: key_dtype_rstidx  = 'dtype_rstidx'
-  character(clen_var), parameter :: key_endian_rstidx = 'endian_rstidx'
-
-  ! rstidx_bnd (tiled)
-  character(clen_var), parameter :: key_dirout_rstidx_bnd_river        = 'dirout_rstidx_bnd_river'
-  character(clen_var), parameter :: key_dirout_rstidx_bnd_river_end    = 'dirout_rstidx_bnd_river_end'
-  character(clen_var), parameter :: key_dirout_rstidx_bnd_river_mouth  = 'dirout_rstidx_bnd_river_mouth'
-  character(clen_var), parameter :: key_dirout_rstidx_bnd_river_inland = 'dirout_rstidx_bnd_river_inland'
-  character(clen_var), parameter :: key_dirout_rstidx_bnd_noriv        = 'dirout_rstidx_bnd_noriv'
-  character(clen_var), parameter :: key_dtype_rstidx_bnd  = 'dtype_rstidx_bnd'
-  character(clen_var), parameter :: key_endian_rstidx_bnd = 'endian_rstidx_bnd'
-
-  ! rstidx_mkbnd (tiled)
-  character(clen_var), parameter :: key_dirout_rstidx_mkbnd_river = 'dirout_rstidx_mkbnd_river'
-  character(clen_var), parameter :: key_dirout_rstidx_mkbnd_noriv = 'dirout_rstidx_mkbnd_noriv'
-  character(clen_var), parameter :: key_dtype_rstidx_mkbnd  = 'dtype_rstidx_mkbnd'
-  character(clen_var), parameter :: key_endian_rstidx_mkbnd = 'endian_rstidx_mkbnd'
-
-  ! missing value
-  character(clen_var), parameter :: key_idx_miss = 'idx_miss'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-  !-------------------------------------------------------------
-  character(clen_path) :: dir
-
-  type(file_), pointer :: f
-  character(clen_path), pointer :: path
+  character(CLEN_PATH) :: dir
 
   call echo(code%bgn, 'read_settings_mat')
   !-------------------------------------------------------------
-  !
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call add(counter%dir)
-    !-----------------------------------------------------------
-    ! grdmsk
-    !-----------------------------------------------------------
-    case( key_fout_grdmsk_river )
-      call add(counter%fout_grdmsk_river)
-
-    case( key_fout_grdmsk_river_end )
-      call add(counter%fout_grdmsk_river_end)
-
-    case( key_fout_grdmsk_river_mouth )
-      call add(counter%fout_grdmsk_river_mouth)
-
-    case( key_fout_grdmsk_river_inland )
-      call add(counter%fout_grdmsk_river_inland)
-
-    case( key_fout_grdmsk_noriv )
-      call add(counter%fout_grdmsk_noriv)
-    !-----------------------------------------------------------
-    ! grdidx
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_river )
-      call add(counter%fout_grdidx_river)
-
-    case( key_fout_grdidx_river_end )
-      call add(counter%fout_grdidx_river_end)
-
-    case( key_fout_grdidx_river_mouth )
-      call add(counter%fout_grdidx_river_mouth)
-
-    case( key_fout_grdidx_river_inland )
-      call add(counter%fout_grdidx_river_inland)
-
-    case( key_fout_grdidx_noriv )
-      call add(counter%fout_grdidx_noriv)
-    !-----------------------------------------------------------
-    ! grdidx_bnd
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_bnd_river )
-      call add(counter%fout_grdidx_bnd_river)
-
-    case( key_fout_grdidx_bnd_river_end )
-      call add(counter%fout_grdidx_bnd_river_end)
-
-    case( key_fout_grdidx_bnd_river_mouth )
-      call add(counter%fout_grdidx_bnd_river_mouth)
-
-    case( key_fout_grdidx_bnd_river_inland )
-      call add(counter%fout_grdidx_bnd_river_inland)
-
-    case( key_fout_grdidx_bnd_noriv )
-      call add(counter%fout_grdidx_bnd_noriv)
-    !-----------------------------------------------------------
-    ! grdidx_bnd
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_mkbnd_river )
-      call add(counter%fout_grdidx_mkbnd_river)
-
-    case( key_fout_grdidx_mkbnd_noriv )
-      call add(counter%fout_grdidx_mkbnd_noriv)
-    !-----------------------------------------------------------
-    ! rstidx (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_river )
-      call add(counter%fout_rstidx_river)
-
-    case( key_fout_rstidx_river_end )
-      call add(counter%fout_rstidx_river_end)
-
-    case( key_fout_rstidx_river_mouth )
-      call add(counter%fout_rstidx_river_mouth)
-
-    case( key_fout_rstidx_river_inland )
-      call add(counter%fout_rstidx_river_inland)
-
-    case( key_fout_rstidx_noriv )
-      call add(counter%fout_rstidx_noriv)
-    !-----------------------------------------------------------
-    ! rstidx_bnd (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_bnd_river )
-      call add(counter%fout_rstidx_bnd_river)
-
-    case( key_fout_rstidx_bnd_river_end )
-      call add(counter%fout_rstidx_bnd_river_end)
-
-    case( key_fout_rstidx_bnd_river_mouth )
-      call add(counter%fout_rstidx_bnd_river_mouth)
-
-    case( key_fout_rstidx_bnd_river_inland )
-      call add(counter%fout_rstidx_bnd_river_inland)
-
-    case( key_fout_rstidx_bnd_noriv )
-      call add(counter%fout_rstidx_bnd_noriv)
-    !-----------------------------------------------------------
-    ! rstidx_mkbnd (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_mkbnd_river )
-      call add(counter%fout_rstidx_mkbnd_river)
-
-    case( key_fout_rstidx_mkbnd_noriv )
-      call add(counter%fout_rstidx_mkbnd_noriv)
-    !-----------------------------------------------------------
-    ! rstidx (tiled)
-    !-----------------------------------------------------------
-    case( key_dirout_rstidx_river )
-      call add(counter%dirout_rstidx_river)
-
-    case( key_dirout_rstidx_river_end )
-      call add(counter%dirout_rstidx_river_end)
-
-    case( key_dirout_rstidx_river_mouth )
-      call add(counter%dirout_rstidx_river_mouth)
-
-    case( key_dirout_rstidx_river_inland )
-      call add(counter%dirout_rstidx_river_inland)
-
-    case( key_dirout_rstidx_noriv )
-      call add(counter%dirout_rstidx_noriv)
-
-    case( key_dtype_rstidx )
-      call add(counter%dtype_rstidx)
-
-    case( key_endian_rstidx )
-      call add(counter%endian_rstidx)
-    !-----------------------------------------------------------
-    ! rstidx_bnd (tiled)
-    !-----------------------------------------------------------
-    case( key_dirout_rstidx_bnd_river )
-      call add(counter%dirout_rstidx_bnd_river)
-
-    case( key_dirout_rstidx_bnd_river_end )
-      call add(counter%dirout_rstidx_bnd_river_end)
-
-    case( key_dirout_rstidx_bnd_river_mouth )
-      call add(counter%dirout_rstidx_bnd_river_mouth)
-
-    case( key_dirout_rstidx_bnd_river_inland )
-      call add(counter%dirout_rstidx_bnd_river_inland)
-
-    case( key_dirout_rstidx_bnd_noriv )
-      call add(counter%dirout_rstidx_bnd_noriv)
-
-    case( key_dtype_rstidx_bnd )
-      call add(counter%dtype_rstidx_bnd)
-
-    case( key_endian_rstidx_bnd )
-      call add(counter%endian_rstidx_bnd)
-    !-----------------------------------------------------------
-    ! rstidx_mkbnd (tiled)
-    !-----------------------------------------------------------
-    case( key_dirout_rstidx_mkbnd_river )
-      call add(counter%dirout_rstidx_mkbnd_river)
-
-    case( key_dirout_rstidx_mkbnd_noriv )
-      call add(counter%dirout_rstidx_mkbnd_noriv)
-
-    case( key_dtype_rstidx_mkbnd )
-      call add(counter%dtype_rstidx_mkbnd)
-
-    case( key_endian_rstidx_mkbnd )
-      call add(counter%endian_rstidx_mkbnd)
-    !-----------------------------------------------------------
-    ! Index
-    !-----------------------------------------------------------
-    case( key_idx_miss )
-      call add(counter%idx_miss)
-    !-----------------------------------------------------------
-    ! ERROR
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  call check_number_of_inputs()
+  call alloc_keynum(49)
+  call set_keynum('dir', 0, -1)
+  call set_keynum('fout_grdmsk_river'       , 0, 1)
+  call set_keynum('fout_grdmsk_river_end'   , 0, 1)
+  call set_keynum('fout_grdmsk_river_mouth' , 0, 1)
+  call set_keynum('fout_grdmsk_river_inland', 0, 1)
+  call set_keynum('fout_grdmsk_noriv'       , 0, 1)
+  call set_keynum('fout_grdidx_river'       , 1, 1)
+  call set_keynum('fout_grdidx_river_end'   , 0, 1)
+  call set_keynum('fout_grdidx_river_mouth' , 0, 1)
+  call set_keynum('fout_grdidx_river_inland', 0, 1)
+  call set_keynum('fout_grdidx_noriv'       , 0, 1)
+  call set_keynum('fout_grdidx_bnd_river'       , 0, 1)
+  call set_keynum('fout_grdidx_bnd_river_end'   , 0, 1)
+  call set_keynum('fout_grdidx_bnd_river_mouth' , 0, 1)
+  call set_keynum('fout_grdidx_bnd_river_inland', 0, 1)
+  call set_keynum('fout_grdidx_bnd_noriv'       , 0, 1)
+  call set_keynum('fout_grdidx_mkbnd_river', 0, 1)
+  call set_keynum('fout_grdidx_mkbnd_noriv', 0, 1)
+  call set_keynum('fout_rstidx_river'       , 0, 1)
+  call set_keynum('fout_rstidx_river_end'   , 0, 1)
+  call set_keynum('fout_rstidx_river_mouth' , 0, 1)
+  call set_keynum('fout_rstidx_river_inland', 0, 1)
+  call set_keynum('fout_rstidx_noriv'       , 0, 1)
+  call set_keynum('fout_rstidx_bnd_river'       , 0, 1)
+  call set_keynum('fout_rstidx_bnd_river_end'   , 0, 1)
+  call set_keynum('fout_rstidx_bnd_river_mouth' , 0, 1)
+  call set_keynum('fout_rstidx_bnd_river_inland', 0, 1)
+  call set_keynum('fout_rstidx_bnd_noriv'       , 0, 1)
+  call set_keynum('fout_rstidx_mkbnd_river', 0, 1)
+  call set_keynum('fout_rstidx_mkbnd_noriv', 0, 1)
+  call set_keynum('dirout_rstidx_river'       , 0, 1)
+  call set_keynum('dirout_rstidx_river_end'   , 0, 1)
+  call set_keynum('dirout_rstidx_river_mouth' , 0, 1)
+  call set_keynum('dirout_rstidx_river_inland', 0, 1)
+  call set_keynum('dirout_rstidx_noriv'       , 0, 1)
+  call set_keynum('dtype_rstidx' , 0, 1)
+  call set_keynum('endian_rstidx', 0, 1)
+  call set_keynum('dirout_rstidx_bnd_river'       , 0, 1)
+  call set_keynum('dirout_rstidx_bnd_river_end'   , 0, 1)
+  call set_keynum('dirout_rstidx_bnd_river_mouth' , 0, 1)
+  call set_keynum('dirout_rstidx_bnd_river_inland', 0, 1)
+  call set_keynum('dirout_rstidx_bnd_noriv'       , 0, 1)
+  call set_keynum('dtype_rstidx_bnd' , 0, 1)
+  call set_keynum('endian_rstidx_bnd', 0, 1)
+  call set_keynum('dirout_rstidx_mkbnd_river', 0, 1)
+  call set_keynum('dirout_rstidx_mkbnd_noriv', 0, 1)
+  call set_keynum('dtype_rstidx_mkbnd' , 0, 1)
+  call set_keynum('endian_rstidx_mkbnd', 0, 1)
+  call set_keynum('idx_miss', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Set default values
+  ! Set the default values
   !-------------------------------------------------------------
+  !call echo(code%ent, 'Setting the default values')
 
+  !call echo(code%ext)
   !-------------------------------------------------------------
-  ! Read settings
+  ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
+  call echo(code%ent, 'Reading the settings')
 
   dir = ''
 
-  call back_to_block_head()
-
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
     !
-    !-----------------------------------------------------------
-    case( key_dir )
-      call read_value(v_path=dir)
+    case( 'dir' )
+      call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! grdmsk
-    !-----------------------------------------------------------
-    case( key_fout_grdmsk_river )
-      f => mat%f_grdmsk_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdmsk_river_end )
-      f => mat%f_grdmsk_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdmsk_river_mouth )
-      f => mat%f_grdmsk_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdmsk_river_inland )
-      f => mat%f_grdmsk_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdmsk_noriv )
-      f => mat%f_grdmsk_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_grdmsk_river' )
+      call read_value(mat%f_grdmsk_river, dir)
+    case( 'fout_grdmsk_river_end' )
+      call read_value(mat%f_grdmsk_river_end, dir)
+    case( 'fout_grdmsk_river_mouth' )
+      call read_value(mat%f_grdmsk_river_mouth, dir)
+    case( 'fout_grdmsk_river_inland' )
+      call read_value(mat%f_grdmsk_river_inland, dir)
+    case( 'fout_grdmsk_noriv' )
+      call read_value(mat%f_grdmsk_noriv, dir)
     !-----------------------------------------------------------
     ! grdidx
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_river )
-      f => mat%f_grdidx_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_river_end )
-      f => mat%f_grdidx_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_river_mouth )
-      f => mat%f_grdidx_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_river_inland )
-      f => mat%f_grdidx_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_noriv )
-      f => mat%f_grdidx_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_grdidx_river' )
+      call read_value(mat%f_grdidx_river, dir)
+    case( 'fout_grdidx_river_end' )
+      call read_value(mat%f_grdidx_river_end, dir)
+    case( 'fout_grdidx_river_mouth' )
+      call read_value(mat%f_grdidx_river_mouth, dir)
+    case( 'fout_grdidx_river_inland' )
+      call read_value(mat%f_grdidx_river_inland, dir)
+    case( 'fout_grdidx_noriv' )
+      call read_value(mat%f_grdidx_noriv, dir)
     !-----------------------------------------------------------
     ! grdidx_bnd
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_bnd_river )
-      f => mat%f_grdidx_bnd_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_bnd_river_end )
-      f => mat%f_grdidx_bnd_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_bnd_river_mouth )
-      f => mat%f_grdidx_bnd_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_bnd_river_inland )
-      f => mat%f_grdidx_bnd_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_bnd_noriv )
-      f => mat%f_grdidx_bnd_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_grdidx_bnd_river' )
+      call read_value(mat%f_grdidx_bnd_river, dir)
+    case( 'fout_grdidx_bnd_river_end' )
+      call read_value(mat%f_grdidx_bnd_river_end, dir)
+    case( 'fout_grdidx_bnd_river_mouth' )
+      call read_value(mat%f_grdidx_bnd_river_mouth, dir)
+    case( 'fout_grdidx_bnd_river_inland' )
+      call read_value(mat%f_grdidx_bnd_river_inland, dir)
+    case( 'fout_grdidx_bnd_noriv' )
+      call read_value(mat%f_grdidx_bnd_noriv, dir)
     !-----------------------------------------------------------
     ! grdidx_bnd
-    !-----------------------------------------------------------
-    case( key_fout_grdidx_mkbnd_river )
-      f => mat%f_grdidx_mkbnd_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_grdidx_mkbnd_noriv )
-      f => mat%f_grdidx_mkbnd_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_grdidx_mkbnd_river' )
+      call read_value(mat%f_grdidx_mkbnd_river, dir)
+    case( 'fout_grdidx_mkbnd_noriv' )
+      call read_value(mat%f_grdidx_mkbnd_noriv, dir)
     !-----------------------------------------------------------
     ! rstidx (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_river )
-      f => mat%f_rstidx_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_river_end )
-      f => mat%f_rstidx_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_river_mouth )
-      f => mat%f_rstidx_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_river_inland )
-      f => mat%f_rstidx_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_noriv )
-      f => mat%f_rstidx_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_rstidx_river' )
+      call read_value(mat%f_rstidx_river, dir)
+    case( 'fout_rstidx_river_end' )
+      call read_value(mat%f_rstidx_river_end, dir)
+    case( 'fout_rstidx_river_mouth' )
+      call read_value(mat%f_rstidx_river_mouth, dir)
+    case( 'fout_rstidx_river_inland' )
+      call read_value(mat%f_rstidx_river_inland, dir)
+    case( 'fout_rstidx_noriv' )
+      call read_value(mat%f_rstidx_noriv, dir)
     !-----------------------------------------------------------
     ! rstidx_bnd (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_bnd_river )
-      f => mat%f_rstidx_bnd_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_bnd_river_end )
-      f => mat%f_rstidx_bnd_river_end
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_bnd_river_mouth )
-      f => mat%f_rstidx_bnd_river_mouth
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_bnd_river_inland )
-      f => mat%f_rstidx_bnd_river_inland
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_bnd_noriv )
-      f => mat%f_rstidx_bnd_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_rstidx_bnd_river' )
+      call read_value(mat%f_rstidx_bnd_river, dir)
+    case( 'fout_rstidx_bnd_river_end' )
+      call read_value(mat%f_rstidx_bnd_river_end, dir)
+    case( 'fout_rstidx_bnd_river_mouth' )
+      call read_value(mat%f_rstidx_bnd_river_mouth, dir)
+    case( 'fout_rstidx_bnd_river_inland' )
+      call read_value(mat%f_rstidx_bnd_river_inland, dir)
+    case( 'fout_rstidx_bnd_noriv' )
+      call read_value(mat%f_rstidx_bnd_noriv, dir)
     !-----------------------------------------------------------
     ! rstidx_mkbnd (untiled)
-    !-----------------------------------------------------------
-    case( key_fout_rstidx_mkbnd_river )
-      f => mat%f_rstidx_mkbnd_river
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
-
-    case( key_fout_rstidx_mkbnd_noriv )
-      f => mat%f_rstidx_mkbnd_noriv
-      call read_value(v_file=f, get_length=.false.)
-      f%path = joined(dir, f%path)
+    case( 'fout_rstidx_mkbnd_river' )
+      call read_value(mat%f_rstidx_mkbnd_river, dir)
+    case( 'fout_rstidx_mkbnd_noriv' )
+      call read_value(mat%f_rstidx_mkbnd_noriv, dir)
     !-----------------------------------------------------------
     ! rstidx (tiled)
-    !-----------------------------------------------------------
-    case( key_dirout_rstidx_river )
-      path => mat%dir_rstidx_river
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dirout_rstidx_river' )
+      call read_value(mat%dir_rstidx_river, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_river_end' )
+      call read_value(mat%dir_rstidx_river_end, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_river_mouth' )
+      call read_value(mat%dir_rstidx_river_mouth, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_river_inland' )
+      call read_value(mat%dir_rstidx_river_inland, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_noriv' )
+      call read_value(mat%dir_rstidx_noriv, is_path=.true., dir=dir)
 
-    case( key_dirout_rstidx_river_end )
-      path => mat%dir_rstidx_river_end
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dirout_rstidx_river_mouth )
-      path => mat%dir_rstidx_river_mouth
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dirout_rstidx_river_inland )
-      path => mat%dir_rstidx_river_inland
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dirout_rstidx_noriv )
-      path => mat%dir_rstidx_noriv
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dtype_rstidx )
-      call read_value(v_char=mat%dtype_rstidx, is_keyword=.true.)
-
-    case( key_endian_rstidx )
-      call read_value(v_char=mat%endian_rstidx, is_keyword=.true.)
+    case( 'dtype_rstidx' )
+      call read_value(mat%dtype_rstidx, is_keyword=.true.)
+    case( 'endian_rstidx' )
+      call read_value(mat%endian_rstidx, is_keyword=.true.)
     !-----------------------------------------------------------
     ! rstidx_bnd (tiled)
-    !-----------------------------------------------------------
-    case( key_dirout_rstidx_bnd_river )
-      path => mat%dir_rstidx_bnd_river
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dirout_rstidx_bnd_river' )
+      call read_value(mat%dir_rstidx_bnd_river, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_bnd_river_end' )
+      call read_value(mat%dir_rstidx_bnd_river_end, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_bnd_river_mouth' )
+      call read_value(mat%dir_rstidx_bnd_river_mouth, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_bnd_river_inland' )
+      call read_value(mat%dir_rstidx_bnd_river_inland, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_bnd_noriv' )
+      call read_value(mat%dir_rstidx_bnd_noriv, is_path=.true., dir=dir)
 
-    case( key_dirout_rstidx_bnd_river_end )
-      path => mat%dir_rstidx_bnd_river_end
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dirout_rstidx_bnd_river_mouth )
-      path => mat%dir_rstidx_bnd_river_mouth
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dirout_rstidx_bnd_river_inland )
-      path => mat%dir_rstidx_bnd_river_inland
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dirout_rstidx_bnd_noriv )
-      path => mat%dir_rstidx_bnd_noriv
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dtype_rstidx_bnd )
-      call read_value(v_char=mat%dtype_rstidx_bnd, is_keyword=.true.)
-
-    case( key_endian_rstidx_bnd )
-      call read_value(v_char=mat%endian_rstidx_bnd, is_keyword=.true.)
+    case( 'dtype_rstidx_bnd' )
+      call read_value(mat%dtype_rstidx_bnd, is_keyword=.true.)
+    case( 'endian_rstidx_bnd' )
+      call read_value(mat%endian_rstidx_bnd, is_keyword=.true.)
     !-----------------------------------------------------------
     ! rstidx_mkbnd (tiled)
     !-----------------------------------------------------------
-    case( key_dirout_rstidx_mkbnd_river )
-      path => mat%dir_rstidx_mkbnd_river
-      call read_value(v_path=path)
-      path = joined(dir, path)
+    case( 'dirout_rstidx_mkbnd_river' )
+      call read_value(mat%dir_rstidx_mkbnd_river, is_path=.true., dir=dir)
+    case( 'dirout_rstidx_mkbnd_noriv' )
+      call read_value(mat%dir_rstidx_mkbnd_noriv, is_path=.true., dir=dir)
 
-    case( key_dirout_rstidx_mkbnd_noriv )
-      path => mat%dir_rstidx_mkbnd_noriv
-      call read_value(v_path=path)
-      path = joined(dir, path)
-
-    case( key_dtype_rstidx_mkbnd )
-      call read_value(v_char=mat%dtype_rstidx_mkbnd, is_keyword=.true.)
-
-    case( key_endian_rstidx_mkbnd )
-      call read_value(v_char=mat%endian_rstidx_mkbnd, is_keyword=.true.)
+    case( 'dtype_rstidx_mkbnd' )
+      call read_value(mat%dtype_rstidx_mkbnd, is_keyword=.true.)
+    case( 'endian_rstidx_mkbnd' )
+      call read_value(mat%endian_rstidx_mkbnd, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Index
-    !-----------------------------------------------------------
-    case( key_idx_miss )
-      call read_value(v_int8=mat%idx_miss)
+    case( 'idx_miss' )
+      call read_value(mat%idx_miss)
     !-----------------------------------------------------------
     ! ERROR
-    !-----------------------------------------------------------
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  ! Modify values
+  call check_keynum()
+  call check_keynum_relations()
+
+  call echo(code%ext)
   !-------------------------------------------------------------
+  ! Set the related values
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting the related values')
 
   !   Status of raster data
   !-------------------------------------------------------------
@@ -1908,458 +1193,256 @@ subroutine read_settings_mat(cmn, mat)
 
   call echo(code%ext)
   !-------------------------------------------------------------
+  ! Free the external module variables
+  !-------------------------------------------------------------
+  call free_keynum()
+  !-------------------------------------------------------------
   call echo(code%ret)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine init_counter()
+subroutine check_keynum_relations()
   implicit none
 
-  counter%dir = 0
-
-  counter%fout_grdmsk_river        = 0
-  counter%fout_grdmsk_river_end    = 0
-  counter%fout_grdmsk_river_mouth  = 0
-  counter%fout_grdmsk_river_inland = 0
-  counter%fout_grdmsk_noriv        = 0
-
-  counter%fout_grdidx_river        = 0
-  counter%fout_grdidx_river_end    = 0
-  counter%fout_grdidx_river_mouth  = 0
-  counter%fout_grdidx_river_inland = 0
-  counter%fout_grdidx_noriv        = 0
-
-  counter%fout_grdidx_bnd_river        = 0
-  counter%fout_grdidx_bnd_river_end    = 0
-  counter%fout_grdidx_bnd_river_mouth  = 0
-  counter%fout_grdidx_bnd_river_inland = 0
-  counter%fout_grdidx_bnd_noriv        = 0
-
-  counter%fout_grdidx_mkbnd_river = 0
-  counter%fout_grdidx_mkbnd_noriv = 0
-
-  counter%fout_rstidx_river        = 0
-  counter%fout_rstidx_river_end    = 0
-  counter%fout_rstidx_river_mouth  = 0
-  counter%fout_rstidx_river_inland = 0
-  counter%fout_rstidx_noriv        = 0
-
-  counter%fout_rstidx_bnd_river        = 0
-  counter%fout_rstidx_bnd_river_end    = 0
-  counter%fout_rstidx_bnd_river_mouth  = 0
-  counter%fout_rstidx_bnd_river_inland = 0
-  counter%fout_rstidx_bnd_noriv        = 0
-
-  counter%fout_rstidx_mkbnd_river = 0
-  counter%fout_rstidx_mkbnd_noriv = 0
-
-  counter%dirout_rstidx_river        = 0
-  counter%dirout_rstidx_river_end    = 0
-  counter%dirout_rstidx_river_mouth  = 0
-  counter%dirout_rstidx_river_inland = 0
-  counter%dirout_rstidx_noriv        = 0
-  counter%dtype_rstidx  = 0
-  counter%endian_rstidx = 0
-
-  counter%dirout_rstidx_bnd_river        = 0
-  counter%dirout_rstidx_bnd_river_end    = 0
-  counter%dirout_rstidx_bnd_river_mouth  = 0
-  counter%dirout_rstidx_bnd_river_inland = 0
-  counter%dirout_rstidx_bnd_noriv        = 0
-  counter%dtype_rstidx_bnd  = 0
-  counter%endian_rstidx_bnd = 0
-
-  counter%dirout_rstidx_mkbnd_river = 0
-  counter%dirout_rstidx_mkbnd_noriv = 0
-  counter%dtype_rstidx_mkbnd  = 0
-  counter%endian_rstidx_mkbnd = 0
-
-  counter%idx_miss = 0
-end subroutine init_counter
-!----------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p -x2')
+  call echo(code%bgn, '__IP__check_keynum_relations', '-p -x2')
   !--------------------------------------------------------------
-  ! Indivisual
+  ! Files or directories activated depending on whether or not 
+  ! data are tiled
   !--------------------------------------------------------------
-  call check_num_of_key(counter%fout_grdmsk_river       , key_fout_grdmsk_river       , 0, 1)
-  call check_num_of_key(counter%fout_grdmsk_river_end   , key_fout_grdmsk_river_end   , 0, 1)
-  call check_num_of_key(counter%fout_grdmsk_river_mouth , key_fout_grdmsk_river_mouth , 0, 1)
-  call check_num_of_key(counter%fout_grdmsk_river_inland, key_fout_grdmsk_river_inland, 0, 1)
-  call check_num_of_key(counter%fout_grdmsk_noriv       , key_fout_grdmsk_noriv       , 0, 1)
-
-  call check_num_of_key(counter%fout_grdidx_river       , key_fout_grdidx_river       , 1, 1)
-  call check_num_of_key(counter%fout_grdidx_river_end   , key_fout_grdidx_river_end   , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_river_mouth , key_fout_grdidx_river_mouth , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_river_inland, key_fout_grdidx_river_inland, 0, 1)
-  call check_num_of_key(counter%fout_grdidx_noriv       , key_fout_grdidx_noriv       , 0, 1)
-
-  call check_num_of_key(counter%fout_grdidx_bnd_river       , key_fout_grdidx_bnd_river       , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_bnd_river_end   , key_fout_grdidx_bnd_river_end   , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_bnd_river_mouth , key_fout_grdidx_bnd_river_mouth , 0, 1)
-  call check_num_of_key(counter%fout_grdidx_bnd_river_inland, key_fout_grdidx_bnd_river_inland, 0, 1)
-  call check_num_of_key(counter%fout_grdidx_bnd_noriv       , key_fout_grdidx_bnd_noriv       , 0, 1)
-
-  call check_num_of_key(counter%fout_grdidx_mkbnd_river, key_fout_grdidx_mkbnd_river, 0, 1)
-  call check_num_of_key(counter%fout_grdidx_mkbnd_noriv, key_fout_grdidx_mkbnd_noriv, 0, 1)
-
+  ! Case: Not tiled
   if( .not. cmn%is_tiled )then
-    call check_num_of_key(counter%fout_rstidx_river       , &
-                              key_fout_rstidx_river       , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_river_end   , &
-                              key_fout_rstidx_river_end   , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_river_mouth , &
-                              key_fout_rstidx_river_mouth , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_river_inland, &
-                              key_fout_rstidx_river_inland, 0, 1)
-    call check_num_of_key(counter%fout_rstidx_noriv       , &
-                              key_fout_rstidx_noriv       , 0, 1)
+    if( keynum('dirout_rstidx_river'       ) == 1 .or. &
+        keynum('dirout_rstidx_river_end'   ) == 1 .or. &
+        keynum('dirout_rstidx_river_mouth' ) == 1 .or. &
+        keynum('dirout_rstidx_river_inland') == 1 .or. &
+        keynum('dirout_rstidx_noriv'       ) == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dirout_rstidx_*" are used for tiled data'//&
+                ' (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    elseif( keynum('dtype_rstidx') == 1 .or. keynum('endian_rstidx') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dtype_rstidx" and "endian_rstidx" are used for tiled data'//&
+                ' with "dirout_rstidx_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    endif
 
-    call check_num_of_key(counter%fout_rstidx_bnd_river       , &
-                              key_fout_rstidx_bnd_river       , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_bnd_river_end   , &
-                              key_fout_rstidx_bnd_river_end   , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_bnd_river_mouth , &
-                              key_fout_rstidx_bnd_river_mouth , 0, 1)
-    call check_num_of_key(counter%fout_rstidx_bnd_river_inland, &
-                              key_fout_rstidx_bnd_river_inland, 0, 1)
-    call check_num_of_key(counter%fout_rstidx_bnd_noriv       , &
-                              key_fout_rstidx_bnd_noriv       , 0, 1)
+    if( keynum('dirout_rstidx_bnd_river'       ) == 1 .or. &
+        keynum('dirout_rstidx_bnd_river_end'   ) == 1 .or. &
+        keynum('dirout_rstidx_bnd_river_mouth' ) == 1 .or. &
+        keynum('dirout_rstidx_bnd_river_inland') == 1 .or. &
+        keynum('dirout_rstidx_bnd_noriv'       ) == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dirout_rstidx_bnd_*" are used for tiled data'//&
+                ' (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    elseif( keynum('dtype_rstidx_bnd') == 1 .or. keynum('endian_rstidx_bnd') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dtype_rstidx_bnd" and "endian_rstidx_bnd" are used for tiled data'//&
+                ' with "dirout_rstidx_bnd_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    endif
 
-    call check_num_of_key(counter%fout_rstidx_mkbnd_river, &
-                              key_fout_rstidx_mkbnd_river, 0, 1)
-    call check_num_of_key(counter%fout_rstidx_mkbnd_noriv, &
-                              key_fout_rstidx_mkbnd_noriv, 0, 1)
 
-    ! Keys for tiled data is forbidden
-    call check_num_of_key(counter%dirout_rstidx_river       , &
-                              key_dirout_rstidx_river       , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_river_end   , &
-                              key_dirout_rstidx_river_end   , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_river_mouth , &
-                              key_dirout_rstidx_river_mouth , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_river_inland, &
-                              key_dirout_rstidx_river_inland, 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_noriv       , &
-                              key_dirout_rstidx_noriv       , 0, 0)
-    call check_num_of_key(counter%dtype_rstidx, key_dtype_rstidx, 0, 0)
-    call check_num_of_key(counter%endian_rstidx, key_endian_rstidx, 0, 0)
-
-    call check_num_of_key(counter%dirout_rstidx_bnd_river       , &
-                              key_dirout_rstidx_bnd_river       , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_bnd_river_end   , &
-                              key_dirout_rstidx_bnd_river_end   , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_bnd_river_mouth , &
-                              key_dirout_rstidx_bnd_river_mouth , 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_bnd_river_inland, &
-                              key_dirout_rstidx_bnd_river_inland, 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_bnd_noriv       , &
-                              key_dirout_rstidx_bnd_noriv       , 0, 0)
-    call check_num_of_key(counter%dtype_rstidx_bnd, key_dtype_rstidx_bnd, 0, 0)
-    call check_num_of_key(counter%endian_rstidx_bnd, key_endian_rstidx_bnd, 0, 0)
-
-    call check_num_of_key(counter%dirout_rstidx_mkbnd_river, &
-                              key_dirout_rstidx_mkbnd_river, 0, 0)
-    call check_num_of_key(counter%dirout_rstidx_mkbnd_noriv, &
-                              key_dirout_rstidx_mkbnd_noriv, 0, 0)
-    call check_num_of_key(counter%dtype_rstidx_mkbnd, key_dtype_rstidx_mkbnd, 0, 0)
-    call check_num_of_key(counter%endian_rstidx_mkbnd, key_endian_rstidx_mkbnd, 0, 0)
-  else
-    ! Keys for tiled data
-    call check_num_of_key(counter%dirout_rstidx_river       , &
-                              key_dirout_rstidx_river       , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_river_end   , &
-                              key_dirout_rstidx_river_end   , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_river_mouth , &
-                              key_dirout_rstidx_river_mouth , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_river_inland, &
-                              key_dirout_rstidx_river_inland, 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_noriv       , &
-                              key_dirout_rstidx_noriv       , 0, 1)
-    call check_num_of_key(counter%dtype_rstidx, key_dtype_rstidx, 0, 1)
-    call check_num_of_key(counter%endian_rstidx, key_endian_rstidx, 0, 1)
-
-    call check_num_of_key(counter%dirout_rstidx_bnd_river       , &
-                              key_dirout_rstidx_bnd_river       , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_bnd_river_end   , &
-                              key_dirout_rstidx_bnd_river_end   , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_bnd_river_mouth , &
-                              key_dirout_rstidx_bnd_river_mouth , 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_bnd_river_inland, &
-                              key_dirout_rstidx_bnd_river_inland, 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_bnd_noriv       , &
-                              key_dirout_rstidx_bnd_noriv       , 0, 1)
-    call check_num_of_key(counter%dtype_rstidx_bnd, key_dtype_rstidx_bnd, 0, 1)
-    call check_num_of_key(counter%endian_rstidx_bnd, key_endian_rstidx_bnd, 0, 1)
-
-    call check_num_of_key(counter%dirout_rstidx_mkbnd_river, &
-                              key_dirout_rstidx_mkbnd_river, 0, 1)
-    call check_num_of_key(counter%dirout_rstidx_mkbnd_noriv, &
-                              key_dirout_rstidx_mkbnd_noriv, 0, 1)
-    call check_num_of_key(counter%dtype_rstidx_mkbnd, key_dtype_rstidx_mkbnd, 0, 1)
-    call check_num_of_key(counter%endian_rstidx_mkbnd, key_endian_rstidx_mkbnd, 0, 1)
-
-    ! Keys for untiled data is forbidden
-    call check_num_of_key(counter%fout_rstidx_river       , &
-                              key_fout_rstidx_river       , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_river_end   , &
-                              key_fout_rstidx_river_end   , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_river_mouth , &
-                              key_fout_rstidx_river_mouth , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_river_inland, &
-                              key_fout_rstidx_river_inland, 0, 0)
-    call check_num_of_key(counter%fout_rstidx_noriv       , &
-                              key_fout_rstidx_noriv       , 0, 0)
-
-    call check_num_of_key(counter%fout_rstidx_bnd_river       , &
-                              key_fout_rstidx_bnd_river       , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_bnd_river_end   , &
-                              key_fout_rstidx_bnd_river_end   , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_bnd_river_mouth , &
-                              key_fout_rstidx_bnd_river_mouth , 0, 0)
-    call check_num_of_key(counter%fout_rstidx_bnd_river_inland, &
-                              key_fout_rstidx_bnd_river_inland, 0, 0)
-    call check_num_of_key(counter%fout_rstidx_bnd_noriv       , &
-                              key_fout_rstidx_bnd_noriv       , 0, 0)
-
-    call check_num_of_key(counter%fout_rstidx_mkbnd_river, &
-                              key_fout_rstidx_mkbnd_river, 0, 0)
-    call check_num_of_key(counter%fout_rstidx_mkbnd_noriv, &
-                              key_fout_rstidx_mkbnd_noriv, 0, 0)
-  endif
-
-  call check_num_of_key(counter%idx_miss, key_idx_miss, 0, 1)
+    if( keynum('dirout_rstidx_mkbnd_river') == 1 .or. &
+        keynum('dirout_rstidx_mkbnd_noriv') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dirout_rstidx_mkbnd_*" are used for tiled data'//&
+                ' (*="river" or "noriv").')
+    elseif( keynum('dtype_rstidx_mkbnd') == 1 .or. keynum('endian_rstidx_mkbnd') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"dtype_rstidx_mkbnd" and "endian_rstidx_mkbnd" are used for tiled data'//&
+                ' with "dirout_rstidx_*" (*="river" or "noriv").')
+    endif
   !--------------------------------------------------------------
-  ! Relations
+  ! Case: Tiled
+  else
+    if( keynum('fout_rstidx_river'       ) == 1 .or. &
+        keynum('fout_rstidx_river_end'   ) == 1 .or. &
+        keynum('fout_rstidx_river_mouth' ) == 1 .or. &
+        keynum('fout_rstidx_river_inland') == 1 .or. &
+        keynum('fout_rstidx_noriv'       ) == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fout_rstidx_*" are used for tiled data'//&
+                ' (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    endif
+
+    if( keynum('fout_rstidx_bnd_river'       ) == 1 .or. &
+        keynum('fout_rstidx_bnd_river_end'   ) == 1 .or. &
+        keynum('fout_rstidx_bnd_river_mouth' ) == 1 .or. &
+        keynum('fout_rstidx_bnd_river_inland') == 1 .or. &
+        keynum('fout_rstidx_bnd_noriv'       ) == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fout_rstidx_bnd_*" are used for tiled data'//&
+                ' (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "river_noriv").')
+    endif
+
+    if( keynum('fout_rstidx_mkbnd_river') == 1 .or. &
+        keynum('fout_rstidx_mkbnd_noriv') == 1 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n"fout_rstidx_mkbnd_*" are used for tiled data'//&
+                ' (*="river" or "noriv").')
+    endif
+  endif
+  !--------------------------------------------------------------
+  ! 
   !--------------------------------------------------------------
   if( .not. cmn%is_tiled )then
     if( .not. cmn%is_raster_input .and. &
-        (counter%fout_rstidx_river            == 1 .or. &
-         counter%fout_rstidx_river_end        == 1 .or. &
-         counter%fout_rstidx_river_mouth      == 1 .or. &
-         counter%fout_rstidx_river_inland     == 1 .or. &
-         counter%fout_rstidx_noriv            == 1 .or. &
-         counter%fout_rstidx_bnd_river        == 1 .or. &
-         counter%fout_rstidx_bnd_river_end    == 1 .or. &
-         counter%fout_rstidx_bnd_river_mouth  == 1 .or. &
-         counter%fout_rstidx_bnd_river_inland == 1 .or. &
-         counter%fout_rstidx_bnd_noriv        == 1 .or. &
-         counter%fout_rstidx_mkbnd_river      == 1 .or. &
-         counter%fout_rstidx_mkbnd_noriv      == 1) )then
-      call eerr('Raster data of catchment, "'//str(key_fin_catmxy)//'", must be specified '//&
-                'when any of following output raster data is specified:'//&
-              '\n  "'//str(key_fout_rstidx_river)//'"'//&
-              '\n  "'//str(key_fout_rstidx_river_end)//'"'//&
-              '\n  "'//str(key_fout_rstidx_river_mouth)//'"'//&
-              '\n  "'//str(key_fout_rstidx_river_inland)//'"'//&
-              '\n  "'//str(key_fout_rstidx_noriv)//'"'//&
-              '\n  "'//str(key_fout_rstidx_bnd_river)//'"'//&
-              '\n  "'//str(key_fout_rstidx_bnd_river_end)//'"'//&
-              '\n  "'//str(key_fout_rstidx_bnd_river_mouth)//'"'//&
-              '\n  "'//str(key_fout_rstidx_bnd_river_inland)//'"'//&
-              '\n  "'//str(key_fout_rstidx_bnd_noriv)//'"'//&
-              '\n  "'//str(key_fout_rstidx_mkbnd_river)//'"'//&
-              '\n  "'//str(key_fout_rstidx_mkbnd_noriv)//'"')
+        (keynum('fout_rstidx_river'           ) == 1 .or. &
+         keynum('fout_rstidx_river_end'       ) == 1 .or. &
+         keynum('fout_rstidx_river_mouth'     ) == 1 .or. &
+         keynum('fout_rstidx_river_inland'    ) == 1 .or. &
+         keynum('fout_rstidx_noriv'           ) == 1 .or. &
+         keynum('fout_rstidx_bnd_river'       ) == 1 .or. &
+         keynum('fout_rstidx_bnd_river_end'   ) == 1 .or. &
+         keynum('fout_rstidx_bnd_river_mouth' ) == 1 .or. &
+         keynum('fout_rstidx_bnd_river_inland') == 1 .or. &
+         keynum('fout_rstidx_bnd_noriv'       ) == 1 .or. &
+         keynum('fout_rstidx_mkbnd_river'     ) == 1 .or. &
+         keynum('fout_rstidx_mkbnd_noriv'     ) == 1) )then
+      call eerr('Catchment raster data "fin_catmxy" must be given'//&
+                ' when any of the following output raster data is given:'//&
+              '\n  "fout_rstidx_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "noriv")'//&
+              '\n  "fout_rstidx_bnd_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "noriv")'//&
+              '\n  "fout_rstidx_mkbnd_*" (*="river" or "noriv")')
+
     endif
   else
-!    if( .not. cmn%is_raster_input .and. &
-!        (counter%dirout_rstidx_river            == 1 .or. &
-!         counter%dirout_rstidx_river_end        == 1 .or. &
-!         counter%dirout_rstidx_river_mouth      == 1 .or. &
-!         counter%dirout_rstidx_river_inland     == 1 .or. &
-!         counter%dirout_rstidx_noriv            == 1 .or. &
-!         counter%dirout_rstidx_bnd_river        == 1 .or. &
-!         counter%dirout_rstidx_bnd_river_end    == 1 .or. &
-!         counter%dirout_rstidx_bnd_river_mouth  == 1 .or. &
-!         counter%dirout_rstidx_bnd_river_inland == 1 .or. &
-!         counter%dirout_rstidx_bnd_noriv        == 1 .or. &
-!         counter%dirout_rstidx_mkbnd_river      == 1 .or. &
-!         counter%dirout_rstidx_mkbnd_noriv      == 1) )then
-!      call eerr('List of raster data of catchment, "'//str(key_fin_list_catmxy)//'", must be specified '//&
-!                'when any of following output raster data is specified:'//&
-!              '\n  "'//str(key_dirout_rstidx_river)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_river_end)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_river_mouth)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_river_inland)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_noriv)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_bnd_river)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_bnd_river_end)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_bnd_river_mouth)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_bnd_river_inland)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_bnd_noriv)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_mkbnd_river)//'"'//&
-!              '\n  "'//str(key_dirout_rstidx_mkbnd_noriv)//'"')
-!    endif
+    if( .not. cmn%is_raster_input .and. &
+        (keynum('dirout_rstidx_river'           ) == 1 .or. &
+         keynum('dirout_rstidx_river_end'       ) == 1 .or. &
+         keynum('dirout_rstidx_river_mouth'     ) == 1 .or. &
+         keynum('dirout_rstidx_river_inland'    ) == 1 .or. &
+         keynum('dirout_rstidx_noriv'           ) == 1 .or. &
+         keynum('dirout_rstidx_bnd_river'       ) == 1 .or. &
+         keynum('dirout_rstidx_bnd_river_end'   ) == 1 .or. &
+         keynum('dirout_rstidx_bnd_river_mouth' ) == 1 .or. &
+         keynum('dirout_rstidx_bnd_river_inland') == 1 .or. &
+         keynum('dirout_rstidx_bnd_noriv'       ) == 1 .or. &
+         keynum('dirout_rstidx_mkbnd_river'     ) == 1 .or. &
+         keynum('dirout_rstidx_mkbnd_noriv'     ) == 1) )then
+      call eerr('List of the tiled catchment raster data "fin_list_catmxy" must be given'//&
+                ' when any of the following output directories for raster data is given:'//&
+              '\n  "dirout_rstidx_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "noriv")'//&
+              '\n  "dirout_rstidx_bnd_*" (*="river", "river_end", "river_mouth",'//&
+                ' "river_inland" or "noriv")'//&
+              '\n  "dirout_rstidx_mkbnd_*" (*="river" or "noriv")')
+
+    endif
   endif
   !--------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_number_of_inputs
+end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_mat
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_set2, only: &
+        line_number            , &
+        back_to_block_head     , &
+        key                    , &
+        keynum                 , &
+        alloc_keynum           , &
+        free_keynum            , &
+        set_keynum             , &
+        reset_keynum           , &
+        update_keynum          , &
+        check_keynum           , &
+        read_input             , &
+        read_value             , &
+        raise_error_invalid_key, &
+        msg_invalid_input      , &
+        msg_undesirable_input
+  use common_opt_set, only: &
+        KEY_OLD_FILES           , &
+        KEY_DIR_INTERMEDIATES   , &
+        KEY_REMOVE_INTERMEDIATES, &
+        KEY_MEMORY_ULIM         , &
+        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_R             , &
+        KEY_EARTH_E2
+  use common_opt_set, only: &
+        set_values_opt_earth
   implicit none
   type(opt_), intent(out) :: opt
 
-  type counter_
-    integer :: old_files
-    integer :: earth_shape
-    integer :: earth_r
-    integer :: earth_e2
-    integer :: save_memory
-  end type
-
-  character(clen_var), parameter :: key_save_memory = 'save_memory'
-
-  type(counter_) :: counter
-  character(clen_var) :: key
-
   call echo(code%bgn, 'read_settings_opt')
   !-------------------------------------------------------------
-  !
+  ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of inputs')
+  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call init_counter()
+  call alloc_keynum(5)
+  call set_keynum(KEY_OLD_FILES, 0, 1)
+  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
+  call set_keynum(KEY_EARTH_R    , 0, 1)
+  call set_keynum(KEY_EARTH_E2   , 0, 1)
+  call set_keynum('save_memory', 0, 1)
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Read the settings
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Reading the settings')
 
   do
-    call read_input(key)
+    call read_input()
+    call update_keynum()
 
-    selectcase( key )
+    selectcase( key() )
+    !-----------------------------------------------------------
+    ! End of block
     case( '' )
       exit
     !-----------------------------------------------------------
-    !
+    ! System
+    case( KEY_OLD_FILES )
+      call read_value(opt%sys%old_files, is_keyword=.true.)
     !-----------------------------------------------------------
-    case( key_old_files )
-      call add(counter%old_files)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_earth_shape )
-      call add(counter%earth_shape)
-
-    case( key_earth_r )
-      call add(counter%earth_r )
-
-    case( key_earth_e2 )
-      call add(counter%earth_e2 )
+    ! Earth's shape
+    case( KEY_EARTH_SHAPE )
+      call read_value(opt%earth%shp, is_keyword=.true.)
+    case( KEY_EARTH_R )
+      call read_value(opt%earth%r)
+    case( KEY_EARTH_E2 )
+      call read_value(opt%earth%e2)
     !-----------------------------------------------------------
     !
+    case( 'save_memory' )
+      call read_value(opt%save_memory)
     !-----------------------------------------------------------
-    case( key_save_memory )
-      call add(counter%save_memory)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
+    ! ERROR
     case default
-      call raise_error_invalid_key(key)
+      call raise_error_invalid_key()
     endselect
   enddo
 
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the number of inputs')
-
-  call check_number_of_inputs()
+  call check_keynum()
+  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  !
+  ! Set the related values
   !-------------------------------------------------------------
-  !call echo(code%ent, 'Initializing variables')
+  call echo(code%ent, 'Setting the related values')
 
-  !call echo(code%ext)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Reading settings')
-
-  call back_to_block_head()
-
-  do
-    call read_input(key)
-
-    selectcase( key )
-    case( '' )
-      exit
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_old_files )
-      call read_value(v_char=opt%sys%old_files, is_keyword=.true.)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_earth_shape )
-      call read_value(v_char=opt%earth%shp, is_keyword=.true.)
-
-    case( key_earth_r )
-      call read_value(v_dble=opt%earth%r)
-
-    case( key_earth_e2 )
-      call read_value(v_dble=opt%earth%e2)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case( key_save_memory )
-      call read_value(v_log=opt%save_memory)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    case default
-      call raise_error_invalid_key(key)
-    endselect
-  enddo
-
-  ! Modify values
-  !-------------------------------------------------------------
-  call set_values_opt_earth(opt%earth, counter%earth_r, counter%earth_e2)
+  call set_values_opt_earth(opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2))
 
   call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Free module variable
+  !-------------------------------------------------------------
+  call free_keynum()
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine init_counter()
-  implicit none
-
-  counter%old_files = 0
-
-  counter%earth_shape = 0
-  counter%earth_r     = 0
-  counter%earth_e2    = 0
-
-  counter%save_memory = 0
-end subroutine init_counter
-!---------------------------------------------------------------
-subroutine check_number_of_inputs()
-  implicit none
-
-  call echo(code%bgn, '__IP__check_number_of_inputs', '-p')
-  !--------------------------------------------------------------
-  ! Indivisual
-  !--------------------------------------------------------------
-  call check_num_of_key(counter%old_files, key_old_files, 0, 1)
-
-  call check_num_of_key(counter%earth_shape, key_earth_shape, 0, 1)
-  call check_num_of_key(counter%earth_r    , key_earth_r    , 0, 1)
-  call check_num_of_key(counter%earth_e2   , key_earth_e2   , 0, 1)
-
-  call check_num_of_key(counter%save_memory, key_save_memory, 0, 1)
-  !--------------------------------------------------------------
-  ! Relation
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_number_of_inputs
-!---------------------------------------------------------------
 end subroutine read_settings_opt
 !===============================================================
 !
@@ -2643,22 +1726,6 @@ end subroutine set_default_values_mat
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_opt(opt)
-  implicit none
-  type(opt_), intent(out) :: opt
-
-  call echo(code%bgn, 'set_default_values_opt', '-p -x2')
-  !-------------------------------------------------------------
-  call init_opt_sys(opt%sys)
-  call init_opt_earth(opt%earth)
-
-  opt%save_memory = .false.
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_opt
-!===============================================================
-!
-!===============================================================
 !
 !
 !
@@ -2668,6 +1735,8 @@ end subroutine set_default_values_opt
 !
 !===============================================================
 subroutine echo_settings_cmn(cmn)
+  use common_set2, only: &
+        bar
   implicit none
   type(cmn_), intent(in) :: cmn
 
@@ -2675,7 +1744,7 @@ subroutine echo_settings_cmn(cmn)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_cmn)))
+  call edbg(str(bar(BLOCK_NAME_LOG_CMN)))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2709,6 +1778,8 @@ end subroutine echo_settings_cmn
 !
 !===============================================================
 subroutine echo_settings_cmf(cmn, cmf)
+  use common_set2, only: &
+        bar
   implicit none
   type(cmn_), intent(in) :: cmn
   type(cmf_), intent(in) :: cmf
@@ -2717,7 +1788,7 @@ subroutine echo_settings_cmf(cmn, cmf)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_cmf)))
+  call edbg(str(bar(BLOCK_NAME_LOG_CMF)))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2795,6 +1866,8 @@ end subroutine echo_settings_cmf
 !
 !===============================================================
 subroutine echo_settings_mat(cmn, mat)
+  use common_set2, only: &
+        bar
   implicit none
   type(cmn_), intent(in) :: cmn
   type(mat_), intent(in) :: mat
@@ -2803,7 +1876,7 @@ subroutine echo_settings_mat(cmn, mat)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_mat)))
+  call edbg(str(bar(BLOCK_NAME_LOG_MAT)))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2883,6 +1956,12 @@ end subroutine echo_settings_mat
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
+  use common_set2, only: &
+        bar
+  use common_opt_set, only: &
+        echo_settings_opt_sys, &
+        echo_settings_opt_log, &
+        echo_settings_opt_earth
   implicit none
   type(opt_), intent(in) :: opt
 
@@ -2890,11 +1969,13 @@ subroutine echo_settings_opt(opt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_opt)))
+  call edbg(str(bar(BLOCK_NAME_LOG_OPT)))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call echo_settings_opt_sys(opt%sys)
+
+  call echo_settings_opt_log(opt%log)
 
   call echo_settings_opt_earth(opt%earth)
 
@@ -2913,42 +1994,10 @@ end subroutine echo_settings_opt
 !===============================================================
 !
 !===============================================================
-subroutine check_inputs(cmn, cmf, mat)
-  implicit none
-  type(cmn_), intent(inout)         :: cmn
-  type(cmf_), intent(inout), target :: cmf
-  type(mat_), intent(inout), target :: mat
-
-  call echo(code%bgn, 'check_inputs')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( mat%f_grdidx_river%path /= '' )then
-    if( cmf%f_grdidx_river%path == '' )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  mat%f_grdidx_river%path /= "" .and. cmf%f_grdidx_river%path == ""'//&
-              '\n"f_grdidx_river" in the block "'//str(block_name_cmf)//&
-                '" must be specified when "f_grdidx_river" in the block "'//&
-                str(block_name_mat)//'" is specified.')
-    endif
-  endif
-
-  if( mat%f_grdidx_noriv%path /= '' )then
-    if( cmf%f_grdidx_noriv%path == '' )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  mat%f_grdidx_noriv%path /= "" .and. cmf%f_grdidx_noriv%path == ""'//&
-              '\n"f_grdidx_noriv" in the block "'//str(block_name_cmf)//&
-                '" must be specified when "f_grdidx_noriv" in the block "'//&
-                str(block_name_mat)//'" is specified.')
-    endif
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_inputs
-!===============================================================
-!
-!===============================================================
 subroutine check_paths(cmn, cmf, mat, opt)
+  use common_file, only: &
+        set_opt_old_files, &
+        handle_old_file
   implicit none
   type(cmn_), intent(inout)         :: cmn
   type(cmf_), intent(inout), target :: cmf
@@ -2956,9 +2005,9 @@ subroutine check_paths(cmn, cmf, mat, opt)
   type(opt_), intent(in)            :: opt
 
   integer(8) :: iTile
-  character(clen_path), pointer :: path
-  character(clen_path), pointer :: path_in
-  character(clen_path), pointer :: path_out
+  character(CLEN_PATH), pointer :: path
+  character(CLEN_PATH), pointer :: path_in
+  character(CLEN_PATH), pointer :: path_out
 
   integer :: un
 

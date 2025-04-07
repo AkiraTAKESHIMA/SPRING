@@ -5,19 +5,22 @@ module mod_rt_latlon_polygon
   use lib_array
   use lib_math
   use common_const
-  use common_type
-  use common_gs, only: &
+  use common_type_gs
+  use common_gs_util, only: &
         print_gs_latlon, &
         print_gs_polygon, &
         print_latlon, &
         print_polygon
-  use common_rt, only: &
-        calc_rt_im_nij_ulim, &
+  use common_type_rt
+  use common_rt1d, only: &
         init_rt1d, &
         reshape_rt1d, &
-        free_rt1d_comps, &
+        free_rt1d_data
+  use common_rt_base, only: &
         clear_rt_main, &
-        output_rt_im
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   use def_type
   implicit none
   private
@@ -142,9 +145,9 @@ subroutine make_rt_latlon_polygon(s, t, rt, opt)
   rtm%nij = 0_8
   rtiz%nij = 0_8
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making regridding table')
+  call echo(code%ent, 'Making remapping table')
 
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.true.)
@@ -190,13 +193,13 @@ subroutine make_rt_latlon_polygon(s, t, rt, opt)
 !<measure_time_core>
     if( rt%im%nij_ulim > 0_8 )then
       if( rtm%nij+rt1%ijsize > rt%im%nij_ulim )then
-        call echo(code%ent, 'Outputting intermediates')
-        call edbg('tij: '//str((/tijs,tij-1_8/),' ~ '))
+        call echo(code%ent, 'Outputting intermediates '//&
+                  '(tij: '//str((/tijs,tij-1_8/),' - ')//')')
 
         call reshape_rt1d(rt1d(tijs:tij-1_8), tgc%is_source, rtm, opt%earth)
-        call output_rt_im(rtm, rt%im)
+        call write_rt_im(rtm, rt%im)
         call clear_rt_main(rtm)
-        call free_rt1d_comps(rt1d(tijs:tij-1_8))
+        call free_rt1d_data(rt1d(tijs:tij-1_8))
         tijs = tij
 
         call echo(code%ext)
@@ -259,29 +262,26 @@ subroutine make_rt_latlon_polygon(s, t, rt, opt)
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
 
-  ! Output intermediates
+  ! Reshape and output intermediates
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting intermediates')
-  call edbg('tij: '//str((/tijs,tzp%mij/),' ~ '))
-
   call reshape_rt1d(rt1d(tijs:tzp%mij), tgc%is_source, rtm, opt%earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call output_rt_im(rtm, rt%im)
+    call echo(code%ent, 'Outputting intermediates '//&
+              '(tij: '//str((/tijs,tij/),' - ')//')')
+    call write_rt_im(rtm, rt%im)
     call clear_rt_main(rtm)
+    call echo(code%ext)
   endif
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
-  call free_rt1d_comps(rt1d(tijs:tzp%mij))
+  call free_rt1d_data(rt1d(tijs:tzp%mij))
   deallocate(rt1d)
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
 end subroutine make_rt_latlon_polygon
 !===============================================================
 !

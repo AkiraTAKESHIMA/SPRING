@@ -5,23 +5,31 @@ module mod_main
   use lib_io
   use lib_array
   use lib_math
+  ! common1
   use common_const
-  use common_type
-  use common_rt, only: &
-    merge_elems_same_index, &
-    calc_rt_coef_sum_modify_enabled, &
-    calc_rt_coef_sum_modify_not_enabled, &
-    sort_rt, &
-    get_rt_stats, &
-    read_rt_main, &
-    write_rt_main, &
-    report_rt_summary
+  ! common2
+  use common_type_rt
+  use common_rt_main_core, only: &
+        merge_elems_same_index, &
+        calc_rt_coef_sum_modify_enabled, &
+        calc_rt_coef_sum_modify_not_enabled, &
+        sort_rt
+  use common_rt_stats, only: &
+        get_rt_main_stats, &
+        report_rt_main_summary
+  use common_rt_io, only: &
+        read_rt_main, &
+        write_rt_main
+  ! this
   use def_type
   implicit none
-  !-------------------------------------------------------------
   private
-
+  !-------------------------------------------------------------
+  ! Public procedures
+  !-------------------------------------------------------------
   public :: make_rt
+  !-------------------------------------------------------------
+  ! Private module variables
   !-------------------------------------------------------------
   type layer_grid_
     integer :: n
@@ -38,7 +46,7 @@ module mod_main
 
   logical, parameter :: debug_lsm = .false.
   integer(8), parameter :: lij_debug = 224488_8
-!===============================================================
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
@@ -213,7 +221,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
   rtim_a_o%grid_sort = grid_target
   call sort_rt(rtim_a_o)
 
-  call get_rt_stats(rtim_a_o)
+  call get_rt_main_stats(rtim_a_o)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -606,11 +614,11 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Summary')
 
-  call get_rt_stats(rtom_l_a)
+  call get_rt_main_stats(rtom_l_a)
 
   save_area = rtom_l_a%f%area%path /= ''
   save_coef = rtom_l_a%f%coef%path /= ''
-  call report_rt_summary(rtom_l_a, save_area, save_coef)
+  call report_rt_main_summary(rtom_l_a, save_area, save_coef)
 
   call echo(code%ext)
   !-------------------------------------------------------------

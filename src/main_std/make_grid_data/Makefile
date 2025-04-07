@@ -6,6 +6,7 @@ OBJS = \
 def_type.o\
 mod_set.o\
 mod_main.o\
+mod_finalize.o\
 main.o
 
 TARGET = main

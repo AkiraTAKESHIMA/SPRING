@@ -6,7 +6,8 @@ module mod_data
   use lib_array
   use lib_math
   use common_const
-  use common_type
+  use common_type_opt
+  use common_type_gs
   use def_type
   implicit none
   private

@@ -1,9 +1,7 @@
 module def_type
   use lib_const
   use lib_io
-  use common_type, only: &
-        opt_sys_, &
-        opt_earth_
+  use common_type_opt
   implicit none
   private
 
@@ -12,8 +10,8 @@ module def_type
   public :: opt_
 
   type agcm_
-    character(clen_var) :: id
-    character(clen_var) :: nam
+    character(CLEN_VAR) :: id
+    character(CLEN_VAR) :: nam
 
     type(file_) :: f_grdidx
     type(file_) :: f_grdara
@@ -32,8 +30,8 @@ module def_type
   end type
 
   type lsm_
-    character(clen_var) :: id
-    character(clen_var) :: nam
+    character(CLEN_VAR) :: id
+    character(CLEN_VAR) :: nam
 
     type(file_) :: f_grdidx
     type(file_) :: f_grdara
@@ -55,6 +53,7 @@ module def_type
 
   type opt_
     type(opt_sys_) :: sys
+    type(opt_log_) :: log
     type(opt_earth_) :: earth
     type(opt_method_) :: method
   end type

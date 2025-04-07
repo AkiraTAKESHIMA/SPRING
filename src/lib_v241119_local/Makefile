@@ -29,32 +29,32 @@ all:
 	$(MAKE) -C $(LIBDIR_PROJ)
 
 	$(RM) $(RMFLAGS) $(MODDIR)/*.mod && $(MKDIR) $(MKDIRFLAGS) $(MODDIR)
-	$(INSTALL) $(LIBDIR_CONST)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_BASE)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_TIME)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_LOG)/*.mod    $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_UTIL)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_ARRAY)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_MATH)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_STATS)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_IO)/*.mod     $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_PROJ)/*.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_CONST)/lib_const.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_BASE)/lib_base.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_TIME)/lib_time.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_LOG)/lib_log.mod       $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_UTIL)/lib_util.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_ARRAY)/lib_array.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_MATH)/lib_math.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_STATS)/lib_stats.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_IO)/lib_io.mod         $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_PROJ)/lib_proj.mod     $(MODDIR)/.
 
 	$(MAKE) $(MKFLAGS) $(TARGET)
 
 .PHONY: install
 install:
 	$(RM) $(RMFLAGS) $(MODDIR)/*.mod
-	$(INSTALL) $(LIBDIR_CONST)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_BASE)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_TIME)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_LOG)/*.mod    $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_UTIL)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_ARRAY)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_MATH)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_STATS)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_IO)/*.mod     $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_PROJ)/*.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_CONST)/lib_const.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_BASE)/lib_base.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_TIME)/lib_time.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_LOG)/lib_log.mod       $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_UTIL)/lib_util.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_ARRAY)/lib_array.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_MATH)/lib_math.mod     $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_STATS)/lib_stats.mod   $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_IO)/lib_io.mod         $(MODDIR)/.
+	$(INSTALL) $(LIBDIR_PROJ)/lib_proj.mod     $(MODDIR)/.
 
 	$(MAKE) $(MKFLAGS) $(TARGET)
 
