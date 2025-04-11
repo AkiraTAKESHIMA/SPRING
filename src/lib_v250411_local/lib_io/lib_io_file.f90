@@ -60,6 +60,10 @@ module lib_io_file
   public :: path_ins
   public :: filesize
 
+  public :: file
+  public :: set_file_default
+  public :: reset_file_default
+
   public :: init_file
   public :: update_file
   public :: set_path
@@ -71,8 +75,6 @@ module lib_io_file
   public :: set_size
   public :: set_lower
   public :: set_upper
-
-  public :: file
 
   public :: fileinfo
 
@@ -151,19 +153,21 @@ module lib_io_file
   integer, parameter :: filedim = 3
 
   type file_
-    character(clen_path) :: id         = ''
+    character(clen_path) :: id         = 'file'
     character(clen_path) :: path       = ''
-    character(clen_key)  :: dtype      = dtype_undef
-    integer              :: rec        = rec_undef
+    character(clen_key)  :: dtype      = DTYPE_REAL
+    integer              :: rec        = 1
     character(clen_key)  :: endian     = ''
-    integer(8)           :: length     = 0
-    character(clen_key)  :: status     = ''
-    character(clen_key)  :: action     = action_undef
-    integer              :: permission = permission_undef
+    integer(8)           :: length     = 0_8
+    character(clen_key)  :: status     = STATUS_UNKNOWN
+    character(clen_key)  :: action     = ACTION_READWRITE
+    integer              :: permission = PERMISSION_RW
     integer(8)           :: sz(filedim)  ! Size of each record
     integer(8)           :: lb(filedim)  ! Lower bounds in the records
     integer(8)           :: ub(filedim)  ! Upper bounds       "
   end type
+
+  type(file_), target, save :: file_default
 
   character(2)        , parameter :: opt_default_mkdir__hut = '+ '
   character(clen_line), save      :: opt_mkdir__hut = opt_default_mkdir__hut
@@ -373,9 +377,10 @@ end function path_ins
 !===============================================================
 !
 !===============================================================
-type(file_) function file(path, dtype, rec, endian, &
-                          length, status, action, permission, id, &
-                          sz1, sz2, sz3, lb1, lb2, lb3, ub1, ub2, ub3) result(f)
+type(file_) function file(&
+    path, dtype, rec, endian, &
+    length, status, action, permission, id, &
+    sz1, sz2, sz3, lb1, lb2, lb3, ub1, ub2, ub3) result(f)
   implicit none
   character(*), intent(in), optional :: path
   character(*), intent(in), optional :: dtype
@@ -390,7 +395,7 @@ type(file_) function file(path, dtype, rec, endian, &
   integer(8)  , intent(in), optional :: lb1, lb2, lb3
   integer(8)  , intent(in), optional :: ub1, ub2, ub3
 
-  call set_file_default(f)
+  f = file_default
 
   if( present(path)       ) f%path       = path
   if( present(dtype)      ) f%dtype      = dtype
@@ -414,43 +419,87 @@ end function file
 !===============================================================
 !
 !===============================================================
+subroutine set_file_default(&
+    id, path, dtype, rec, endian, length, &
+    status, action, permission, sz, lb, ub)
+  implicit none
+  character(*), intent(in), optional :: id
+  character(*), intent(in), optional :: path
+  character(*), intent(in), optional :: dtype
+  integer     , intent(in), optional :: rec
+  character(*), intent(in), optional :: endian
+  integer     , intent(in), optional :: length
+  character(*), intent(in), optional :: status
+  character(*), intent(in), optional :: action
+  integer     , intent(in), optional :: permission
+  integer     , intent(in), optional :: sz(:)
+  integer     , intent(in), optional :: lb(:)
+  integer     , intent(in), optional :: ub(:)
+
+  type(file_), pointer :: f
+
+  f => file_default
+
+  if( present(id)    ) f%id = id
+  if( present(path)  ) f%path = path
+  if( present(dtype) ) f%dtype = dtype
+  if( present(rec)   ) f%rec = rec
+  if( present(endian) ) f%endian = endian
+  if( present(length) ) f%length = length
+  if( present(status) ) f%status = status
+  if( present(action) ) f%action = action
+  if( present(permission) ) f%permission = permission
+  if( present(sz) ) f%sz = sz
+  if( present(lb) ) f%lb = lb
+  if( present(ub) ) f%ub = ub
+
+  nullify(f)
+end subroutine set_file_default
+!===============================================================
+!
+!===============================================================
+subroutine reset_file_default()
+  implicit none
+
+  type(file_), pointer :: f
+
+  f => file_default
+
+  f%id         = ID_UNDEF
+  f%path       = ''
+  f%dtype      = DTYPE_REAL
+  f%rec        = 1
+  f%endian     = ENDIAN_DEFAULT
+  f%length     = 0_8
+  f%status     = STATUS_UNKNOWN
+  f%action     = ACTION_READWRITE
+  f%permission = PERMISSION_RW
+  f%sz(:)      = 0_8
+  f%lb(:)      = 0_8
+  f%ub(:)      = 0_8
+
+  nullify(f)
+end subroutine reset_file_default
+!===============================================================
+!
+!===============================================================
 subroutine init_file(f)
   implicit none
   type(FILE_), intent(out) :: f
 
-  f%id         = id_undef
+  f%id         = ID_UNDEF
   f%path       = ''
-  f%dtype      = dtype_undef
-  f%rec        = rec_undef
-  f%endian     = endian_undef
-  f%length     = 0_8
-  f%status     = status_undef
-  f%action     = action_undef
-  f%permission = permission_undef
-  f%sz(:)      = 0_8
-  f%lb(:)      = 0_8
-  f%ub(:)      = 0_8
+  f%dtype      = DTYPE_UNDEF
+  f%rec        = REC_UNDEF
+  f%endian     = ENDIAN_UNDEF
+  f%length     = -9999_8
+  f%status     = STATUS_UNDEF
+  f%action     = ACTION_UNDEF
+  f%permission = PERMISSION_UNDEF
+  f%sz(:)      = -9999_8
+  f%lb(:)      = -9999_8
+  f%ub(:)      = -9999_8
 end subroutine init_file
-!===============================================================
-!
-!===============================================================
-subroutine set_file_default(f)
-  implicit none
-  type(file_), intent(out) :: f
-
-  f%id         = id_undef
-  f%path       = ''
-  f%dtype      = dtype_dble
-  f%rec        = 1
-  f%endian     = endian_default
-  f%length     = 0_8
-  f%status     = status_unknown
-  f%action     = action_readwrite
-  f%permission = permission_rw
-  f%sz(:)      = 0_8
-  f%lb(:)      = 0_8
-  f%ub(:)      = 0_8
-end subroutine set_file_default
 !===============================================================
 !
 !===============================================================

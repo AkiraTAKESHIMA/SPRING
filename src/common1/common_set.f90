@@ -619,7 +619,6 @@ subroutine read_value__log(&
   logical             :: found_
 
   integer :: ival
-  integer :: cl
 
   call echo(code%bgn, 'read_value__log', '-p -x2')
   !-------------------------------------------------------------
@@ -712,7 +711,6 @@ subroutine read_value__int4(&
   logical             :: found_
 
   integer :: ival
-  integer :: cl
 
   call echo(code%bgn, 'read_value__int4', '-p -x2')
   !-------------------------------------------------------------
@@ -801,7 +799,6 @@ subroutine read_value__int8(&
   logical             :: found_
 
   integer :: ival
-  integer :: cl
 
   call echo(code%bgn, 'read_value__int8', '-p -x2')
   !-------------------------------------------------------------
@@ -890,7 +887,6 @@ subroutine read_value__real(&
   logical             :: found_
 
   integer :: ival
-  integer :: cl
 
   call echo(code%bgn, 'read_value__real', '-p -x2')
   !-------------------------------------------------------------
@@ -979,7 +975,6 @@ subroutine read_value__dble(&
   logical             :: found_
 
   integer :: ival
-  integer :: cl
 
   call echo(code%bgn, 'read_value__dble', '-p -x2')
   !-------------------------------------------------------------
@@ -1065,7 +1060,6 @@ subroutine read_value__fbin(&
   character(CLEN_PATH) :: dir_
   logical :: getlen_
 
-  integer :: cl
   logical :: found
 
   call echo(code%bgn, 'read_value__fbin', '-p -x2')
@@ -1363,7 +1357,6 @@ character(CLEN_VAR) function bar(s)
   implicit none
   character(*), intent(in) :: s
 
-  integer :: cl
   integer :: cl_left, cl_right
 
   call echo(code%bgn, 'print_bar', '-p -x2')
