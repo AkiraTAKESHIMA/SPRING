@@ -6,6 +6,7 @@ SPRINGLIB = libspring.a
 OBJ_F = \
 ls_base.o\
 ls_gs.o\
+ls_rt.o\
 ls_remap.o\
 ls_manage.o\
 ls.o

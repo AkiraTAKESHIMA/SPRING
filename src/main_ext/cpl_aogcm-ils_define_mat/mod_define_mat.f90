@@ -11,17 +11,17 @@ module mod_define_mat
         set_opt_old_files
   ! common2
   use common_rt_base, only: &
-        init_rt_main_data, &
+        init_rt_main_data    , &
         set_default_values_rt, &
-        free_rt_main_data
+        free_rt_main
   use common_rt_stats, only: &
-        get_rt_main_stats, &
+        get_rt_main_stats     , &
         report_rt_main_summary
   use common_rt_io, only: &
-        read_rt_main, &
+        read_rt_main , &
         write_rt_main
   use common_rt_main_coef, only: &
-        calc_rt_coef_sum_modify_enabled, &
+        calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
   ! this
   use def_const
@@ -231,8 +231,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  call free_rt_main_data(rtmi_oo_a)
-  call free_rt_main_data(rtmi_ol_a)
+  call free_rt_main(rtmi_oo_a)
+  call free_rt_main(rtmi_ol_a)
   !-------------------------------------------------------------
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -464,7 +464,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main_data(rtmo_lnv_a)
+  call free_rt_main(rtmo_lnv_a)
   !-------------------------------------------------------------
   ! Calc. all types of grdwgt of LSM
   !-------------------------------------------------------------
@@ -953,16 +953,16 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   ! Free rt
   !-------------------------------------------------------------
-  call free_rt_main_data(rtmi_rr_a)
-  call free_rt_main_data(rtmi_rn_a)
-  call free_rt_main_data(rtmi_ro_a)
+  call free_rt_main(rtmi_rr_a)
+  call free_rt_main(rtmi_rn_a)
+  call free_rt_main(rtmi_ro_a)
 
-  call free_rt_main_data(rtmo_lr_a)
-  call free_rt_main_data(rtmo_ln_a)
-  call free_rt_main_data(rtmo_lo_a)
-  call free_rt_main_data(rtmo_a_lr)
-  call free_rt_main_data(rtmo_a_ln)
-  call free_rt_main_data(rtmo_a_lo)
+  call free_rt_main(rtmo_lr_a)
+  call free_rt_main(rtmo_ln_a)
+  call free_rt_main(rtmo_lo_a)
+  call free_rt_main(rtmo_a_lr)
+  call free_rt_main(rtmo_a_ln)
+  call free_rt_main(rtmo_a_lo)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1361,7 +1361,7 @@ subroutine calc_grdara_from_rt(&
   !
   !-------------------------------------------------------------
   if( .not. is_rtm_associated )then
-    call free_rt_main_data(rtm)
+    call free_rt_main(rtm)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1606,7 +1606,7 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main_data(rtmi_ro_a)
+  call free_rt_main(rtmi_ro_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_noriv_virt_to_agcm
@@ -1797,7 +1797,7 @@ subroutine make_rt_lsm_ocean_to_agcm(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main_data(rtmi_ro_a)
+  call free_rt_main(rtmi_ro_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_ocean_to_agcm
@@ -1956,7 +1956,7 @@ subroutine make_rt_lsm_river_to_agcm(&
   !-------------------------------------------------------------
   call get_rt_main_stats(rtm_lr_a)
   !-------------------------------------------------------------
-  call free_rt_main_data(rtm_rr_a)
+  call free_rt_main(rtm_rr_a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_lsm_river_to_agcm

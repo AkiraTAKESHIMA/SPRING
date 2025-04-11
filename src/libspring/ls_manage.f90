@@ -29,8 +29,8 @@ subroutine spring_initialize(num_grdsys, num_rmptbl, logopt)
         spring_set_logopt
   use ls_gs, only: &
         initialize_gs => initialize
-  use ls_remap, only: &
-        initialize_remap => initialize
+  use ls_rt, only: &
+        initialize_rt => initialize
   implicit none
   integer     , intent(in), optional :: num_grdsys
   integer     , intent(in), optional :: num_rmptbl
@@ -62,7 +62,7 @@ subroutine spring_initialize(num_grdsys, num_rmptbl, logopt)
   if( present(num_rmptbl) ) num_rmptbl_ = num_rmptbl
 
   call initialize_gs(num_grdsys_)
-  call initialize_remap(num_rmptbl_)
+  call initialize_rt(num_rmptbl_)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -79,8 +79,8 @@ subroutine spring_finalize()
         spring_set_logopt
   use ls_gs, only: &
         finalize_gs => finalize
-  use ls_remap, only: &
-        finalize_remap => finalize
+  use ls_rt, only: &
+        finalize_rt => finalize
   implicit none
 
   call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_finalize', logopt())
@@ -91,7 +91,7 @@ subroutine spring_finalize()
   is_initialized = .false.
 
   call finalize_gs()
-  call finalize_remap()
+  call finalize_rt()
 
   call spring_set_logopt(LOGOPT_DEFAULT)
   !-------------------------------------------------------------
