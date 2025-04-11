@@ -62,15 +62,16 @@ LIBDIR_LOG    = $(TOPLIBDIR)/lib_log
 LIBDIR_UTIL   = $(TOPLIBDIR)/lib_util
 LIBDIR_RANDOM = $(TOPLIBDIR)/lib_random
 LIBDIR_ARRAY  = $(TOPLIBDIR)/lib_array
-LIBDIR_IO     = $(TOPLIBDIR)/lib_io
 LIBDIR_MATH   = $(TOPLIBDIR)/lib_math
 LIBDIR_STATS  = $(TOPLIBDIR)/lib_stats
 LIBDIR_PROJ   = $(TOPLIBDIR)/lib_proj
+LIBDIR_IO     = $(TOPLIBDIR)/lib_io
 LIBDIR_PNG    = $(TOPLIBDIR)/lib_png
 MODDIR = $(TOPLIBDIR)/mod
 
 CMNDIR1 = $(TOPSRCDIR)/common1
 CMNDIR2 = $(TOPSRCDIR)/common2
+CMNDIR3 = $(TOPSRCDIR)/common3
 
 ifeq ($(ILS),T)
   include $(TOPSRCDIR)/../../../Mkinclude
