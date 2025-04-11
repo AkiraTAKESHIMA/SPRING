@@ -25,6 +25,17 @@ module common_const
   real(8), parameter :: coord_miss_c_default = -1d20
   real(8), parameter :: coord_miss_s_default = -1d20
 
+  character(CLEN_KEY), parameter :: origin_lower = 'lower'
+  character(CLEN_KEY), parameter :: origin_upper = 'upper'
+
+  integer, parameter :: tag_in_raster_idxmap_undef   = -9
+  integer, parameter :: tag_in_raster_idxmap_given   = 0
+  integer, parameter :: tag_in_raster_idxmap_file_pb = 1
+  integer, parameter :: tag_in_raster_idxmap_int1    = 11
+  integer, parameter :: tag_in_raster_idxmap_int2    = 12
+  integer, parameter :: tag_in_raster_idxmap_int4    = 13
+  integer, parameter :: tag_in_raster_idxmap_int8    = 14
+
   integer, parameter :: rec_im_idx = 1
   integer, parameter :: rec_im_msk = 2
   integer, parameter :: rec_im_uwa = 3
@@ -72,9 +83,9 @@ module common_const
   !-------------------------------------------------------------
   ! Rasterization
   !-------------------------------------------------------------
-  character(clen_var), parameter :: varname_area_sum = 'area_sum'
-  character(clen_var), parameter :: varname_frac_sum = 'frac_sum'
-  character(clen_var), parameter :: varname_mask     = 'mask'
+  character(clen_var), parameter :: varname_iarea_sum  = 'iarea_sum'
+  character(clen_var), parameter :: varname_iratio_sum = 'iratio_sum'
+  character(clen_var), parameter :: varname_mask       = 'mask'
   !character(clen_var), parameter :: varname_idx      = 'idx'
   !-------------------------------------------------------------
   ! Remapping

@@ -2820,9 +2820,9 @@ subroutine make_rstidx_river_from_grdidx(&
   nkij = 0_8
   rstidx(:,:) = idx_miss
 
-call edbg('nklx, nkly: '//str((/cmn%nklx,cmn%nkly/),', '))
-call edbg('shape(rstidx): ('//str((/lbound(rstidx,1),ubound(rstidx,1)/),':')//&
-          ', '//str((/lbound(rstidx,2),ubound(rstidx,2)/),':')//')')
+!  call edbg('nklx, nkly: '//str((/cmn%nklx,cmn%nkly/),', '))
+!  call edbg('shape(rstidx): ('//str((/lbound(rstidx,1),ubound(rstidx,1)/),':')//&
+!            ', '//str((/lbound(rstidx,2),ubound(rstidx,2)/),':')//')')
 
   do iky = 1_8, cmn%nkly
     do ikx = 1_8, cmn%nklx

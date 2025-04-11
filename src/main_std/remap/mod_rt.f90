@@ -5,74 +5,46 @@ module mod_rt
   use lib_array
   use lib_io
   use lib_math
+  ! common1
   use common_const
+  use common_type_opt
   use common_type_gs
-  use common_file, only: &
-        handle_old_file
   use common_gs_define, only: &
-        set_grids_latlon, &
-        set_grids_raster
+        set_grids
   use common_gs_define_polygon, only: &
-        set_grids_polygon, &
         make_n_list_polygon
   use common_gs_zone, only: &
-        determine_zones_latlon, &
-        determine_zones_raster, &
-        determine_zones_polygon, &
-        clear_iZone, &
+        determine_zones            , &
+        clear_iZone                , &
         raise_warning_no_valid_zone, &
         raise_error_no_valid_zone
   use common_gs_grid_core, only: &
-        make_idxmap_latlon, &
-        make_wgtmap_latlon, &
-        make_grdidx_latlon, &
-        make_grduwa_latlon, &
-        make_grdara_latlon, &
-        make_grdwgt_latlon, &
-        make_idxmap_raster, &
-        make_wgtmap_raster, &
-        make_grdidx_raster, &
-        make_grduwa_raster, &
-        make_grdara_raster, &
-        make_grdwgt_raster, &
-        make_grdidx_polygon, &
-        make_grduwa_polygon, &
-        make_grdara_polygon, &
-        make_grdwgt_polygon
+        make_grdidx
   use common_gs_grid_base, only: &
         free_grid
   use common_gs_grid_io, only: &
         write_grid_im
+  ! common2
   use common_type_rt
-  use common_rt_llbnds, only: &
-        calc_relations_llbnds
   use common_rt_base, only: &
-        init_rt_im_zone, &
+        init_rt_im_zone  , &
         free_rt_main_data, &
         clear_rt_main
   use common_rt_io, only: &
-        open_file_rt_im, &
+        open_file_rt_im , &
         close_file_rt_im
-  use common_rt_driv, only: &
-        output_rt_final
-  use common_area_raster_polygon, only: &
-        initialize_raster_polygon => initialize, &
-        finalize_raster_polygon => finalize
+  use common_rt_main, only: &
+        make_rt_main
+  use common_rt_vrf, only: &
+        make_rt_vrf
+  ! common3
+  use common_gs_driv, only: &
+        set_gs   , &
+        prep_grid
+  ! this
   use def_type
   use mod_file, only: &
         set_unit_number_rt_im
-  use mod_rt_latlon_latlon, only: &
-        make_rt_latlon_latlon
-  use mod_rt_latlon_raster, only: &
-        make_rt_latlon_raster
-  use mod_rt_latlon_polygon, only: &
-        make_rt_latlon_polygon
-  use mod_rt_raster_polygon, only: &
-        make_rt_raster_polygon
-  use mod_rt_polygon_polygon_regions, only: &
-        set_regions_polygon_polygon
-  use mod_rt_polygon_polygon, only: &
-        make_rt_polygon_polygon
   implicit none
   !-------------------------------------------------------------
   private
@@ -86,11 +58,15 @@ contains
 !
 !===============================================================
 subroutine make_rt(gs_source, gs_target, rt, opt)
+  use common_rt_driv, only: &
+        driv_make_rt_latlon_latlon
   implicit none
   type(gs_) , intent(inout) :: gs_source
   type(gs_) , intent(inout) :: gs_target
   type(rt_) , intent(inout) :: rt
   type(opt_), intent(inout) :: opt
+  logical :: output = .true.
+  logical :: was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved
 
   call echo(code%bgn, 'make_rt')
   !-------------------------------------------------------------
@@ -100,7 +76,10 @@ subroutine make_rt(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   ! Case: LatLon and LatLon
   case( trim(gs_type_latlon)//'_'//trim(gs_type_latlon) )
-    call make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
+    !call make_rt_driv_latlon_latlon(gs_source, gs_target, rt, opt)
+    call driv_make_rt_latlon_latlon(&
+           gs_source, gs_target, rt, opt%sys, opt%log, opt%earth, &
+           output, was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
   !-------------------------------------------------------------
   ! Case: LatLon and Raster
   case( trim(gs_type_latlon)//'_'//trim(gs_type_raster), &
@@ -114,6 +93,7 @@ subroutine make_rt(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   ! Case: Raster and Raster
   case( trim(gs_type_raster)//'_'//trim(gs_type_raster) )
+    call make_rt_driv_raster_raster(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   ! Case: Raster and Polygon
   case( trim(gs_type_raster)//'_'//trim(gs_type_polygon), &
@@ -142,36 +122,45 @@ end subroutine make_rt
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_driv_latlon_latlon(&
-    gs_source, gs_target, rt, opt)
+subroutine make_rt_latlon_latlon(s, t, rt, opt)
+  ! common3
+  use common_rt_llbnds, only: &
+        calc_relations_llbnds
+  use common_rt_latlon_latlon, only: &
+        make_rt_latlon_latlon
+  use common_rt_driv, only: &
+        driv_make_rt_latlon_latlon
   implicit none
-  type(gs_) , intent(inout), target :: gs_source, gs_target
+  type(gs_) , intent(inout), target :: s, t
   type(rt_) , intent(inout), target :: rt
   type(opt_), intent(in)            :: opt
 
-  type(gs_)         , pointer :: s, t
-  type(gs_common_)  , pointer :: sc, tc
-  type(gs_latlon_) , pointer :: sl, tl
-  type(zone_latlon_), pointer :: szl, tzl
-
-  integer, pointer :: isz, itz
+  type(gs_)       , pointer :: a, b
+  type(gs_common_), pointer :: ac, bc
+  type(gs_latlon_), pointer :: al, bl
+  integer, pointer :: iaz, ibz
   integer, pointer :: iZone_im
+  logical :: output = .true.
+  logical :: free_sgrid = .true.
+  logical :: free_tgrid = .true.
+  logical :: free_rtm = .true.
+  logical :: was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved
 
-  call echo(code%bgn, 'make_rt_driv_latlon_latlon')
+  call echo(code%bgn, 'make_rt_latlon_latlon')
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  s => gs_source
-  t => gs_target
+  a => s
+  b => t
 
-  sc => s%cmn
-  tc => t%cmn
+  ac => a%cmn
+  bc => b%cmn
 
-  sl => s%latlon
-  tl => t%latlon
+  al => a%latlon
+  bl => b%latlon
 
-  isz => sl%iZone
-  itz => tl%iZone
+  iaz => al%iZone
+  ibz => bl%iZone
 
   iZone_im => rt%im%iZone
   !-----------------------------------------------------------
@@ -179,19 +168,16 @@ subroutine make_rt_driv_latlon_latlon(&
   !-----------------------------------------------------------
   call echo(code%ent, 'Setting grid systems')
 
-  call set_grids_latlon(sl)
-  call set_grids_latlon(tl)
-
-  call determine_zones_latlon(sl, opt%sys%memory_ulim)
-  call determine_zones_latlon(tl, opt%sys%memory_ulim)
+  call set_gs(a)
+  call set_gs(b)
 
   ! Return if no valid zone exists
   !-------------------------------------------------------------
-  if( sl%nZones == 0 .or. tl%nZones == 0 )then
+  if( al%nZones == 0 .or. bl%nZones == 0 )then
     if( rt%main%allow_empty )then
-      call raise_warning_no_valid_zone(sl%nZones, tl%nZones, sl%id, tl%id, sl%nam, tl%nam)
+      call raise_warning_no_valid_zone(al%nZones, bl%nZones, al%id, bl%id, al%nam, bl%nam)
     else
-      call raise_error_no_valid_zone(sl%nZones, tl%nZones, sl%id, tl%id, sl%nam, tl%nam)
+      call raise_error_no_valid_zone(al%nZones, bl%nZones, al%id, bl%id, al%nam, bl%nam)
     endif
 
     call echo(code%ext)
@@ -201,182 +187,68 @@ subroutine make_rt_driv_latlon_latlon(&
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Calc. relations of grid bounds.
+  ! Prep. grid data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating relations of grid bounds.')
-
-  call calc_relations_llbnds(sl, tl, opt%earth)
-  call calc_relations_llbnds(tl, sl, opt%earth)
-
-  call echo(code%ext)
+  call prep_grid(a)
+  call prep_grid(b)
   !-------------------------------------------------------------
-  ! Make remapping table
+  ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making remapping table')
-
-  call set_unit_number_rt_im(rt%im)
-  call open_file_rt_im(rt%im, action_write, opt%sys%old_files)
-
-  rt%im%nZones = sl%nZones * tl%nZones
-  allocate(rt%im%zone(rt%im%nZones))
-  call init_rt_im_zone(rt%im%zone)
-
-  rt%im%nij_max = 0_8
-
-  iZone_im = 0
-
-  do itz = 1, tl%nZones
-    if( tl%nZones > 1 )then
-      call echo(code%ent, '('//str(tl%nam)//') Zone '//str(itz)//' / '//str(tl%nZones))
-      call clear_iZone(tl)
-      call free_grid(tl%grid)
-    endif
-
-    tzl => tl%zone(itz)
-    !-----------------------------------------------------------
-    ! Make grid data
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Making grid data ('//str(tl%nam)//')')
-
-    call make_idxmap_latlon(tl)
-    call make_grdidx_latlon(tl)
-
-    if( .not. tzl%is_valid )then
-      call edbg('No valid grid. Skipped.')
-      call echo(code%ext)
-      if( tl%nZones > 1 ) call echo(code%ext)
-      cycle
-    endif
-
-    call make_grduwa_latlon(tl, opt%earth)
-    call make_grdara_latlon(tl)
-    call make_grdwgt_latlon(tl)
-    call make_wgtmap_latlon(tl)
-
-    if( tl%nZones > 1 )then
-      call write_grid_im(&
-             itz, tl%grid, tl%f_grid_out, &
-             attr=.true., idx=.true., &
-             uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do isz = 1, sl%nZones
-      if( sl%nZones > 1 )then
-        call echo(code%ent, '('//str(sl%nam)//') Zone '//str(isz)//' / '//str(sl%nZones))
-        call clear_iZone(sl)
-        call free_grid(sl%grid)
-      endif
-
-      szl => sl%zone(isz)
-      !---------------------------------------------------------
-      call add(iZone_im)
-      !---------------------------------------------------------
-      ! Make grid data
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making grid data ('//str(sl%nam)//')')
-
-      call make_idxmap_latlon(sl)
-      call make_grdidx_latlon(sl)
-
-      if( .not. szl%is_valid )then
-        call edbg('No valid grid. Skipped.')
-        if( sl%nZones > 1 ) call echo(code%ext)
-        cycle
-      endif
-
-      call make_grduwa_latlon(sl, opt%earth)
-      call make_grdara_latlon(sl)
-      call make_grdwgt_latlon(sl)
-      call make_wgtmap_latlon(sl)
-
-      if( sl%nZones > 1 )then
-        call write_grid_im(&
-               isz, sl%grid, sl%f_grid_out, &
-               attr=.true., idx=.true., &
-               uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-      endif
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      ! Make remapping table
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making remapping table')
-
-      call make_rt_latlon_latlon(s, t, rt, opt)
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      if( sl%nZones > 1 ) call echo(code%ext)
-    enddo  ! isz/
-    !-----------------------------------------------------------
-    if( tl%nZones > 1 ) call echo(code%ext)
-  enddo  ! itz/
-
-  call close_file_rt_im(rt%im)
-
-  if( rt%im%nij_max > 0_8 )then
-    call clear_rt_main(rt%main)
-  endif
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Output final products
-  !-------------------------------------------------------------
-  call output_rt_final(&
-         rt, gs_source, gs_target, opt%sys, opt%log, opt%earth)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call free_grid(sl%grid)
-  call free_grid(tl%grid)
-
-  call free_rt_main_data(rt%main)
+  call driv_make_rt_latlon_latlon(&
+         s, t, rt, opt%sys, opt%log, opt%earth, &
+         output, free_sgrid, free_tgrid, free_rtm, &
+         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_rt_driv_latlon_latlon
+end subroutine make_rt_latlon_latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
+subroutine make_rt_latlon_raster(s, t, rt, opt)
+  ! common3
+  use common_rt_llbnds, only: &
+        calc_relations_llbnds
+  use common_rt_driv, only: &
+        driv_make_rt_latlon_raster
   implicit none
-  type(gs_) , intent(inout), target :: gs_source, gs_target
+  type(gs_) , intent(inout), target :: s, t
   type(rt_) , intent(inout), target :: rt
   type(opt_), intent(in)            :: opt
 
-  type(gs_)         , pointer :: s, t
-  type(gs_common_)  , pointer :: sc, tc
-  type(gs_latlon_) , pointer :: sl
-  type(gs_raster_)  , pointer :: tr
-  type(zone_latlon_), pointer :: szl, tzl
-
-  integer, pointer :: isz, itz
+  type(gs_)       , pointer :: a  ! latlon
+  type(gs_)       , pointer :: b  ! raster
+  type(gs_common_), pointer :: ac, bc
+  type(gs_latlon_), pointer :: al
+  type(gs_raster_), pointer :: br
+  integer, pointer :: iaz, ibz
   integer, pointer :: iZone_im
+  logical :: output = .true.
+  logical :: free_sgrid = .true.
+  logical :: free_tgrid = .true.
+  logical :: free_rtm = .true.
+  logical :: was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved
 
   call echo(code%bgn, 'make_rt_driv_latlon_raster')
   !-------------------------------------------------------------
   ! Set pointers
-  !   s: LatLon, t: Raster
+  !   a: LatLon, b: Raster
   !-------------------------------------------------------------
-  if( gs_source%cmn%gs_type == gs_type_latlon )then
-    s => gs_source  ! LatLon
-    t => gs_target  ! Raster
+  if( s%cmn%gs_type == GS_TYPE_LATLON )then
+    a => s  ! latlon
+    b => t  ! raster
   else
-    s => gs_target  ! LatLon
-    t => gs_source  ! Raster
+    a => t  ! latlon
+    b => s  ! raster
   endif
 
-  sc => s%cmn
-  tc => t%cmn
+  ac => a%cmn
+  bc => b%cmn
 
-  sl => s%latlon
-  tr => t%raster
+  al => a%latlon
+  br => b%raster
 
-  isz => sl%iZone
-  itz => tr%iZone
+  iaz => al%iZone
+  ibz => br%iZone
 
   iZone_im => rt%im%iZone
   !-------------------------------------------------------------
@@ -384,19 +256,19 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting grid systems')
 
-  call set_grids_latlon(sl)
-  call set_grids_raster(tr)
+  call set_grids_latlon(al)
+  call set_grids_raster(br)
 
-  call determine_zones_latlon(sl, opt%sys%memory_ulim)
-  call determine_zones_raster(tr, opt%sys%memory_ulim)
+  call determine_zones(al, opt%sys%memory_ulim)
+  call determine_zones(br, opt%sys%memory_ulim)
 
   ! Return if no valid zone exists
   !-------------------------------------------------------------
-  if( sl%nZones == 0 .or. tr%nZones == 0 )then
+  if( al%nZones == 0 .or. br%nZones == 0 )then
     if( rt%main%allow_empty )then
-      call raise_warning_no_valid_zone(sl%nZones, tr%nZones, sl%id, tr%id, sl%nam, tr%nam)
+      call raise_warning_no_valid_zone(al%nZones, br%nZones, al%id, br%id, al%nam, br%nam)
     else
-      call raise_error_no_valid_zone(sl%nZones, tr%nZones, sl%id, tr%id, sl%nam, tr%nam)
+      call raise_error_no_valid_zone(al%nZones, br%nZones, al%id, br%id, al%nam, br%nam)
     endif
 
     call echo(code%ext)
@@ -406,221 +278,61 @@ subroutine make_rt_driv_latlon_raster(gs_source, gs_target, rt, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Calc. relations of grid bounds.
+  ! Prep. grid data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating relations of grid bounds.')
-
-  call calc_relations_llbnds(sl, tr, opt%earth)
-  call calc_relations_llbnds(tr, sl, opt%earth)
-
-  call echo(code%ext)
+  call prep_grid(a)
+  call prep_grid(b)
   !-------------------------------------------------------------
-  ! Prep. grid data of raster
+  ! Make a remapping table
   !-------------------------------------------------------------
-  if( tr%nZones > 1 .and. &
-      (tr%f_grid_in%ara%path /= '' .or. tr%f_grid_in%wgt%path /= '') )then
-    call echo(code%ent, 'Preparing grid data ('//str(tr%nam)//')')
-
-    do itz = 1, tr%nZones
-      call echo(code%ent, 'Zone '//str(itz)//' / '//str(tr%nZones)//' (index and area)')
-      call clear_iZone(tr)
-      call free_grid(tr%grid)
-
-      call make_idxmap_raster(tr)
-      call make_grdidx_raster(tr)
-      call make_grduwa_raster(tr, opt%earth)
-      call make_grdara_raster(tr, opt%earth)
-      call write_grid_im(itz, tr%grid, tr%f_grid_out, &
-                         attr=.true., idx=.true., &
-                         uwa=.true., ara=.true., wgt=.false., xyz=.false.)
-      call echo(code%ext)
-    enddo
-
-    do itz = 1, tr%nZones
-      call echo(code%ent, 'Zone '//str(itz)//' / '//str(tr%nZones)//' (weight)')
-      call clear_iZone(tr)
-      call free_grid(tr%grid)
-
-      call make_grdwgt_raster(tr)
-      call write_grid_im(itz, tr%grid, tr%f_grid_out, &
-                         attr=.false., idx=.false., &
-                         uwa=.false., ara=.false., wgt=.true., xyz=.false.)
-      call echo(code%ext)
-    enddo
-
-    call clear_iZone(tr)
-    call free_grid(tr%grid)
-    call realloc(tr%idxmap, 0)
-    call realloc(tr%wgtmap, 0)
-
-    call echo(code%ext)
-  endif
-  !-------------------------------------------------------------
-  ! Make remapping table
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Making remapping table')
-
-  call set_unit_number_rt_im(rt%im)
-  call open_file_rt_im(rt%im, action_write, opt%sys%old_files)
-
-  rt%im%nZones = sl%nZones * tr%nZones
-  allocate(rt%im%zone(rt%im%nZones))
-  call init_rt_im_zone(rt%im%zone)
-
-  iZone_im = 0
-
-  do itz = 1, tr%nZones
-    if( tr%nZones > 1 )then
-      call echo(code%ent, '('//str(tr%nam)//') Zone '//str(itz)//' / '//str(tr%nZones))
-      call clear_iZone(tr)
-      call free_grid(tr%grid)
-    endif
-
-    tzl => tr%zone(itz)
-    !-----------------------------------------------------------
-    ! Make grid data
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Making grid data ('//str(tr%nam)//')')
-
-    call make_idxmap_raster(tr)
-    call make_grdidx_raster(tr)
-
-    if( .not. tzl%is_valid )then
-      call edbg('No valid grid. Skipped.')
-      call add(iZone_im, sl%nZones)
-      call echo(code%ext)
-      if( tr%nZones > 1 ) call echo(code%ext)
-      cycle
-    endif
-
-    call make_grduwa_raster(tr, opt%earth)
-    call make_grdara_raster(tr, opt%earth)
-    call make_grdwgt_raster(tr)
-    call make_wgtmap_raster(tr, opt%earth)
-
-    if( tr%nZones > 1 )then
-      call write_grid_im(itz, tr%grid, tr%f_grid_out, &
-                         attr=.true., idx=.true., &
-                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do isz = 1, sl%nZones
-      if( sl%nZones > 1 )then
-        call echo(code%ent, '('//str(sl%nam)//') Zone '//str(isz)//' / '//str(sl%nZones))
-        call clear_iZone(sl)
-        call free_grid(sl%grid)
-      endif
-
-      szl => sl%zone(isz)
-      !---------------------------------------------------------
-      call add(iZone_im)
-      !---------------------------------------------------------
-      ! Making grid data
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making grid data ('//str(sl%nam)//')')
-
-      call make_idxmap_latlon(sl)
-      call make_grdidx_latlon(sl)
-
-      if( .not. szl%is_valid )then
-        call edbg('No valid index exists. Skipped')
-        call echo(code%ext)
-        if( sl%nZones > 1 ) call echo(code%ext)
-        cycle
-      endif
-
-      call make_grduwa_latlon(sl, opt%earth)
-      call make_grdara_latlon(sl)
-      call make_grdwgt_latlon(sl)
-      call make_wgtmap_latlon(sl)
-
-      if( sl%nZones > 1 )then
-        call write_grid_im(isz, sl%grid, sl%f_grid_out, &
-                           attr=.true., idx=.true., &
-                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-      endif
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      ! Make remapping table
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making remapping table')
-
-      call make_rt_latlon_raster(s, t, rt, opt)
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      if( sl%nZones > 1 ) call echo(code%ext)
-    enddo  ! isz/
-    !-----------------------------------------------------------
-    if( tr%nZones > 1 ) call echo(code%ext)
-  enddo  ! itz/
-
-  call close_file_rt_im(rt%im)
-
-  if( rt%im%nij_max > 0_8 )then
-    call clear_rt_main(rt%main)
-  endif
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Output final products
-  !-------------------------------------------------------------
-  call output_rt_final(&
-         rt, gs_source, gs_target, opt%sys, opt%log, opt%earth)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call free_grid(sl%grid)
-  call free_grid(tr%grid)
-
-  call free_rt_main_data(rt%main)
+  call driv_make_rt_latlon_raster(&
+         s, t, rt, opt%sys, opt%log, opt%earth, &
+         output, free_sgrid, free_tgrid, free_rtm, &
+         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_latlon_raster
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_driv_latlon_polygon(gs_source, gs_target, rt, opt)
+subroutine make_rt_driv_latlon_polygon(s, t, rt, opt)
+  ! common3
+  use common_rt_latlon_polygon, only: &
+        make_rt_latlon_polygon
   implicit none
-  type(gs_) , intent(inout), target :: gs_source, gs_target
+  type(gs_) , intent(inout), target :: s, t
   type(rt_) , intent(inout), target :: rt
   type(opt_), intent(in)            :: opt
 
-  type(gs_)          , pointer :: s, t
-  type(gs_common_)   , pointer :: sc, tc
-  type(gs_latlon_)  , pointer :: sl
-  type(gs_polygon_)  , pointer :: tp
-  type(zone_latlon_) , pointer :: szl
-  type(zone_polygon_), pointer :: tzp
-  integer, pointer :: isz, itz
+  type(gs_)          , pointer :: a  ! latlon
+  type(gs_)          , pointer :: b  ! polygon
+  type(gs_common_)   , pointer :: ac, bc
+  type(gs_latlon_)   , pointer :: al
+  type(gs_polygon_)  , pointer :: bp
+  integer, pointer :: iaz, ibz
   integer, pointer :: iZone_im
 
   call echo(code%bgn, 'make_rt_driv_latlon_polygon')
   !-------------------------------------------------------------
   ! Set pointers
-  !   s: LatLon, t: Raster
+  !   a: latlon, b: polygon
   !-------------------------------------------------------------
-  if( gs_source%cmn%gs_type == gs_type_latlon )then
-    s => gs_source  ! LatLon
-    t => gs_target  ! Polygon
+  if( s%cmn%gs_type == GS_TYPE_LATLON )then
+    a => s  ! latlon
+    b => t  ! polygon
   else
-    s => gs_target  ! LatLon
-    t => gs_source  ! Polygon
+    a => t  ! latlon
+    b => s  ! polygon
   endif
 
-  sc => s%cmn
-  tc => t%cmn
+  ac => a%cmn
+  bc => b%cmn
 
-  sl => s%latlon
-  tp => t%polygon
+  al => a%latlon
+  bp => b%polygon
 
-  isz => sl%iZone
-  itz => tp%iZone
+  iaz => al%iZone
+  ibz => bp%iZone
 
   iZone_im => rt%im%iZone
   !-------------------------------------------------------------
@@ -628,19 +340,25 @@ subroutine make_rt_driv_latlon_polygon(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting grid systems')
 
-  call set_grids_latlon(sl)
-  call make_n_list_polygon(tp)
+  call set_grids_latlon(al)
+  call make_n_list_polygon(bp)
 
-  call determine_zones_latlon(sl, opt%sys%memory_ulim)
-  call determine_zones_polygon(tp, opt%sys%memory_ulim)
+  call determine_zones(al, opt%sys%memory_ulim)
+  call determine_zones(bp, opt%sys%memory_ulim)
+
+  if( bp%nZones == 1 )then
+    ibz = 1
+    call make_grdidx(bp)
+    call set_grids_polygon(bp)
+  endif
 
   ! Return in no valid zone exists
   !-------------------------------------------------------------
-  if( sl%nZones == 0 .or. tp%nZones == 0 )then
+  if( al%nZones == 0 .or. bp%nZones == 0 )then
     if( rt%main%allow_empty )then
-      call raise_warning_no_valid_zone(sl%nZones, tp%nZones, sl%id, tp%id, sl%nam, tp%nam)
+      call raise_warning_no_valid_zone(al%nZones, bp%nZones, al%id, bp%id, al%nam, bp%nam)
     else
-      call raise_error_no_valid_zone(sl%nZones, tp%nZones, sl%id, tp%id, sl%nam, tp%nam)
+      call raise_error_no_valid_zone(al%nZones, bp%nZones, al%id, bp%id, al%nam, bp%nam)
     endif
 
     call echo(code%ext)
@@ -650,169 +368,146 @@ subroutine make_rt_driv_latlon_polygon(gs_source, gs_target, rt, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make remapping table
+  ! Prep. grid data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making remapping table')
-
-  call set_unit_number_rt_im(rt%im)
-  call open_file_rt_im(rt%im, action_write, opt%sys%old_files)
-
-  rt%im%nZones = sl%nZones * tp%nZones
-  allocate(rt%im%zone(rt%im%nZones))
-  call init_rt_im_zone(rt%im%zone)
-
-  iZone_im = 0
-
-  do itz = 1, tp%nZones
-    if( tp%nZones > 1 )then
-      call echo(code%ent, '('//str(tp%nam)//') Zone '//str(itz)//' / '//str(tp%nZones))
-      call clear_iZone(tp)
-      call free_grid(tp%grid)
-    endif
-
-    tzp => tp%zone(itz)
-    !-----------------------------------------------------------
-    ! Make grid data
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Making grid data ('//str(tp%nam)//')')
-
-    call make_grdidx_polygon(tp)
-    call set_grids_polygon(tp)
-
-    if( .not. tzp%is_valid )then
-      call edbg('No valid grid. Skipped.')
-      call add(iZone_im, sl%nZones)
-      call echo(code%ext)
-      if( tp%nZones > 1 ) call echo(code%ext)
-      cycle
-    endif
-
-    call make_grduwa_polygon(tp, opt%earth)
-    call make_grdara_polygon(tp)
-    call make_grdwgt_polygon(tp)
-
-    if( tp%nZones > 1 )then
-      call write_grid_im(itz, tp%grid, tp%f_grid_out, &
-                         attr=.true., idx=.true., &
-                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do isz = 1, sl%nZones
-      if( sl%nZones > 1 )then
-        call echo(code%ent, '('//str(sl%nam)//') Zone '//str(isz)//' / '//str(sl%nZones))
-        call clear_iZone(sl)
-        call free_grid(sl%grid)
-      endif
-
-      szl => sl%zone(isz)
-      !---------------------------------------------------------
-      call add(iZone_im)
-      !---------------------------------------------------------
-      ! Make grid data
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making grid data ('//str(sl%nam)//')')
-
-      call make_idxmap_latlon(sl)
-      call make_grdidx_latlon(sl)
-
-      if( .not. szl%is_valid )then
-        call edbg('No valid grid. Skipped.')
-        call echo(code%ext)
-        if( sl%nZones > 1 ) call echo(code%ext)
-        cycle
-      endif
-
-      call make_grduwa_latlon(sl, opt%earth)
-      call make_grdara_latlon(sl)
-      call make_grdwgt_latlon(sl)
-      call make_wgtmap_latlon(sl)
-
-      if( sl%nZones > 1 )then
-        call write_grid_im(isz, sl%grid, sl%f_grid_out, &
-                           attr=.true., idx=.true., &
-                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-      endif
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      ! Make a remapping table
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making remapping table')
-
-      call make_rt_latlon_polygon(s, t, rt, opt)
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      if( sl%nZones > 1 ) call echo(code%ext)
-    enddo  ! isz/
-    !-----------------------------------------------------------
-    if( tp%nZones > 1 ) call echo(code%ext)
-  enddo  ! itz/
-
-  call close_file_rt_im(rt%im)
-
-  if( rt%im%nij_max > 0_8 )then
-    call clear_rt_main(rt%main)
-  endif
-
-  call echo(code%ext)
+  call prep_grid(a)
+  call prep_grid(b)
   !-------------------------------------------------------------
-  ! Output final products
+  ! Make a remapping table
   !-------------------------------------------------------------
-  call output_rt_final(&
-         rt, gs_source, gs_target, opt%sys, opt%log, opt%earth)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call free_grid(sl%grid)
-  call free_grid(tp%grid)
-
-  call free_rt_main_data(rt%main)
+  call driv_make_rt_latlon_polygon(&
+         s, t, rt, opt%sys, opt%log, opt%earth, &
+         output, free_sgrid, free_tgrid, free_rtm, &
+         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_latlon_polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
+subroutine make_rt_driv_raster_raster(s, t, rt, opt)
+  ! common3
+  use common_rt_llbnds, only: &
+        calc_relations_llbnds
+  use common_rt_raster_raster, only: &
+        make_rt_raster_raster
   implicit none
-  type(gs_), intent(inout), target :: gs_source, gs_target
-  type(rt_), intent(inout), target :: rt
-  type(opt_), intent(in) :: opt
+  type(gs_) , intent(inout), target :: s  ! source
+  type(gs_) , intent(inout), target :: t  ! target
+  type(rt_) , intent(inout), target :: rt
+  type(opt_), intent(in)            :: opt
 
-  type(gs_)          , pointer :: s, t
-  type(gs_common_)   , pointer :: sc, tc
-  type(gs_raster_)   , pointer :: sr
-  type(gs_polygon_)  , pointer :: tp
-  type(zone_latlon_) , pointer :: szl
-  type(zone_polygon_), pointer :: tzp
-  integer, pointer :: isz, itz
+  type(gs_)         , pointer :: a, b
+  type(gs_common_)  , pointer :: ac, bc
+  type(gs_raster_)  , pointer :: ar, br
+  integer, pointer :: iaz, ibz
+  integer, pointer :: iZone_im
+
+  call echo(code%bgn, 'make_rt_driv_raster_raster')
+  !-------------------------------------------------------------
+  ! Set pointers
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting pointers')
+
+  a => s
+  b => t
+
+  ac => a%cmn
+  bc => b%cmn
+
+  ar => a%raster
+  br => b%raster
+
+  iaz => ar%iZone
+  ibz => br%iZone
+
+  iZone_im => rt%im%iZone
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Set grid systems
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Setting grid systems')
+
+  call set_grids_raster(ar)
+  call set_grids_raster(br)
+
+  call determine_zones(ar, opt%sys%memory_ulim)
+  call determine_zones(br, opt%sys%memory_ulim)
+
+  ! Return if no valid zone exists
+  !-------------------------------------------------------------
+  if( ar%nZones == 0 .or. br%nZones == 0 )then
+    if( rt%main%allow_empty )then
+      call raise_warning_no_valid_zone(ar%nZones, br%nZones, ar%id, br%id, ar%nam, br%nam)
+    else
+      call raise_error_no_valid_zone(ar%nZones, br%nZones, ar%id, br%id, ar%nam, br%nam)
+    endif
+
+    call echo(code%ext)
+    call echo(code%ret)
+    return
+  endif
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Prep. grid data
+  !-------------------------------------------------------------
+  call prep_grid(a)
+  call prep_grid(b)
+  !-------------------------------------------------------------
+  ! Make a remapping table
+  !-------------------------------------------------------------
+  call driv_make_rt_raster_raster(&
+         s, t, rt, opt%sys, opt%log, opt%earth, &
+         output, free_sgrid, free_tgrid, free_rtm, &
+         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_rt_driv_raster_raster
+!===============================================================
+!
+!===============================================================
+subroutine make_rt_driv_raster_polygon(s, t, rt, opt)
+  use common_area_raster_polygon, only: &
+        initialize, &
+        finalize
+  use common_rt_raster_polygon, only: &
+        make_rt_raster_polygon
+  implicit none
+  type(gs_) , intent(inout), target :: s
+  type(gs_) , intent(inout), target :: t
+  type(rt_) , intent(inout), target :: rt
+  type(opt_), intent(in)            :: opt
+
+  type(gs_)          , pointer :: a  ! raster
+  type(gs_)          , pointer :: b  ! polygon
+  type(gs_common_)   , pointer :: ac, bc
+  type(gs_raster_)   , pointer :: ar
+  type(gs_polygon_)  , pointer :: bp
+  integer, pointer :: iaz, ibz
   integer, pointer :: iZone_im
 
   call echo(code%bgn, 'make_rt_driv_raster_polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( gs_source%cmn%gs_type == gs_type_raster )then
-    s => gs_source  ! raster
-    t => gs_target  ! polygon
+  if( s%cmn%gs_type == GS_TYPE_RASTER )then
+    a => s  ! raster
+    b => t  ! polygon
   else
-    s => gs_target  ! raster
-    t => gs_source  ! polygon
+    a => t  ! raster
+    b => s  ! polygon
   endif
 
-  sc => s%cmn
-  tc => t%cmn
+  ac => a%cmn
+  bc => b%cmn
 
-  sr => s%raster
-  tp => t%polygon
+  ar => a%raster
+  bp => b%polygon
 
-  isz => sr%iZone
-  itz => tp%iZone
+  iaz => ar%iZone
+  ibz => bp%iZone
 
   iZone_im => rt%im%iZone
   !-------------------------------------------------------------
@@ -820,19 +515,25 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting grid systems')
 
-  call set_grids_raster(sr)
-  call make_n_list_polygon(tp)
+  call set_grids_raster(ar)
+  call make_n_list_polygon(bp)
 
-  call determine_zones_raster(sr, opt%sys%memory_ulim)
-  call determine_zones_polygon(tp, opt%sys%memory_ulim)
+  call determine_zones(ar, opt%sys%memory_ulim)
+  call determine_zones(bp, opt%sys%memory_ulim)
+
+  if( bp%nZones == 1 )then
+    ibz = 1
+    call make_grdidx(bp)
+    call set_grids_polygon(bp)
+  endif
 
   ! Return if no valid zone exists
   !-------------------------------------------------------------
-  if( sr%nZones == 0 .or. tp%nZones == 0 )then
+  if( ar%nZones == 0 .or. bp%nZones == 0 )then
     if( rt%main%allow_empty )then
-      call raise_warning_no_valid_zone(sr%nZones, tp%nZones, sr%id, tp%id, sr%nam, tp%nam)
+      call raise_warning_no_valid_zone(ar%nZones, bp%nZones, ar%id, bp%id, ar%nam, bp%nam)
     else
-      call raise_error_no_valid_zone(sr%nZones, tp%nZones, sr%id, tp%id, sr%nam, tp%nam)
+      call raise_error_no_valid_zone(ar%nZones, bp%nZones, ar%id, bp%id, ar%nam, bp%nam)
     endif
 
     call echo(code%ext)
@@ -842,212 +543,56 @@ subroutine make_rt_driv_raster_polygon(gs_source, gs_target, rt, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Prep. grid data of raster
+  ! Prep. grid data
   !-------------------------------------------------------------
-  if( sr%nZones > 1 .and. &
-      (sr%f_grid_in%ara%path /= '' .or. sr%f_grid_in%wgt%path /= '') )then
-    call echo(code%ent, 'Preparing grid data ('//str(sr%nam)//')')
-
-    do isz = 1, sr%nZones
-      call echo(code%ent, 'Zone '//str(isz)//' / '//str(sr%nZones)//' (index and area)')
-      call clear_iZone(sr)
-      call free_grid(sr%grid)
-
-      call make_idxmap_raster(sr)
-      call make_grdidx_raster(sr)
-      call make_grduwa_raster(sr, opt%earth)
-      call make_grdara_raster(sr, opt%earth)
-      call write_grid_im(isz, sr%grid, sr%f_grid_out, &
-                         attr=.true., idx=.true., &
-                         uwa=.true., ara=.true., wgt=.false., xyz=.false.)
-      call echo(code%ext)
-    enddo
-    do isz = 1, sr%nZones
-      call echo(code%ent, 'Zone '//str(isz)//' / '//str(sr%nZones)//' (weight)')
-      call clear_iZone(sr)
-      call free_grid(sr%grid)
-
-      call make_grdwgt_raster(sr)
-      call write_grid_im(isz, sr%grid, sr%f_grid_out, &
-                         attr=.false., idx=.false., &
-                         uwa=.false., ara=.false., wgt=.true., xyz=.false.)
-      call echo(code%ext)
-    enddo
-
-    call free_grid(sr%grid)
-    call realloc(sr%idxmap, 0)
-    call realloc(sr%wgtmap, 0)
-
-    call echo(code%ext)
-  endif
+  call prep_grid(a)
+  call prep_grid(b)
   !-------------------------------------------------------------
-  ! Make remapping table
+  ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making remapping table')
-
-  call set_unit_number_rt_im(rt%im)
-  call open_file_rt_im(rt%im, action_write, opt%sys%old_files)
-
-  rt%im%nZones = sr%nZones * tp%nZones
-  allocate(rt%im%zone(rt%im%nZones))
-  call init_rt_im_zone(rt%im%zone)
-
-  rt%im%nij_max = 0_8
-
-  iZone_im = 0
-
-  ! Initialize
-  call initialize_raster_polygon(sr, tp, rt%vrf_source%dval_miss)
-  call make_rt_raster_polygon('I', s, t, rt, opt)  ![2024/11/19 bug fix]
-
-  do isz = 1, sr%nZones
-    if( sr%nZones > 1 )then
-      call echo(code%ent, '('//str(sr%nam)//') Zone '//str(isz)//'/'//str(sr%nZones))
-      call clear_iZone(sr)
-      call free_grid(sr%grid)
-    endif
-
-    szl => sr%zone(isz)
-    !-----------------------------------------------------------
-    ! Make grid data
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Making grid data ('//str(sr%nam)//')')
-
-    call make_idxmap_raster(sr)
-    call make_grdidx_raster(sr)
-
-    if( .not. szl%is_valid )then
-      call edbg('No valid grid. Skipped.')
-      call add(iZone_im, tp%nZones)
-      call echo(code%ext)
-      if( sr%nZones > 1 ) call echo(code%ext)
-      cycle
-    endif
-
-    call make_grduwa_raster(sr, opt%earth)
-    call make_grdara_raster(sr, opt%earth)
-    call make_grdwgt_raster(sr)
-    call make_wgtmap_raster(sr, opt%earth)
-
-    if( sr%nZones > 1 )then
-      call write_grid_im(isz, sr%grid, sr%f_grid_out, &
-                         attr=.true., idx=.true., &
-                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    ! Make remapping table
-    !-----------------------------------------------------------
-    do itz = 1, tp%nZones
-      if( tp%nZones > 1 )then
-        call echo(code%ent, '('//str(tp%nam)//') Zone '//str(itz)//' / '//str(tp%nZones))
-        call clear_iZone(tp)
-        call free_grid(tp%grid)
-      endif
-
-      tzp => tp%zone(itz)
-      !---------------------------------------------------------
-      call add(iZone_im)
-      !---------------------------------------------------------
-      ! Make grid data
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making grid data ('//str(tp%nam)//')')
-
-      call make_grdidx_polygon(tp)
-      call set_grids_polygon(tp)
-
-      if( .not. tzp%is_valid )then
-        call edbg('No valid grid. Skipped.')
-        call echo(code%ext)
-        if( tp%nZones > 1 ) call echo(code%ext)
-        cycle
-      endif
-
-      call make_grduwa_polygon(tp, opt%earth)
-      call make_grdara_polygon(tp)
-      call make_grdwgt_polygon(tp)
-
-      if( tp%nZones > 1 )then
-        call write_grid_im(itz, tp%grid, tp%f_grid_out, &
-                           attr=.true., idx=.true., &
-                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-      endif
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      ! Make remapping table
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making remapping table')
-
-      call make_rt_raster_polygon('R', s, t, rt, opt) ![2024/11/19 bug fix]
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      if( tp%nZones > 1 ) call echo(code%ext)
-    enddo  ! itz/
-    !-----------------------------------------------------------
-    if( sr%nZones > 1 ) call echo(code%ext)
-  enddo  ! isz/
-
-  ! Finalize
-  call make_rt_raster_polygon('F', s, t, rt, opt) ![2024/11/19 bug fix]
-  call finalize_raster_polygon()
-
-  call close_file_rt_im(rt%im)
-
-  if( rt%im%nij_max > 0_8 )then
-    call clear_rt_main(rt%main)
-  endif
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Output final products
-  !-------------------------------------------------------------
-  call output_rt_final(&
-         rt, gs_source, gs_target, opt%sys, opt%log, opt%earth)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call free_grid(sr%grid)
-  call free_grid(tp%grid)
-
-  call free_rt_main_data(rt%main)
+  call driv_make_rt_raster_polygon(&
+         s, t, rt, opt%sys, opt%log, opt%earth, &
+         output, free_sgrid, free_tgrid, free_rtm, &
+         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_raster_polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_driv_polygon_polygon(gs_source, gs_target, rt, opt)
+subroutine make_rt_driv_polygon_polygon(s, t, rt, opt)
+  use common_rt_polygon_polygon_regions, only: &
+        set_regions_polygon_polygon
+  use common_rt_polygon_polygon, only: &
+        make_rt_polygon_polygon
   implicit none
-  type(gs_) , intent(inout), target :: gs_source, gs_target
+  type(gs_) , intent(inout), target :: s, t
   type(rt_) , intent(inout), target :: rt
   type(opt_), intent(in)            :: opt
 
-  type(gs_)          , pointer :: s, t
-  type(gs_common_)   , pointer :: sc, tc
-  type(gs_polygon_)  , pointer :: sp, tp
-  type(zone_polygon_), pointer :: szp, tzp
+  type(gs_)          , pointer :: a, b
+  type(gs_common_)   , pointer :: ac, bc
+  type(gs_polygon_)  , pointer :: ap, bp
+  type(zone_polygon_), pointer :: azp, bzp
   type(regions_) :: regions
-  integer, pointer :: isz, itz
+  integer, pointer :: iaz, ibz
   integer, pointer :: iZone_im
 
   call echo(code%bgn, 'make_rt_driv_polygon_polygon')
   !-------------------------------------------------------------
-  !
+  ! Set pointers
   !-------------------------------------------------------------
-  s => gs_source
-  t => gs_target
+  a => s
+  b => t
 
-  sc => s%cmn
-  tc => t%cmn
+  ac => a%cmn
+  bc => b%cmn
 
-  sp => s%polygon
-  tp => t%polygon
+  ap => a%polygon
+  bp => b%polygon
 
-  isz => sp%iZone
-  itz => tp%iZone
+  iaz => ap%iZone
+  ibz => bp%iZone
 
   iZone_im => rt%im%iZone
   !-------------------------------------------------------------
@@ -1055,19 +600,31 @@ subroutine make_rt_driv_polygon_polygon(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting grid systems')
 
-  call make_n_list_polygon(sp)
-  call make_n_list_polygon(tp)
+  call make_n_list_polygon(ap)
+  call make_n_list_polygon(bp)
 
-  call determine_zones_polygon(sp, opt%sys%memory_ulim)
-  call determine_zones_polygon(tp, opt%sys%memory_ulim)
+  call determine_zones(ap, opt%sys%memory_ulim)
+  call determine_zones(bp, opt%sys%memory_ulim)
+
+  if( ap%nZones == 1 )then
+    ap%iZone = 1
+    call make_grdidx(ap)
+    call set_grids_polygon(ap)
+  endif
+
+  if( bp%nZones == 1 )then
+    bp%iZone = 1
+    call make_grdidx(bp)
+    call set_grids_polygon(bp)
+  endif
 
   ! Return if no valid zone exists
   !-------------------------------------------------------------
-  if( sp%nZones == 0 .or. tp%nZones == 0 )then
+  if( ap%nZones == 0 .or. bp%nZones == 0 )then
     if( rt%main%allow_empty )then
-      call raise_warning_no_valid_zone(sp%nZones, tp%nZones, sp%id, tp%id, sp%nam, tp%nam)
+      call raise_warning_no_valid_zone(ap%nZones, bp%nZones, ap%id, bp%id, ap%nam, bp%nam)
     else
-      call raise_error_no_valid_zone(sp%nZones, tp%nZones, sp%id, tp%id, sp%nam, tp%nam)
+      call raise_error_no_valid_zone(ap%nZones, bp%nZones, ap%id, bp%id, ap%nam, bp%nam)
     endif
 
     call echo(code%ext)
@@ -1077,130 +634,17 @@ subroutine make_rt_driv_polygon_polygon(gs_source, gs_target, rt, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make remapping table
+  ! Prep. grid data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making remapping table')
-
-  call set_unit_number_rt_im(rt%im)
-  call open_file_rt_im(rt%im, action_write, opt%sys%old_files)
-
-  rt%im%nZones = sp%nZones * tp%nZones
-  allocate(rt%im%zone(rt%im%nZones))
-  call init_rt_im_zone(rt%im%zone)
-
-  iZone_im = 0
-
-  do isz = 1, sp%nZones
-    if( sp%nZones > 1 )then
-      call echo(code%ent, '('//str(sp%nam)//') Zone '//str(isz)//' / '//str(sp%nZones))
-      call clear_iZone(sp)
-      call free_grid(sp%grid)
-    endif
-
-    szp => sp%zone(isz)
-    !-----------------------------------------------------------
-    ! Prep. grid data
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Preparing grid data ('//str(sp%nam)//')')
-
-    call make_grdidx_polygon(sp)
-    call set_grids_polygon(sp)
-
-    if( .not. szp%is_valid )then
-      call edbg('No valid grid. Skipped.')
-      call add(iZone_im, tp%nZones)
-      call echo(code%ext)
-      if( sp%nZones > 1 ) call echo(code%ext)
-      cycle
-    endif
-
-    call make_grduwa_polygon(sp, opt%earth)
-    call make_grdara_polygon(sp)
-    call make_grdwgt_polygon(sp)
-
-    if( sp%nZones > 1 )then
-      call write_grid_im(isz, sp%grid, sp%f_grid_out, &
-                         attr=.true., idx=.true., &
-                         uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do itz = 1, tp%nZones
-      if( tp%nZones > 1 )then
-        call echo(code%ent, '('//str(tp%nam)//') Zone '//str(itz)//' / '//str(tp%nZones))
-        call clear_iZone(tp)
-        call free_grid(tp%grid)
-      endif
-
-      tzp => tp%zone(itz)
-      !---------------------------------------------------------
-      call add(iZone_im)
-      !---------------------------------------------------------
-      ! Prep. grid data
-      !---------------------------------------------------------
-      call echo(code%ent, 'Preparing grid data ('//str(tp%nam)//')')
-
-      call make_grdidx_polygon(tp)
-      call set_grids_polygon(tp)
-
-      if( tzp%mij == 0_8 )then
-        call edbg('No valid grid. Skipped.')
-        call echo(code%ext)
-        cycle
-      endif
-
-      call make_grduwa_polygon(tp, opt%earth)
-      call make_grdara_polygon(tp)
-      call make_grdwgt_polygon(tp)
-
-      if( tp%nZones > 1 )then
-        call write_grid_im(itz, tp%grid, tp%f_grid_out, &
-                           attr=.true., idx=.true., &
-                           uwa=.true., ara=.true., wgt=.true., xyz=.false.)
-      endif
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      ! Set regions
-      !---------------------------------------------------------
-      call set_regions_polygon_polygon(sp, tp, regions)
-      !---------------------------------------------------------
-      ! Make remapping table
-      !---------------------------------------------------------
-      call echo(code%ent, 'Making remapping table')
-
-      call make_rt_polygon_polygon(s, t, rt, regions, opt)
-
-      call echo(code%ext)
-      !---------------------------------------------------------
-      if( tp%nZones > 1 ) call echo(code%ext)
-    enddo  ! itz/
-    !-----------------------------------------------------------
-    if( sp%nZones > 1 ) call echo(code%ext)
-  enddo  ! isz/
-
-  call close_file_rt_im(rt%im)
-
-  if( rt%im%nij_max > 0_8 )then
-    call clear_rt_main(rt%main)
-  endif
-
-  call echo(code%ext)
+  call prep_grid(a)
+  call prep_grid(b)
   !-------------------------------------------------------------
-  ! Output final products
+  ! Make a remapping table
   !-------------------------------------------------------------
-  call output_rt_final(&
-         rt, gs_source, gs_target, opt%sys, opt%log, opt%earth)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call free_grid(sp%grid)
-  call free_grid(tp%grid)
-
-  call free_rt_main_data(rt%main)
+  call driv_make_rt_polygon_polygon(&
+         s, t, rt, opt%sys, opt%log, opt%earth, &
+         output, free_sgrid, free_tgrid, free_rtm, &
+         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_driv_polygon_polygon
@@ -1215,9 +659,9 @@ end subroutine make_rt_driv_polygon_polygon
 !===============================================================
 !
 !===============================================================
-subroutine remove_im(s, t, rt)
+subroutine remove_im(a, b, rt)
   implicit none
-  type(gs_), intent(in), target :: s, t
+  type(gs_), intent(in), target :: a, b
   type(rt_), intent(in), target :: rt
 
   type(file_grid_out_), pointer :: fg_out
@@ -1233,13 +677,13 @@ subroutine remove_im(s, t, rt)
   !-------------------------------------------------------------
   ! Grid data
   !-------------------------------------------------------------
-  fg_out => s%cmn%f_grid_out
+  fg_out => a%cmn%f_grid_out
   do iZone = 1, fg_out%nZones
     zone_im => fg_out%zone_im(iZone)
     call remove(zone_im%path, output=.true.)
   enddo
 
-  fg_out => t%cmn%f_grid_out
+  fg_out => b%cmn%f_grid_out
   do iZone = 1, fg_out%nZones
     zone_im => fg_out%zone_im(iZone)
     call remove(zone_im%path, output=.true.)

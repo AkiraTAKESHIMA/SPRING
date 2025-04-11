@@ -4,18 +4,32 @@ module common_rt_polygon_polygon
   use lib_log
   use lib_array
   use lib_math
+  ! common1
   use common_const
   use common_type_opt
   use common_type_gs
+  use common_gs_util, only: &
+        print_gs_polygon, &
+        print_polygon
+  ! common2
   use common_type_rt
+  use common_rt1d, only: &
+        init_rt1d, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
+        clear_rt_main, &
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: make_rt_polygon_polygon
   !-------------------------------------------------------------
-  ! Private Module Variables
+  !
   !-------------------------------------------------------------
   logical :: debug
   !-------------------------------------------------------------
@@ -23,20 +37,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_polygon_polygon(&
-    s, t, rt, regions, opt_sys, opt_earth)
-  use common_gs_util, only: &
-        print_gs_polygon, &
-        print_polygon
-  use common_rt1d, only: &
-        init_rt1d, &
-        free_rt1d_data, &
-        reshape_rt1d
-  use common_rt_base, only: &
-        calc_rt_im_nij_ulim, &
-        clear_rt_main
-  use common_rt_io, only: &
-        write_rt_im
+subroutine make_rt_polygon_polygon(s, t, rt, regions, opt_sys, opt_earth)
   implicit none
   type(gs_)       , intent(inout), target :: s, t
   type(rt_)       , intent(inout), target :: rt
@@ -48,18 +49,17 @@ subroutine make_rt_polygon_polygon(&
   type(gs_polygon_)     , pointer :: sgp, tgp
   type(file_polygon_in_), pointer :: sfp, tfp
   type(zone_polygon_)   , pointer :: szp, tzp
-  type(grid_), pointer :: sg, tg
+  type(grid_)           , pointer :: sg, tg
   type(rt_main_)       , pointer :: rtm
   type(rt1d_)          , pointer :: rt1d(:), rt1
   type(polygon_)       , pointer :: sp, tp
-
-  real(8) :: area
 
   type(region_), pointer :: region
   integer(8) :: ssij, sij, ttij, tij
   integer(8) :: tijs
   integer :: iRegion
   real(8) :: sarea, tarea
+  real(8) :: area
 
   call echo(code%bgn, 'make_rt_polygon_polygon')
   !-------------------------------------------------------------
@@ -148,8 +148,10 @@ subroutine make_rt_polygon_polygon(&
 
   rtm%nij = 0_8
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make a remapping table
   !-------------------------------------------------------------
+  call echo(code%ent, 'Making a remapping table')
+
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.true.)
   endif
@@ -261,18 +263,20 @@ subroutine make_rt_polygon_polygon(&
     enddo  ! ttij/
   enddo  ! iRegion/
 
-  ! Output intermediates
+  ! Reshape and output intermediates
   !-------------------------------------------------------------
   call reshape_rt1d(rt1d(tijs:tzp%mij), tgc%is_source, rtm, opt_earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call write_rt_im(rtm, rt%im)
+    call write_rt_im(rtm, rt%im, opt_sys%old_files)
     call clear_rt_main(rtm)
   endif
 
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
+  !-------------------------------------------------------------
+  call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

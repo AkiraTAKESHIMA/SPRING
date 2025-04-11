@@ -24,16 +24,10 @@ OBJ_F = \
 def_type.o\
 mod_file.o\
 mod_set.o\
-mod_rt_latlon_latlon.o\
-mod_rt_latlon_raster.o\
-mod_rt_latlon_polygon.o\
-mod_rt_raster_polygon.o\
-mod_rt_polygon_polygon_regions.o\
-mod_rt_polygon_polygon.o\
-mod_rt.o\
 mod_remap.o\
 mod_finalize.o\
 main.o
+#mod_rt.o\
 
 OBJ_ALL = $(OBJ_F)
 OBJ_LIB = def_*.o mod_*.o

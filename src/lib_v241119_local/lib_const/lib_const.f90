@@ -176,11 +176,11 @@ module lib_const
   character(clen_key), parameter :: coord_sys_spherical = 'spherical'
   character(clen_key), parameter :: coord_sys_cartesian = 'cartesian'
 
-  character(clen_key), parameter :: inequality_none = 'none'
-  character(clen_key), parameter :: inequality_lt = 'lt'
-  character(clen_key), parameter :: inequality_le = 'le'
-  character(clen_key), parameter :: inequality_gt = 'gt'
-  character(clen_key), parameter :: inequality_ge = 'ge'
+  character(clen_key), parameter :: ineq_none = 'none'
+  character(clen_key), parameter :: ineq_lt = 'lt'
+  character(clen_key), parameter :: ineq_le = 'le'
+  character(clen_key), parameter :: ineq_gt = 'gt'
+  character(clen_key), parameter :: ineq_ge = 'ge'
 
   integer, parameter :: sign_counterclockwise =  1
   integer, parameter :: sign_clockwise        = -1

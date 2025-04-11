@@ -16,7 +16,7 @@ module common_gs_base
   public :: init_gs
 
   public :: alloc_gs_components
-  public :: set_gs_common_components
+  public :: set_gs_common
 
   public :: set_default_values_gs_latlon
   public :: set_default_values_gs_raster
@@ -35,6 +35,8 @@ module common_gs_base
   public :: set_miss_file_grid_in
   public :: set_miss_file_grid_out
   public :: set_save_file_grid_out
+
+  public :: free_gs
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -61,68 +63,85 @@ end subroutine init_gs
 ! Requirements:
 !   1. That SUBROUTINE init_gs has been called.
 !===============================================================
-subroutine alloc_gs_components(u, gs_type)
+subroutine alloc_gs_components(a, gs_type)
   implicit none
-  type(gs_)   , intent(inout), target :: u
+  type(gs_)   , intent(inout), target :: a
   character(*), intent(in) :: gs_type
 
-  type(gs_common_) , pointer :: uc
-  type(gs_latlon_) , pointer :: ul
-  type(gs_raster_) , pointer :: ur
-  type(gs_polygon_), pointer :: up
+  type(gs_common_) , pointer :: ac
+  type(gs_latlon_) , pointer :: al
+  type(gs_raster_) , pointer :: ar
+  type(gs_polygon_), pointer :: ap
 
   call echo(code%bgn, 'alloc_gs_components', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  u%gs_type = gs_type
+  a%gs_type = gs_type
 
   selectcase( gs_type )
   case( GS_TYPE_LATLON )
-    allocate(u%latlon)
-    ul => u%latlon
-    ul%id = trim(u%id)//'%latlon'
-    ul%nam => u%nam
-    ul%is_source = u%is_source
-    nullify(ul%f_latlon_in)
-    nullify(ul%f_grid_in)
-    nullify(ul%f_grid_out)
-    nullify(ul)
+    allocate(a%latlon)
+    al => a%latlon
+    al%id = trim(a%id)//'%latlon'
+    al%nam => a%nam
+    al%is_source = a%is_source
+    nullify(al%f_latlon_in)
+    nullify(al%f_grid_in)
+    nullify(al%f_grid_out)
+    nullify(al%zone)
+    nullify(al%lon, al%lat)
+    nullify(al%lonwidth, al%latwidth)
+    nullify(al%lon0)
+    nullify(al%idxmap, al%wgtmap)
+    nullify(al%hrel, al%vrel)
+    nullify(al)
   case( GS_TYPE_RASTER )
-    allocate(u%raster)
-    ur => u%raster
-    ur%id = trim(u%id)//'%raster'
-    ur%nam => u%nam
-    ur%is_source = u%is_source
-    nullify(ur%f_raster_in)
-    nullify(ur%f_grid_in)
-    nullify(ur%f_grid_out)
-    nullify(ur)
+    allocate(a%raster)
+    ar => a%raster
+    ar%id = trim(a%id)//'%raster'
+    ar%nam => a%nam
+    ar%is_source = a%is_source
+    nullify(ar%f_raster_in)
+    nullify(ar%f_grid_in)
+    nullify(ar%f_grid_out)
+    nullify(ar%zone)
+    nullify(ar%lon, ar%lat)
+    nullify(ar%lonwidth, ar%latwidth)
+    nullify(ar%lon0)
+    nullify(ar%idxmap, ar%wgtmap)
+    nullify(ar%idxmapall1, ar%idxmapall2, &
+            ar%idxmapall4, ar%idxmapall8)
+    nullify(ar%hrel, ar%vrel)
+    nullify(ar)
   case( GS_TYPE_POLYGON )
-    allocate(u%polygon)
-    up => u%polygon
-    up%id = trim(u%id)//'%polygon'
-    up%nam => u%nam
-    up%is_source = u%is_source
-    nullify(up%f_polygon_in)
-    nullify(up%f_grid_in)
-    nullify(up%f_grid_out)
-    nullify(up)
+    allocate(a%polygon)
+    ap => a%polygon
+    ap%id = trim(a%id)//'%polygon'
+    ap%nam => a%nam
+    ap%is_source = a%is_source
+    nullify(ap%f_polygon_in)
+    nullify(ap%f_grid_in)
+    nullify(ap%f_grid_out)
+    nullify(ap%zone)
+    nullify(ap%polygon)
+    nullify(ap%n_next, ap%n_prev)
+    nullify(ap)
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  gs_type: '//str(gs_type))
   endselect
 
-  allocate(u%cmn)
-  uc => u%cmn
-  uc%id = trim(u%id)//'%cmn'
-  uc%nam => u%nam
-  uc%gs_type => u%gs_type
-  uc%is_source => u%is_source
-  nullify(uc%f_grid_in)
-  nullify(uc%f_grid_out)
-  nullify(uc%grid)
-  nullify(uc)
+  allocate(a%cmn)
+  ac => a%cmn
+  ac%id = trim(a%id)//'%cmn'
+  ac%nam => a%nam
+  ac%gs_type => a%gs_type
+  ac%is_source => a%is_source
+  nullify(ac%f_grid_in)
+  nullify(ac%f_grid_out)
+  nullify(ac%grid)
+  nullify(ac)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine alloc_gs_components
@@ -130,7 +149,7 @@ end subroutine alloc_gs_components
 ! Requirements:
 !   1. That SUBROUTINE set_default_values_gs_? has been called.
 !===============================================================
-subroutine set_gs_common_components(u)
+subroutine set_gs_common(u)
   implicit none
   type(gs_), intent(inout), target :: u
 
@@ -139,7 +158,7 @@ subroutine set_gs_common_components(u)
   type(gs_raster_) , pointer :: ur
   type(gs_polygon_), pointer :: up
 
-  call echo(code%bgn, 'set_gs_common_components', '-p -x2')
+  call echo(code%bgn, 'set_gs_common', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -184,7 +203,7 @@ subroutine set_gs_common_components(u)
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_gs_common_components
+end subroutine set_gs_common
 !===============================================================
 !
 !===============================================================
@@ -355,6 +374,7 @@ subroutine set_default_values_gs_raster(ur)
   nullify(ur%latwidth)
   nullify(ur%lon0)
 
+  ur%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_FILE_PB
   nullify(ur%idxmap)
   nullify(ur%wgtmap)
 
@@ -458,22 +478,16 @@ subroutine set_default_values_file_grid_in(fg)
 
   call echo(code%bgn, 'set_default_values_file_grid_in', '-p -x2')
   !-------------------------------------------------------------
-  fg%idx = file('', dtype_int4, 1, endian_default, &
-                id=trim(fg%id)//'%idx', action=action_read)
-  fg%ara = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%ara', action=action_read)
-  fg%wgt = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%wgt', action=action_read)
-  fg%x   = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%x', action=action_read)
-  fg%y   = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%y', action=action_read)
-  fg%z   = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%z', action=action_read)
-  fg%lon = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%lon', action=action_read)
-  fg%lat = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%lat', action=action_read)
+  call set_file_default(action=ACTION_READ)
+  fg%idx = file(dtype=DTYPE_INT4, id=trim(fg%id)//'%idx')
+  fg%ara = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%ara')
+  fg%wgt = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%wgt')
+  fg%x   = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%x'  )
+  fg%y   = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%y'  )
+  fg%z   = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%z'  )
+  fg%lon = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%lon')
+  fg%lat = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%lat')
+  call reset_file_default()
 
   fg%nFiles_val = 0
   nullify(fg%val)
@@ -523,26 +537,18 @@ subroutine set_default_values_file_grid_out(fg)
   fg%save_xyz    = .false.
   fg%save_lonlat = .false.
 
-  fg%msk = file('', dtype_int4, 1, endian_default, &
-                id=trim(fg%id)//'%msk', action=action_write)
-  fg%idx = file('', dtype_int4, 1, endian_default, &
-                id=trim(fg%id)//'%idx', action=action_write)
-  fg%uwa = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%uwa', action=action_write)
-  fg%ara = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%ara', action=action_write)
-  fg%wgt = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%wgt', action=action_write)
-  fg%x = file('', dtype_dble, 1, endian_default, &
-              id=trim(fg%id)//'%x', action=action_write)
-  fg%y = file('', dtype_dble, 1, endian_default, &
-              id=trim(fg%id)//'%y', action=action_write)
-  fg%z = file('', dtype_dble, 1, endian_default, &
-              id=trim(fg%id)//'%z', action=action_write)
-  fg%lon = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%lon', action=action_write)
-  fg%lat = file('', dtype_dble, 1, endian_default, &
-                id=trim(fg%id)//'%lat', action=action_write)
+  call set_file_default(action=ACTION_WRITE)
+  fg%msk = file(dtype=DTYPE_INT4, id=trim(fg%id)//'%msk')
+  fg%idx = file(dtype=DTYPE_INT4, id=trim(fg%id)//'%idx')
+  fg%uwa = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%uwa')
+  fg%ara = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%ara')
+  fg%wgt = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%wgt')
+  fg%x   = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%x'  )
+  fg%y   = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%y'  )
+  fg%z   = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%z'  )
+  fg%lon = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%lon')
+  fg%lat = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%lat')
+  call reset_file_default()
 
   fg%nFiles_val = 0
   nullify(fg%val)
@@ -561,9 +567,9 @@ subroutine set_default_values_file_grid_out(fg)
 
   fg%mij = 0_8
 
-  fg%path_im_base = ''
-
   fg%nZones = 0
+  nullify(fg%zone_im)
+  fg%path_im_base = ''
   fg%nij_im = 0_8
   fg%mij_im_max = 0_8
 
@@ -1087,6 +1093,195 @@ subroutine set_save_file_grid_out(fg_out)
   call echo(code%ret)
 end subroutine set_save_file_grid_out
 !===============================================================
-! Private
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine free_gs(a)
+  use common_gs_grid_base, only: &
+        free_grid
+  implicit none
+  type(gs_), intent(inout), target :: a
+
+  type(gs_latlon_) , pointer :: al
+  type(gs_raster_) , pointer :: ar
+  type(gs_polygon_), pointer :: ap
+  type(file_latlon_in_) , pointer :: fl
+  type(file_raster_in_) , pointer :: fr
+  type(file_polygon_in_), pointer :: fp
+
+  call echo(code%bgn, 'free_gs')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%gs_type )
+  !-------------------------------------------------------------
+  ! Case: LatLon
+  case( GS_TYPE_LATLON )
+    al => a%latlon
+
+    if( associated(al%f_latlon_in) )then
+      fl => al%f_latlon_in
+      deallocate(fl%sz, fl%lb, fl%ub)
+      nullify(fl)
+      nullify(al%f_latlon_in)
+    endif
+
+    if( associated(al%f_grid_in) )then
+      call free_file_grid_in(al%f_grid_in)
+      nullify(al%f_grid_in)
+    endif
+
+    if( associated(al%f_grid_out) )then
+      call free_file_grid_out(al%f_grid_out)
+      nullify(al%f_grid_out)
+    endif
+
+    if( associated(al%zone) ) deallocate(al%zone)
+
+    call free_grid(al%grid)
+
+    if( associated(al%lon) )&
+    deallocate(al%lon, al%lat, al%lonwidth, al%latwidth, al%lon0)
+
+    if( associated(al%idxmap) ) deallocate(al%idxmap, al%wgtmap)
+
+    if( associated(al%hrel) ) deallocate(al%hrel, al%vrel)
+
+    nullify(al)
+    nullify(a%latlon)
+  !-------------------------------------------------------------
+  ! Case: Raster
+  case( GS_TYPE_RASTER )
+    ar => a%raster
+
+    if( associated(ar%f_raster_in) )then
+      fr => ar%f_raster_in
+      deallocate(fr%sz, fr%lb, fr%ub)
+      nullify(fr)
+      nullify(ar%f_raster_in)
+    endif
+
+    if( associated(ar%f_grid_in) )then
+      call free_file_grid_in(ar%f_grid_in)
+      nullify(ar%f_grid_in)
+    endif
+
+    if( associated(ar%f_grid_out) )then
+      call free_file_grid_out(ar%f_grid_out)
+      nullify(ar%f_grid_out)
+    endif
+
+    if( associated(ar%zone) ) deallocate(ar%zone)
+
+    call free_grid(ar%grid)
+
+    if( associated(ar%lon) )&
+    deallocate(ar%lon, ar%lat, ar%lonwidth, ar%latwidth, ar%lon0)
+
+    if( associated(ar%idxmap) ) deallocate(ar%idxmap, ar%wgtmap)
+
+    if( associated(ar%idxmapall1) ) deallocate(ar%idxmapall1)
+    if( associated(ar%idxmapall2) ) deallocate(ar%idxmapall2)
+    if( associated(ar%idxmapall4) ) deallocate(ar%idxmapall4)
+    if( associated(ar%idxmapall8) ) deallocate(ar%idxmapall8)
+
+    if( associated(ar%hrel) ) deallocate(ar%hrel, ar%vrel)
+
+    nullify(ar)
+    nullify(a%raster)
+  !-------------------------------------------------------------
+  ! Case: Polygon
+  case( GS_TYPE_POLYGON )
+    ap => a%polygon
+
+    if( associated(ap%f_polygon_in) )then
+      fp => ap%f_polygon_in
+      deallocate(fp%sz, fp%lb, fp%ub)
+      nullify(fp)
+      nullify(ap%f_polygon_in)
+    endif
+
+    if( associated(ap%f_grid_in) )then
+      call free_file_grid_in(ap%f_grid_in)
+      nullify(ap%f_grid_in)
+    endif
+
+    if( associated(ap%f_grid_out) )then
+      call free_file_grid_out(ap%f_grid_out)
+      nullify(ap%f_grid_out)
+    endif
+
+    if( associated(ap%zone) ) deallocate(ap%zone)
+
+    call free_grid(ap%grid)
+
+    if( associated(ap%polygon) ) deallocate(ap%polygon)
+
+    if( associated(ap%n_next) ) deallocate(ap%n_next, ap%n_prev)
+
+    nullify(ap)
+    nullify(a%polygon)
+  !-------------------------------------------------------------
+  !
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  a%gs_type: '//str(a%gs_type))
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine free_gs
+!===============================================================
+!
+!===============================================================
+subroutine free_file_grid_in(fg)
+  implicit none
+  type(file_grid_in_), intent(inout) :: fg
+
+  call echo(code%bgn, 'free_file_grid_in', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( fg%nFiles_val > 0 )then
+    deallocate(fg%form_val)
+    deallocate(fg%val)
+    fg%nFiles_val = 0
+  endif
+
+  deallocate(fg%sz, fg%lb, fg%ub)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine free_file_grid_in
+!===============================================================
+!
+!===============================================================
+subroutine free_file_grid_out(fg)
+  implicit none
+  type(file_grid_out_), intent(inout) :: fg
+
+  call echo(code%bgn, 'free_file_grid_out', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( fg%nFiles_val > 0 )then
+    deallocate(fg%val)
+    fg%nFiles_val = 0
+  endif
+
+  deallocate(fg%sz, fg%lb, fg%ub)
+
+  fg%nZones = 0
+  if( associated(fg%zone_im) ) deallocate(fg%zone_im)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine free_file_grid_out
+!===============================================================
+!
 !===============================================================
 end module common_gs_base

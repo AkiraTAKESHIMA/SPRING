@@ -20,7 +20,7 @@ module mod_define_mat
   use common_rt_io, only: &
         read_rt_main, &
         write_rt_main
-  use common_rt_main_core, only: &
+  use common_rt_main_coef, only: &
         calc_rt_coef_sum_modify_enabled, &
         calc_rt_coef_sum_modify_not_enabled
   ! this

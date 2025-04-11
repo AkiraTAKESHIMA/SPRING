@@ -5,12 +5,14 @@ module common_rt_io
   use lib_io
   use lib_array
   use lib_math
+  ! common1
   use common_const
+  ! common2
   use common_type_rt
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: read_rt_main
   public :: write_rt_main
@@ -18,6 +20,15 @@ module common_rt_io
   public :: open_file_rt_im
   public :: close_file_rt_im
   public :: write_rt_im
+
+  public :: set_unit_number_rt_im
+  public :: clear_unit_number_rt_im
+
+  public :: copy_tmp_data
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  integer :: un_rt_im = 0
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -175,7 +186,7 @@ subroutine open_file_rt_im(rtim, action, old_files)
   inquire(unit=rtim%un, opened=is_opened)
   if( is_opened )then
     call eerr(str(msg_unexpected_condition())//&
-            '\n  Unit number '//str(rtim%un)//' has already been opened.'//&
+            '\nUnit number '//str(rtim%un)//' has already been opened.'//&
             '\n  rtim%path: '//str(rtim%path))
   endif
 
@@ -183,7 +194,7 @@ subroutine open_file_rt_im(rtim, action, old_files)
   case( action_write )
     if( .not. present(old_files) )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  action == action_write .and. .not. present(old_files)')
+              '\n  action == ACTION_WRITE .and. .not. present(old_files)')
     endif
 
     selectcase( old_files )
@@ -238,14 +249,14 @@ subroutine close_file_rt_im(rtim)
   call echo(code%bgn, 'close_file_rt_im', '-p -x2')
   !-------------------------------------------------------------
   if( rtim%un == 0 )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  rtim%un == 0')
+    call echo(code%ret)
+    return
   endif
 
   if( access(rtim%path,' ') /= 0 )then
     call eerr(str(msg_unexpected_condition())//&
-            '\n File was not found.'//&
-            '\npath: '//str(rtim%path))
+            '\nFile was not found.'//&
+            '\n  path: '//str(rtim%path))
   endif
 
   close(rtim%un)
@@ -255,10 +266,11 @@ end subroutine close_file_rt_im
 !===============================================================
 !
 !===============================================================
-subroutine write_rt_im(rtm, rtim)
+subroutine write_rt_im(rtm, rtim, old_files)
   implicit none
   type(rt_main_), intent(inout) :: rtm
   type(rt_im_)  , intent(inout) :: rtim
+  character(*)  , intent(in)    :: old_files
 
   type(rt_im_zone_), pointer :: rtiz
   integer(8), pointer     :: sortidx(:)
@@ -288,7 +300,7 @@ subroutine write_rt_im(rtm, rtim)
 
   call edbg('nij: '//str(rtiz%nij)//' -> '//str(rtiz%nij+rtm%nij))
   !-------------------------------------------------------------
-  !
+  ! Update statistics
   !-------------------------------------------------------------
   call get_stats(rtm%sidx(:rtm%nij), vmin=sidx_min, vmax=sidx_max)
   call get_stats(rtm%tidx(:rtm%nij), vmin=tidx_min, vmax=tidx_max)
@@ -318,17 +330,24 @@ subroutine write_rt_im(rtm, rtim)
   endselect
 
   call edbg('sortidx min: '//str(rtiz%sortidxmin)//' max: '//str(rtiz%sortidxmax))
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  rtim%nij_max = max(rtim%nij_max, rtm%nij)
 
+  rtim%nij_max = max(rtim%nij_max, rtm%nij)
+  !-------------------------------------------------------------
+  ! Sort
+  !-------------------------------------------------------------
   allocate(arg(rtm%nij))
   call argsort(sortidx, arg)
   call sort(rtm%sidx(:rtm%nij), arg)
   call sort(rtm%tidx(:rtm%nij), arg)
   call sort(rtm%area(:rtm%nij), arg)
   deallocate(arg)
+  !-------------------------------------------------------------
+  ! Output
+  !-------------------------------------------------------------
+  if( rtim%un == 0 )then
+    call set_unit_number_rt_im(rtim)
+    call open_file_rt_im(rtim, ACTION_WRITE, old_files)
+  endif
 
   write(rtim%un) rtm%nij, sortidx(1), sortidx(rtm%nij), &
                  rtm%sidx(1), rtm%sidx(rtm%nij), rtm%tidx(1), rtm%tidx(rtm%nij)
@@ -340,6 +359,204 @@ subroutine write_rt_im(rtm, rtim)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine write_rt_im
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine set_unit_number_rt_im(rtim)
+  implicit none
+  type(rt_im_), intent(inout) :: rtim
+
+  integer :: un
+  logical :: is_opened
+
+  call echo(code%bgn, 'set_unit_number_rt_im', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( rtim%un /= 0 )then
+    call eerr(str(msg_unexpected_condition())//&
+             '\n  rtim%un /= 0'//&
+             '\nrtim%un: '//str(rtim%un)//&
+             '\nrtim%path: '//str(rtim%path))
+  endif
+
+  if( un_rt_im /= 0 )then
+    call eerr(str(msg_unexpected_condition())//&
+            '\n  un_rt_im /= 0'//&
+            '\nun_rt_im: '//str(un_rt_im)//&
+            '\nrtim%path: '//str(rtim%path))
+  endif
+
+  do un = 21, 99
+    inquire(unit=un, opened=is_opened)
+    if( .not. is_opened )then
+      rtim%un = un
+      exit
+    endif
+  enddo
+
+  if( rtim%un == 0 )then
+    call eerr(str(msg_unexpected_condition())//&
+            '\nFailed to set the unit number.')
+  endif
+
+  un_rt_im = rtim%un
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine set_unit_number_rt_im
+!===============================================================
+!
+!===============================================================
+subroutine clear_unit_number_rt_im(rtim)
+  implicit none
+  type(rt_im_), intent(inout) :: rtim
+
+  call echo(code%bgn, 'clear_unit_number_rt_im', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( rtim%un /= un_rt_im )then
+    call eerr(str(msg_unexpected_condition())//&
+           '\n  rtim%un /= un_rt_im'//&
+           '\nun_rt_im : '//str(un_rt_im)//&
+           '\nrtim%un  : '//str(rtim%un)//&
+           '\nrtim%path: '//str(rtim%path))
+  endif
+
+  rtim%un = 0
+  un_rt_im = 0
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine clear_unit_number_rt_im
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine copy_tmp_data(f, f_tmp, nij, memory_ulim)
+  implicit none
+  type(file_), intent(in) :: f
+  type(file_), intent(in) :: f_tmp
+  integer(8) , intent(in) :: nij
+  real(8)    , intent(in) :: memory_ulim
+
+  integer(8) :: mij, ijs, ije
+  integer    :: nDivs, iDiv
+  integer(1), allocatable :: dat_int1(:)
+  integer(2), allocatable :: dat_int2(:)
+  integer(4), allocatable :: dat_int4(:)
+  integer(8), allocatable :: dat_int8(:)
+  real(4)   , allocatable :: dat_real(:)
+  real(8)   , allocatable :: dat_dble(:)
+
+  call echo(code%bgn, 'copy_tmp_data', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( f%rec == 1 )then
+    call echo(code%ret)
+    return
+  endif
+
+  call edbg('Copy from: '//str(fileinfo(f_tmp))//&
+          '\n     to  : '//str(fileinfo(f)))
+
+  if( memory_ulim == 0.d0 )then
+    mij = nij
+  else
+    mij = int((memory_ulim*1d6) / 8*4,8)
+  endif
+
+  selectcase( f_tmp%dtype )
+  case( dtype_int1 )
+    allocate(dat_int1(mij))
+  case( dtype_int2 )
+    allocate(dat_int2(mij))
+  case( dtype_int4 )
+    allocate(dat_int4(mij))
+  case( dtype_int8 )
+    allocate(dat_int8(mij))
+  case( dtype_real )
+    allocate(dat_real(mij))
+  case( dtype_dble )
+    allocate(dat_dble(mij))
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  f_tmp%dtype: '//str(f_tmp%dtype))
+  endselect
+
+  nDivs = int((nij-1_8) / mij + 1_8, 4)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  ije = 0_8
+  do iDiv = 1, nDivs
+    ijs = ije + 1_8
+    ije = min(ijs + mij - 1_8, nij)
+    call edbg('div '//str(iDiv)//' ij: '//str((/ijs,ije/),dgt(nij),' ~ '))
+
+    selectcase( f_tmp%dtype )
+    case( dtype_int1 )
+      call rbin(dat_int1(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
+      call wbin(dat_int1(:ije-ijs+1_8), f%path, f%dtype, &
+                f%endian, f%rec, sz=nij, lb=ijs)
+    case( dtype_int2 )
+      call rbin(dat_int2(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
+      call wbin(dat_int2(:ije-ijs+1_8), f%path, f%dtype, &
+                f%endian, f%rec, sz=nij, lb=ijs)
+    case( dtype_int4 )
+      call rbin(dat_int4(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
+      call wbin(dat_int4(:ije-ijs+1_8), f%path, f%dtype, &
+                f%endian, f%rec, sz=nij, lb=ijs)
+    case( dtype_int8 )
+      call rbin(dat_int8(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
+      call wbin(dat_int8(:ije-ijs+1_8), f%path, f%dtype, &
+                f%endian, f%rec, sz=nij, lb=ijs)
+    case( dtype_real )
+      call rbin(dat_real(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
+      call wbin(dat_real(:ije-ijs+1_8), f%path, f%dtype, &
+                f%endian, f%rec, sz=nij, lb=ijs)
+    case( dtype_dble )
+      call rbin(dat_dble(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
+      call wbin(dat_dble(:ije-ijs+1_8), f%path, f%dtype, &
+                f%endian, f%rec, sz=nij, lb=ijs)
+    case default
+      call eerr(str(msg_invalid_value())//&
+              '\n  f_tmp%dtype: '//str(f_tmp%dtype))
+    endselect
+  enddo  ! iDiv/
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( allocated(dat_int1) ) deallocate(dat_int1)
+  if( allocated(dat_int2) ) deallocate(dat_int2)
+  if( allocated(dat_int4) ) deallocate(dat_int4)
+  if( allocated(dat_int8) ) deallocate(dat_int8)
+  if( allocated(dat_real) ) deallocate(dat_real)
+  if( allocated(dat_dble) ) deallocate(dat_dble)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine copy_tmp_data
 !===============================================================
 !
 !===============================================================

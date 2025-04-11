@@ -17,18 +17,17 @@ OBJ_F = \
 common_type_rt.o\
 common_rt1d.o\
 common_area_raster_polygon.o\
-common_rt_util.o\
-common_rt_vrf_base.o\
 common_rt_base.o\
 common_rt_set.o\
 common_rt_stats.o\
 common_rt_error.o\
 common_rt_io.o\
-common_rt_main_core.o\
+common_rt_main_util.o\
+common_rt_main_coef.o\
+common_rt_main_finish.o\
 common_rt_vrf_core.o\
-common_rt_main_driv.o\
-common_rt_vrf_driv.o\
-common_rt_driv.o
+common_rt_vrf.o
+#common_rt_vrf_base.o\
 
 OBJ_CMN = $(OBJ_F)
 

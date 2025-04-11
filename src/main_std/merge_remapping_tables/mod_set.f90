@@ -40,7 +40,7 @@ contains
 !===============================================================
 subroutine read_settings(input, output, opt)
   ! common1
-  use common_set2, only: &
+  use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -248,7 +248,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_input(input)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -580,7 +580,7 @@ end subroutine read_settings_input
 !
 !===============================================================
 subroutine read_settings_output(output)
-  use common_set2, only: &
+  use common_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -799,7 +799,7 @@ end subroutine read_settings_output
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -1024,7 +1024,7 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_input(input)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(input_), intent(in) :: input
@@ -1084,7 +1084,7 @@ end subroutine echo_settings_input
 !
 !===============================================================
 subroutine echo_settings_output(output)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   use common_rt_set, only: &
         echo_settings_rt_opt_coef
@@ -1127,7 +1127,7 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   use common_opt_set, only: &
         echo_settings_opt_sys, &

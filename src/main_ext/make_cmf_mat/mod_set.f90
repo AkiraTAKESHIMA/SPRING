@@ -34,7 +34,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(cmn, cmf, mat, opt)
-  use common_set2, only: &
+  use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -171,7 +171,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_cmn(cmn)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -339,7 +339,7 @@ end subroutine read_settings_cmn
 !
 !===============================================================
 subroutine read_settings_cmf(cmn, cmf)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -835,7 +835,7 @@ end subroutine read_settings_cmf
 !
 !===============================================================
 subroutine read_settings_mat(cmn, mat)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1345,7 +1345,7 @@ end subroutine read_settings_mat
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1735,7 +1735,7 @@ end subroutine set_default_values_mat
 !
 !===============================================================
 subroutine echo_settings_cmn(cmn)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(cmn_), intent(in) :: cmn
@@ -1778,7 +1778,7 @@ end subroutine echo_settings_cmn
 !
 !===============================================================
 subroutine echo_settings_cmf(cmn, cmf)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(cmn_), intent(in) :: cmn
@@ -1866,7 +1866,7 @@ end subroutine echo_settings_cmf
 !
 !===============================================================
 subroutine echo_settings_mat(cmn, mat)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(cmn_), intent(in) :: cmn
@@ -1956,7 +1956,7 @@ end subroutine echo_settings_mat
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   use common_opt_set, only: &
         echo_settings_opt_sys, &

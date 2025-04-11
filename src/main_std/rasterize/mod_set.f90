@@ -2,8 +2,9 @@ module mod_set
   use lib_const
   use lib_base
   use lib_log
-  use lib_io
+  use lib_util
   use lib_math
+  use lib_io
   use common_const
   use common_type_opt
   use common_type_gs
@@ -20,7 +21,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(src, tgt, dout, opt)
-  use common_set2, only: &
+  use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -334,7 +335,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_gs_latlon(u)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -352,12 +353,12 @@ subroutine read_settings_gs_latlon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
-        set_gs_common_components    , &
         set_default_values_gs_latlon, &
         alloc_file_grid_in_val      , &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out
+        set_bounds_file_grid_out    , &
+        set_gs_common
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
@@ -475,6 +476,7 @@ subroutine read_settings_gs_latlon(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
+      call remove_quotes(u%nam, QUOTE_BOTH)
     !-----------------------------------------------------------
     ! Resolution
     case( 'nx' )
@@ -576,7 +578,7 @@ subroutine read_settings_gs_latlon(u)
   call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
   call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
 
-  call set_gs_common_components(u)
+  call set_gs_common(u)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -677,7 +679,7 @@ end subroutine read_settings_gs_latlon
 !
 !===============================================================
 subroutine read_settings_gs_polygon(u)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -695,12 +697,12 @@ subroutine read_settings_gs_polygon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components          , &
-        set_gs_common_components     , &
         set_default_values_gs_polygon, &
         alloc_file_grid_in_val       , &
         set_bounds_file_polygon_in   , &
         set_bounds_file_grid_in      , &
-        set_bounds_file_grid_out
+        set_bounds_file_grid_out     , &
+        set_gs_common
   implicit none
   type(gs_), intent(out), target :: u
 
@@ -822,6 +824,7 @@ subroutine read_settings_gs_polygon(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
+      call remove_quotes(u%nam, QUOTE_BOTH)
     !-----------------------------------------------------------
     ! Shape
     case( 'np' )
@@ -912,7 +915,7 @@ subroutine read_settings_gs_polygon(u)
   call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
   call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
 
-  call set_gs_common_components(u)
+  call set_gs_common(u)
 
   ! Coordinate system
   !-------------------------------------------------------------
@@ -1062,7 +1065,7 @@ end subroutine read_settings_gs_polygon
 !
 !===============================================================
 subroutine read_settings_raster(u)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1080,11 +1083,11 @@ subroutine read_settings_raster(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
-        set_gs_common_components    , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out
+        set_bounds_file_grid_out    , &
+        set_gs_common
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
@@ -1196,7 +1199,7 @@ subroutine read_settings_raster(u)
   call set_bounds_file_grid_in(fg_in)
   call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
 
-  call set_gs_common_components(u)
+  call set_gs_common(u)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1210,7 +1213,7 @@ end subroutine read_settings_raster
 !
 !===============================================================
 subroutine read_settings_output(dout)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1239,17 +1242,17 @@ subroutine read_settings_output(dout)
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
   call alloc_keynum(12)
-  call set_keynum('frac_min', 0, 1)
-  call set_keynum('frac_max', 0, 1)
+  call set_keynum('ratio_min', 0, 1)
+  call set_keynum('ratio_max', 0, 1)
   call set_keynum('include_min', 0, 1)
   call set_keynum('include_max', 0, 1)
-  call set_keynum('thresh_frac_zero_positive'    , 0, 1)
-  call set_keynum('thresh_frac_sum_zero_positive', 0, 1)
+  call set_keynum('thresh_ratio_zero_positive'    , 0, 1)
+  call set_keynum('thresh_ratio_sum_zero_positive', 0, 1)
   call set_keynum('dir', 0, -1)
-  call set_keynum('f_area_sum', 0, 1)
-  call set_keynum('f_frac_sum', 0, 1)
-  call set_keynum('f_mask'    , 0, 1)
-  call set_keynum('f_idx'     , 0, 1)
+  call set_keynum('f_area_sum' , 0, 1)
+  call set_keynum('f_ratio_sum', 0, 1)
+  call set_keynum('f_mask'     , 0, 1)
+  call set_keynum('f_idx'      , 0, 1)
   call set_keynum('val_miss', 0, 1)
 
   call echo(code%ext)
@@ -1259,22 +1262,20 @@ subroutine read_settings_output(dout)
   call echo(code%ent, 'Setting the default values')
 
   ! [0.5, 1.0] in default
-  dout%frac_min = 0.5d0
-  dout%frac_max = 1.d0
+  dout%iratio_min = 0.5d0
+  dout%iratio_max = 1.d0
   include_min = .true.
   include_max = .true.
 
-  dout%thresh_frac_zero_positive     = 0.d0
-  dout%thresh_frac_sum_zero_positive = 0.d0
+  dout%thresh_iratio_zero_positive     = 0.d0
+  dout%thresh_iratio_sum_zero_positive = 0.d0
 
-  dout%f_area_sum = file('', dtype_dble, 1, endian_default, action=action_write, &
-                         id='output%f_area_sum')
-  dout%f_frac_sum = file('', dtype_dble, 1, endian_default, action=action_write, &
-                         id='output%f_frac_sum')
-  dout%f_mask     = file('', dtype_int4, 1, endian_default, action=action_write, &
-                         id='output%f_mask')
-  dout%f_idx      = file('', dtype_int4, 1, endian_default, action=action_write, &
-                         id='output%f_idx')
+  call set_file_default(action=ACTION_WRITE)
+  dout%f_iarea_sum  = file('', DTYPE_DBLE, id='output%f_iarea_sum')
+  dout%f_iratio_sum = file('', DTYPE_DBLE, id='output%f_iratio_sum')
+  dout%f_mask       = file('', DTYPE_INT4, id='output%f_mask')
+  dout%f_idx        = file('', DTYPE_INT4, id='output%f_idx')
+  call reset_file_default()
 
   dout%val_miss = -1d20
 
@@ -1288,6 +1289,7 @@ subroutine read_settings_output(dout)
 
   do
     call read_input()
+print*, trim(key())
     call update_keynum()
 
     selectcase( key() )
@@ -1296,38 +1298,38 @@ subroutine read_settings_output(dout)
     case( '' )
       exit
     !-----------------------------------------------------------
-    ! Threshold
+    ! Thresholds
+    case( 'ratio_min' )
+      call read_value(dout%iratio_min)
+    case( 'ratio_max' )
+      call read_value(dout%iratio_max)
+
     case( 'include_min' )
       call read_value(include_min)
     case( 'include_max' )
       call read_value(include_max)
-
-    case( 'frac_min' )
-      call read_value(dout%frac_min)
-    case( 'frac_max' )
-      call read_value(dout%frac_max)
     !-----------------------------------------------------------
-    ! Threshold for validation
-    case( 'thresh_frac_zero_positive' )
-      call read_value(dout%thresh_frac_zero_positive)
-    case( 'thresh_frac_sum_zero_positive' )
-      call read_value(dout%thresh_frac_sum_zero_positive)
+    ! Thresholds for validation
+    case( 'thresh_ratio_zero_positive' )
+      call read_value(dout%thresh_iratio_zero_positive)
+    case( 'thresh_ratio_sum_zero_positive' )
+      call read_value(dout%thresh_iratio_sum_zero_positive)
     !-----------------------------------------------------------
     ! Parent directory
     case( 'dir' )
       call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
-    ! Output file
+    ! Output files
     case( 'f_area_sum' )
-      call read_value(dout%f_area_sum, dir)
-    case( 'f_frac_sum' )
-      call read_value(dout%f_frac_sum, dir)
+      call read_value(dout%f_iarea_sum, dir)
+    case( 'f_ratio_sum' )
+      call read_value(dout%f_iratio_sum, dir)
     case( 'f_mask' )
       call read_value(dout%f_mask, dir)
     case( 'f_idx' )
       call read_value(dout%f_idx, dir)
     !-----------------------------------------------------------
-    ! Missing value
+    ! Missing values
     case( 'val_miss' )
       call read_value(dout%val_miss)
     !-----------------------------------------------------------
@@ -1346,23 +1348,23 @@ subroutine read_settings_output(dout)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the related values')
 
-  if( keynum('frac_min') == 0 )then
-    dout%ineq_frac_min = inequality_none
+  if( keynum('ratio_min') == 0 )then
+    dout%ineq_iratio_min = INEQ_NONE
   else
     if( include_min )then
-      dout%ineq_frac_min = inequality_ge
+      dout%ineq_iratio_min = INEQ_GE
     else
-      dout%ineq_frac_min = inequality_gt
+      dout%ineq_iratio_min = INEQ_GT
     endif
   endif
 
-  if( keynum('frac_max') == 0 )then
-    dout%ineq_frac_max = inequality_none
+  if( keynum('ratio_max') == 0 )then
+    dout%ineq_iratio_max = INEQ_NONE
   else
     if( include_max )then
-      dout%ineq_frac_max = inequality_le
+      dout%ineq_iratio_max = INEQ_LE
     else
-      dout%ineq_frac_max = inequality_lt
+      dout%ineq_iratio_max = INEQ_LT
     endif
   endif
 
@@ -1372,8 +1374,9 @@ subroutine read_settings_output(dout)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  call check_values_frac_minmax(&
-         dout%ineq_frac_min, dout%ineq_frac_max, dout%frac_min, dout%frac_max)
+  call check_values_iratio_minmax(&
+         dout%ineq_iratio_min, dout%ineq_iratio_max, &
+         dout%iratio_min, dout%iratio_max)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1385,38 +1388,38 @@ subroutine read_settings_output(dout)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine check_values_frac_minmax(ineq_min, ineq_max, vmin, vmax)
+subroutine check_values_iratio_minmax(ineq_min, ineq_max, vmin, vmax)
   implicit none
   character(*), intent(in) :: ineq_min, ineq_max
   real(8)     , intent(in) :: vmin, vmax
 
-  call echo(code%bgn, '__IP__check_values_frac_minmax', '-p -x2')
+  call echo(code%bgn, '__IP__check_values_iratio_minmax', '-p -x2')
   !-------------------------------------------------------------
-  if( ineq_min == INEQUALITY_NONE .or. ineq_max == INEQUALITY_NONE )then
+  if( ineq_min == INEQ_NONE .or. ineq_max == INEQ_NONE )then
     continue
-  elseif( ineq_min == INEQUALITY_GE .and. ineq_max == INEQUALITY_LE )then
+  elseif( ineq_min == INEQ_GE .and. ineq_max == INEQ_LE )then
     if( vmin > vmax )then
       call eerr(str(msg_unexpected_condition())//&
-              '\nRange of fraction is invalid.'//&
-              ' Check the values of "frac_min", "frac_max", "include_min" and "include_max".')
+              '\nRange of the ratio is invalid.'//&
+              ' Check the values of "ratio_min", "ratio_max", "include_min" and "include_max".')
     endif
   else
     if( vmin >= vmax )then
       call eerr(str(msg_unexpected_condition())//&
-              '\nRange of fraction is invalid.'//&
-              ' Check the values of "frac_min", "frac_max", "include_min" and "include_max".')
+              '\nRange of the ratio is invalid.'//&
+              ' Check the values of "ratio_min", "ratio_max", "include_min" and "include_max".')
     endif
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_values_frac_minmax
+end subroutine check_values_iratio_minmax
 !---------------------------------------------------------------
 end subroutine read_settings_output
 !===============================================================
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1627,8 +1630,8 @@ subroutine check_paths(src, tgt, dout, opt_sys)
 
   call set_opt_old_files(opt_sys%old_files)
 
-  call handle_old_file(dout%f_area_sum)
-  call handle_old_file(dout%f_frac_sum)
+  call handle_old_file(dout%f_iarea_sum)
+  call handle_old_file(dout%f_iratio_sum)
   call handle_old_file(dout%f_mask)
   call handle_old_file(dout%f_idx)
 
@@ -1640,15 +1643,15 @@ subroutine check_paths(src, tgt, dout, opt_sys)
 
   call set_opt_mkdir(output=.true., hut=hut_command)
 
-  call mkdir(dirname(dout%f_area_sum%path))
-  call mkdir(dirname(dout%f_frac_sum%path))
+  call mkdir(dirname(dout%f_iarea_sum%path))
+  call mkdir(dirname(dout%f_iratio_sum%path))
   call mkdir(dirname(dout%f_mask%path))
   call mkdir(dirname(dout%f_idx%path))
 
-  call check_permission(dout%f_area_sum, allow_empty=.true.)
-  call check_permission(dout%f_frac_sum, allow_empty=.true.)
-  call check_permission(dout%f_mask    , allow_empty=.true.)
-  call check_permission(dout%f_idx     , allow_empty=.true.)
+  call check_permission(dout%f_iarea_sum , allow_empty=.true.)
+  call check_permission(dout%f_iratio_sum, allow_empty=.true.)
+  call check_permission(dout%f_mask      , allow_empty=.true.)
+  call check_permission(dout%f_idx       , allow_empty=.true.)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1666,7 +1669,7 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_gs_latlon(ul)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(gs_latlon_), intent(in), target :: ul
@@ -1740,7 +1743,7 @@ end subroutine echo_settings_gs_latlon
 !
 !===============================================================
 subroutine echo_settings_gs_raster(ur)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
@@ -1768,7 +1771,7 @@ end subroutine echo_settings_gs_raster
 !
 !===============================================================
 subroutine echo_settings_gs_polygon(up)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(gs_polygon_), target :: up
@@ -1855,7 +1858,7 @@ end subroutine echo_settings_gs_polygon
 !
 !===============================================================
 subroutine echo_settings_raster(ur)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
@@ -1889,7 +1892,7 @@ end subroutine echo_settings_raster
 !
 !===============================================================
 subroutine echo_settings_output(dout)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(output_), intent(in), target :: dout
@@ -1902,53 +1905,53 @@ subroutine echo_settings_output(dout)
   !-------------------------------------------------------------
   call edbg(bar('Output'))
   !-------------------------------------------------------------
-  ! Make a string of range of frac.
+  ! Make a string of range of the ratio
   !-------------------------------------------------------------
-  selectcase( dout%ineq_frac_min )
-  case( inequality_none )
+  selectcase( dout%ineq_iratio_min )
+  case( INEQ_NONE )
     range_left = '(-inf'
-  case( inequality_gt )
-    range_left = '('//str(dout%frac_min)
-  case( inequality_ge )
-    range_left = '['//str(dout%frac_min)
-  case( inequality_lt, &
-        inequality_le )
+  case( INEQ_GT )
+    range_left = '('//str(dout%iratio_min)
+  case( INEQ_GE )
+    range_left = '['//str(dout%iratio_min)
+  case( INEQ_LT, &
+        INEQ_LE )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  dout%ineq_frac_min: '//str(dout%ineq_frac_min))
+            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  dout%ineq_frac_min: '//str(dout%ineq_frac_min))
+            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
   endselect
 
-  selectcase( dout%ineq_frac_max )
-  case( inequality_none )
+  selectcase( dout%ineq_iratio_max )
+  case( INEQ_NONE )
     range_right = '+inf)'
-  case( inequality_lt )
-    range_right = str(dout%frac_min)//')'
-  case( inequality_le )
-    range_right = str(dout%frac_min)//']'
-  case( inequality_gt, &
-        inequality_ge )
+  case( INEQ_LT )
+    range_right = str(dout%iratio_min)//')'
+  case( INEQ_LE )
+    range_right = str(dout%iratio_min)//']'
+  case( INEQ_GT, &
+        INEQ_GE )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  dout%ineq_frac_min: '//str(dout%ineq_frac_min))
+            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  dout%ineq_frac_min: '//str(dout%ineq_frac_min))
+            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Range of frac: '//str(range_left)//', '//str(range_right))
+  call edbg('Range of intersection ratio: '//str(range_left)//', '//str(range_right))
   call edbg('Files')
-  call edbg('  area_sum: '//str(fileinfo(dout%f_area_sum)))
-  call edbg('  frac_sum: '//str(fileinfo(dout%f_frac_sum)))
-  call edbg('  mask    : '//str(fileinfo(dout%f_mask)))
-  call edbg('  idx     : '//str(fileinfo(dout%f_idx)))
+  call edbg('  area_sum : '//str(fileinfo(dout%f_iarea_sum)))
+  call edbg('  ratio_sum: '//str(fileinfo(dout%f_iratio_sum)))
+  call edbg('  mask     : '//str(fileinfo(dout%f_mask)))
+  call edbg('  idx      : '//str(fileinfo(dout%f_idx)))
   call edbg('Missing value: '//str(dout%val_miss))
-  call edbg('Raster is considered to be missing when sum. of frac. <= '//&
-            str(dout%thresh_frac_sum_zero_positive))
-  call edbg('Intersection is ignored when fraction <= '//&
-            str(dout%thresh_frac_zero_positive))
+  call edbg('Raster is considered to be missing when sum. of ratio <= '//&
+            str(dout%thresh_iratio_sum_zero_positive))
+  call edbg('Intersection is ignored when ratio <= '//&
+            str(dout%thresh_iratio_zero_positive))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_output
@@ -1956,7 +1959,7 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   use common_opt_set, only: &
         echo_settings_opt_sys, &

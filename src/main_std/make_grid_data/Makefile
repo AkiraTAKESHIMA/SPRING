@@ -21,7 +21,7 @@ install:
 	$(MKDIR) $(MKDIRFLAGS) $(BINDIR)
 	$(INSTALL) $(TARGET) $(BIN)
 
-$(TARGET): $(OBJS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET): $(OBJS) $(CMNDIR3)/*.o $(CMNDIR2)/*.o $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
 clean:
@@ -31,7 +31,7 @@ clean:
 .SUFFIXES: .o .f90 .mod
 
 .f90.o:
-	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR1) -I$(MODDIR)
+	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR3) -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 
 %.mod: %.f90
 	$(MAKE) $(patsubst %.f90,%.o,%<)

@@ -4,138 +4,138 @@ module common_rt_latlon_raster
   use lib_log
   use lib_array
   use lib_math
+  ! common1
   use common_const
   use common_type_opt
   use common_type_gs
+  use common_gs_util, only: &
+        print_gs_latlon, &
+        print_gs_raster, &
+        print_latlon!, &
+        !print_raster
+  ! common2
   use common_type_rt
+  use common_rt1d, only: &
+        init_rt1d, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
+        clear_rt_main, &
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: make_rt_latlon_raster
   !-------------------------------------------------------------
-  ! Private Module Variables
+  !
   !-------------------------------------------------------------
-  logical   , parameter :: debug_t = .false.
-  integer(8), parameter :: tidx_debug = 101477
+  logical   , parameter :: debug_b = .false.
+  integer(8), parameter :: bidx_debug = 101477
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_latlon_raster(&
-    s, t, rt, opt_sys, opt_earth)
-  use common_gs_util, only: &
-    print_gs_latlon, &
-    print_gs_raster
-  use common_rt1d, only: &
-    init_rt1d, &
-    free_rt1d_data, &
-    reshape_rt1d
-  use common_rt_base, only: &
-    calc_rt_im_nij_ulim, &
-    clear_rt_main
-  use common_rt_io, only: &
-    write_rt_im
+subroutine make_rt_latlon_raster(a, b, rt, opt_sys, opt_earth)
   implicit none
-  type(gs_)       , intent(in)   , target :: s  ! Lattice
-  type(gs_)       , intent(in)   , target :: t  ! Raster
+  type(gs_)       , intent(in)   , target :: a  ! LatLon
+  type(gs_)       , intent(in)   , target :: b  ! Raster
   type(rt_)       , intent(inout), target :: rt
   type(opt_sys_)  , intent(in)            :: opt_sys
   type(opt_earth_), intent(in)            :: opt_earth
 
-  type(gs_common_)  , pointer :: sgc, tgc
-  type(gs_latlon_) , pointer :: sgl
-  type(gs_raster_)  , pointer :: tgr
-  type(file_latlon_in_), pointer :: sfl
-  type(file_raster_in_) , pointer :: tfr
-  type(zone_latlon_), pointer :: szl, tzl
-  type(hrel_), pointer :: shr
-  type(vrel_), pointer :: svr
+  type(gs_common_)     , pointer :: ac, bc
+  type(gs_latlon_)     , pointer :: al
+  type(gs_raster_)     , pointer :: br
+  type(zone_latlon_)   , pointer :: azl, bzl
+  type(hrel_)          , pointer :: ahr
+  type(vrel_)          , pointer :: avr
   type(rt_main_)   , pointer :: rtm
   type(rt_im_zone_), pointer :: rtiz
   type(rt1d_)      , pointer :: rt1d(:), rt1
-  integer(8) :: ish, isv
-  integer(8) :: thi(2), thf(2), tvi, tvf, ith, itv
-  integer    :: itr
-  integer(8) :: iitv0, iitv
-  integer(8) :: iith_this
-  integer(8), allocatable :: iith(:)
+
+  integer(8) :: iah, iav
+  integer(8) :: bhi(2), bhf(2), bvi, bvf, ibh, ibv
+  integer    :: ibr
+  integer(8) :: iibv0, iibv
+  integer(8) :: iibh_this
+  integer(8), allocatable :: iibh(:)
   integer(8), allocatable :: list_ij(:)
-  integer(8), allocatable :: list_tloc(:)
+  integer(8), allocatable :: list_bloc(:)
   integer(8) :: ij
-  integer(8) :: sidx, sijs, sij
-  integer(8) :: tidx, tidx_prev
-  integer(8) :: tloc
+  integer(8) :: aidx, aijs, aij
+  integer(8) :: bidx, bidx_prev
+  integer(8) :: bloc
   real(8) :: lapara
-  real(8) :: lapara_sum_t
+  real(8) :: lapara_sum_b
   !integer :: time0(8)
 
   call echo(code%bgn, 'make_rt_latlon_raster')
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  sgc => s%cmn
-  tgc => t%cmn
+  call echo(code%ent, 'Setting pointers')
 
-  if( sgc%gs_type /= gs_type_latlon .or. &
-      tgc%gs_type /= gs_type_raster )then
+  ac => a%cmn
+  bc => b%cmn
+
+  if( ac%gs_type /= GS_TYPE_LATLON .or. &
+      bc%gs_type /= GS_TYPE_RASTER )then
     call eerr(str(msg_invalid_value())//&
-            '\n  s%cmn%gs_type: '//str(sgc%gs_type)//&
-            '\n  t%cmn%gs_type: '//str(tgc%gs_type))
+            '\n  a%cmn%gs_type: '//str(ac%gs_type)//&
+            '\n  b%cmn%gs_type: '//str(bc%gs_type))
   endif
 
-  sgl => s%latlon
-  tgr => t%raster
+  al => a%latlon
+  br => b%raster
 
-  sfl => sgl%f_latlon_in
-  tfr => tgr%f_raster_in
+  azl => al%zone(al%iZone)
+  bzl => br%zone(br%iZone)
 
-  szl => sgl%zone(sgl%iZone)
-  tzl => tgr%zone(tgr%iZone)
-
-  if( sgc%is_source )then
+  if( ac%is_source )then
     call print_gs_latlon(&
-           'Source', sgc%nam, &
-           szl%typ, &
-           szl%hi, szl%hf, szl%vi, szl%vf, &
-           sgl%hi, sgl%hf, sgl%vi, sgl%vf, &
-           szl%west, szl%east, szl%south, szl%north)
+           'Source', ac%nam, &
+           azl%typ, &
+           azl%hi, azl%hf, azl%vi, azl%vf, &
+           al%hi, al%hf, al%vi, al%vf, &
+           azl%west, azl%east, azl%south, azl%north)
     call print_gs_raster(&
-           'Target', tgc%nam, &
-           tzl%typ, &
-           tzl%hi, tzl%hf, tzl%vi, tzl%vf, &
-           tgr%hi, tgr%hf, tgr%vi, tgr%vf, &
-           tzl%west, tzl%east, tzl%south, tzl%north)
+           'Target', bc%nam, &
+           bzl%typ, &
+           bzl%hi, bzl%hf, bzl%vi, bzl%vf, &
+           br%hi, br%hf, br%vi, br%vf, &
+           bzl%west, bzl%east, bzl%south, bzl%north)
   else
     call print_gs_raster(&
-           'Source', tgc%nam, &
-           tzl%typ, &
-           tzl%hi, tzl%hf, tzl%vi, tzl%vf, &
-           tgr%hi, tgr%hf, tgr%vi, tgr%vf, &
-           tzl%west, tzl%east, tzl%south, tzl%north)
+           'Source', bc%nam, &
+           bzl%typ, &
+           bzl%hi, bzl%hf, bzl%vi, bzl%vf, &
+           br%hi, br%hf, br%vi, br%vf, &
+           bzl%west, bzl%east, bzl%south, bzl%north)
     call print_gs_latlon(&
-           'Target', sgc%nam, &
-           szl%typ, &
-           szl%hi, szl%hf, szl%vi, szl%vf, &
-           sgl%hi, sgl%hf, sgl%vi, sgl%vf, &
-           szl%west, szl%east, szl%south, szl%north)
+           'Target', ac%nam, &
+           azl%typ, &
+           azl%hi, azl%hf, azl%vi, azl%vf, &
+           al%hi, al%hf, al%vi, al%vf, &
+           azl%west, azl%east, azl%south, azl%north)
   endif
 
   rtm => rt%main
   rtiz => rt%im%zone(rt%im%iZone)
+
+  call echo(code%ext)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
-  allocate(list_ij(tzl%mij))
-  allocate(list_tloc(tzl%mij))
-  list_ij(:) = 0_8
-  list_tloc(:) = 0_8
+  call echo(code%ent, 'Initializing')
 
-  allocate(iith(tgr%hi-1_8:tgr%hf+1_8))  ! TMP
+  allocate(iibh(br%hi-1_8:br%hf+1_8))  ! TMP
 
-  allocate(rt1d(szl%mij))
+  allocate(rt1d(azl%mij))
   call init_rt1d(rt1d)
 
   call calc_rt_im_nij_ulim(rt%im%nij_ulim, opt_sys%memory_ulim)
@@ -143,228 +143,243 @@ subroutine make_rt_latlon_raster(&
 
   rtm%nij = 0_8
   rtiz%nij = 0_8
-  !-------------------------------------------------------------
-  ! Make regridding table
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Making regridding table')
 
-  if( debug_t )then
-    lapara_sum_t = 0.d0
+  allocate(list_ij(bzl%mij))
+  allocate(list_bloc(bzl%mij))
+  list_ij(:) = 0_8
+  list_bloc(:) = 0_8
+
+  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Make a remapping table
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Making a remapping table')
+
+  if( debug_b )then
+    lapara_sum_b = 0.d0
   endif
 
-  sij = 0_8
-  sijs = 1_8
-  do isv = szl%vi, szl%vf
-    svr => sgl%vrel(isv)
-    if( svr%vi == 0_8 ) cycle
+  aij = 0_8
+  aijs = 1_8
+  do iav = azl%vi, azl%vf
+    avr => al%vrel(iav)
+    if( avr%vi == 0_8 ) cycle
 
-    tvi = max(svr%vi, tzl%vi)
-    tvf = min(svr%vf, tzl%vf)
-    iitv0 = max(tzl%vi-svr%vi, 0_8)
+    bvi = max(avr%vi, bzl%vi)
+    bvf = min(avr%vf, bzl%vf)
+    iibv0 = max(bzl%vi-avr%vi, 0_8)
 
-    do ish = szl%hi, szl%hf
-      shr => sgl%hrel(ish)
-      if( shr%nr == 0_8 ) cycle
+    do iah = azl%hi, azl%hf
+      ahr => al%hrel(iah)
+      if( ahr%nr == 0 ) cycle
 
-      sidx = sgl%idxmap(ish,isv)
-      if( sidx == sgl%idx_miss ) cycle
+      aidx = al%idxmap(iah,iav)
+      if( aidx == al%idx_miss ) cycle
 
-      sij = sij + 1_8
+      aij = aij + 1_8
 
-      rt1 => rt1d(sij)
-      rt1%idx_self = sidx
+      rt1 => rt1d(aij)
+      rt1%idx_self = aidx
       !---------------------------------------------------------
-      ! Prep. range of $th
+      ! Prep. range of $bh
       !---------------------------------------------------------
-      !if( shr%nr == 1 )then
-      !  call edbg('sh: '//str(ish)//' ('//str(sgl%lon(ish-1:ish)*r2d,'f10.5',' ~ ')//')'//&
-      !            ' th: '//str((/shr%hi(1),shr%hf(1)/),dgt(tgr%hf),' ~ '))
+      !if( ahr%nr == 1 )then
+      !  call edbg('ah: '//str(iah)//' ('//str(al%lon(iah-1:iah)*r2d,'f10.5',' ~ ')//')'//&
+      !            ' bh: '//str((/ahr%hi(1),ahr%hf(1)/),dgt(br%hf),' ~ '))
       !else
-      !  call edbg('sh: '//str(ish)//' ('//str(sgl%lon(ish-1:ish)*r2d,'f10.5',' ~ ')//')'//&
-      !            ' th: '//str((/shr%hi(1),shr%hf(1)/),dgt(tgr%hf),' ~ ')//&
-      !               ', '//str((/shr%hi(2),shr%hf(2)/),dgt(tgr%hf),' ~ '))
+      !  call edbg('ah: '//str(iah)//' ('//str(al%lon(iah-1:iah)*r2d,'f10.5',' ~ ')//')'//&
+      !            ' bh: '//str((/ahr%hi(1),ahr%hf(1)/),dgt(br%hf),' ~ ')//&
+      !               ', '//str((/ahr%hi(2),ahr%hf(2)/),dgt(br%hf),' ~ '))
       !endif
 
-      thi(:) = max(shr%hi(:), tzl%hi)
-      thf(:) = min(shr%hf(:), tzl%hf)
+      bhi(:) = max(ahr%hi(:), bzl%hi)
+      bhf(:) = min(ahr%hf(:), bzl%hf)
 
-      iith_this = 0
-      do itr = 1, shr%nr
-        do ith = shr%hi(itr), shr%hf(itr)
-          call add(iith_this)
-          iith(ith) = iith_this
+      iibh_this = 0_8
+      do ibr = 1, ahr%nr
+        do ibh = ahr%hi(ibr), ahr%hf(ibr)
+          call add(iibh_this)
+          iibh(ibh) = iibh_this
         enddo
       enddo
       !---------------------------------------------------------
-      ! Count t grids which intersect with s grid
+      ! Count $b grids which intersect with $a grid
       !---------------------------------------------------------
       rt1%mij = 0_8
 
-      tidx_prev = tgr%idx_miss
+      bidx_prev = br%idx_miss
 
       ij = 0_8
 
-      iitv = iitv0
-      do itv = tvi, tvf
-        iitv = iitv + 1_8
+      iibv = iibv0
+      do ibv = bvi, bvf
+        iibv = iibv + 1_8
 
-        do itr = 1, shr%nr
-          do ith = thi(itr), thf(itr)
-            tidx = tgr%idxmap(ith,itv)
-            if( tidx == tgr%idx_miss ) cycle
+        do ibr = 1, ahr%nr
+          do ibh = bhi(ibr), bhf(ibr)
+            bidx = br%idxmap(ibh,ibv)
+            if( bidx == br%idx_miss ) cycle
 
-            !if( debug_t )then
-            !  if( tidx /= tidx_debug ) cycle
+            !if( debug_b )then
+            !  if( bidx /= bidx_debug ) cycle
             !endif
 
-            if( tidx == tidx_prev ) cycle
-            tidx_prev = tidx
+            if( bidx == bidx_prev ) cycle
+            bidx_prev = bidx
 
-            call search(tidx, tgr%grid%idx, tloc)
+            call search(bidx, br%grid%idx, bloc)
 
-            if( list_ij(tloc) /= 0_8 ) cycle
+            if( list_ij(bloc) /= 0_8 ) cycle
 
             call add(rt1%mij)
-            list_ij(tloc) = rt1%mij
-            list_tloc(rt1%mij) = tloc
-          enddo  ! ith/
-        enddo  ! itr/
-      enddo  ! itv/
+            list_ij(bloc) = rt1%mij
+            list_bloc(rt1%mij) = bloc
+          enddo  ! ibh/
+        enddo  ! ibr/
+      enddo  ! ibv/
 
       if( rt1%mij == 0_8 ) cycle
 
       allocate(rt1%idx(rt1%mij))
       allocate(rt1%ara(rt1%mij))
       !---------------------------------------------------------
-      ! Reset list_ij and list_tloc
+      ! Reset $list_ij and $list_bloc
       !---------------------------------------------------------
       do ij = 1_8, rt1%mij
-        list_ij(list_tloc(ij)) = 0_8
+        list_ij(list_bloc(ij)) = 0_8
       enddo
-      list_tloc(:rt1%mij) = 0_8
+      list_bloc(:rt1%mij) = 0_8
       !---------------------------------------------------------
       ! Output intermediates
       !---------------------------------------------------------
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij+rt1%mij > rt%im%nij_ulim )then
-          call echo(code%ent, 'Outputting intermediates')
-          call edbg('sij: '//str((/sijs,sij-1_8/),' ~ '))
+          call echo(code%ent, 'Outputting intermediates '//&
+                    '(aij: '//str((/aijs,aij-1_8/),' - ')//')')
 
-          call reshape_rt1d(rt1d(sijs:sij-1_8), sgc%is_source, rtm, opt_earth)
-          call write_rt_im(rtm, rt%im)
+          call reshape_rt1d(rt1d(aijs:aij-1_8), ac%is_source, rtm, opt_earth)
+          call write_rt_im(rtm, rt%im, opt_sys%old_files)
           call clear_rt_main(rtm)
-          call free_rt1d_data(rt1d(sijs:sij-1_8))
-          sijs = sij
+          call free_rt1d_data(rt1d(aijs:aij-1_8))
+          aijs = aij
 
           call echo(code%ext)
         endif
       endif
       !---------------------------------------------------------
-      ! Calc. area of intersection and update regridding table
+      ! Calc. intersection area and update the remapping table
       !---------------------------------------------------------
       rt1%mij = 0_8
 
-      tidx_prev = tgr%idx_miss
+      bidx_prev = br%idx_miss
 
-      iitv = iitv0
-      do itv = tvi, tvf
-        iitv = iitv + 1_8
+      iibv = iibv0
+      do ibv = bvi, bvf
+        iibv = iibv + 1_8
 
-        do itr = 1, shr%nr
-          do ith = thi(itr), thf(itr)
-            tidx = tgr%idxmap(ith,itv)
-            if( tidx == tgr%idx_miss ) cycle
+        do ibr = 1, ahr%nr
+          do ibh = bhi(ibr), bhf(ibr)
+            bidx = br%idxmap(ibh,ibv)
+            if( bidx == br%idx_miss ) cycle
 
-            lapara = svr%lapara_1rad(iitv) * shr%lonwidth(iith(ith)) &
-                       * sgl%wgtmap(ish,isv) * tgr%wgtmap(ith,itv)
+            lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh)) &
+                       * al%wgtmap(iah,iav) * br%wgtmap(ibh,ibv)
 
-            if( debug_t )then
-              if( tidx == tidx_debug )then
-                call edbg('t('//str((/ith,itv/),', ')//')')
-                call edbg('  iith: '//str(iith(ith))//' iitv: '//str(iitv))
-                call edbg('  s('//str((/ish,isv/),', ')//') sidx: '//str(sidx))
-                call edbg('  t lon: '//str(tgr%lon(ith-1:ith)*r2d,'f15.10',' ~ '))
-                call edbg('  s lon: '//str(sgl%lon(ish-1:ish)*r2d,'f15.10',' ~ '))
-                call edbg('  shr west: '//str(shr%west(iith(ith))*r2d,'f15.10')//&
-                               ' east: '//str(shr%east(iith(ith))*r2d,'f15.10'))
-                call edbg('  s weight: '//str(sgl%wgtmap(ish,isv),'f15.10'))
-                call edbg('  t weight: '//str(tgr%wgtmap(ith,itv),'f15.10'))
-                call edbg('  lonwidth('//str(iith(ith))//'): '//str(shr%lonwidth(iith(ith))*r2d))
-                call edbg('  lapara_1deg('//str(iitv)//'): '//str(svr%lapara_1rad(iitv)*d2r))
+            if( debug_b )then
+              if( bidx == bidx_debug )then
+                call edbg('b('//str((/ibh,ibv/),', ')//')')
+                call edbg('  iibh: '//str(iibh(ibh))//' iibv: '//str(iibv))
+                call edbg('  a('//str((/iah,iav/),', ')//') aidx: '//str(aidx))
+                call edbg('  b lon: '//str(br%lon(ibh-1:ibh)*r2d,'f15.10',' ~ '))
+                call edbg('  a lon: '//str(al%lon(iah-1:iah)*r2d,'f15.10',' ~ '))
+                call edbg('  ahr west: '//str(ahr%west(iibh(ibh))*r2d,'f15.10')//&
+                               ' east: '//str(ahr%east(iibh(ibh))*r2d,'f15.10'))
+                call edbg('  a weight: '//str(al%wgtmap(iah,iav),'f15.10'))
+                call edbg('  b weight: '//str(br%wgtmap(ibh,ibv),'f15.10'))
+                call edbg('  lonwidth('//str(iibh(ibh))//'): '//str(ahr%lonwidth(iibh(ibh))*r2d))
+                call edbg('  lapara_1deg('//str(iibv)//'): '//str(avr%lapara_1rad(iibv)*d2r))
                 call edbg('  lapara: '//str(lapara)//' -> '//str(lapara*opt_earth%r**2))
-                call add(lapara_sum_t, lapara*opt_earth%r**2)
+                call add(lapara_sum_b, lapara*opt_earth%r**2)
               endif
             endif
 
-            if( tidx == tidx_prev )then
+            if( bidx == bidx_prev )then
               call add(rt1%ara(ij), lapara)
             else
-              call search(tidx, tgr%grid%idx, tloc)
+              call search(bidx, br%grid%idx, bloc)
               !-------------------------------------------------
               ! Case: Index is newly registered
-              if( list_ij(tloc) == 0_8 )then
+              if( list_ij(bloc) == 0_8 )then
                 call add(rt1%mij)
-                rt1%idx(rt1%mij)  = tidx
+                rt1%idx(rt1%mij) = bidx
                 rt1%ara(rt1%mij) = lapara
 
                 ! Update lists of ij and tloc.
                 ij = rt1%mij
-                list_ij(tloc) = ij
-                list_tloc(ij) = tloc
+                list_ij(bloc) = ij
+                list_bloc(ij) = bloc
               !-------------------------------------------------
               ! Case: Index has been already registered
               else
-                ij = list_ij(tloc)
+                ij = list_ij(bloc)
                 call add(rt1%ara(ij), lapara)
               endif
 
-              tidx_prev = tidx
+              bidx_prev = bidx
             endif
 
-          enddo  ! ith/
-        enddo  ! itr/
-      enddo  ! itv/
+          enddo  ! ibh/
+        enddo  ! ibr/
+      enddo  ! ibv/
 
       call add(rtm%nij, rt1%mij)
       !---------------------------------------------------------
       ! Reset $list_ij and $list_tloc
       !---------------------------------------------------------
       do ij = 1_8, rt1%mij
-        list_ij(list_tloc(ij)) = 0_8
+        list_ij(list_bloc(ij)) = 0_8
       enddo
-      list_tloc(:rt1%mij) = 0_8
-    enddo  ! ish/
-  enddo  ! isv/
+      list_bloc(:rt1%mij) = 0_8
+    enddo  ! iah/
+  enddo  ! iav/
 
-  if( debug_t )then
-    call edbg('lapara_sum_t: '//str(lapara_sum_t,'es20.13'))
+  if( debug_b )then
+    call edbg('lapara_sum_b: '//str(lapara_sum_b,'es20.13'))
   endif
 
-  ! Output intermediates
+  ! Reshape $rt1d and output intermediates
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting intermediates')
-  call edbg('sij: '//str((/sijs,sij/),' ~ '))
-
-  call reshape_rt1d(rt1d(sijs:sij), sgc%is_source, rtm, opt_earth)
+  call reshape_rt1d(rt1d(aijs:aij), ac%is_source, rtm, opt_earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call write_rt_im(rtm, rt%im)
+    call echo(code%ent, 'Outputting intermediates '//&
+              '(aij: '//str((/aijs,aij/),' - ')//')')
+    call write_rt_im(rtm, rt%im, opt_sys%old_files)
     call clear_rt_main(rtm)
+    call echo(code%ext)
   endif
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
-  call free_rt1d_data(rt1d(sijs:sij))
+  nullify(rt1)
+  call free_rt1d_data(rt1d(aijs:aij))
   deallocate(rt1d)
+  nullify(rt1d)
 
-  deallocate(iith)  ![add 2024/11/19]
+  nullify(rtm)
+  nullify(rtiz)
 
   deallocate(list_ij)
-  deallocate(list_tloc)
+  deallocate(list_bloc)
+
+  deallocate(iibh)
+
+  nullify(ahr, avr)
+  nullify(azl, bzl)
+  nullify(al, br)
+  nullify(ac, bc)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_latlon_raster
