@@ -2,7 +2,6 @@ TOPSRCDIR = ..
 include $(TOPSRCDIR)/Mkinclude
 
 SPRINGLIB = libspring.a
-TARGETLIB = mod.a
 
 OBJ_F = \
 ls_base.o\
@@ -11,16 +10,13 @@ ls_remap.o\
 ls_manage.o\
 ls.o
 
+OBJS = $(OBJ_F)
+
 all:
 	$(MAKE) $(OBJ_F)
-	$(MAKE) $(TARGETLIB)
 	$(MAKE) $(SPRINGLIB)
 
-$(TARGETLIB): $(OBJ_F)
-	$(AR) $(ARFLAGS) $@ $^
-	$(RANLIB) $@
-
-$(SPRINGLIB): $(TARGETLIB) $(CMNDIR1)/common1.a $(CMNDIR2)/common2.a $(CMNDIR3)/common3.a $(LIB)
+$(SPRINGLIB): $(OBJS) $(CMNDIR1)/common1.a $(CMNDIR2)/common2.a $(CMNDIR3)/common3.a $(LIB)
 	$(RM) $(RMFLAGS) $@
 	$(AR) cqT $@ $^
 	printf "create $@\naddlib $@\nsave\nend\n" | ar -M
