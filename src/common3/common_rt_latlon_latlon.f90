@@ -1,15 +1,30 @@
 module common_rt_latlon_latlon
+  use lib_const
   use lib_base
   use lib_log
   use lib_math
+  ! common1
   use common_const
   use common_type_opt
   use common_type_gs
+  use common_gs_util, only: &
+        print_gs_latlon, &
+        print_latlon
+  ! common2
   use common_type_rt
+  use common_rt1d, only: &
+        init_rt1d, &
+        free_rt1d_data, &
+        reshape_rt1d
+  use common_rt_base, only: &
+        clear_rt_main, &
+        calc_rt_im_nij_ulim
+  use common_rt_io, only: &
+        write_rt_im
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: make_rt_latlon_latlon
   !-------------------------------------------------------------
@@ -18,17 +33,6 @@ contains
 !
 !===============================================================
 subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
-  use common_gs_util, only: &
-    print_gs_latlon
-  use common_rt1d, only: &
-    init_rt1d, &
-    free_rt1d_data, &
-    reshape_rt1d
-  use common_rt_base, only: &
-    calc_rt_im_nij_ulim, &
-    clear_rt_main
-  use common_rt_io, only: &
-    write_rt_im
   implicit none
   type(gs_)       , intent(in)   , target :: s, t
   type(rt_)       , intent(inout), target :: rt
@@ -57,11 +61,13 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
+  call echo(code%ent, 'Setting pointers')
+
   sgc => s%cmn
   tgc => t%cmn
 
-  if( sgc%gs_type /= gs_type_latlon .or. &
-      tgc%gs_type /= gs_type_latlon )then
+  if( sgc%gs_type /= GS_TYPE_LATLON .or. &
+      tgc%gs_type /= GS_TYPE_LATLON )then
     call eerr(str(msg_invalid_value())//&
             '\n  s%cmn%gs_type: '//str(sgc%gs_type)//&
             '\n  t%cmn%gs_type: '//str(tgc%gs_type))
@@ -110,9 +116,13 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
 
   rtm => rt%main
   rtiz => rt%im%zone(rt%im%iZone)
+
+  call echo(code%ext)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call echo(code%ent, 'Initializing')
+
   allocate(iith(tgl%hi-1_8:tgl%hf+1_8))
   iith(:) = 0_8
 
@@ -124,10 +134,12 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
 
   rtm%nij = 0_8
   rtiz%nij = 0_8
+
+  call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make regridding table
+  ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making regridding table')
+  call echo(code%ent, 'Making a remapping table')
 
   !call edbg('th: '//str((/tzl%hi,tzl%hf/),' ~ '))
   !call edbg('tv: '//str((/tzl%vi,tzl%vf/),' ~ '))
@@ -186,10 +198,10 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij+rt1%mij > rt%im%nij_ulim )then
           call echo(code%ent, 'Outputting intermediates '//&
-                    '(sij: '//str((/sijs,sij-1_8/),' ~ ')//')')
+                    '(sij: '//str((/sijs,sij-1_8/),' - ')//')')
 
           call reshape_rt1d(rt1d(sijs:sij-1_8), sgc%is_source, rtm, opt_earth)
-          call write_rt_im(rtm, rt%im)
+          call write_rt_im(rtm, rt%im, opt_sys%old_files)
           call clear_rt_main(rtm)
           call free_rt1d_data(rt1d(sijs:sij-1_8))
           sijs = sij
@@ -226,14 +238,14 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
     enddo  ! ish/
   enddo  ! isv/
 
-  ! Respahe and output intermediates
+  ! Respahe rt and output intermediates
   !-------------------------------------------------------------
   call reshape_rt1d(rt1d(sijs:sij), sgc%is_source, rtm, opt_earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
     call echo(code%ent, 'Outputting intermediates '//&
-              '(sij: '//str((/sijs,sij/),' ~ ')//')')
-    call write_rt_im(rtm, rt%im)
+              '(sij: '//str((/sijs,sij/),' - ')//')')
+    call write_rt_im(rtm, rt%im, opt_sys%old_files)
     call clear_rt_main(rtm)
     call echo(code%ext)
   endif
@@ -243,30 +255,20 @@ subroutine make_rt_latlon_latlon(s, t, rt, opt_sys, opt_earth)
   ! Deallocate
   !-------------------------------------------------------------
   nullify(rt1)
-
   call free_rt1d_data(rt1d(sijs:sij))
   deallocate(rt1d)
   nullify(rt1d)
 
-  deallocate(iith)
-
-  nullify(shr)
-  nullify(svr)
-
   nullify(rtm)
   nullify(rtiz)
 
-  nullify(szl)
-  nullify(tzl)
+  deallocate(iith)
 
-  nullify(sfl)
-  nullify(tfl)
-
-  nullify(sgl)
-  nullify(tgl)
-
-  nullify(sgc)
-  nullify(tgc)
+  nullify(shr, svr)
+  nullify(szl, tzl)
+  nullify(sfl, tfl)
+  nullify(sgl, tgl)
+  nullify(sgc, tgc)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_latlon_latlon

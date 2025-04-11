@@ -29,7 +29,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(gs_source, gs_target, rt, opt)
-  use common_set2, only: &
+  use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -532,7 +532,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_gs_latlon(u)
-  use common_set2, only: &
+  use common_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -547,11 +547,11 @@ subroutine read_settings_gs_latlon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
-        set_gs_common_components    , &
         set_default_values_gs_latlon, &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out
+        set_bounds_file_grid_out    , &
+        set_gs_common
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
@@ -639,6 +639,7 @@ subroutine read_settings_gs_latlon(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
+      call remove_quotes(u%nam, QUOTE_BOTH)
     !-----------------------------------------------------------
     ! Resolution
     case( 'nx' )
@@ -759,7 +760,7 @@ subroutine read_settings_gs_latlon(u)
   call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
   call set_bounds_file_grid_out(fg_out, ul%nx, ul%ny)
 
-  call set_gs_common_components(u)
+  call set_gs_common(u)
 
   ul%debug = keynum('idx_debug') == 1
   if( .not. ul%debug ) ul%idx_debug = ul%idx_miss
@@ -898,7 +899,7 @@ end subroutine read_settings_gs_latlon
 !
 !===============================================================
 subroutine read_settings_gs_raster(u)
-  use common_set2, only: &
+  use common_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -913,11 +914,11 @@ subroutine read_settings_gs_raster(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
-        set_gs_common_components    , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out
+        set_bounds_file_grid_out    , &
+        set_gs_common
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
@@ -1011,6 +1012,7 @@ subroutine read_settings_gs_raster(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
+      call remove_quotes(u%nam, QUOTE_BOTH)
     !-----------------------------------------------------------
     ! Resolution
     case( 'nx' )
@@ -1128,9 +1130,9 @@ subroutine read_settings_gs_raster(u)
          ur%xi, ur%xf, ur%yi, ur%yf,             & ! out
          ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) ! out
   call set_bounds_file_grid_in(fg_in)
-  call set_bounds_file_grid_out(fg_out, fg_in%nx, fg_in%ny)
+  call set_bounds_file_grid_out(fg_out, ur%nx, ur%ny)
 
-  call set_gs_common_components(u)
+  call set_gs_common(u)
 
   ur%debug = keynum('idx_debug') == 1
   if( .not. ur%debug ) ur%idx_debug = ur%idx_miss
@@ -1235,7 +1237,7 @@ end subroutine read_settings_gs_raster
 !
 !===============================================================
 subroutine read_settings_gs_polygon(u)
-  use common_set2, only: &
+  use common_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -1250,11 +1252,11 @@ subroutine read_settings_gs_polygon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components          , &
-        set_gs_common_components     , &
         set_default_values_gs_polygon, &
         set_bounds_file_polygon_in   , &
         set_bounds_file_grid_in      , &
-        set_bounds_file_grid_out
+        set_bounds_file_grid_out     , &
+        set_gs_common
   implicit none
   type(gs_), intent(inout), target :: u
 
@@ -1340,6 +1342,7 @@ subroutine read_settings_gs_polygon(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
+      call remove_quotes(u%nam, QUOTE_BOTH)
     !-----------------------------------------------------------
     ! Shape
     case( 'np' )
@@ -1446,7 +1449,7 @@ subroutine read_settings_gs_polygon(u)
   call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
   call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
 
-  call set_gs_common_components(u)
+  call set_gs_common(u)
 
   ! Coordinate system
   !-------------------------------------------------------------
@@ -1608,7 +1611,7 @@ end subroutine read_settings_gs_polygon
 !
 !===============================================================
 subroutine read_settings_remapping(rt, s, t)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -2110,7 +2113,7 @@ end subroutine read_settings_remapping
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -2233,7 +2236,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine skip_unused_block()
-  use common_set2, only: &
+  use common_set, only: &
         key       , &
         read_input
   implicit none

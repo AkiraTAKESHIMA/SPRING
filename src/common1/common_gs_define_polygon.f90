@@ -13,7 +13,7 @@ module common_gs_define_polygon
   !-------------------------------------------------------------
   ! Public Procedures
   !-------------------------------------------------------------
-  public :: set_grids_polygon
+  public :: set_grids__polygon
 
   public :: make_n_list_polygon
 
@@ -31,7 +31,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine set_grids_polygon(up)
+subroutine set_grids__polygon(up)
   use common_gs_zone, only: &
     check_iZone
   implicit none
@@ -43,7 +43,7 @@ subroutine set_grids_polygon(up)
   type(polygon_)        , pointer :: p
   integer(8) :: ijs, ije, ij
 
-  call echo(code%bgn, 'set_grids_polygon')
+  call echo(code%bgn, 'set_grids__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -161,7 +161,7 @@ subroutine set_grids_polygon(up)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_grids_polygon
+end subroutine set_grids__polygon
 !===============================================================
 !
 !===============================================================

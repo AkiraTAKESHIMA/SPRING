@@ -3,12 +3,9 @@ module def_type
   use lib_io
   use common_type_opt
   implicit none
-  !-------------------------------------------------------------
-  private
+  public
   !-------------------------------------------------------------
   !
-  !-------------------------------------------------------------
-  public :: iarea_max_
   !-------------------------------------------------------------
   type iarea_max_
     integer(8) :: idx_single
@@ -19,16 +16,13 @@ module def_type
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  public :: output_
-  public :: opt_
-  !-------------------------------------------------------------
   type output_
-    character(clen_key) :: ineq_frac_min, ineq_frac_max
-    real(8) :: frac_min, frac_max
-    real(8) :: thresh_frac_zero_positive
-    real(8) :: thresh_frac_sum_zero_positive
-    type(file_) :: f_area_sum
-    type(file_) :: f_frac_sum
+    character(CLEN_KEY) :: ineq_iratio_min, ineq_iratio_max
+    real(8) :: iratio_min, iratio_max
+    real(8) :: thresh_iratio_zero_positive
+    real(8) :: thresh_iratio_sum_zero_positive
+    type(file_) :: f_iarea_sum
+    type(file_) :: f_iratio_sum
     type(file_) :: f_mask
     type(file_) :: f_idx
     real(8) :: val_miss

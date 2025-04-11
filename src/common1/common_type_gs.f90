@@ -129,7 +129,7 @@ module common_type_gs
     integer(8) :: idxmin, idxmax
     integer(8), pointer :: idx(:)
     integer(8), pointer :: idxarg(:)
-    integer(8), pointer :: idx2ij(:)
+    !integer(8), pointer :: idx2ij(:)
     integer(1), pointer :: msk(:)
     real(8)   , pointer :: uwa(:)  ! unweighted area
     real(8)   , pointer :: ara(:)  ! weighted area
@@ -327,6 +327,12 @@ module common_type_gs
 
     integer(8), pointer :: idxmap(:,:)  !(hi:hf,vi:vf)
     real(8)   , pointer :: wgtmap(:,:)  !(hi:hf,vi:vf)
+
+    integer :: tag_in_idxmap
+    integer(1), pointer :: idxmapall1(:,:)
+    integer(2), pointer :: idxmapall2(:,:)
+    integer(4), pointer :: idxmapall4(:,:)
+    integer(8), pointer :: idxmapall8(:,:)
 
     integer(8) :: idx_miss
     real(8)    :: ara_miss

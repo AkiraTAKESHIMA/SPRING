@@ -33,11 +33,11 @@ subroutine calc_iarea(&
   implicit none
   type(gs_polygon_), intent(in) :: tgp
   type(output_)    , intent(in) :: dout
-  real(8), pointer :: iarea(:,:)
-  real(8), pointer :: iarea_sum(:,:)
-  type(iarea_max_), pointer :: iarea_max(:,:)
-  logical, intent(in) :: calc_sum
-  logical, intent(in) :: calc_max
+  real(8)          , pointer    :: iarea(:,:)     ! out
+  real(8)          , pointer    :: iarea_sum(:,:) ! inout
+  type(iarea_max_) , pointer    :: iarea_max(:,:) ! inout
+  logical          , intent(in) :: calc_sum
+  logical          , intent(in) :: calc_max
 
   type(zone_polygon_), pointer :: tzp
   integer(8) :: tij

@@ -11,61 +11,101 @@ module common_set
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public procedures
+  ! Public Procedures
   !-------------------------------------------------------------
   public :: open_setting_file
   public :: close_setting_file
   public :: line_number
+  public :: key
 
+  public :: read_path_report
   public :: get_path_report
 
   public :: find_block
   public :: back_to_block_head
-  public :: bar
 
   public :: read_input
   public :: read_value
 
+  public :: keynum
+  public :: alloc_keynum
+  public :: free_keynum
+  public :: set_keynum
+  public :: reset_keynum
+  public :: update_keynum
+  public :: check_keynum
+
   public :: check_num_of_key
+
+  public :: set_barlen
+  public :: init_barlen
+  public :: bar
 
   public :: raise_error_invalid_key
   public :: raise_warning_invalid_key
-  !-----------------------------------------------------------
-  ! Private Variables
-  !-----------------------------------------------------------
-  type input_val_noKey_
-    character(clen_line) :: val
+  public :: msg_invalid_input
+  public :: msg_undesirable_input
+  !-------------------------------------------------------------
+  ! Interface
+  !-------------------------------------------------------------
+  interface read_value
+    module procedure read_value__char
+    module procedure read_value__log
+    module procedure read_value__int4
+    module procedure read_value__int8
+    module procedure read_value__real
+    module procedure read_value__dble
+    module procedure read_value__fbin
+  end interface
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  character(CLEN_VAR), parameter :: BLOCK_END = 'end'
+  character(CLEN_VAR), parameter :: KEY_PATH_REPORT = 'path_report'
+
+  character(1), parameter :: DELIM_INPUT    = ':'
+  character(1), parameter :: DELIM_CONTENTS = ','
+  character(1), parameter :: DELIM_POSVAL   = '='
+
+  integer, parameter :: BARLEN_DEFAULT = 64
+  integer :: barlen = BARLEN_DEFAULT
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  type input_val_nokey_
+    character(CLEN_LINE) :: val
   end type
 
   type input_val_key_
-    character(clen_var)  :: key
-    character(clen_line) :: val
+    character(CLEN_VAR)  :: key
+    character(CLEN_LINE) :: val
   end type
 
   type input_
-    character(clen_var) :: key
-    integer :: nVals, &
-               nVals_noKey, &
-               nVals_key
-    type(input_val_noKey_), pointer :: val_noKey(:)
-    type(input_val_key_)  , pointer :: val_key(:)
+    character(CLEN_VAR) :: key
+    integer :: nval, nval_nokey, nval_key
+    type(input_val_nokey_), pointer :: val_nokey(:) !(nval)
+    type(input_val_key_)  , pointer :: val_key(:)   !(nval)
   end type
 
-  !-----------------------------------------------------------
-  character(clen_var), parameter :: block_end = 'end'
-  character(1)       , parameter :: separator_key_contents = ':'
-
-  character(clen_var), parameter :: key_path_report = 'path_report'
-
-  character(clen_var), parameter :: block_name_log_gs  = 'Grid system'
-
-  !-----------------------------------------------------------
-  integer            , save :: un
-  integer            , save :: iLine
-  integer            , save :: iLine_block_head
-  type(input_)       , save :: input
-  character(clen_var), save :: block_name = ''
-  !-----------------------------------------------------------
+  type keydict_
+    character(CLEN_VAR) :: key
+    integer :: n_llim, n_ulim
+    integer :: n
+  end type
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  integer                 :: un
+  character(CLEN_PATH)    :: path_report
+  integer                 :: iLine
+  integer                 :: iLine_block_head
+  character(CLEN_VAR)     :: block_name      = ''
+  character(CLEN_VAR)     :: block_name_prev = ''
+  type(input_)            :: input
+  integer                 :: nkey
+  type(keydict_), pointer :: keydict(:) !(nkey)
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
@@ -123,44 +163,56 @@ end subroutine close_setting_file
 !===============================================================
 !
 !===============================================================
-integer function line_number() result(res)
+integer function line_number()
   implicit none
 
-  res = iLine
+  line_number = iLine
 end function line_number
 !===============================================================
 !
 !===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine get_path_report(path)
+character(CLEN_VAR) function key()
   implicit none
-  character(*), intent(out) :: path
 
-  character(clen_var) :: key
+  key = input%key
+end function key
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine read_path_report()
+  implicit none
 
-  call echo(code%bgn, 'get_path_report', '-p -x2')
+  call echo(code%bgn, 'read_path_report', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call read_input(key)
+  call read_input()
 
-  if( key /= key_path_report )then
-    call eerr(str(msg_syntax_error())//&
-            '\n  Specify the path of report file at the top of setting file as follows.'//&
-            '\n'//str(key_path_report)//': "<path_report>"')
+  if( input%key /= KEY_PATH_REPORT )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nPath of the report file is not given.')
   endif
 
-  call read_value(v_path=path)
+  call read_value(path_report, is_path=.true.)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine get_path_report
+end subroutine read_path_report
+!===============================================================
+!
+!===============================================================
+character(CLEN_PATH) function get_path_report() result(ret)
+  implicit none
+
+  ret = path_report
+end function get_path_report
 !===============================================================
 !
 !===============================================================
@@ -182,6 +234,8 @@ subroutine find_block(res)
 
   call echo(code%bgn, 'find_block', '-p -x2')
   !-------------------------------------------------------------
+  block_name_prev = block_name
+
   do
     read(un,"(a)",iostat=ios) line
 
@@ -245,104 +299,73 @@ end subroutine back_to_block_head
 !===============================================================
 !
 !===============================================================
-character(clen_var) function bar(block_name)
+subroutine read_input()
   implicit none
-  character(*), intent(in) :: block_name
 
-  integer, parameter :: cl = 64
-  integer :: cl_left, cl_right
-
-  call echo(code%bgn, 'print_bar', '-p -x2')
-  !-------------------------------------------------------------
-  ! Case: Tail
-  if( block_name == '' )then
-    bar = str('', cl, '-')
-  !-------------------------------------------------------------
-  ! Case: Head
-  else
-    cl_left = (cl - len_trim(block_name) - 2) / 2
-    cl_right = cl - len_trim(block_name) - 2 - cl_left
-
-    bar = str('', cl_left, '-')//' '//str(block_name)//' '//str('', cl_right, '-')
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end function bar
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine read_input(key)
-  implicit none
-  character(clen_var), intent(out) :: key
-
-  character(clen_line) :: line, &
-                          line_concat
-  character(clen_line) :: contents
+  character(CLEN_LINE) :: line
+  character(CLEN_LINE) :: line_concat
+  character(CLEN_LINE) :: contents
   integer :: cl
-  integer :: iVal
+  integer :: ival
   integer :: ic0_val, ic1_val, ic
   integer :: ios
 
   call echo(code%bgn, 'read_input', '-p -x2')
   !-------------------------------------------------------------
-  ! Initialize output
+  ! 
   !-------------------------------------------------------------
-  key = ''
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  input%key = ''
-  input%nVals_noKey = 0
-  input%nVals_key   = 0
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
+  call clear_input()
+
   do
+    call add(iLine)
     read(un,"(a)",iostat=ios) line
 
     selectcase( ios )
     case( 0 )
       continue
     case( -1 )
-      call eerr(str(msg_unexpected_condition())//&
-              '\nReached to the end of file.')
+      call eerr('Invalid input @ line '//str(iLine)//&
+              '\nUnexpectedly reached the end of the file.')
     case default
-      call eerr(str(msg_io_error())//&
-              '\nAn unknown error occured while reading.')
+      call eerr('An unknown reading error @ line '//str(iLine)//'.')
     endselect
-
-    call add(iLine)
-
+    !-----------------------------------------------------------
     call remove_comment(line, sgn='#')
 
     if( line == '' ) cycle
 
     line = adjustl(line)
-
+    line_concat = line
+    !-----------------------------------------------------------
+    ! Successfully reached the end of the block
     if( is_block_tail(line) )then
       call echo(code%ret)
       return
     endif
-
-    line_concat = line
-    cl = len_trim(line)
+    !-----------------------------------------------------------
+    ! A comma at the end of line means this line continues
+    ! to the next line. They are concatenated here.
+    cl = len_trim(line_concat)
     do while( line_concat(cl:cl) == ',' )
-      read(un,"(a)") line
       call add(iLine)
+      read(un,"(a)",iostat=ios) line
 
+      selectcase( ios )
+      case( 0 )
+        continue
+      case( -1 )
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nUnexpectedly reached the end of the file.')
+      case default
+        call eerr('An unknown reading error @ line '//str(iLine)//'.')
+      endselect
+      !---------------------------------------------------------
+      ! ERROR: Unexpectedly reached the end of the block
       if( is_block_tail(line) )then
-        call eerr(str(msg_syntax_error())//&
-                '\nNo line continues after a comma @ line '//str(iLine)//'.')
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nNo line follows the comma.')
       endif
-
+      !---------------------------------------------------------
       line_concat = trim(line_concat)//adjustl(line)
       cl = len_trim(line_concat)
     enddo
@@ -352,75 +375,72 @@ subroutine read_input(key)
 
   line = line_concat
   !-------------------------------------------------------------
-  ! Separate line into a key and contents.
+  ! Separate the line into a key and contents.
   !-------------------------------------------------------------
-  input%key = lower(splitted(line, trim(separator_key_contents), 1, QUOTE_BOTH))
-
-  contents = splitted(line, trim(separator_key_contents), 2, QUOTE_BOTH)
-
+  input%key = lower(splitted(line, trim(DELIM_INPUT), 1, QUOTE_BOTH))
+  contents = splitted(line, trim(DELIM_INPUT), 2, QUOTE_BOTH)
   if( contents == '' )then
-    call eerr("No value was specified for the key '"//str(input%key)//"'.")
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nNo value is given for the keyword "'//str(input%key)//'".')
   endif
 
-  call count_word(contents, ',', input%nVals, quoteIgnored=QUOTE_BOTH)
-
-  input%nVals = input%nVals + 1
-
-  allocate(input%val_noKey(input%nVals))
-  allocate(input%val_key(input%nVals))
-  input%nVals_noKey = 0
-  input%nVals_key   = 0
+  call count_word(contents, DELIM_CONTENTS, input%nval, quoteIgnored=QUOTE_BOTH)
+  input%nval = input%nval + 1
+  allocate(input%val_nokey(input%nval))
+  allocate(input%val_key(input%nval))
+  input%nval_nokey = 0
+  input%nval_key = 0
 
   ic0_val = 1
-  do iVal = 1, input%nVals
-    if( iVal < input%nVals )then
-      call search_word(contents(ic0_val:), ',', ic1_val, quoteIgnored=QUOTE_BOTH)
-      ic1_val = ic1_val + ic0_val - 2
+  do ival = 1, input%nval
+    if( ival < input%nval )then
+      ! Find the next comma @ ic1_val+1
+      call search_word(contents(ic0_val:), DELIM_CONTENTS, ic, quoteIgnored=QUOTE_BOTH)
+      ic1_val = ic0_val + ic - 2
     else
       ic1_val = len_trim(contents)
     endif
 
-    call search_word(contents(ic0_val:ic1_val), '=', ic, quoteIgnored=QUOTE_BOTH)
-
+    call search_word(contents(ic0_val:ic1_val), DELIM_POSVAL, ic, quoteIgnored=QUOTE_BOTH)
     !-----------------------------------------------------------
-    ! Case: Positional argument
+    ! Case: A value without a keyword
     if( ic == 0 )then
-      if( input%nVals_key > 0 )then
-        call eerr(str(msg_syntax_error())//&
-                '\nPositional argument follows optional argument.')
+      !---------------------------------------------------------
+      ! ERROR: Value without keywords after values with keywords
+      if( input%nval_key > 0 )then
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nValues without keywords must precede values with keywords.')
       endif
 
-      call add(input%nVals_noKey)
-      input%val_noKey(input%nVals_noKey)%val = adjustl(contents(ic0_val:ic1_val))
+      call add(input%nval_nokey)
+      input%val_nokey(input%nval_nokey)%val = adjustl(contents(ic0_val:ic1_val))
     !-----------------------------------------------------------
-    ! Case: Optional argument
+    ! Case: A value with a keyword
     else
-      call add(input%nVals_key)
-      input%val_key(input%nVals_key)%key = adjustl(contents(ic0_val:ic0_val+ic-2))
-      input%val_key(input%nVals_key)%val = adjustl(contents(ic0_val+ic:ic1_val))
+      call add(input%nval_key)
+      input%val_key(input%nval_key)%key = adjustl(contents(ic0_val:ic0_val+ic-2))
+      input%val_key(input%nval_key)%val = adjustl(contents(ic0_val+ic:ic1_val))
     !-----------------------------------------------------------
     endif
 
     ic0_val = ic1_val + 2
   enddo
   !-------------------------------------------------------------
-  ! Debug
-  !-------------------------------------------------------------
-!  call edbg('line: '//str(line))
-!  call edbg('key: '//str(input%key))
-!  call edbg('  nvals_noKey: '//str(input%nVals_noKey))
-!  do iVal = 1, input%nVals_noKey
-!    call edbg('    '//str(input%val_noKey(iVal)%val))
-!  enddo
-!  call edbg('  nVals_key: '//str(input%nVals_key))
-!  do iVal = 1, input%nVals_key
-!    call edbg('    key: '//str(input%val_key(iVal)%key)//', val: '//str(input%val_key(iVal)%val))
-!  enddo
-  !-------------------------------------------------------------
-  key = input%key
-  !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine read_input
+!===============================================================
+!
+!===============================================================
+subroutine clear_input()
+  implicit none
+
+  input%key = ''
+  if( input%nval > 0 )then
+    deallocate(input%val_nokey)
+    deallocate(input%val_key)
+  endif
+  input%nval = 0
+end subroutine clear_input
 !===============================================================
 !
 !===============================================================
@@ -442,13 +462,12 @@ logical function is_block_tail(line) result(res)
 
   if( line_(1:1) == '[' .and. line_(cl:cl) == ']' )then
     block_name = lower(adjustl(line_(2:cl-1)))
-    if( block_name == block_end )then
+    if( block_name == BLOCK_END )then
       res = .true.
     else
-      call eerr(str(msg_syntax_error())//&
-              '\n'//str(line_)//' (line '//str(iLine)//')'//&
+      call eerr('Invalid input @ line '//str(iLine)//&
               '\nBlock "'//str(block_name)//'" appeared before '//&
-              'current block was closed.')
+                'the current block "'//str(block_name_prev)//'" was closed.')
     endif
   else
     res = .false.
@@ -467,43 +486,142 @@ end function is_block_tail
 !===============================================================
 !
 !===============================================================
-recursive subroutine read_value(&
-    v_char, v_log, v_int4, v_int8, v_real, v_dble, v_file, v_path, &
-    pos, key, is_keyword, get_length, found)
+subroutine read_value__char(&
+    val, pos, key, is_keyword, is_path, dir, found)
   implicit none
-  character(*), intent(inout), optional :: v_char
-  logical     , intent(inout), optional :: v_log
-  integer(4)  , intent(inout), optional :: v_int4
-  integer(8)  , intent(inout), optional :: v_int8
-  real(4)     , intent(inout), optional :: v_real
-  real(8)     , intent(inout), optional :: v_dble
-  character(*), intent(inout), optional :: v_path
-  type(file_) , intent(inout), optional :: v_file
-  integer     , intent(in)   , optional :: pos
-  character(*), intent(in)   , optional :: key
-  logical     , intent(in)   , optional :: is_keyword
-  logical     , intent(in)   , optional :: get_length
-  logical     , intent(out)  , optional :: found
+  character(*), intent(inout) :: val
+  integer     , intent(in) , optional :: pos
+  character(*), intent(in) , optional :: key
+  logical     , intent(in) , optional :: is_keyword
+  logical     , intent(in) , optional :: is_path
+  character(*), intent(in) , optional :: dir
+  logical     , intent(out), optional :: found
+
+  integer              :: pos_
+  character(CLEN_VAR)  :: key_
+  logical              :: is_keyword_
+  logical              :: is_path_
+  character(CLEN_PATH) :: dir_
+  logical              :: found_
+
+  integer :: ival
+  integer :: cl
+
+  call echo(code%bgn, 'read_value__char', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  pos_ = 1
+  key_ = ''
+  is_keyword_ = .false.
+  is_path_ = .false.
+  dir_ = ''
+  if( present(pos) ) pos_ = pos
+  if( present(key) ) key_ = key
+  if( present(is_keyword) ) is_keyword_ = is_keyword
+  if( present(is_path) ) is_path_ = is_path
+  if( present(dir) ) dir_ = dir
+
+  if( is_keyword_ .and. is_path_ )then
+    call eerr('!!! INTERNAL ERROR !!!'//&
+            '\n  is_keyword_ .and. is_path_')
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( input%nval_nokey >= pos_ )then
+    found_ = .true.
+    val = input%val_nokey(pos_)%val
+  else
+    if( key_ == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  pos_ > input%nval_key .and. key_ == ""'//&
+              '\n  iLine         : '//str(iLine)//&
+              '\n  pos_          : '//str(pos_)//&
+              '\n  input%nval_key: '//str(input%nval_key))
+    endif
+
+    found_ = .false.
+    do ival = 1, input%nval_key
+      if( key_ == input%val_key(ival)%key )then
+        found_ = .true.
+        val = input%val_key(ival)%val
+        exit
+      endif
+    enddo  ! ival/
+
+    if( .not. found_ )then
+      if( present(found) )then
+        found = found_
+        call echo(code%ret)
+        return
+      else
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nFailed to get value.'//&
+                '\n  Default position: '//str(pos_)//&
+                '\n  Keyword         : '//str(key_))
+      endif
+    endif
+  endif
+
+  if( present(found) ) found = found_
+  !-------------------------------------------------------------
+  ! Modify val
+  !-------------------------------------------------------------
+  cl = len_trim(val)
+  !-------------------------------------------------------------
+  ! Case: Keyword
+  if( is_keyword_ )then
+    val = lower(val)
+    ! Remove quotes
+    if( (val(1:1) == "'" .and. val(cl:cl) == "'") .or. &
+        (val(1:1) == '"' .and. val(cl:cl) == '"') )then
+      val = val(2:cl-1)
+    endif
+  !-------------------------------------------------------------
+  ! Case: Path
+  elseif( is_path_ )then
+    if( val == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  len_trim(val) == 0 '//&
+              '\n  iLine     : '//str(iLine)//&
+              '\n  block_name: '//str(block_name)//&
+              '\n  keyword   : '//str(input%key))
+    elseif( .not. ( &
+              (val(1:1) == "'" .and. val(cl:cl) == "'") .or. &
+              (val(1:1) == '"' .and. val(cl:cl) == '"') ) )then
+      call eerr('Invalid input @ line '//str(iLine)//&
+              '\nPath must be quoted.')
+    endif
+    val = val(2:cl-1)
+    val = joined(dir_, val)
+  !-------------------------------------------------------------
+  ! Case: Neither keyword or path
+  else
+    continue
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine read_value__char
+!===============================================================
+!
+!===============================================================
+subroutine read_value__log(&
+    val, pos, key, found)
+  implicit none
+  logical, intent(inout) :: val
+  integer     , intent(in) , optional :: pos
+  character(*), intent(in) , optional :: key
+  logical     , intent(out), optional :: found
 
   integer             :: pos_
-  character(clen_var) :: key_
-  logical :: is_keyword_
-  logical :: found_
-  integer :: iVal
+  character(CLEN_VAR) :: key_
+  logical             :: found_
+
+  integer :: ival
   integer :: cl
-  logical :: is_ok
-  character(clen_line) :: val
 
-  character(clen_path) :: path
-  character(clen_key)  :: dtype
-  integer              :: rec
-  character(clen_key)  :: endian
-  integer(8)           :: length
-  logical :: found_f
-
-  integer :: ios
-
-  call echo(code%bgn, 'read_value', '-p')
+  call echo(code%bgn, 'read_value__log', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -511,163 +629,663 @@ recursive subroutine read_value(&
   key_ = ''
   if( present(pos) ) pos_ = pos
   if( present(key) ) key_ = key
-
-  is_keyword_ = .true.
-  if( present(is_keyword) ) is_keyword_ = is_keyword
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( input%nVals_noKey >= pos_ )then
+  if( input%nval_nokey >= pos_ )then
     found_ = .true.
-    val = input%val_noKey(pos_)%val
+    call read_this(input%val_nokey(pos_)%val)
   else
+    if( key_ == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  pos_ > input%nval_key .and. key_ == ""'//&
+              '\n  iLine         : '//str(iLine)//&
+              '\n  pos_          : '//str(pos_)//&
+              '\n  input%nval_key: '//str(input%nval_key))
+    endif
+
     found_ = .false.
-    do iVal = 1, input%nVals_key
-      if( key_ == input%val_key(iVal)%key )then
+    do ival = 1, input%nval_key
+      if( key_ == input%val_key(ival)%key )then
         found_ = .true.
-        val = input%val_key(iVal)%val
+        call read_this(input%val_key(ival)%val)
         exit
       endif
-    enddo  ! iVal/
-  endif
+    enddo  ! ival/
 
-  if( .not. found_ )then
-    if( present(found) )then
-      found = found_
-      call echo(code%ret)
-      return
-    else
-      call eerr(str(msg_syntax_error())//&
-              '\nValue was not obtained @ line '//str(iLine)//'.'//&
-              '\n  Default position: '//str(pos_)//&
-              '\n  Key             : '//str(key_))
-!      call eerr(str(msg_invalid_syntax())//&
-!              '\nValue was not obtained @ line '//str(iLine)//'.'//&
-!              '\n  Default position: '//str(pos_)//&
-!              '\n  Key             : '//str(key_)//&
-!              '\n  input%nVals_noKey: '//str(input%nVals_noKey), '-q -b')
-!      do iVal = 1, input%nVals_noKey
-!        call eerr('    ('//str(iVal)//') '//str(input%val_noKey(iVal)%val), '-q -p')
-!      enddo
-!      call eerr('  input%nVals_key: '//str(input%nVals_key), '-q -p')
-!      do iVal = 1, input%nVals_key
-!        call eerr('    key: "'//str(input%val_key(iVal)%key)//&
-!                   '", val: "'//str(input%val_key(iVal)%val)//'"', '-q -p')
-!      enddo
-!      call eerr('', '-p +b')
+    if( .not. found_ )then
+      if( present(found) )then
+        found = found_
+        call echo(code%ret)
+        return
+      else
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nFailed to get value.'//&
+                '\n  Default position: '//str(pos_)//&
+                '\n  Keyword         : '//str(key_))
+      endif
     endif
   endif
 
   if( present(found) ) found = found_
-
-  cl = len_trim(val)
-  !-------------------------------------------------------------
-  ! Remove quotes
-  !-------------------------------------------------------------
-  if( present(v_path) )then
-    is_ok = .true.
-    if( cl == 0 )then
-      is_ok = .false.
-    elseif( .not. ( &
-              (val(1:1) == "'" .and. val(cl:cl) == "'") .or. &
-              (val(1:1) == '"' .and. val(cl:cl) == '"') ) )then
-      is_ok = .false.
-    endif
-
-    if( .not. is_ok )then
-      call eerr(str(msg_invalid_value())//&
-                '\n  key: '//str(key_)//&
-                '\n  val: '//str(val)//&
-                '\nFormat is invalid. Values of this key must be quoted.')
-    endif
-
-    val = val(2:cl-1)
-  else
-    if( (val(1:1) == "'" .and. val(cl:cl) == "'") .or. &
-        (val(1:1) == '"' .and. val(cl:cl) == '"') )then
-      val = val(2:cl-1)
-    endif
-  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( present(v_char) )then
-    if( is_keyword_ )then
-      v_char = lower(val)
-    else
-      v_char = val
+  call echo(code%ret)
+  !-------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine read_this(cval)
+  implicit none
+  character(*), intent(in) :: cval
+
+  selectcase( lower(cval) )
+  case( '.true.', 'true', 't' )
+    val = .true.
+  case( '.false.', 'false', 'f' )
+    val = .false.
+  case default
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nBoolean (logical) value must be given by'//&
+              '".true.", "True" or "T" for true and '//&
+              '".false.", "False" or "F" for false.'//&
+            '\n  Default position: '//str(pos_)//&
+            '\n  Keyword         : '//str(key_)//&
+            '\n  Value           : '//str(cval))
+  endselect
+end subroutine read_this
+!---------------------------------------------------------------
+end subroutine read_value__log
+!===============================================================
+!
+!===============================================================
+subroutine read_value__int4(&
+    val, pos, key, found)
+  implicit none
+  integer(4), intent(inout) :: val
+  integer     , intent(in) , optional :: pos
+  character(*), intent(in) , optional :: key
+  logical     , intent(out), optional :: found
+
+  integer             :: pos_
+  character(CLEN_VAR) :: key_
+  logical             :: found_
+
+  integer :: ival
+  integer :: cl
+
+  call echo(code%bgn, 'read_value__int4', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  pos_ = 1
+  key_ = ''
+  if( present(pos) ) pos_ = pos
+  if( present(key) ) key_ = key
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( input%nval_nokey >= pos_ )then
+    found_ = .true.
+    call read_this(input%val_nokey(pos_)%val)
+  else
+    if( key_ == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  pos_ > input%nval_key .and. key_ == ""'//&
+              '\n  iLine         : '//str(iLine)//&
+              '\n  pos_          : '//str(pos_)//&
+              '\n  input%nval_key: '//str(input%nval_key))
     endif
-  elseif( present(v_log) )then
-    read(val,*,iostat=ios) v_log
-    if( ios /= 0 ) call raise_error('logical')
-  elseif( present(v_int4) )then
-    read(val,*,iostat=ios) v_int4
-    if( ios /= 0 ) call raise_error('integer(4)')
-  elseif( present(v_int8) )then
-    read(val,*,iostat=ios) v_int8
-    if( ios /= 0 ) call raise_error('integer(8)')
-  elseif( present(v_real) )then
-    read(val,*,iostat=ios) v_real
-    if( ios /= 0 ) call raise_error('real(4)')
-  elseif( present(v_dble) )then
-    read(val,*,iostat=ios) v_dble
-    if( ios /= 0 ) call raise_error('real(8)')
-  elseif( present(v_path) )then
-    v_path = val
-  elseif( present(v_file) )then
-    call read_value(v_path=path, pos=1, key='path', found=found_f)
-    if( found_f ) v_file%path = path
 
-    call read_value(v_char=dtype, pos=2, key='dtype', found=found_f)
-    if( found_f ) v_file%dtype = dtype
+    found_ = .false.
+    do ival = 1, input%nval_key
+      if( key_ == input%val_key(ival)%key )then
+        found_ = .true.
+        call read_this(input%val_key(ival)%val)
+        exit
+      endif
+    enddo  ! ival/
 
-    call read_value(v_int4=rec, pos=3, key='rec', found=found_f)
-    if( found_f ) v_file%rec = rec
-
-    call read_value(v_char=endian, pos=4, key='endian', found=found_f)
-    if( found_f )then
-      v_file%endian = endian
-
-      selectcase( v_file%endian )
-      case( endian_little, endian_big )
-        continue
-      case( endian_little_short )
-        v_file%endian = endian_little
-      case( endian_big_short )
-        v_file%endian = endian_big
-      case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  endian: '//str(v_file%endian)//' @ line '//str(iLine))
-      endselect
-    endif
-
-    if( get_length )then
-      call read_value(v_int8=length, pos=5, key='length')
-    else
-      call read_value(v_int8=length, pos=5, key='length', found=found_f)
-      if( found_f )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  Invalid optional value "length" was input @ line '//str(iLine)//&
-                  ' (default position: 5)')
+    if( .not. found_ )then
+      if( present(found) )then
+        found = found_
+        call echo(code%ret)
+        return
+      else
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nFailed to get value.'//&
+                '\n  Default position: '//str(pos_)//&
+                '\n  Keyword         : '//str(key_))
       endif
     endif
   endif
+
+  if( present(found) ) found = found_
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   call echo(code%ret)
-!---------------------------------------------------------------
+  !-------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine raise_error(dtype)
+subroutine read_this(cval)
   implicit none
-  character(*), intent(in) :: dtype
+  character(*), intent(in) :: cval
 
-  call eerr(str(msg_invalid_value())//&
-            '\n  key     : "'//str(key_)//'"'//&
-            '\n  val     : "'//str(val)//'"'//&
-            '\nTried to read $val as '//str(dtype)//'.')
-end subroutine raise_error
+  integer :: ios
+
+  read(cval,*,iostat=ios) val
+  if( ios /= 0 )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nFailed to read the 4-byte integer argument.'//&
+            '\n  Default position: '//str(pos_)//&
+            '\n  Keyword         : '//str(key_)//&
+            '\n  Value           : '//str(cval))
+  endif
+end subroutine read_this
 !---------------------------------------------------------------
-end subroutine read_value
+end subroutine read_value__int4
+!===============================================================
+!
+!===============================================================
+subroutine read_value__int8(&
+    val, pos, key, found)
+  implicit none
+  integer(8), intent(inout) :: val
+  integer     , intent(in) , optional :: pos
+  character(*), intent(in) , optional :: key
+  logical     , intent(out), optional :: found
+
+  integer             :: pos_
+  character(CLEN_VAR) :: key_
+  logical             :: found_
+
+  integer :: ival
+  integer :: cl
+
+  call echo(code%bgn, 'read_value__int8', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  pos_ = 1
+  key_ = ''
+  if( present(pos) ) pos_ = pos
+  if( present(key) ) key_ = key
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( input%nval_nokey >= pos_ )then
+    found_ = .true.
+    call read_this(input%val_nokey(pos_)%val)
+  else
+    if( key_ == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  pos_ > input%nval_key .and. key_ == ""'//&
+              '\n  iLine         : '//str(iLine)//&
+              '\n  pos_          : '//str(pos_)//&
+              '\n  input%nval_key: '//str(input%nval_key))
+    endif
+
+    found_ = .false.
+    do ival = 1, input%nval_key
+      if( key_ == input%val_key(ival)%key )then
+        found_ = .true.
+        call read_this(input%val_key(ival)%val)
+        exit
+      endif
+    enddo  ! ival/
+
+    if( .not. found_ )then
+      if( present(found) )then
+        found = found_
+        call echo(code%ret)
+        return
+      else
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nFailed to get value.'//&
+                '\n  Default position: '//str(pos_)//&
+                '\n  Keyword         : '//str(key_))
+      endif
+    endif
+  endif
+
+  if( present(found) ) found = found_
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call echo(code%ret)
+  !-------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine read_this(cval)
+  implicit none
+  character(*), intent(in) :: cval
+
+  integer :: ios
+
+  read(cval,*,iostat=ios) val
+  if( ios /= 0 )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nFailed to read the 8-byte integer argument.'//&
+            '\n  Default position: '//str(pos_)//&
+            '\n  Keyword         : '//str(key_)//&
+            '\n  Value           : '//str(cval))
+  endif
+end subroutine read_this
+!---------------------------------------------------------------
+end subroutine read_value__int8
+!===============================================================
+!
+!===============================================================
+subroutine read_value__real(&
+    val, pos, key, found)
+  implicit none
+  real(4), intent(inout) :: val
+  integer     , intent(in) , optional :: pos
+  character(*), intent(in) , optional :: key
+  logical     , intent(out), optional :: found
+
+  integer             :: pos_
+  character(CLEN_VAR) :: key_
+  logical             :: found_
+
+  integer :: ival
+  integer :: cl
+
+  call echo(code%bgn, 'read_value__real', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  pos_ = 1
+  key_ = ''
+  if( present(pos) ) pos_ = pos
+  if( present(key) ) key_ = key
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( input%nval_nokey >= pos_ )then
+    found_ = .true.
+    call read_this(input%val_nokey(pos_)%val)
+  else
+    if( key_ == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  pos_ > input%nval_key .and. key_ == ""'//&
+              '\n  iLine         : '//str(iLine)//&
+              '\n  pos_          : '//str(pos_)//&
+              '\n  input%nval_key: '//str(input%nval_key))
+    endif
+
+    found_ = .false.
+    do ival = 1, input%nval_key
+      if( key_ == input%val_key(ival)%key )then
+        found_ = .true.
+        call read_this(input%val_key(ival)%val)
+        exit
+      endif
+    enddo  ! ival/
+
+    if( .not. found_ )then
+      if( present(found) )then
+        found = found_
+        call echo(code%ret)
+        return
+      else
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nFailed to get value.'//&
+                '\n  Default position: '//str(pos_)//&
+                '\n  Keyword         : '//str(key_))
+      endif
+    endif
+  endif
+
+  if( present(found) ) found = found_
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call echo(code%ret)
+  !-------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine read_this(cval)
+  implicit none
+  character(*), intent(in) :: cval
+
+  integer :: ios
+
+  read(cval,*,iostat=ios) val
+  if( ios /= 0 )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nFailed to read the 4-byte float (real) argument.'//&
+            '\n  Default position: '//str(pos_)//&
+            '\n  Keyword         : '//str(key_)//&
+            '\n  Value           : '//str(cval))
+  endif
+end subroutine read_this
+!---------------------------------------------------------------
+end subroutine read_value__real
+!===============================================================
+!
+!===============================================================
+subroutine read_value__dble(&
+    val, pos, key, found)
+  implicit none
+  real(8), intent(inout) :: val
+  integer     , intent(in) , optional :: pos
+  character(*), intent(in) , optional :: key
+  logical     , intent(out), optional :: found
+
+  integer             :: pos_
+  character(CLEN_VAR) :: key_
+  logical             :: found_
+
+  integer :: ival
+  integer :: cl
+
+  call echo(code%bgn, 'read_value__dble', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  pos_ = 1
+  key_ = ''
+  if( present(pos) ) pos_ = pos
+  if( present(key) ) key_ = key
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( input%nval_nokey >= pos_ )then
+    found_ = .true.
+    call read_this(input%val_nokey(pos_)%val)
+  else
+    if( key_ == '' )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  pos_ > input%nval_key .and. key_ == ""'//&
+              '\n  iLine         : '//str(iLine)//&
+              '\n  pos_          : '//str(pos_)//&
+              '\n  input%nval_key: '//str(input%nval_key))
+    endif
+
+    found_ = .false.
+    do ival = 1, input%nval_key
+      if( key_ == input%val_key(ival)%key )then
+        found_ = .true.
+        call read_this(input%val_key(ival)%val)
+        exit
+      endif
+    enddo  ! ival/
+
+    if( .not. found_ )then
+      if( present(found) )then
+        found = found_
+        call echo(code%ret)
+        return
+      else
+        call eerr('Invalid input @ line '//str(iLine)//&
+                '\nFailed to get value.'//&
+                '\n  Default position: '//str(pos_)//&
+                '\n  Keyword         : '//str(key_))
+      endif
+    endif
+  endif
+
+  if( present(found) ) found = found_
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call echo(code%ret)
+  !-------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine read_this(cval)
+  implicit none
+  character(*), intent(in) :: cval
+
+  integer :: ios
+
+  read(cval,*,iostat=ios) val
+  if( ios /= 0 )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nFailed to read the 8-byte float (real) argument.'//&
+            '\n  Default position: '//str(pos_)//&
+            '\n  Keyword         : '//str(key_)//&
+            '\n  Value           : '//str(cval))
+  endif
+end subroutine read_this
+!---------------------------------------------------------------
+end subroutine read_value__dble
+!===============================================================
+!
+!===============================================================
+subroutine read_value__fbin(&
+    val, dir, getlen)
+  implicit none
+  type(file_), intent(inout) :: val
+  character(*), intent(in), optional :: dir
+  logical, intent(in), optional :: getlen
+
+  character(CLEN_PATH) :: dir_
+  logical :: getlen_
+
+  integer :: cl
+  logical :: found
+
+  call echo(code%bgn, 'read_value__fbin', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  dir_ = ''
+  getlen_ = .false.
+  if( present(dir) ) dir_ = dir
+  if( present(getlen) ) getlen_ = getlen
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call read_value__char(val%path, is_path=.true., pos=1, key='path', found=found)
+  if( .not. found )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\n  Path is not given.')
+  endif
+  val%path = joined(dir_, val%path)
+
+  call read_value__char(val%dtype, pos=2, key='dtype', found=found, is_keyword=.true.)
+  call read_value__int4(val%rec, pos=3, key='rec', found=found)
+  call read_value__char (val%endian, pos=4, key='endian', found=found)
+  call read_value__int8(val%length, pos=5, key='length', found=found)
+  if( .not. getlen_ .and. found )then
+    call eerr('Invalid input @ line '//str(iLine)//&
+            '\nLength of data cannot be given for this argument.')
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine read_value__fbin
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine alloc_keynum(n)
+  implicit none
+  integer, intent(in) :: n
+
+  type(keydict_), pointer :: kd
+  integer :: ikey
+
+  allocate(keydict(n))
+  nkey = n
+
+  do ikey = 1, nkey
+    kd => keydict(ikey)
+    kd%key = ''
+    kd%n = 0
+    kd%n_llim = 0
+    kd%n_ulim = 0
+  enddo
+end subroutine alloc_keynum
+!===============================================================
+!
+!===============================================================
+subroutine free_keynum()
+  implicit none
+
+  deallocate(keydict)
+  nullify(keydict)
+  nkey = 0
+end subroutine free_keynum
+!===============================================================
+!
+!===============================================================
+subroutine set_keynum(key, llim, ulim)
+  implicit none
+  character(*), intent(in) :: key
+  integer     , intent(in) :: llim, ulim
+
+  type(keydict_), pointer :: kd
+  integer :: ikey
+
+  call echo(code%bgn, 'set_keynum', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  do ikey = 1, nkey
+    kd => keydict(ikey)
+    if( kd%key == trim(key) )then
+      call eerr('!!! INTERNAL ERROR !!!'//&
+              '\n  keydict(ikey)%key == trim(key)'//&
+              '\n  block_name: '//str(block_name)//&
+              '\n  key: '//str(key))
+    endif
+
+    if( kd%key == '' )then
+      kd%key = trim(key)
+      kd%n_llim = llim
+      kd%n_ulim = ulim
+      nullify(kd)
+      call echo(code%ret)
+      return
+    endif
+  enddo
+
+  call eerr('!!! INTERNAL ERROR !!!'//&
+          '\n  ikey == nkey+1'//&
+          '\n  block_name: '//str(block_name))
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine set_keynum
+!===============================================================
+!
+!===============================================================
+subroutine reset_keynum()
+  implicit none
+
+  integer :: ikey
+
+  do ikey = 1, nkey
+    keydict(ikey)%n = 0
+  enddo
+end subroutine reset_keynum
+!===============================================================
+!
+!===============================================================
+subroutine update_keynum()
+  implicit none
+
+  type(keydict_), pointer :: kd
+  integer :: ikey
+
+  call echo(code%bgn, 'update_keynum', '-p -x2')
+  !-------------------------------------------------------------
+  ! Update the counter of keywords
+  !-------------------------------------------------------------
+  if( input%key == '' )then
+    call echo(code%ret)
+    return
+  endif
+
+  nullify(kd)
+  do ikey = 1, nkey
+    if( keydict(ikey)%key /= input%key ) cycle
+    kd => keydict(ikey)
+  enddo
+
+  if( .not. associated(kd) )then
+    call eerr(str(msg_invalid_input())//&
+            '\n@ line '//str(line_number())//': key "'//str(input%key)//'" is invalid.')
+  endif
+
+  call add(kd%n)
+  nullify(kd)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine update_keynum
+!===============================================================
+!
+!===============================================================
+subroutine check_keynum()
+  implicit none
+
+  type(keydict_), pointer :: kd
+  integer :: ikey
+
+  call echo(code%bgn, 'check_keynum', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  do ikey = 1, nkey
+    kd => keydict(ikey)
+    if( kd%key == '' ) exit
+
+    if( kd%n_llim >= 0 )then
+      if( kd%n < kd%n_llim )then
+        call eerr('Invalid input in block "'//str(block_name)//&
+                  '" which starts from line '//str(iLine_block_head)//'.'//&
+                '\nThe number of arguments given by the keyword "'//str(kd%key)//&
+                  '" is below the lower limit of '//str(kd%n_llim)//'.')
+      endif
+    endif
+    if( kd%n_ulim >= 0 )then
+      if( kd%n > kd%n_ulim )then
+        call eerr('Invalid input in block "'//str(block_name)//&
+                  '" which starts from line '//str(iLine_block_head)//'.'//&
+                '\nThe number of arguments given by the keyword "'//str(kd%key)//&
+                  '" is above the upper limit of '//str(kd%n_ulim)//'.')
+      endif
+    endif
+  enddo
+
+  nullify(kd)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine check_keynum
+!===============================================================
+!
+!===============================================================
+integer function keynum(key) result(n)
+  implicit none
+  character(*), intent(in) :: key
+
+  integer :: ikey
+
+  call echo(code%bgn, 'keynum', '-p -x2')
+  !-------------------------------------------------------------
+  n = 0
+  do ikey = 1, nkey
+    if( keydict(ikey)%key == key )then
+      n = keydict(ikey)%n
+      call echo(code%ret)
+      return
+    endif
+  enddo
+
+  call eerr('!!! INTERNAL ERROR !!!'//&
+          '\nKeyword "'//str(key)//'" is not found.')
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end function keynum
 !===============================================================
 !
 !===============================================================
@@ -703,7 +1321,7 @@ subroutine check_num_of_key(n, key, nmin, nmax)
       c_nmax = '(unlimited)'
     endif
 
-    call eerr(str(msg_syntax_error())//&
+    call eerr(str(msg_invalid_input())//&
             '\n  The number of times the key was specified is out of range.'//&
             '\n  key          : "'//str(key)//'"'//&
             '\n  num. of times: '//str(n)//&
@@ -716,33 +1334,113 @@ end subroutine check_num_of_key
 !===============================================================
 !
 !===============================================================
-subroutine raise_error_invalid_key(key)
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine set_barlen(cl)
   implicit none
-  character(*), intent(in) :: key
+  integer, intent(in) :: cl
+
+  barlen = cl
+end subroutine set_barlen
+!===============================================================
+!
+!===============================================================
+subroutine init_barlen()
+  implicit none
+
+  barlen = BARLEN_DEFAULT
+end subroutine init_barlen
+!===============================================================
+!
+!===============================================================
+character(CLEN_VAR) function bar(s)
+  implicit none
+  character(*), intent(in) :: s
+
+  integer :: cl
+  integer :: cl_left, cl_right
+
+  call echo(code%bgn, 'print_bar', '-p -x2')
+  !-------------------------------------------------------------
+  ! Case: Tail
+  if( s == '' )then
+    bar = str('', barlen, '-')
+  !-------------------------------------------------------------
+  ! Case: Head
+  else
+    if( barlen > len_trim(s)+6 )then
+      if( mod(barlen-len_trim(s),2) == 0 )then
+        cl_left = (barlen - len_trim(s) - 2) / 2
+      else
+        cl_left = (barlen - len_trim(s) - 1) / 2
+      endif
+      cl_right = barlen - len_trim(s) - 2 - cl_left
+      bar = str('', cl_left, '-')//' '//str(s)//' '//str('', cl_right, '-')
+    else
+      bar = '-- '//trim(s)//' --'
+    endif
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end function bar
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine raise_error_invalid_key()
+  implicit none
 
   call echo(code%bgn, 'raise_error_invalid_key', '-p -x2')
   !-------------------------------------------------------------
-  call eerr(str(msg_syntax_error())//&
-         '\n  @ line '//str(line_number())//&
-         '\n  The key "'//str(key)//'" is invalid for block "'//str(block_name)//'".')
+  call eerr('Invalid input @ line '//str(iLine)//&
+          '\n  Keyword "'//str(input%key)//&
+            '" is invalid for block "'//str(block_name)//'".')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine raise_error_invalid_key
 !===============================================================
 !
 !===============================================================
-subroutine raise_warning_invalid_key(key)
+subroutine raise_warning_invalid_key()
   implicit none
-  character(*), intent(in) :: key
 
   call echo(code%bgn, 'raise_warning_invalid_key', '-p -x2')
   !-------------------------------------------------------------
-  call ewrn(str(msg_syntax_error())//&
-          '\n  @ line '//str(line_number())//&
-          '\n  The key "'//str(key)//'" is invalid for block "'//str(block_name)//'".')
+  call ewrn('Invalid input @ line '//str(iLine)//&
+          '\n  Keyword "'//str(input%key)//&
+            '" is invalid for block "'//str(block_name)//'".')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine raise_warning_invalid_key
+!===============================================================
+!
+!===============================================================
+character(CLEN_MSG+CLEN_VAR) function msg_invalid_input() result(msg)
+  implicit none
+
+  msg = 'Invalid input in block "'//str(block_name)//'"'
+end function msg_invalid_input
+!===============================================================
+!
+!===============================================================
+character(CLEN_MSG+CLEN_VAR) function msg_undesirable_input() result(msg)
+  implicit none
+
+  msg = 'Undesirable input in block "'//str(block_name)//'"'
+end function msg_undesirable_input
 !===============================================================
 !
 !===============================================================

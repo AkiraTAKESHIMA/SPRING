@@ -306,6 +306,11 @@ subroutine calc_relations_llbnds_core(&
   svrel(:)%vf = 0
   svrel(:)%mv = 0
 
+  call edbg('s: '//str(slat(svi-1:svi)*r2d,'f12.7',', ')//&
+        ', ..., '//str(slat(svf-1:svf)*r2d,'f12.7',', '))
+  call edbg('t: '//str(tlat(tvi-1:tvi)*r2d,'f12.7',', ')//&
+        ', ..., '//str(tlat(tvf-1:tvf)*r2d,'f12.7',', '))
+
   ! South
   !-------------------------------------------------------------
   isv = svi

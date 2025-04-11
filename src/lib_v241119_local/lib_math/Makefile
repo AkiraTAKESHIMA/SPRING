@@ -10,6 +10,7 @@ include $(TOPSRCDIR)/Mkinclude
 TARGET = lib_math.a
 
 OBJ_F = \
+  lib_math_base.o\
   lib_math_exception.o\
   lib_math_operation.o\
   lib_math_stats.o\
@@ -21,8 +22,6 @@ OBJ_F = \
   lib_math_sphere.o\
   lib_math_interp.o\
   lib_math.o
-  #lib_math_linalg_blas.o\
-  #lib_math_linalg_lapack.o\
 
 OBJ_ALL = $(OBJ_F)
 

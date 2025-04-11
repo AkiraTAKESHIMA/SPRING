@@ -13,11 +13,9 @@ module common_gs_zone
   !-------------------------------------------------------------
   ! Public Procedures
   !-------------------------------------------------------------
-  public :: determine_zones_latlon
-  public :: determine_zones_raster
-  public :: determine_zones_polygon
+  public :: determine_zones
 
-  public :: extend_zone_latlon
+  !public :: extend_zone_latlon
 
   public :: raise_warning_no_valid_zone
   public :: raise_error_no_valid_zone
@@ -28,6 +26,12 @@ module common_gs_zone
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
+  interface determine_zones
+    module procedure determine_zones__latlon
+    module procedure determine_zones__raster
+    module procedure determine_zones__polygon
+  end interface
+
   interface clear_iZone
     module procedure clear_iZone_latlon
     module procedure clear_iZone_raster
@@ -38,12 +42,12 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine determine_zones_latlon(ul, mem_ulim)
+subroutine determine_zones__latlon(ul, mem_ulim)
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
   real(8)         , intent(in)            :: mem_ulim
 
-  call echo(code%bgn, 'determine_zones_latlon')
+  call echo(code%bgn, 'determine_zones__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -59,16 +63,16 @@ subroutine determine_zones_latlon(ul, mem_ulim)
   call alloc_file_grid_out_zone_im(ul%f_grid_out, ul%nZones)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine determine_zones_latlon
+end subroutine determine_zones__latlon
 !===============================================================
 !
 !===============================================================
-subroutine determine_zones_raster(ur, mem_ulim)
+subroutine determine_zones__raster(ur, mem_ulim)
   implicit none
   type(gs_raster_), intent(inout) :: ur
   real(8)         , intent(in)    :: mem_ulim
 
-  call echo(code%bgn, 'determine_zones_raster')
+  call echo(code%bgn, 'determine_zones__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -86,11 +90,11 @@ subroutine determine_zones_raster(ur, mem_ulim)
   call alloc_file_grid_out_zone_im(ur%f_grid_out, ur%nZones)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine determine_zones_raster
+end subroutine determine_zones__raster
 !===============================================================
 !
 !===============================================================
-subroutine determine_zones_polygon(up, mem_ulim)
+subroutine determine_zones__polygon(up, mem_ulim)
   implicit none
   type(gs_polygon_), intent(inout) :: up
   real(8)          , intent(in)    :: mem_ulim
@@ -101,7 +105,7 @@ subroutine determine_zones_polygon(up, mem_ulim)
   integer(8) :: ijs, ije
   integer :: iZone
 
-  call echo(code%bgn, 'determine_zones_polygon')
+  call echo(code%bgn, 'determine_zones__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -155,7 +159,7 @@ subroutine determine_zones_polygon(up, mem_ulim)
   call alloc_file_grid_out_zone_im(up%f_grid_out, up%nZones)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine determine_zones_polygon
+end subroutine determine_zones__polygon
 !===============================================================
 !
 !===============================================================

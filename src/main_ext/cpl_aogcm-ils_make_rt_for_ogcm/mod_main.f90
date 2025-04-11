@@ -9,16 +9,17 @@ module mod_main
   use common_const
   ! common2
   use common_type_rt
-  use common_rt_main_core, only: &
+  use common_rt_main_util, only: &
         merge_elems_same_index, &
-        calc_rt_coef_sum_modify_enabled, &
-        calc_rt_coef_sum_modify_not_enabled, &
         sort_rt
+  use common_rt_main_coef, only: &
+        calc_rt_coef_sum_modify_enabled    , &
+        calc_rt_coef_sum_modify_not_enabled
   use common_rt_stats, only: &
-        get_rt_main_stats, &
+        get_rt_main_stats     , &
         report_rt_main_summary
   use common_rt_io, only: &
-        read_rt_main, &
+        read_rt_main , &
         write_rt_main
   ! this
   use def_type

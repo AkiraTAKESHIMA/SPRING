@@ -13,18 +13,19 @@ module mod_main
         report
   ! common2
   use common_type_rt
-  use common_rt_main_core, only: &
+  use common_rt_main_util, only: &
         merge_elems_same_index, &
-        calc_rt_coef_sum_modify_enabled, &
-        calc_rt_coef_sum_modify_not_enabled, &
         sort_rt
+  use common_rt_main_coef, only: &
+        calc_rt_coef_sum_modify_enabled    , &
+        calc_rt_coef_sum_modify_not_enabled
   use common_rt_stats, only: &
-        get_rt_main_stats, &
+        get_rt_main_stats     , &
         report_rt_main_summary
   use common_rt_error, only: &
-        raise_error_coef_negative, &
-        raise_error_coef_small, &
-        raise_error_coef_above_thresh, &
+        raise_error_coef_negative        , &
+        raise_error_coef_small           , &
+        raise_error_coef_above_thresh    , &
         raise_error_coef_sum_above_thresh, &
         raise_error_val_sum_non_positive
   ! this
@@ -179,7 +180,7 @@ subroutine merge_rt(input, output, opt)
       if( rtm%opt_coef%is_sum_modify_enabled )then
         call echo(code%ent, 'Case: coef_sum_modify is enabled')
         !-------------------------------------------------------
-        call echo(code%ent, 'Calc. coef.')
+        call echo(code%ent, 'Calculating coef.')
   
         call calc_rt_coef_sum_modify_enabled(rtm)
   

@@ -36,7 +36,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
-  use common_set2, only: &
+  use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -530,7 +530,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_input_rt(rt)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -644,7 +644,7 @@ end subroutine read_settings_input_rt
 !
 !===============================================================
 subroutine read_settings_input_agcm(agcm)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -774,7 +774,7 @@ end subroutine read_settings_input_agcm
 !
 !===============================================================
 subroutine read_settings_input_rm(rm)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -964,7 +964,7 @@ end subroutine read_settings_input_rm
 !
 !===============================================================
 subroutine read_settings_rt_coef_options(opt_coef)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1068,7 +1068,7 @@ end subroutine read_settings_rt_coef_options
 !
 !===============================================================
 subroutine read_settings_output_rt(rt)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1168,7 +1168,7 @@ end subroutine read_settings_output_rt
 !
 !===============================================================
 subroutine read_settings_output_agcm(agcm)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1274,7 +1274,7 @@ end subroutine read_settings_output_agcm
 !
 !===============================================================
 subroutine read_settings_output_lsm(lsm)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1538,7 +1538,7 @@ end subroutine read_settings_output_lsm
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set2, only: &
+  use common_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1648,7 +1648,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine echo_settings_input_rt(rt)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(rt_), intent(in), target :: rt
@@ -1675,7 +1675,7 @@ end subroutine echo_settings_input_rt
 !
 !===============================================================
 subroutine echo_settings_input_agcm(agcm)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(agcm_), intent(in) :: agcm
@@ -1711,7 +1711,7 @@ end subroutine echo_settings_input_agcm
 !
 !===============================================================
 subroutine echo_settings_input_rm(rm)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(rm_), intent(in) :: rm
@@ -1750,7 +1750,7 @@ end subroutine echo_settings_input_rm
 !
 !===============================================================
 subroutine echo_settings_output_rt(rt)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   use common_rt_set, only: &
         echo_settings_rt_opt_coef
@@ -1782,7 +1782,7 @@ end subroutine echo_settings_output_rt
 !
 !===============================================================
 subroutine echo_settings_output_agcm(agcm)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(agcm_), intent(in) :: agcm
@@ -1806,7 +1806,7 @@ end subroutine echo_settings_output_agcm
 !
 !===============================================================
 subroutine echo_settings_output_lsm(lsm)
-  use common_set2, only: &
+  use common_set, only: &
         bar
   implicit none
   type(lsm_), intent(in) :: lsm

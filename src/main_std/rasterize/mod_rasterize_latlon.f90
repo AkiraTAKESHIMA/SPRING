@@ -10,13 +10,11 @@ module mod_rasterize_latlon
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: calc_iarea
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  contains
+contains
 !===============================================================
 !
 !===============================================================
@@ -25,8 +23,8 @@ subroutine calc_iarea(&
     iarea, iarea_sum, iarea_max, &
     calc_sum, calc_max)
   use mod_data, only: &
-    update_iarea_sum, &
-    update_iarea_max
+        update_iarea_sum, &
+        update_iarea_max
   implicit none
   type(gs_latlon_), intent(in) :: sgl
   type(gs_raster_), intent(in) :: tgr
@@ -85,7 +83,7 @@ subroutine calc_iarea(&
         enddo
       enddo
       !---------------------------------------------------------
-      ! Compute area of intersection
+      ! Compute intersection area
       !---------------------------------------------------------
       do itr = 1, shr%nr
         iarea(thi(itr):thf(itr),tvi:tvf) = 0.d0

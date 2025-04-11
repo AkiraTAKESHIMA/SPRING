@@ -121,8 +121,8 @@ subroutine initialize(sgr, tgp, rt_vrf_val_miss)
 
   nullify(n_prev)
   nullify(n_next)
-  call copy(tgp%n_prev, n_prev)
-  call copy(tgp%n_next, n_next)
+  call cparr(tgp%n_prev, n_prev)
+  call cparr(tgp%n_next, n_next)
 
   lonlat_miss = tgp%coord_miss_s
 

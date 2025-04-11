@@ -19,7 +19,6 @@ common_type_opt.o\
 common_type_gs.o\
 common_file.o\
 common_set.o\
-common_set2.o\
 common_opt_set.o\
 common_gs_util.o\
 common_gs_zone.o\
@@ -29,8 +28,8 @@ common_gs_grid_std.o\
 common_gs_grid_util.o\
 common_gs_grid_io.o\
 common_gs_grid_core.o\
-common_gs_define.o\
 common_gs_define_polygon.o\
+common_gs_define.o\
 common_gs_grid_driv.o
 
 OBJ_CMN = $(OBJ_F)

@@ -688,44 +688,44 @@ subroutine make_grid_data_auto_from_grid_data(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call copy(g%idx, g_out%idx)
+  call cparr(g%idx, g_out%idx)
 
   call realloc(g_out%idxarg, g_out%nij)
   call argsort(g_out%idx, g_out%idxarg)
   call sort(g_out%idx, g_out%idxarg)
 
   if( make_msk_ )then
-    call copy(g%msk, g_out%msk)
+    call cparr(g%msk, g_out%msk)
     call sort(g_out%msk, g_out%idxarg)
   endif
 
   if( make_uwa_ )then
-    call copy(g%uwa, g_out%uwa)
+    call cparr(g%uwa, g_out%uwa)
     call sort(g_out%uwa, g_out%idxarg)
   endif
 
   if( make_ara_ )then
-    call copy(g%ara, g_out%ara)
+    call cparr(g%ara, g_out%ara)
     call sort(g_out%ara, g_out%idxarg)
   endif
 
   if( make_wgt_ )then
-    call copy(g%wgt, g_out%wgt)
+    call cparr(g%wgt, g_out%wgt)
     call sort(g_out%wgt, g_out%idxarg)
   endif
 
   if( make_xyz_ )then
-    call copy(g%x, g_out%x)
-    call copy(g%y, g_out%y)
-    call copy(g%z, g_out%z)
+    call cparr(g%x, g_out%x)
+    call cparr(g%y, g_out%y)
+    call cparr(g%z, g_out%z)
     call sort(g_out%x, g_out%idxarg)
     call sort(g_out%y, g_out%idxarg)
     call sort(g_out%z, g_out%idxarg)
   endif
 
   if( make_lonlat_ )then
-    call copy(g%lon, g_out%lon)
-    call copy(g%lat, g_out%lat)
+    call cparr(g%lon, g_out%lon)
+    call cparr(g%lat, g_out%lat)
     call sort(g_out%lon, g_out%idxarg)
     call sort(g_out%lat, g_out%idxarg)
   endif

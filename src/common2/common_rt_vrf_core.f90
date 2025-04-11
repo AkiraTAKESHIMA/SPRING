@@ -118,8 +118,8 @@ subroutine calc_grdara_rt(&
     grdara_rt, &
     opt_sys)
   use common_rt_io, only: &
-    open_file_rt_im, &
-    close_file_rt_im
+        open_file_rt_im, &
+        close_file_rt_im
   implicit none
   type(rt_)     , intent(in), target :: rt
   logical       , intent(in)         :: is_source

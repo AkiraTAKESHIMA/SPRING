@@ -22,6 +22,7 @@ module lib_util_char
   public :: char_to_val
 
   public :: remove_quoted
+  public :: remove_quotes
   public :: search_word
   public :: count_word
   public :: remove_word
@@ -75,12 +76,12 @@ subroutine count_words(str, n, dlm)
   character(len(str)) :: str_
   character(len(str)) :: dlm_
   integer :: loc
-  integer :: clen
+  integer :: cl
   integer :: len_dlm
 
   n = 1
   str_ = trim(adjustl(str))
-  clen = len_trim(str_)
+  cl = len_trim(str_)
 
   dlm_ = ' '
   len_dlm = 1
@@ -90,10 +91,10 @@ subroutine count_words(str, n, dlm)
   endif
 
   do
-    loc = index(str_(:clen), dlm_(:len_dlm))
+    loc = index(str_(:cl), dlm_(:len_dlm))
     if( loc == 0 ) exit
-    str_ = adjustl(str_(loc+1:clen))
-    clen = len_trim(str_)
+    str_ = adjustl(str_(loc+1:cl))
+    cl = len_trim(str_)
     n = n + 1
   enddo
 end subroutine count_words
@@ -510,7 +511,7 @@ subroutine remove_quoted(c, quote)
   implicit none
   character(*), intent(inout) :: c
   character(*), intent(in), optional :: quote
-  integer :: clen
+  integer :: cl
   integer :: ic0, ic
   integer :: ic0_singleQuote, ic0_doubleQuote
   logical :: removeSingleQuote, removeDoubleQuote
@@ -534,18 +535,18 @@ subroutine remove_quoted(c, quote)
     removeDoubleQuote = .true.
   endif
 
-  clen = len(c)
+  cl = len(c)
 
   ic0 = 1
   do
     ic0_singleQuote = index(c(ic0:),"'") + ic0 - 1
     ic0_doubleQuote = index(c(ic0:),'"') + ic0 - 1
 
-    if( ic0_singleQuote == ic0-1 ) ic0_singleQuote = clen
-    if( ic0_doubleQuote == ic0-1 ) ic0_doubleQuote = clen
+    if( ic0_singleQuote == ic0-1 ) ic0_singleQuote = cl
+    if( ic0_doubleQuote == ic0-1 ) ic0_doubleQuote = cl
 
-    if( (.not. removeSingleQuote .or. ic0_singleQuote == clen) .and. &
-        (.not. removeDoubleQuote .or. ic0_doubleQuote == clen) ) exit
+    if( (.not. removeSingleQuote .or. ic0_singleQuote == cl) .and. &
+        (.not. removeDoubleQuote .or. ic0_doubleQuote == cl) ) exit
     !-----------------------------------------------------------
     ! Remove single quote
     !-----------------------------------------------------------
@@ -580,13 +581,57 @@ end subroutine remove_quoted
 !==============================================================
 !
 !==============================================================
+subroutine remove_quotes(c, quote)
+  implicit none
+  character(*), intent(inout) :: c
+  character(*), intent(in), optional :: quote
+
+  logical :: removeSingleQuote, removeDoubleQuote
+  integer :: cl
+
+  if( present(quote) )then
+    removeSingleQuote = .false.
+    removeDoubleQuote = .false.
+    selectcase( quote )
+    case( QUOTE_BOTH )
+      removeSingleQuote = .true.
+      removeDoubleQuote = .true.
+    case( QUOTE_SINGLE )
+      removeSingleQuote = .true.
+    case( QUOTE_DOUBLE )
+      removeDoubleQuote = .true.
+    case( QUOTE_NONE )
+    endselect
+  else
+    removeSingleQuote = .true.
+    removeDoubleQuote = .true.
+  endif
+
+  cl = len_trim(c)
+  if( cl <= 1 ) return
+
+  if( removeSingleQuote )then
+    if( c(1:1) == '"' .and. c(cl:cl) == '"' )then
+      c = c(2:cl-1)
+    endif
+  endif
+
+  if( removeDoubleQuote )then
+    if( c(1:1) == "'" .and. c(cl:cl) == "'" )then
+      c = c(2:cl-1)
+    endif
+  endif
+end subroutine remove_quotes
+!==============================================================
+!
+!==============================================================
 subroutine search_word(c, word, loc, quoteIgnored)
   implicit none
   character(*), intent(in)  :: c
   character(*), intent(in)  :: word
   integer     , intent(out) :: loc
   character(*), intent(in), optional :: quoteIgnored
-  integer :: clen
+  integer :: cl
   integer :: ic0, iic_word, iic_singleQuote, iic_doubleQuote
   integer :: stat
   logical :: ignoreSingleQuote, ignoreDoubleQuote
@@ -619,7 +664,7 @@ subroutine search_word(c, word, loc, quoteIgnored)
     ignoreDoubleQuote = .true.
   endif
 
-  clen = len(c)
+  cl = len(c)
 
   stat = 0
   ic0 = 1
@@ -631,8 +676,8 @@ subroutine search_word(c, word, loc, quoteIgnored)
       return
     endif
 
-    if( iic_singleQuote == 0 ) iic_singleQuote = clen
-    if( iic_doubleQuote == 0 ) iic_doubleQuote = clen
+    if( iic_singleQuote == 0 ) iic_singleQuote = cl
+    if( iic_doubleQuote == 0 ) iic_doubleQuote = cl
 
     if( ignoreSingleQuote .and. &
         iic_singleQuote < iic_word .and. &
@@ -646,7 +691,7 @@ subroutine search_word(c, word, loc, quoteIgnored)
         stop
       endif
       ic0 = ic0 + iic_singleQuote + 1
-      if( ic0 > clen ) exit
+      if( ic0 > cl ) exit
     elseif( ignoreDoubleQuote .and. &
             iic_doubleQuote < iic_word .and. &
             iic_doubleQuote < iic_singleQuote )then
@@ -659,7 +704,7 @@ subroutine search_word(c, word, loc, quoteIgnored)
         stop
       endif
       ic0 = ic0 + iic_doubleQuote + 1
-      if( ic0 > clen ) exit
+      if( ic0 > cl ) exit
     else
       loc = ic0 + iic_word - 1
       exit
@@ -675,7 +720,7 @@ subroutine count_word(c, word, n, quoteIgnored)
   character(*), intent(in)  :: word
   integer     , intent(out) :: n
   character(*), intent(in), optional :: quoteIgnored
-  integer :: clen
+  integer :: cl
   integer :: ic0, iic_word, iic_singleQuote, iic_doubleQuote
   integer :: stat
   logical :: ignoreSingleQuote, ignoreDoubleQuote
@@ -703,7 +748,7 @@ subroutine count_word(c, word, n, quoteIgnored)
     ignoreDoubleQuote = .true.
   endif
 
-  clen = len(c)
+  cl = len(c)
 
   stat = 0
   ic0 = 1
@@ -714,8 +759,8 @@ subroutine count_word(c, word, n, quoteIgnored)
 
     if( iic_word == 0 ) return
 
-    if( iic_singleQuote == 0 ) iic_singleQuote = clen
-    if( iic_doubleQuote == 0 ) iic_doubleQuote = clen
+    if( iic_singleQuote == 0 ) iic_singleQuote = cl
+    if( iic_doubleQuote == 0 ) iic_doubleQuote = cl
 
     if( ignoreSingleQuote .and. &
         iic_singleQuote < iic_word .and. &
@@ -744,7 +789,7 @@ subroutine count_word(c, word, n, quoteIgnored)
       ic0 = ic0 + iic_word
     endif
 
-    if( ic0 > clen ) exit
+    if( ic0 > cl ) exit
   enddo
 end subroutine count_word
 !==============================================================

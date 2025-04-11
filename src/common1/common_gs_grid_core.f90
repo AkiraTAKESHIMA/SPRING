@@ -14,43 +14,79 @@ module common_gs_grid_core
   !-------------------------------------------------------------
   ! Public Procedures
   !-------------------------------------------------------------
-  public :: make_idxmap_latlon
-  public :: make_wgtmap_latlon
-  public :: make_grdidx_latlon
-  public :: make_grdmsk_latlon
-  public :: make_grduwa_latlon
-  public :: make_grdara_latlon
-  public :: make_grdwgt_latlon
-  public :: make_grdxyz_latlon
-  public :: make_grdlonlat_latlon
+  public :: make_idxmap
+  public :: make_wgtmap
+  public :: make_grdidx
+  public :: make_grdmsk
+  public :: make_grduwa
+  public :: make_grdara
+  public :: make_grdwgt
+  public :: make_grdxyz
+  public :: make_grdlonlat
+  !-------------------------------------------------------------
+  ! Interfaces
+  !-------------------------------------------------------------
+  interface make_idxmap
+    module procedure make_idxmap__latlon
+    module procedure make_idxmap__raster
+  end interface
 
-  public :: make_idxmap_raster
-  public :: make_wgtmap_raster
-  public :: make_grdidx_raster
-  public :: make_grdmsk_raster
-  public :: make_grduwa_raster
-  public :: make_grdara_raster
-  public :: make_grdwgt_raster
-  public :: make_grdxyz_raster
-  public :: make_grdlonlat_raster
-
-  public :: make_grdidx_polygon
-  public :: make_grdmsk_polygon
-  public :: make_grduwa_polygon
-  public :: make_grdara_polygon
-  public :: make_grdwgt_polygon
-  public :: make_grdxyz_polygon
-  public :: make_grdlonlat_polygon
+  interface make_wgtmap
+    module procedure make_wgtmap__latlon
+    module procedure make_wgtmap__raster
+  end interface
+ 
+  interface make_grdidx
+    module procedure make_grdidx__latlon
+    module procedure make_grdidx__raster
+    module procedure make_grdidx__polygon
+  end interface
+ 
+  interface make_grdmsk
+    module procedure make_grdmsk__latlon
+    module procedure make_grdmsk__raster
+    module procedure make_grdmsk__polygon
+  end interface
+ 
+  interface make_grduwa
+    module procedure make_grduwa__latlon
+    module procedure make_grduwa__raster
+    module procedure make_grduwa__polygon
+  end interface
+ 
+  interface make_grdara
+    module procedure make_grdara__latlon
+    module procedure make_grdara__raster
+    module procedure make_grdara__polygon
+  end interface
+ 
+  interface make_grdwgt
+    module procedure make_grdwgt__latlon
+    module procedure make_grdwgt__raster
+    module procedure make_grdwgt__polygon
+  end interface
+ 
+  interface make_grdxyz
+    module procedure make_grdxyz__latlon
+    module procedure make_grdxyz__raster
+    module procedure make_grdxyz__polygon
+  end interface
+ 
+  interface make_grdlonlat
+    module procedure make_grdlonlat__latlon
+    module procedure make_grdlonlat__raster
+    module procedure make_grdlonlat__polygon
+  end interface
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap_latlon(ul)
+subroutine make_idxmap__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -60,7 +96,7 @@ subroutine make_idxmap_latlon(ul)
   integer(8) :: ih, iv
   integer :: stat
 
-  call echo(code%bgn, 'make_idxmap_latlon')
+  call echo(code%bgn, 'make_idxmap__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -72,7 +108,7 @@ subroutine make_idxmap_latlon(ul)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_idxmap == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -133,15 +169,15 @@ subroutine make_idxmap_latlon(ul)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_idxmap_latlon
+end subroutine make_idxmap__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_wgtmap_latlon(ul)
+subroutine make_wgtmap__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -155,7 +191,7 @@ subroutine make_wgtmap_latlon(ul)
   integer(8) :: idx
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_wgtmap_latlon')
+  call echo(code%bgn, 'make_wgtmap__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -167,7 +203,7 @@ subroutine make_wgtmap_latlon(ul)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_wgtmap == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -267,15 +303,15 @@ subroutine make_wgtmap_latlon(ul)
           ', max: '//str(maxval(ul%wgtmap,mask=ul%wgtmap/=ul%wgt_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_wgtmap_latlon
+end subroutine make_wgtmap__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx_latlon(ul)
+subroutine make_grdidx__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_util, only: &
-    print_indices
+        print_indices
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -286,7 +322,7 @@ subroutine make_grdidx_latlon(ul)
   integer(8) :: ih, iv
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_grdidx_latlon')
+  call echo(code%bgn, 'make_grdidx__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -298,7 +334,7 @@ subroutine make_grdidx_latlon(ul)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_grdidx == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -366,13 +402,13 @@ subroutine make_grdidx_latlon(ul)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdidx_latlon
+end subroutine make_grdidx__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdmsk_latlon(ul)
+subroutine make_grdmsk__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -384,7 +420,7 @@ subroutine make_grdmsk_latlon(ul)
 
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grdmsk_latlon')
+  call echo(code%bgn, 'make_grdmsk__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -396,7 +432,7 @@ subroutine make_grdmsk_latlon(ul)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_grdmsk == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -442,13 +478,13 @@ subroutine make_grdmsk_latlon(ul)
   if( ul%iZone_grdidx == 0 ) call realloc(g%idx, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdmsk_latlon
+end subroutine make_grdmsk__latlon
 !===============================================================
 ! Calc. unweighted area
 !===============================================================
-subroutine make_grduwa_latlon(ul, earth)
+subroutine make_grduwa__latlon(ul, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
   type(opt_earth_), intent(in) :: earth
@@ -464,7 +500,7 @@ subroutine make_grduwa_latlon(ul, earth)
   integer(8) :: idx
   integer(8) :: ih, iv
 
-  call echo(code%bgn, 'make_grduwa_latlon')
+  call echo(code%bgn, 'make_grduwa__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -476,7 +512,7 @@ subroutine make_grduwa_latlon(ul, earth)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_grduwa == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -559,15 +595,15 @@ subroutine make_grduwa_latlon(ul, earth)
   deallocate(grduwa_1rad)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grduwa_latlon
+end subroutine make_grduwa__latlon
 !===============================================================
 ! Calc. weighted area
 !===============================================================
-subroutine make_grdara_latlon(ul)
+subroutine make_grdara__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -583,7 +619,7 @@ subroutine make_grdara_latlon(ul)
   integer(8) :: loc
   integer(8) :: idx
 
-  call echo(code%bgn, 'make_grdara_latlon')
+  call echo(code%bgn, 'make_grdara__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -595,7 +631,7 @@ subroutine make_grdara_latlon(ul)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_grdara == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -770,15 +806,15 @@ subroutine make_grdara_latlon(ul)
           '\ntotal: '//str(sum(g%ara,mask=g%ara/=ul%ara_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdara_latlon
+end subroutine make_grdara__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdwgt_latlon(ul)
+subroutine make_grdwgt__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -794,7 +830,7 @@ subroutine make_grdwgt_latlon(ul)
   integer(8) :: idx
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_grdwgt_latlon')
+  call echo(code%bgn, 'make_grdwgt__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -806,7 +842,7 @@ subroutine make_grdwgt_latlon(ul)
   call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
 
   if( ul%iZone_grdwgt == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -939,13 +975,13 @@ subroutine make_grdwgt_latlon(ul)
           ', max: '//str(maxval(g%wgt,mask=g%wgt/=ul%wgt_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdwgt_latlon
+end subroutine make_grdwgt__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz_latlon(ul, earth)
+subroutine make_grdxyz__latlon(ul, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
   type(opt_earth_), intent(in) :: earth
@@ -961,7 +997,7 @@ subroutine make_grdxyz_latlon(ul, earth)
   integer(8) :: loc
   real(8) :: r
 
-  call echo(code%bgn, 'make_grdxyz_latlon')
+  call echo(code%bgn, 'make_grdxyz__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -974,7 +1010,7 @@ subroutine make_grdxyz_latlon(ul, earth)
   call check_iZone(varname_grdxyz, ul%iZone_grdwgt, ul%iZone, .true.)
 
   if( ul%iZone_grdxyz == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1075,15 +1111,15 @@ subroutine make_grdxyz_latlon(ul, earth)
   deallocate(sin_grdlat)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdxyz_latlon
+end subroutine make_grdxyz__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat_latlon(ul)
+subroutine make_grdlonlat__latlon(ul)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -1100,7 +1136,7 @@ subroutine make_grdlonlat_latlon(ul)
   integer(8) :: idx
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_grdlonlat_latlon')
+  call echo(code%bgn, 'make_grdlonlat__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1113,7 +1149,7 @@ subroutine make_grdlonlat_latlon(ul)
   call check_iZone(varname_grdxyz, ul%iZone_grdwgt, ul%iZone, .true.)
 
   if( ul%iZone_grdlonlat == ul%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1242,7 +1278,7 @@ subroutine make_grdlonlat_latlon(ul)
               ', max: '//str(maxval(g%lat,mask=g%lat/=ul%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdlonlat_latlon
+end subroutine make_grdlonlat__latlon
 !===============================================================
 !
 !===============================================================
@@ -1254,13 +1290,13 @@ end subroutine make_grdlonlat_latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap_raster(ur)
+subroutine make_idxmap__raster(ur)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_util, only: &
-    print_idxmap
+        print_idxmap
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_raster_), intent(inout), target :: ur
 
@@ -1269,7 +1305,7 @@ subroutine make_idxmap_raster(ur)
 
   integer :: stat
 
-  call echo(code%bgn, 'make_idxmap_raster')
+  call echo(code%bgn, 'make_idxmap__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1281,7 +1317,7 @@ subroutine make_idxmap_raster(ur)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_idxmap == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1297,14 +1333,43 @@ subroutine make_idxmap_raster(ur)
     call echo(code%ret)
     return
   endif
-
-  call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call read_grid_data_latlon(&
-         ur%idxmap, fr%idx, varname_rstidx, &
-         zl, ur%xi, ur%yi, ur%is_south_to_north)
+  selectcase( ur%tag_in_idxmap )
+  case( TAG_IN_RASTER_IDXMAP_GIVEN )
+    continue
+
+  case( TAG_IN_RASTER_IDXMAP_UNDEF )
+    call eerr(str(msg_unexpected_condition())//&
+            '\nur%tag_in_idxmap == '//str(ur%tag_in_idxmap))
+
+  case( TAG_IN_RASTER_IDXMAP_INT1 )
+    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
+    call cpval(ur%idxmapall1(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
+
+  case( TAG_IN_RASTER_IDXMAP_INT2 )
+    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
+    call cpval(ur%idxmapall2(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
+
+  case( TAG_IN_RASTER_IDXMAP_INT4 )
+    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
+    call cpval(ur%idxmapall4(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
+
+  case( TAG_IN_RASTER_IDXMAP_INT8 )
+    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
+    call cpval(ur%idxmapall8(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
+
+  case( TAG_IN_RASTER_IDXMAP_FILE_PB )
+    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
+    call read_grid_data_latlon(&
+           ur%idxmap, fr%idx, varname_rstidx, &
+           zl, ur%xi, ur%yi, ur%is_south_to_north)
+
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\nur%tag_in_idxmap == '//str(ur%tag_in_idxmap))
+  endselect
 
   call print_idxmap(ur%idxmap, zl)
 
@@ -1320,21 +1385,21 @@ subroutine make_idxmap_raster(ur)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_idxmap_raster
+end subroutine make_idxmap__raster
 !===============================================================
 ! It can be called after 
-!   subroutine make_idxmap_raster
-!   subroutine make_grdidx_raster
-!   subroutine make_grduwa_raster
-!   subroutine make_grdara_raster
-!   subroutine make_grdwgt_raster
+!   subroutine make_idxmap__raster
+!   subroutine make_grdidx__raster
+!   subroutine make_grduwa__raster
+!   subroutine make_grdara__raster
+!   subroutine make_grdwgt__raster
 ! were called and grid data were output to the intermediate file.
 !===============================================================
-subroutine make_wgtmap_raster(ur, earth)
+subroutine make_wgtmap__raster(ur, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_raster_), intent(inout), target :: ur
   type(opt_earth_), intent(in) :: earth
@@ -1352,7 +1417,7 @@ subroutine make_wgtmap_raster(ur, earth)
   integer(8) :: idx, idx_prev
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_wgtmap_raster')
+  call echo(code%bgn, 'make_wgtmap__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1364,7 +1429,7 @@ subroutine make_wgtmap_raster(ur, earth)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_wgtmap == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1539,15 +1604,15 @@ subroutine make_wgtmap_raster(ur, earth)
   endif
   !---------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_wgtmap_raster
+end subroutine make_wgtmap__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx_raster(ur)
+subroutine make_grdidx__raster(ur)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_util, only: &
-    print_indices
+        print_indices
   implicit none
   type(gs_raster_), intent(inout), target :: ur
 
@@ -1558,7 +1623,7 @@ subroutine make_grdidx_raster(ur)
 
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_grdidx_raster')
+  call echo(code%bgn, 'make_grdidx__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1570,7 +1635,7 @@ subroutine make_grdidx_raster(ur)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_grdidx == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1589,8 +1654,8 @@ subroutine make_grdidx_raster(ur)
     return
   endif
 
-  ! Case: Intermediate data exists
   !-------------------------------------------------------------
+  ! Case: Intermediate data exist
   if( zone_im%is_saved_idx )then
     call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
 
@@ -1600,8 +1665,8 @@ subroutine make_grdidx_raster(ur)
     call rbin(g%idx, zone_im%path, rec=rec_im_idx)
     call argsort(g%idx, g%idxarg)
 
-  ! Case: Intermediate data does not eixst
   !-------------------------------------------------------------
+  ! Case: Intermediate data do not eixst
   else
     call make_index_list_raster(&
            ur%idxmap, ur%idx_miss, zl%idxmin, zl%idxmax, & ! in
@@ -1628,13 +1693,13 @@ subroutine make_grdidx_raster(ur)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdidx_raster
+end subroutine make_grdidx__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdmsk_raster(ur)
+subroutine make_grdmsk__raster(ur)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_raster_), intent(inout), target :: ur
 
@@ -1645,7 +1710,7 @@ subroutine make_grdmsk_raster(ur)
 
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grdmsk_raster')
+  call echo(code%bgn, 'make_grdmsk__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1657,7 +1722,7 @@ subroutine make_grdmsk_raster(ur)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_grdmsk == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1711,17 +1776,17 @@ subroutine make_grdmsk_raster(ur)
   if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdmsk_raster
+end subroutine make_grdmsk__raster
 !===============================================================
 ! Calc. unweighted area of grid.
 ! It can be called after
-!   subroutine make_idxmap_raster
-!   subroutine make_grdidx_raster
+!   subroutine make_idxmap__raster
+!   subroutine make_grdidx__raster
 ! were called.
 !===============================================================
-subroutine make_grduwa_raster(ur, earth)
+subroutine make_grduwa__raster(ur, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_raster_), intent(inout), target :: ur
   type(opt_earth_), intent(in) :: earth
@@ -1737,7 +1802,7 @@ subroutine make_grduwa_raster(ur, earth)
   integer(8) :: loc
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grduwa_raster')
+  call echo(code%bgn, 'make_grduwa__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1749,7 +1814,7 @@ subroutine make_grduwa_raster(ur, earth)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_grduwa == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -1770,7 +1835,6 @@ subroutine make_grduwa_raster(ur, earth)
 
   g%nij = zl%mij
   call realloc(g%uwa, g%nij, clear=.true.)
-
   !-------------------------------------------------------------
   ! Case: Intermediate data exists
   if( zone_im%is_saved_uwa )then
@@ -1855,23 +1919,23 @@ subroutine make_grduwa_raster(ur, earth)
   if( ur%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grduwa_raster
+end subroutine make_grduwa__raster
 !===============================================================
 ! Calc. weighted area of grid.
 ! It can be called after 
-!   subroutine make_idxmap_raster
-!   subroutine make_grdidx_raster
-!   subroutine make_grduwa_raster
+!   subroutine make_idxmap__raster
+!   subroutine make_grdidx__raster
+!   subroutine make_grduwa__raster
 ! were called.
 !===============================================================
-subroutine make_grdara_raster(ur, earth)
+subroutine make_grdara__raster(ur, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_base, only: &
-    init_grid, &
-    free_grid
+        init_grid, &
+        free_grid
   use common_gs_grid_io, only: &
-    read_grid_data_latlon
+        read_grid_data_latlon
   implicit none
   type(gs_raster_), intent(inout), target :: ur
   type(opt_earth_), intent(in) :: earth
@@ -1894,7 +1958,7 @@ subroutine make_grdara_raster(ur, earth)
   integer(8) :: loc
   integer(8) :: loc_in
 
-  call echo(code%bgn, 'make_grdara_raster')
+  call echo(code%bgn, 'make_grdara__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1906,7 +1970,7 @@ subroutine make_grdara_raster(ur, earth)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_grdara == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -2163,23 +2227,23 @@ subroutine make_grdara_raster(ur, earth)
   call edbg('total: '//str(sum(g%ara),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdara_raster
+end subroutine make_grdara__raster
 !===============================================================
 ! Calc. weight of grid.
 ! It can be called after
-!   subroutine make_idxmap_raster
-!   subroutine make_grdidx_raster
-!   subroutine make_grduwa_raster
-!   subroutine make_grdara_raster
+!   subroutine make_idxmap__raster
+!   subroutine make_grdidx__raster
+!   subroutine make_grduwa__raster
+!   subroutine make_grdara__raster
 ! were called.
 ! Also, grduwa and grdara must be output if divided into zones.
 !===============================================================
-subroutine make_grdwgt_raster(ur)
+subroutine make_grdwgt__raster(ur)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_base, only: &
-    init_grid, &
-    free_grid
+        init_grid, &
+        free_grid
   implicit none
   type(gs_raster_), intent(inout), target :: ur
 
@@ -2203,7 +2267,7 @@ subroutine make_grdwgt_raster(ur)
   integer(8) :: loc_in
   integer(8) :: loc_tmp
 
-  call echo(code%bgn, 'make_grdwgt_raster')
+  call echo(code%bgn, 'make_grdwgt__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2215,7 +2279,7 @@ subroutine make_grdwgt_raster(ur)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_grdwgt == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -2462,13 +2526,13 @@ subroutine make_grdwgt_raster(ur)
   call edbg('min: '//str(minval(g%wgt))//' max: '//str(maxval(g%wgt)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdwgt_raster
+end subroutine make_grdwgt__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz_raster(ur, earth)
+subroutine make_grdxyz__raster(ur, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_raster_), intent(inout), target :: ur
   type(opt_earth_), intent(in) :: earth
@@ -2484,7 +2548,7 @@ subroutine make_grdxyz_raster(ur, earth)
   integer(8) :: loc
   real(8) :: r
 
-  call echo(code%bgn, 'make_grdxyz_raster')
+  call echo(code%bgn, 'make_grdxyz__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2496,7 +2560,7 @@ subroutine make_grdxyz_raster(ur, earth)
   call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
 
   if( ur%iZone_grdxyz == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -2579,13 +2643,13 @@ subroutine make_grdxyz_raster(ur, earth)
   deallocate(rstara)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdxyz_raster
+end subroutine make_grdxyz__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat_raster(ur)
+subroutine make_grdlonlat__raster(ur)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_raster_), intent(inout), target :: ur
 
@@ -2596,7 +2660,7 @@ subroutine make_grdlonlat_raster(ur)
   type(zone_latlon_)   , pointer :: zl
   type(grid_)          , pointer :: g
 
-  call echo(code%bgn, 'make_grdlonlat_raster')
+  call echo(code%bgn, 'make_grdlonlat__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2609,7 +2673,7 @@ subroutine make_grdlonlat_raster(ur)
   call check_iZone(varname_grdxyz, ur%iZone_grdxyz, ur%iZone, .true.)
 
   if( ur%iZone_grdlonlat == ur%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -2702,7 +2766,7 @@ subroutine make_grdlonlat_raster(ur)
               ', max: '//str(maxval(g%lat,mask=g%lat/=ur%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdlonlat_raster
+end subroutine make_grdlonlat__raster
 !===============================================================
 !
 !===============================================================
@@ -2714,14 +2778,14 @@ end subroutine make_grdlonlat_raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx_polygon(up)
+subroutine make_grdidx__polygon(up)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_base, only: &
-    init_grid, &
-    free_grid
+        init_grid, &
+        free_grid
   use common_gs_grid_util, only: &
-    print_indices
+        print_indices
   implicit none
   type(gs_polygon_), intent(inout), target :: up
 
@@ -2736,7 +2800,7 @@ subroutine make_grdidx_polygon(up)
   integer(8) :: ij
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_grdidx_polygon')
+  call echo(code%bgn, 'make_grdidx__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2748,7 +2812,7 @@ subroutine make_grdidx_polygon(up)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grdidx == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -2855,13 +2919,13 @@ subroutine make_grdidx_polygon(up)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdidx_polygon
+end subroutine make_grdidx__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdmsk_polygon(up)
+subroutine make_grdmsk__polygon(up)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_polygon_), intent(inout), target :: up
 
@@ -2873,7 +2937,7 @@ subroutine make_grdmsk_polygon(up)
   !type(polygon_)      , pointer :: p
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grdmsk_polygon')
+  call echo(code%bgn, 'make_grdmsk__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2885,7 +2949,7 @@ subroutine make_grdmsk_polygon(up)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grdmsk == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -2943,13 +3007,13 @@ subroutine make_grdmsk_polygon(up)
   if( up%iZone_grdidx == 0 ) call realloc(g%idx, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdmsk_polygon
+end subroutine make_grdmsk__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grduwa_polygon(up, earth)
+subroutine make_grduwa__polygon(up, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_polygon_), intent(inout), target :: up
   type(opt_earth_), intent(in) :: earth
@@ -2962,7 +3026,7 @@ subroutine make_grduwa_polygon(up, earth)
   type(polygon_)      , pointer :: p
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grduwa_polygon')
+  call echo(code%bgn, 'make_grduwa__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2974,7 +3038,7 @@ subroutine make_grduwa_polygon(up, earth)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grduwa == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -3042,16 +3106,16 @@ subroutine make_grduwa_polygon(up, earth)
   call edbg('total: '//str(sum(g%uwa,mask=g%uwa/=up%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grduwa_polygon
+end subroutine make_grduwa__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdara_polygon(up)
+subroutine make_grdara__polygon(up)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   use common_gs_grid_base, only: &
-    init_grid, &
-    free_grid
+        init_grid, &
+        free_grid
   implicit none
   type(gs_polygon_), intent(inout), target :: up
 
@@ -3065,7 +3129,7 @@ subroutine make_grdara_polygon(up)
   type(grid_) :: g_in
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grdara_polygon')
+  call echo(code%bgn, 'make_grdara__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3077,7 +3141,7 @@ subroutine make_grdara_polygon(up)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grdara == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -3179,13 +3243,13 @@ subroutine make_grdara_polygon(up)
   call edbg('total: '//str(sum(g%ara,mask=g%ara/=up%ara_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdara_polygon
+end subroutine make_grdara__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdwgt_polygon(up)
+subroutine make_grdwgt__polygon(up)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_polygon_), intent(inout), target :: up
 
@@ -3199,7 +3263,7 @@ subroutine make_grdwgt_polygon(up)
   type(polygon_), pointer :: p
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grdwgt_polygon')
+  call echo(code%bgn, 'make_grdwgt__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3211,7 +3275,7 @@ subroutine make_grdwgt_polygon(up)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grdwgt == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -3310,13 +3374,13 @@ subroutine make_grdwgt_polygon(up)
            ' max: '//str(maxval(g%wgt,mask=g%wgt/=up%wgt_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdwgt_polygon
+end subroutine make_grdwgt__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz_polygon(up, earth)
+subroutine make_grdxyz__polygon(up, earth)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_polygon_), intent(inout), target :: up
   type(opt_earth_) , intent(in)            :: earth
@@ -3327,7 +3391,7 @@ subroutine make_grdxyz_polygon(up, earth)
   integer(8) :: ij
   real(8) :: r
 
-  call echo(code%bgn, 'make_grdxyz_polygon')
+  call echo(code%bgn, 'make_grdxyz__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3339,7 +3403,7 @@ subroutine make_grdxyz_polygon(up, earth)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grdxyz == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -3391,13 +3455,13 @@ subroutine make_grdxyz_polygon(up, earth)
             ', max: '//str(maxval(g%z,mask=g%z/=up%xyz_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdxyz_polygon
+end subroutine make_grdxyz__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat_polygon(up)
+subroutine make_grdlonlat__polygon(up)
   use common_gs_zone, only: &
-    check_iZone
+        check_iZone
   implicit none
   type(gs_polygon_), intent(inout), target :: up
 
@@ -3406,7 +3470,7 @@ subroutine make_grdlonlat_polygon(up)
   type(zone_grid_im_) , pointer :: zone_im
   type(grid_)         , pointer :: g
 
-  call echo(code%bgn, 'make_grdlonlat_polygon')
+  call echo(code%bgn, 'make_grdlonlat__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3418,7 +3482,7 @@ subroutine make_grdlonlat_polygon(up)
   call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
 
   if( up%iZone_grdlonlat == up%iZone )then
-    call edbg('Nothing to do')
+    call edbg('Nothing to do.')
     call echo(code%ret)
     return
   endif
@@ -3488,7 +3552,7 @@ subroutine make_grdlonlat_polygon(up)
               ', max: '//str(maxval(g%lat,mask=g%lat/=up%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine make_grdlonlat_polygon
+end subroutine make_grdlonlat__polygon
 !===============================================================
 !
 !===============================================================
