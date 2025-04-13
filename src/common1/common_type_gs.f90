@@ -407,18 +407,20 @@ module common_type_gs
 
   type gs_common_
     character(CLEN_VAR) :: id
-    character(CLEN_VAR), pointer :: nam ! => gs_%nam
-    character(CLEN_VAR), pointer :: gs_type ! => gs_%gs_type
-    logical, pointer :: is_source !=> gs_%is_source
-    integer(8), pointer :: idx_miss    !=> gs_?_%idx_miss
-    real(8)   , pointer :: ara_miss    !=> gs_?_%ara_miss
-    real(8)   , pointer :: wgt_miss    !=> gs_?_%wgt_miss
-    real(8)   , pointer :: xyz_miss    !=> gs_?_%xyz_miss
-    real(8)   , pointer :: lonlat_miss !=> gs_?_%lonlat_miss
-    real(8)   , pointer :: val_miss    !=> gs_?_%val_miss
-    type(file_grid_in_) , pointer :: f_grid_in  !=> gs_?_%f_grid_in
-    type(file_grid_out_), pointer :: f_grid_out !=> gs_?_%f_grid_out
-    type(grid_)         , pointer :: grid       !=> gs_?_%grid
+    character(CLEN_VAR), pointer :: nam ! => gs_*_%nam
+    character(CLEN_VAR), pointer :: gs_type ! => gs_*_%gs_type
+    logical, pointer :: is_source !=> gs_*_%is_source
+    integer(8), pointer :: idx_miss    !=> gs_*_%idx_miss
+    real(8)   , pointer :: ara_miss    !=> gs_*_%ara_miss
+    real(8)   , pointer :: wgt_miss    !=> gs_*_%wgt_miss
+    real(8)   , pointer :: xyz_miss    !=> gs_*_%xyz_miss
+    real(8)   , pointer :: lonlat_miss !=> gs_*_%lonlat_miss
+    real(8)   , pointer :: val_miss    !=> gs_*_%val_miss
+    type(file_grid_in_) , pointer :: f_grid_in  !=> gs_*_%f_grid_in
+    type(file_grid_out_), pointer :: f_grid_out !=> gs_*_%f_grid_out
+    type(grid_)         , pointer :: grid       !=> gs_*_%grid
+    logical, pointer :: debug
+    integer(8), pointer :: idx_debug !=> gs_*_%idx_debug
   end type
 
   type gs_

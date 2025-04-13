@@ -1,0 +1,31 @@
+[ToDo]
+- Multiple missing indices
+
+- Shapefile input
+#---------------------------------------------------------------
+[2025/04/13]
+#---------------------------------------------------------------
+common1/common_gs_define_polygon.f90 calc_range_of_latit
+
+Added initialization of %lontop and %lattop.
+It will not affect the action of the program with the normal mode
+but will avoid an error in the debugging mode.
+#---------------------------------------------------------------
+[2025/04/11]
+#---------------------------------------------------------------
+lib/
+
+Updated the library.
+#---------------------------------------------------------------
+[2025/04/09]
+#---------------------------------------------------------------
+main_std/remap/mod_rt.f90
+main_std/remap/mod_rt_raster_raster.f90
+common3/common_rt_raster_raster.f90
+
+Introduced the function to remap from raster to raster.
+Alleviated the definition of raster grid system, for which only the integer bbox was allowed (e.g. west=120, east=150, south=20, north=50). Now real number can be used for bbox (e.g. west=130, east=130.66666, south=35, north=35.33333).
+
+Added the setting files for testing this type of remapping:
+  set/remap/raster-1min_to_raster-1min.conf
+  set/remap/CMF-jpn06min-1min_to_NLI-wsCode5-5340.conf

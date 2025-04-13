@@ -28,6 +28,8 @@ module common_area_raster_polygon
   !-------------------------------------------------------------
   ! Private variables
   !-------------------------------------------------------------
+  character(CLEN_VAR) :: PROCMOD = 'common_area_raster_polygon'
+  !-------------------------------------------------------------
   integer(8), save :: ndh, ndv
   real(8)   , save :: dlon, dlat
 
@@ -71,15 +73,15 @@ module common_area_raster_polygon
 
   real(8) :: vrf_val_miss
   !-------------------------------------------------------------
-  logical, parameter :: debug_s = .false.
-  logical, parameter :: debug_t = .false.
-  logical, parameter :: debug = debug_s .or. debug_t
-  integer(8), parameter :: sidx_debug = 289179
-  integer(8), parameter :: sdhi_debug = 8609
-  integer(8), parameter :: sdhf_debug = 8685
-  integer(8), parameter :: sdvi_debug = 10406
-  integer(8), parameter :: sdvf_debug = 10416
-  integer(8), parameter :: tidx_debug = 294785
+  logical :: debug_s = .false.
+  logical :: debug_t = .false.
+  logical :: debug = .false.
+  integer(8) :: sidx_debug = 0_8
+  integer(8) :: sdhi_debug = 0_8
+  integer(8) :: sdhf_debug = 0_8
+  integer(8) :: sdvi_debug = 0_8
+  integer(8) :: sdvf_debug = 0_8
+  integer(8) :: tidx_debug = 0_8
   !-------------------------------------------------------------
 !  logical, save :: is_iarea_updated
   !-------------------------------------------------------------
@@ -91,55 +93,63 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine initialize(sgr, tgp, rt_vrf_val_miss)
+subroutine initialize(sr, tp, rt_vrf_val_miss)
   implicit none
-  type(gs_raster_) , intent(in) :: sgr
-  type(gs_polygon_), intent(in) :: tgp
+  type(gs_raster_) , intent(in) :: sr
+  type(gs_polygon_), intent(in) :: tp
   real(8)          , intent(in) :: rt_vrf_val_miss
 
   integer(8) :: dhi, dhf, dvi, dvf
 
-  call echo(code%bgn, 'initialize')
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE initialize')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  dgt_hv = dgt(max(sgr%nh,sgr%nv))
+  dgt_hv = dgt(max(sr%nh,sr%nv))
   !-------------------------------------------------------------
   ! Set params.
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting parameters')
 
   ! module
-  ndh = sgr%nh
-  ndv = sgr%nv
+  ndh = sr%nh
+  ndv = sr%nv
 
-  sidx_miss = sgr%idx_miss
+  sidx_miss = sr%idx_miss
 
-  tidx_miss = tgp%idx_miss
+  tidx_miss = tp%idx_miss
 
   vrf_val_miss = rt_vrf_val_miss
 
   nullify(n_prev)
   nullify(n_next)
-  call cparr(tgp%n_prev, n_prev)
-  call cparr(tgp%n_next, n_next)
+  call cparr(tp%n_prev, n_prev)
+  call cparr(tp%n_next, n_next)
 
-  lonlat_miss = tgp%coord_miss_s
+  lonlat_miss = tp%coord_miss_s
+
+  debug_s = sr%debug
+  sidx_debug = sr%idx_debug
+
+  debug_t = tp%debug
+  tidx_debug = tp%idx_debug
+
+  debug = debug_s .or. debug_t
 
   ! local
-  dhi = sgr%hi
-  dhf = sgr%hf
-  dvi = sgr%vi
-  dvf = sgr%vf
+  dhi = sr%hi
+  dhf = sr%hf
+  dvi = sr%vi
+  dvf = sr%vf
 
   ! module
-  dlon = sgr%lonwidth(dhi)
-  dlat = sgr%latwidth(dvi)
+  dlon = sr%lonwidth(dhi)
+  dlat = sr%latwidth(dvi)
 
   allocate(dlons(dhi-2:dhf+1))
   allocate(dlats(dvi-2:dvf+1))
-  dlons(dhi-1:dhf) = sgr%lon(dhi-1:dhf)
-  dlats(dvi-1:dvf) = sgr%lat(dvi-1:dvf)
+  dlons(dhi-1:dhf) = sr%lon(dhi-1:dhf)
+  dlats(dvi-1:dvf) = sr%lat(dvi-1:dvf)
   dlons(dhi-2) = -9999.d0
   dlons(dhf+1) =  9999.d0
   dlats(dvi-2) = -9999.d0
@@ -192,7 +202,7 @@ end subroutine initialize
 subroutine finalize()
   implicit none
 
-  call echo(code%bgn, 'finalize')
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE finalize')
   !-------------------------------------------------------------
   deallocate(dlons)
   deallocate(dlats)
@@ -222,10 +232,10 @@ end subroutine finalize
 !===============================================================
 !
 !===============================================================
-subroutine set_modvars(sgr, tgp, make_rt)
+subroutine set_modvars(sr, tp, make_rt)
   implicit none
-  type(gs_raster_) , intent(in), target :: sgr
-  type(gs_polygon_), intent(in), target :: tgp
+  type(gs_raster_) , intent(in), target :: sr
+  type(gs_polygon_), intent(in), target :: tp
   logical          , intent(in)         :: make_rt
 
   type(file_raster_in_) , pointer :: sfr
@@ -235,8 +245,8 @@ subroutine set_modvars(sgr, tgp, make_rt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  sfr => sgr%f_raster_in
-  szl => sgr%zone(sgr%iZone)
+  sfr => sr%f_raster_in
+  szl => sr%zone(sr%iZone)
   !-------------------------------------------------------------
   szone_typ = szl%typ
 
@@ -716,7 +726,7 @@ subroutine update_area_normal(&
   !-------------------------------------------------------------
   do iZone = 1, nZones
     !-----------------------------------------------------------
-    ! Calc. ranges of raster with and without buffer.
+    ! Calc. ranges of raster with and without buffer
     !-----------------------------------------------------------
     ttdhi_buf = max(ttdhi_zone(iZone), tdhi_buf)
     ttdhf_buf = min(ttdhf_zone(iZone), tdhf_buf)
@@ -731,7 +741,7 @@ subroutine update_area_normal(&
       call edbg('           w/o buffer: ['//str((/ttdhi,ttdhf/),dgt(ndh),':')//']')
     endif
     !-----------------------------------------------------------
-    ! Calc. coords. of intersections with meridians.
+    ! Calc. coords. of intersections with meridians
     !-----------------------------------------------------------
     clons(ttdhi_buf-1) = wlon
     clons(ttdhf_buf  ) = elon
@@ -762,7 +772,7 @@ subroutine update_area_normal(&
       enddo
     endif
     !-----------------------------------------------------------
-    ! Update areas.
+    ! Update areas
     !-----------------------------------------------------------
     if( is_convex )then
       do idh = ttdhi_buf, dh_top-1_8
@@ -789,7 +799,7 @@ subroutine update_area_normal(&
       enddo
     endif
     !-----------------------------------------------------------
-    ! Restore module variables.
+    ! Restore module variables
     !-----------------------------------------------------------
     clons(ttdhi_buf-1) = dlons(ttdhi_buf-1)
     clons(ttdhf_buf  ) = dlons(ttdhf_buf)
@@ -1452,9 +1462,9 @@ subroutine update_area_normal_convex_downward(&
     call edbg('c1  ('//str((/clons(dh-1),clats(dh-1)/)*r2d,'f20.15',',')//')')
     call edbg('c2  ('//str((/clons(dh)  ,clats(dh)  /)*r2d,'f20.15',',')//')')
     call edbg('top ('//str((/lontop     ,lattop     /)*r2d,'f20.15',',')//')')
-    call edbg('dv west '//str(dv_west)//' '//str(dlats(dv_west-1:dv_west)*r2d,'f20.15',' ~ '))
-    call edbg('   east '//str(dv_east)//' '//str(dlats(dv_east-1:dv_east)*r2d,'f20.15',' ~ '))
-    call edbg('   top  '//str(dv_top) //' '//str(dlats(dv_top-1:dv_top)*r2d  ,'f20.15',' ~ '))
+    call edbg('dv west '//str(dv_west)//' '//str(dlats(dv_west-1:dv_west)*r2d,'f20.15',' - '))
+    call edbg('   east '//str(dv_east)//' '//str(dlats(dv_east-1:dv_east)*r2d,'f20.15',' - '))
+    call edbg('   top  '//str(dv_top) //' '//str(dlats(dv_top-1:dv_top)*r2d  ,'f20.15',' - '))
   endif
   !-------------------------------------------------------------
   !
@@ -1632,7 +1642,7 @@ subroutine update_area_parallel(iarea, lon1, lon2, lat, arcpos)
   endif
 
   if( debug )then
-    call edbg('lat: '//str(lat*r2d,'f12.7')//', dv: '//str((/sdvi,sdvf/),' ~ '))
+    call edbg('lat: '//str(lat*r2d,'f12.7')//', dv: '//str((/sdvi,sdvf/),' - '))
   endif
 
   do iZone = 1, nZones
@@ -1723,7 +1733,7 @@ subroutine calc_arc_sign_range(&
           (lon1 == rad_360deg .and. lon2 == rad_0deg  ) )then
         if( abs(lat1) /= rad_90deg .or. abs(lat2) /= rad_90deg )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  abs(lat1) /= 90  .or. abs(lat2) /= 90 (deg)'//&
+                  '\n  abs(lat1) /= 90 .or. abs(lat2) /= 90 (deg)'//&
                   '\n  lat1: '//str(lat1*r2d,'f12.7')//' (deg)'//&
                   '\n  lat2: '//str(lat2*r2d,'f12.7')//' (deg)')
         endif
@@ -1913,13 +1923,13 @@ subroutine debug_print_polygon(p)
 
   call edbg('idx '//str(p%idx)//&
           '\n  pos: '//str(p%pos)//&
-          '\n  lon: '//str(str(str_coords(p%lon,r2d,lonlat_miss,'f12.7')))//&
-          '\n  lat: '//str(str(str_coords(p%lat,r2d,lonlat_miss,'f12.7')))//&
-          '\n  arc: '//str(str_arctyp_long(p%arctyp),12,', ')//&
+          '\n  lon: '//str(str(str_coords(p%lon,r2d,lonlat_miss,wfmt_deg)))//&
+          '\n  lat: '//str(str(str_coords(p%lat,r2d,lonlat_miss,wfmt_deg)))//&
+          '\n  arc: '//str(str_arctyp_long(p%arctyp),cl(wfmt_deg),', ')//&
           '\n  a  : '//str(p%a,'es12.5',', ')//&
           '\n  b  : '//str(p%b,'es12.5',', ')//&
           '\n  c  : '//str(p%c,'es12.5',', ')//&
-          '\n  bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,'f12.7')//&
+          '\n  bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,wfmt_deg)//&
           '\n  n_west: '//str(p%n_west)//' n_east: '//str(p%n_east))
 end subroutine debug_print_polygon
 !===============================================================
@@ -1932,13 +1942,13 @@ subroutine debug_print_range(nam, tdhi, tdhf, tdvi, tdvf)
 
   call edbg(str(nam)//':\n'//&
             '  dh: '//str(tdhi,dgt_hv)//' ('//&
-            str(str_coords(dlons(tdhi-1:tdhi),r2d,lonlat_miss,wfmt_deg,' ~ '))//')'//&
-               ' ~ '//str(tdhf,dgt_hv)//' ('//&
-            str(str_coords(dlons(tdhf-1:tdhf),r2d,lonlat_miss,wfmt_deg,' ~ '))//')\n'//&
+            str(str_coords(dlons(tdhi-1:tdhi),r2d,lonlat_miss,wfmt_deg,' - '))//')'//&
+               ' - '//str(tdhf,dgt_hv)//' ('//&
+            str(str_coords(dlons(tdhf-1:tdhf),r2d,lonlat_miss,wfmt_deg,' - '))//')\n'//&
             '  dv: '//str(tdvi,dgt_hv)//' ('//&
-            str(str_coords(dlats(tdvi-1:tdvi),r2d,lonlat_miss,wfmt_deg,' ~ '))//')'//&
-               ' ~ '//str(tdvf,dgt_hv)//' ('//&
-            str(str_coords(dlats(tdvf-1:tdvf),r2d,lonlat_miss,wfmt_deg,' ~ '))//')')
+            str(str_coords(dlats(tdvi-1:tdvi),r2d,lonlat_miss,wfmt_deg,' - '))//')'//&
+               ' - '//str(tdvf,dgt_hv)//' ('//&
+            str(str_coords(dlats(tdvf-1:tdvf),r2d,lonlat_miss,wfmt_deg,' - '))//')')
 end subroutine debug_print_range
 !===============================================================
 !

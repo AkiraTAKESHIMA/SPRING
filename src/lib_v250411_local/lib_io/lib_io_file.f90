@@ -157,7 +157,7 @@ module lib_io_file
     character(clen_path) :: path       = ''
     character(clen_key)  :: dtype      = DTYPE_REAL
     integer              :: rec        = 1
-    character(clen_key)  :: endian     = ''
+    character(clen_key)  :: endian     = ENDIAN_DEFAULT
     integer(8)           :: length     = 0_8
     character(clen_key)  :: status     = STATUS_UNKNOWN
     character(clen_key)  :: action     = ACTION_READWRITE

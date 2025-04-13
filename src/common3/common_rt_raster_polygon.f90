@@ -24,6 +24,83 @@ module common_rt_raster_polygon
         reshape_rt1d
   use common_rt_io, only: &
         write_rt_im
+  implicit none
+  private
+  !-------------------------------------------------------------
+  ! Public procedures
+  !-------------------------------------------------------------
+  public :: initialize
+  public :: finalize
+  public :: make_rt_raster_polygon
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_VAR), parameter :: PROCMOD = 'MODULE common_rt_raster_polygon'
+
+  real(8), pointer :: iarea(:,:)
+  real(8), pointer :: iarea_sum(:,:)
+  real(8), pointer :: ifrac_sum(:,:)
+  
+
+  logical :: debug_a = .false.
+  logical :: debug_b = .false.
+  logical :: debug = .false.
+  integer(8) :: aidx_debug = 0_8
+  integer(8) :: bidx_debug = 0_8
+  !-------------------------------------------------------------
+contains
+!===============================================================
+!
+!===============================================================
+subroutine initialize(ac, bc)
+  implicit none
+  type(gs_common_), intent(in) :: ac  ! raster
+  type(gs_common_), intent(in) :: bc  ! polygon
+
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE initialize')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  nullify(iarea)
+  nullify(iarea_sum)
+  nullify(ifrac_sum)
+
+  debug_a = ac%debug
+  aidx_debug = ac%idx_debug
+
+  debug_b = bc%debug
+  bidx_debug = bc%idx_debug
+
+  debug = debug_a .or. debug_b
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine initialize
+!===============================================================
+!
+!===============================================================
+subroutine finalize()
+  implicit none
+
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE finalize')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call realloc(iarea, 0)
+  call realloc(iarea_sum, 0)
+  call realloc(ifrac_sum, 0)
+
+  debug_a = .false.
+  debug_b = .false.
+  debug = .false.
+  aidx_debug = 0_8
+  bidx_debug = 0_8
+  !-------------------------------------------------------------
+end subroutine finalize
+!===============================================================
+!
+!===============================================================
+subroutine make_rt_raster_polygon(&
+    a, b, rt, opt_sys, opt_earth)
   use common_area_raster_polygon, only: &
         set_modvars, &
         alloc_iarea, &
@@ -33,51 +110,29 @@ module common_rt_raster_polygon
         calc_ifrac_sum, &
         update_rt1d
   implicit none
-  private
-  !-------------------------------------------------------------
-  ! Public Procedures
-  !-------------------------------------------------------------
-  public :: make_rt_raster_polygon
-  !-------------------------------------------------------------
-  ! Private Module Variables
-  !-------------------------------------------------------------
-  logical, parameter :: debug_s = .false.
-  logical, parameter :: debug_t = .false.
-  logical, parameter :: debug = debug_s .or. debug_t
-  integer(8), parameter :: sidx_debug = 0_8
-  integer(8), parameter :: tidx_debug = 1301994_8
-  !-------------------------------------------------------------
-contains
-!===============================================================
-!
-!===============================================================
-subroutine make_rt_raster_polygon(&
-    job, s, t, rt, opt_sys, opt_earth)
-  implicit none
-  character(*)    , intent(in)            :: job
-  type(gs_)       , intent(inout), target :: s  ! raster
-  type(gs_)       , intent(inout), target :: t  ! polygon
+  type(gs_)       , intent(inout), target :: a  ! raster
+  type(gs_)       , intent(inout), target :: b  ! polygon
   type(rt_)       , intent(inout), target :: rt
   type(opt_sys_)  , intent(in)            :: opt_sys
   type(opt_earth_), intent(in)            :: opt_earth
 
-  type(gs_common_)      , pointer :: sgc, tgc
-  type(gs_raster_)      , pointer :: sgr
-  type(gs_polygon_)     , pointer :: tgp
-  type(file_raster_in_) , pointer :: sfr
-  type(file_polygon_in_), pointer :: tfp
-  type(zone_latlon_)    , pointer :: szl
-  type(zone_polygon_)   , pointer :: tzp
-  type(grid_)           , pointer :: sg
+  type(gs_common_)      , pointer :: ac, bc
+  type(gs_raster_)      , pointer :: ar
+  type(gs_polygon_)     , pointer :: bp
+  type(file_raster_in_) , pointer :: afr
+  type(file_polygon_in_), pointer :: bfp
+  type(zone_latlon_)    , pointer :: azl
+  type(zone_polygon_)   , pointer :: bzp
+  type(grid_)           , pointer :: ag
   type(rt_main_)        , pointer :: rtm
   type(rt_im_zone_)     , pointer :: rtiz
   type(rt_vrf_)         , pointer :: rtv
   type(file_rt_vrf_)    , pointer :: fvrf
   type(rt1d_), allocatable :: rt1d(:)
-  type(polygon_), pointer :: tp
+  type(polygon_), pointer :: bp0
   type(file_), pointer :: f
 
-  integer(8) :: tij, tijs
+  integer(8) :: bij, bijs
   integer :: iFile_rtv
   real(8), pointer, save :: iarea(:,:)                     ![2024/11/19 bug fix]
   real(8), pointer, save :: iarea_sum(:,:), ifrac_sum(:,:) ![2024/11/19 bug fix]
@@ -89,72 +144,51 @@ subroutine make_rt_raster_polygon(&
 
   call echo(code%bgn, 'make_rt_raster_polygon')
   !-------------------------------------------------------------
-  !
+  ! Set the pointers
   !-------------------------------------------------------------
-  selectcase( job )
-  case( 'I' )
-    call edbg('Initializing')
-    nullify(iarea)
-    nullify(iarea_sum)
-    nullify(ifrac_sum)
-    call echo(code%ret)
-    return
-  case( 'F' )
-    call edbg('Finalizing')
-    call realloc(iarea, 0)
-    call realloc(iarea_sum, 0)
-    call realloc(ifrac_sum, 0)
-    call echo(code%ret)
-    return
-  case( 'R' ) ! run
-    continue
-  endselect
-  !-------------------------------------------------------------
-  ! Set pointers
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Setting pointers')
+  call echo(code%ent, 'Setting the pointers')
 
-  sgc => s%cmn
-  tgc => t%cmn
+  ac => a%cmn
+  bc => b%cmn
 
-  if( sgc%gs_type /= GS_TYPE_RASTER .or. &
-      tgc%gs_type /= GS_TYPE_POLYGON )then
+  if( ac%gs_type /= GS_TYPE_RASTER .or. &
+      bc%gs_type /= GS_TYPE_POLYGON )then
     call eerr(str(msg_invalid_value())//&
-            '\n  s%cmn%gs_type: '//str(sgc%gs_type)//&
-            '\n  t%cmn%gs_type: '//str(tgc%gs_type))
+            '\n  a%cmn%gs_type: '//str(ac%gs_type)//&
+            '\n  b%cmn%gs_type: '//str(bc%gs_type))
   endif
 
-  sgr => s%raster
-  tgp => t%polygon
+  ar => a%raster
+  bp => b%polygon
 
-  sfr => sgr%f_raster_in
-  tfp => tgp%f_polygon_in
+  afr => ar%f_raster_in
+  bfp => bp%f_polygon_in
 
-  szl => sgr%zone(sgr%iZone)
-  tzp => tgp%zone(tgp%iZone)
+  azl => ar%zone(ar%iZone)
+  bzp => bp%zone(bp%iZone)
 
-  sg  => sgr%grid
+  ag  => ar%grid
 
-  if( sgc%is_source )then
+  if( ac%is_source )then
     call print_gs_raster(&
-           'Source', sgc%nam, &
-           szl%typ, &
-           szl%hi, szl%hf, szl%vi, szl%vf, &
-           sgr%hi, sgr%hf, sgr%vi, sgr%vf, &
-           szl%west, szl%east, szl%south, szl%north)
+           'Source', ac%nam, &
+           azl%typ, &
+           azl%hi, azl%hf, azl%vi, azl%vf, &
+           ar%hi, ar%hf, ar%vi, ar%vf, &
+           azl%west, azl%east, azl%south, azl%north)
     call print_gs_polygon(&
-           'Target', tgc%nam, &
-           tzp%ijs, tzp%ije, tgp%ijs, tgp%ije)
+           'Target', bc%nam, &
+           bzp%ijs, bzp%ije, bp%ijs, bp%ije)
   else
     call print_gs_polygon(&
-           'Source', tgc%nam, &
-           tzp%ijs, tzp%ije, tgp%ijs, tgp%ije)
+           'Source', bc%nam, &
+           bzp%ijs, bzp%ije, bp%ijs, bp%ije)
     call print_gs_raster(&
-           'Target', sgc%nam, &
-           szl%typ, &
-           szl%hi, szl%hf, szl%vi, szl%vf, &
-           sgr%hi, sgr%hf, sgr%vi, sgr%vf, &
-           szl%west, szl%east, szl%south, szl%north)
+           'Target', ac%nam, &
+           azl%typ, &
+           azl%hi, azl%hf, azl%vi, azl%vf, &
+           ar%hi, ar%hf, ar%vi, ar%vf, &
+           azl%west, azl%east, azl%south, azl%north)
   endif
 
   rtm => rt%main
@@ -166,7 +200,7 @@ subroutine make_rt_raster_polygon(&
   !-------------------------------------------------------------
   call echo(code%ent, 'Initializing')
 
-  allocate(rt1d(tzp%mij))
+  allocate(rt1d(bzp%mij))
   call init_rt1d(rt1d)
 
   call calc_rt_im_nij_ulim(rt%im%nij_ulim, opt_sys%memory_ulim)
@@ -175,7 +209,7 @@ subroutine make_rt_raster_polygon(&
   rtiz%nij = 0_8
   rtm%nij = 0_8
 
-  if( sgr%is_source )then
+  if( ar%is_source )then
     rtv => rt%vrf_source
   else
     rtv => rt%vrf_target
@@ -190,7 +224,7 @@ subroutine make_rt_raster_polygon(&
   enddo
 
   call edbg('Preparing module variables')
-  call set_modvars(sgr, tgp, make_rt)
+  call set_modvars(ar, bp, make_rt)
   call alloc_iarea(iarea, buffer_iarea)
   if( is_calc_iarea_sum )then
     call alloc_iarea(iarea_sum, buffer_iarea_sum)
@@ -202,21 +236,24 @@ subroutine make_rt_raster_polygon(&
   !-------------------------------------------------------------
   call echo(code%ent, 'Making a remapping table')
 
-  tijs = 1_8
+  bijs = bzp%ijs
 
-  do tij = 1_8, tzp%mij
-    tp => tgp%polygon(tij)
-    if( tp%idx == tgp%idx_miss ) cycle
+  !do bij = 1_8, bzp%mij
+  do bij = bzp%ijs, bzp%ije
+    if( debug_b .and. bij /= bp%grid%ij_debug ) cycle
 
-    !call edbg('tij: '//str(tij)//' idx: '//str(tp%idx))
-    if( debug_t .and. tp%idx /= tidx_debug ) cycle
+    bp0 => bp%polygon(bij)
+    if( bp0%idx == bp%idx_miss ) cycle
+
+    !call edbg('bij: '//str(bij)//' idx: '//str(bp0%idx))
+    !if( debug_b .and. bp0%idx /= bidx_debug ) cycle
     !-----------------------------------------------------------
     ! Calc. intersection area
     !-----------------------------------------------------------
-    call update_iarea_polygon(iarea, tp, is_iarea_updated, sgr%idxmap)
+    call update_iarea_polygon(iarea, bp0, is_iarea_updated, ar%idxmap)
 !<time_measurement>
     if( is_iarea_updated )then
-      call update_rt1d(rt1d(tij), iarea, sgr%idxmap, sgr%wgtmap, sg%idx, sg%idxarg)
+      call update_rt1d(rt1d(bij), iarea, ar%idxmap, ar%wgtmap, ag%idx, ag%idxarg)
       if( is_calc_iarea_sum )then
         call update_iarea_sum(iarea_sum, iarea)
       endif
@@ -230,13 +267,13 @@ subroutine make_rt_raster_polygon(&
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij > rt%im%nij_ulim )then
           call echo(code%ent, 'Outputting intermediates')
-          call edbg('tij: '//str((/tijs,tij-1_8/),' ~ '))
+          call edbg('bij: '//str((/bijs,bij-1_8/),' ~ '))
 
-          call reshape_rt1d(rt1d(tijs:tij-1_8), tgp%is_source, rtm, opt_earth)
+          call reshape_rt1d(rt1d(bijs:bij-1_8), bp%is_source, rtm, opt_earth)
           call write_rt_im(rtm, rt%im, opt_sys%old_files)
           call clear_rt_main(rtm)
-          call free_rt1d_data(rt1d(tijs:tij-1_8))
-          tijs = tij
+          call free_rt1d_data(rt1d(bijs:bij-1_8))
+          bijs = bij
 
           call echo(code%ext)
         endif
@@ -245,25 +282,23 @@ subroutine make_rt_raster_polygon(&
 !<time_measurement/>
     !-----------------------------------------------------------
 !<time_measurement>
-    call add(rtm%nij, rt1d(tij)%mij)
+    call add(rtm%nij, rt1d(bij)%mij)
 !<time_measurement/>
-  enddo  ! tij/
+  enddo  ! bij/
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Output intermediates
+  ! Reshape $rt1d and output intermediates
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting intermediates')
-
-  call reshape_rt1d(rt1d(tijs:tzp%mij), tgp%is_source, rtm, opt_earth)
+  call reshape_rt1d(rt1d(bijs:bzp%mij), bp%is_source, rtm, opt_earth)
 
   if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
+    call echo(code%ent, 'Outputting intermediates')
     call write_rt_im(rtm, rt%im, opt_sys%old_files)
     call clear_rt_main(rtm)
-    call free_rt1d_data(rt1d(tijs:tzp%mij))
+    call free_rt1d_data(rt1d(bijs:bzp%mij))
+    call echo(code%ext)
   endif
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -273,7 +308,7 @@ subroutine make_rt_raster_polygon(&
   !-------------------------------------------------------------
 !<time_measurement>
   if( is_calc_iarea_sum )then
-    call fill_miss_iarea_sum(iarea_sum, sgr%idxmap)
+    call fill_miss_iarea_sum(iarea_sum, ar%idxmap)
   endif
 !<time_measurement/>
   !-------------------------------------------------------------
@@ -282,14 +317,14 @@ subroutine make_rt_raster_polygon(&
 !<time_measurement>
   if( is_calc_ifrac_sum )then
     call alloc_iarea(ifrac_sum, buffer_iarea_sum)
-    call calc_ifrac_sum(ifrac_sum, iarea_sum, sgr%idxmap)
+    call calc_ifrac_sum(ifrac_sum, iarea_sum, ar%idxmap)
   endif
 !<time_measurement/>
   !-------------------------------------------------------------
   ! Reverse
   !-------------------------------------------------------------
 !<time_measurement>
-  if( .not. sgr%is_south_to_north )then
+  if( .not. ar%is_south_to_north )then
     if( is_calc_iarea_sum )then
       call reverse(iarea_sum, 2)
     endif
@@ -311,14 +346,14 @@ subroutine make_rt_raster_polygon(&
       if( f%path /= '' )then
         call edbg('Writing iarea_sum '//str(fileinfo(f)))
         call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                  sz=(/sgr%nh,sgr%nv/), lb=(/szl%xi,szl%yi/), fill=0.d0)
+                  sz=(/ar%nh,ar%nv/), lb=(/azl%xi,azl%yi/), fill=0.d0)
       endif
 
       f => fvrf%out_ifrac_sum
       if( f%path /= '' )then
         call edbg('Writing ifrac_sum '//str(fileinfo(f)))
         call wbin(ifrac_sum, f%path, f%dtype, f%endian, f%rec, &
-                  sz=(/sgr%nh,sgr%nv/), lb=(/szl%xi,szl%yi/), fill=0.d0)
+                  sz=(/ar%nh,ar%nv/), lb=(/azl%xi,azl%yi/), fill=0.d0)
       endif
     enddo  ! iFile_rtv/
 
@@ -335,19 +370,20 @@ subroutine make_rt_raster_polygon(&
   nullify(rtm)
   nullify(rtiz)
 
-  nullify(sg)
+  nullify(ag)
+  nullify(bp0)
 
-  nullify(szl)
-  nullify(tzp)
+  nullify(azl)
+  nullify(bzp)
 
-  nullify(sfr)
-  nullify(tfp)
+  nullify(afr)
+  nullify(bfp)
 
-  nullify(sgr)
-  nullify(tgp)
+  nullify(ar)
+  nullify(bp)
 
-  nullify(sgc)
-  nullify(tgc)
+  nullify(ac)
+  nullify(bc)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_raster_polygon

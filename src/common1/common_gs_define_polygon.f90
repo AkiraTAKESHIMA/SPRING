@@ -70,6 +70,7 @@ subroutine set_grids__polygon(up)
     ijs = up%grid%ij_debug
     ije = up%grid%ij_debug
   endif
+call edbg('ij: '//str((/ijs,ije/),' - '))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -153,10 +154,11 @@ subroutine set_grids__polygon(up)
              ' n_pole: '//str(p%n_pole))
     call edbg('lon   : '//str(str_coords_lonlat(p%lon,up%coord_miss_s)))
     call edbg('lat   : '//str(str_coords_lonlat(p%lat,up%coord_miss_s)))
-    call edbg('top   : '//str(p%lattop*r2d,'f12.7',', '))
-    call edbg('convex: '//str(str_convex_long(p%convex),-12,','))
-    call edbg('arctyp: '//str(str_arctyp_long(p%arctyp),-12,','))
-    call edbg('arcpos: '//str(str_arcpos_long(p%arcpos),-12,','))
+    call edbg('lontop: '//str(str_coords_lonlat(p%lontop,up%coord_miss_s)))
+    call edbg('lattop: '//str(str_coords_lonlat(p%lattop,up%coord_miss_s)))
+    call edbg('convex: '//str(str_convex_long(p%convex),-13,','))
+    call edbg('arctyp: '//str(str_arctyp_long(p%arctyp),-13,','))
+    call edbg('arcpos: '//str(str_arcpos_long(p%arcpos),-13,','))
     !stop
   endif
   !-------------------------------------------------------------
@@ -1016,13 +1018,15 @@ subroutine calc_range_of_latit(up, ijs, ije)
     allocate(p%convex(p%n))
     allocate(p%lontop(p%n))
     allocate(p%lattop(p%n))
+    p%convex(:) = ARC_CONVEX_MONOTONE
+    p%lontop(:) = up%coord_miss_s
+    p%lattop(:) = up%coord_miss_s
 
     selectcase( p%pos )
     !-----------------------------------------------------------
     ! Case: Polar
     case( polygon_position_polar )
 
-      p%convex(:) = arc_convex_monotone
       p%south = minval(p%lat)
       p%north = maxval(p%lat)
 
@@ -1034,17 +1038,17 @@ subroutine calc_range_of_latit(up, ijs, ije)
 
       do n = 1, p%n
         selectcase( p%arctyp(n) )
-        case( arc_type_normal )
+        case( ARC_TYPE_NORMAL )
           n_next = up%n_next(n,p%n)
 
           call calc_lat_range_large_arc(&
                  p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
                  p%a(n), p%b(n), p%c(n), &
                  south, north, p%convex(n), p%lontop(n), p%lattop(n))
-        case( arc_type_meridian )
-          continue
-        case( arc_type_parallel )
-          continue
+        case( ARC_TYPE_MERIDIAN )
+
+        case( ARC_TYPE_PARALLEL )
+
         case default
           call eerr(str(msg_invalid_value())//&
                   '\n  p%arctyp('//str(n)//'): '//str(p%arctyp(n)))
@@ -1055,13 +1059,12 @@ subroutine calc_range_of_latit(up, ijs, ije)
     case( polygon_position_lon0, &
           polygon_position_normal )
 
-      p%convex(:) = arc_convex_monotone
       p%south = minval(p%lat)
       p%north = maxval(p%lat)
 
       do n = 1, p%n
         selectcase( p%arctyp(n) )
-        case( arc_type_normal )
+        case( ARC_TYPE_NORMAL )
           n_next = up%n_next(n,p%n)
 
           call calc_lat_range_large_arc(&
@@ -1071,10 +1074,10 @@ subroutine calc_range_of_latit(up, ijs, ije)
 
           p%south = min(p%south, south)
           p%north = max(p%north, north)
-        case( arc_type_meridian )
-          continue
-        case( arc_type_parallel )
-          continue
+        case( ARC_TYPE_MERIDIAN )
+
+        case( ARC_TYPE_PARALLEL )
+
         case default
           call eerr(str(msg_invalid_value())//&
                   '\n  p%arctyp('//str(n)//'): '//str(p%arctyp(n)))
@@ -1115,7 +1118,7 @@ subroutine modify_loop_directions(up, ijs, ije)
     selectcase( p%pos )
     !-----------------------------------------------------------
     ! Case: Normal
-    case( polygon_position_normal )
+    case( POLYGON_POSITION_NORMAL )
       n = p%n_west
       n_prev = up%n_prev(n,p%n)
       n_next = up%n_next(n,p%n)
@@ -1127,7 +1130,7 @@ subroutine modify_loop_directions(up, ijs, ije)
       endif
     !-----------------------------------------------------------
     ! Case: Lon0
-    case( polygon_position_lon0 )
+    case( POLYGON_POSITION_LON0 )
       n = p%n_west
       n_prev = up%n_prev(n,p%n)
       n_next = up%n_next(n,p%n)
@@ -1139,7 +1142,7 @@ subroutine modify_loop_directions(up, ijs, ije)
       endif
     !-----------------------------------------------------------
     ! Case: Polar
-    case( polygon_position_polar )
+    case( POLYGON_POSITION_POLAR )
       if( p%north == rad_90deg )then
         n = minloc(p%lat,1)
         is_north = .true.
@@ -1151,7 +1154,7 @@ subroutine modify_loop_directions(up, ijs, ije)
       call get_n_next_lon_is_unequal(up, ij, n, p%n, p%n_pole, p%lon, n_next)
       n = up%n_prev(n_next,p%n)
 
-      if( p%arcpos(n) == arc_position_lon0 )then
+      if( p%arcpos(n) == ARC_POSITION_LON0 )then
         is_anticlockwise = p%lon(n) > p%lon(n_next) .eqv. is_north
       else
         is_anticlockwise = p%lon(n) < p%lon(n_next) .eqv. is_north

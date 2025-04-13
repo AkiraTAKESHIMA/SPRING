@@ -15,8 +15,6 @@ module common_gs_zone
   !-------------------------------------------------------------
   public :: determine_zones
 
-  !public :: extend_zone_latlon
-
   public :: raise_warning_no_valid_zone
   public :: raise_error_no_valid_zone
 
@@ -109,50 +107,39 @@ subroutine determine_zones__polygon(up, mem_ulim)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( mem_ulim == 0.d0 )then
+  if( up%debug )then
+    up%nZones = 1
+    allocate(up%zone(1))
+    zp => up%zone(1)
+    call init_zone_polygon(zp)
+    zp%ijs = up%ijs
+    zp%ije = up%ije
+    zp%mij = zp%ije - zp%ijs + 1_8
+    call edbg('zone(1) ij: '//str((/zp%ijs,zp%ije/),' - '))
+  else
     up%nZones = 1
     mij_zone = up%nij
-  else
-    mem_polygon &
-      = 8  &! idx
-      + 8  &! val
-      + 4  &! n
-      + 8*up%np*2  &! lon, lat
-      + 8*up%np*3  &! x, y, z
-      + 8*4  &! west, east, south, north
-      + 4*2  &! n_west, n_east
-      + 4  &! n_pole
-      + 1  &! pos
-      + 1*up%np  &! arctyp
-      + 1*up%np  &! arcpos
-      + 8*up%np*3  &! a, b, c
-      + 1*up%np  &! convex
-      + 8*up%np*2
-
-    mij_zone = int(mem_ulim / mem_polygon,8)
-    up%nZones = int((up%nij-1_8)/mij_zone + 1_8,4)
-    mij_zone = int((up%nij-1_8)/up%nZones + 1_8,4)
-  endif
 
   ! TEST
   !up%nZones = 2
   !mij_zone = int((up%nij-1_8)/up%nZones + 1_8,4)
 
-  allocate(up%zone(up%nZones))
+    allocate(up%zone(up%nZones))
 
-  ije = up%ijs - 1_8
-  do iZone = 1, up%nZones
-    zp => up%zone(iZone)
-    call init_zone_polygon(zp)
+    ije = up%ijs - 1_8
+    do iZone = 1, up%nZones
+      zp => up%zone(iZone)
+      call init_zone_polygon(zp)
 
-    ijs = ije + 1_8
-    ije = min(ije + mij_zone, up%ije)
+      ijs = ije + 1_8
+      ije = min(ije + mij_zone, up%ije)
 
-    zp%ijs = ijs
-    zp%ije = ije
-    zp%mij = zp%ije - zp%ijs + 1_8
-    call edbg('zone('//str(iZone)//') ij: '//str((/zp%ijs,zp%ije/),' ~ '))
-  enddo ! iZone/
+      zp%ijs = ijs
+      zp%ije = ije
+      zp%mij = zp%ije - zp%ijs + 1_8
+      call edbg('zone('//str(iZone)//') ij: '//str((/zp%ijs,zp%ije/),' - '))
+    enddo ! iZone/
+  endif
   !-------------------------------------------------------------
   ! Set f_grid_out
   !-------------------------------------------------------------
@@ -186,6 +173,7 @@ subroutine divide_map_into_zones_raster(&
   !-------------------------------------------------------------
   ! Case: Divided by lon0-line
   if( any(lon(hi:hf-1_8) == rad_0deg) )then
+  !if( .false. )then
     ih_lon0 = hi
     do while( lon(ih_lon0) /= rad_0deg )
       call add(ih_lon0)

@@ -1231,7 +1231,7 @@ subroutine calc_lat_range_large_arc(&
   south = min(lat1, lat2)
   north = max(lat1, lat2)
 
-  convex = arc_convex_monotone
+  convex = ARC_CONVEX_MONOTONE
   lontop = 0.d0
   lattop = 0.d0
   !-------------------------------------------------------------
@@ -1294,14 +1294,14 @@ subroutine calc_lat_range_large_arc(&
 
         if( lat1 < rad_0deg )then
           if( plat < south )then
-            convex = arc_convex_downward
+            convex = ARC_CONVEX_DOWNWARD
             lontop = plon
             lattop = plat
             south  = plat
           endif
         else
           if( plat > north )then
-            convex = arc_convex_upward
+            convex = ARC_CONVEX_UPWARD
             lontop = plon
             lattop = plat
             north  = plat
@@ -1326,14 +1326,14 @@ subroutine calc_lat_range_large_arc(&
 
         if( lat1 < rad_0deg )then
           if( plat < south )then
-            convex = arc_convex_downward
+            convex = ARC_CONVEX_DOWNWARD
             lontop = plon
             lattop = plat
             south  = plat
           endif
         else
           if( plat > north )then
-            convex = arc_convex_upward
+            convex = ARC_CONVEX_UPWARD
             lontop = plon
             lattop = plat
             north  = plat
