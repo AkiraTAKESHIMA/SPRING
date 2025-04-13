@@ -34,8 +34,8 @@ module common_rt_driv
   ! common2
   use common_type_rt
   use common_rt_base, only: &
-        init_rt_im_zone  , &
-        free_rt_main_data, &
+        init_rt_im_zone, &
+        free_rt_main   , &
         clear_rt_main
   use common_rt_io, only: &
         open_file_rt_im        , &
@@ -347,7 +347,7 @@ subroutine driv_make_rt_latlon_latlon(&
   call clear_unit_number_rt_im(rt%im)
 
   if( free_rtm )then
-    call free_rt_main_data(rt%main)
+    call free_rt_main(rt%main)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -562,7 +562,7 @@ subroutine driv_make_rt_latlon_raster(&
   call clear_unit_number_rt_im(rt%im)
 
   if( free_rtm )then
-    call free_rt_main_data(rt%main)
+    call free_rt_main(rt%main)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -767,7 +767,7 @@ subroutine driv_make_rt_latlon_polygon(&
   call clear_unit_number_rt_im(rt%im)
 
   if( free_rtm )then
-    call free_rt_main_data(rt%main)
+    call free_rt_main(rt%main)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -979,7 +979,7 @@ subroutine driv_make_rt_raster_raster(&
   !call clear_unit_number_rt_im(rt%im)
 
   if( free_rtm )then
-    call free_rt_main_data(rt%main)
+    call free_rt_main(rt%main)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1198,7 +1198,7 @@ subroutine driv_make_rt_raster_polygon(&
   call clear_unit_number_rt_im(rt%im)
 
   if( free_rtm )then
-    call free_rt_main_data(rt%main)
+    call free_rt_main(rt%main)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1403,7 +1403,7 @@ subroutine driv_make_rt_polygon_polygon(&
   call clear_unit_number_rt_im(rt%im)
 
   if( free_rtm )then
-    call free_rt_main_data(rt%main)
+    call free_rt_main(rt%main)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)

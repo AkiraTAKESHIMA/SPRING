@@ -160,8 +160,8 @@ module common_type_rt
 
   type rt_
     character(CLEN_VAR) :: id
-    character(:), allocatable :: nam
-    character(:), allocatable :: snam, tnam
+    character(CLEN_VAR*2+4) :: nam
+    character(CLEN_VAR)     :: snam, tnam
     type(rt_main_) :: main
     type(rt_vrf_)  :: vrf_source
     type(rt_vrf_)  :: vrf_target

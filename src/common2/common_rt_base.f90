@@ -17,7 +17,7 @@ module common_rt_base
   public :: init_rt_im_zone
 
   public :: free_rt
-  public :: free_rt_main_data
+  public :: free_rt_main
   public :: free_rt_vrf
 
   public :: clear_rt_main
@@ -40,9 +40,9 @@ subroutine init_rt(rt)
   call echo(code%bgn, 'init_rt', '-p -x2')
   !-------------------------------------------------------------
   rt%id = ''
-  allocate(character(1) :: rt%nam)
-  allocate(character(1) :: rt%snam)
-  allocate(character(1) :: rt%tnam)
+!  allocate(character(1) :: rt%nam)
+!  allocate(character(1) :: rt%snam)
+!  allocate(character(1) :: rt%tnam)
   rt%nam = ''
   rt%snam = ''
   rt%tnam = ''
@@ -270,19 +270,22 @@ subroutine free_rt(rt)
 
   call echo(code%bgn, 'free_rt', '-p -x2')
   !-------------------------------------------------------------
-  deallocate(rt%nam)
-  call clear_rt_main(rt%main)
+!  deallocate(rt%nam)
+  call free_rt_main(rt%main)
+  call free_rt_vrf(rt%vrf_source)
+  call free_rt_vrf(rt%vrf_target)
+  call free_rt_im(rt%im)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine free_rt
 !===============================================================
 !
 !===============================================================
-subroutine free_rt_main_data(rtm)
+subroutine free_rt_main(rtm)
   implicit none
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'free_rt_main_data', '-p -x2')
+  call echo(code%bgn, 'free_rt_main', '-p -x2')
   !-------------------------------------------------------------
   rtm%is_sorted_by_sidx = .false.
   rtm%is_sorted_by_tidx = .false.
@@ -294,7 +297,7 @@ subroutine free_rt_main_data(rtm)
   call realloc(rtm%coef, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine free_rt_main_data
+end subroutine free_rt_main
 !===============================================================
 !
 !===============================================================
@@ -304,11 +307,31 @@ subroutine free_rt_vrf(rtv)
 
   call echo(code%bgn, 'free_rt_vrf', '-p -x2')
   !-------------------------------------------------------------
-  rtv%nFiles = 0
-  nullify(rtv%f)
+  if( rtv%nFiles > 0 )then
+    rtv%nFiles = 0
+    deallocate(rtv%f)
+  endif
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine free_rt_vrf
+!===============================================================
+!
+!===============================================================
+subroutine free_rt_im(rtim)
+  implicit none
+  type(rt_im_), intent(inout), target :: rtim
+
+  call echo(code%bgn, 'free_rt_im', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( rtim%nZones > 0 )then
+    rtim%nZones = 0
+    deallocate(rtim%zone)
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine free_rt_im
 !===============================================================
 !
 !===============================================================
@@ -676,7 +699,8 @@ subroutine set_default_values_rt_im(rt)
   implicit none
   type(rt_), intent(inout), target :: rt
 
-  call echo(code%bgn, 'set_default_values_rt_im', '-p -x2')
+  !call echo(code%bgn, 'set_default_values_rt_im', '-p -x2')
+  call echo(code%bgn, 'set_default_values_rt_im')
   !-------------------------------------------------------------
   rt%im%un = 0
   rt%im%path = ''

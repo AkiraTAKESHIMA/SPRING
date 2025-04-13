@@ -38,13 +38,17 @@ module ls_gs
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
+  public :: initialize
+  public :: finalize
+
+  public :: point_grdsys
+
   public :: spring_define_grdsys_latlon
   public :: spring_define_grdsys_raster
   public :: spring_clear_grdsys
 
-  public :: initialize
-  public :: finalize
-  public :: point_grdsys
+  public :: spring_print_grdsys_name
+  public :: spring_print_grdsys
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
@@ -84,21 +88,57 @@ subroutine finalize()
         free_gs
   implicit none
 
-  integer :: i_gs
+  integer :: i
 
   call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE finalize', logopt())
   !-------------------------------------------------------------
   call assert_initialized(is_initialized, .true.)
   is_initialized = .false.
 
-  do i_gs = 1, size(lst_gs)
-    if( lst_gs(i_gs)%nam == '' ) cycle
-    call free_gs(lst_gs(i_gs))
+  do i = 1, size(lst_gs)
+    if( lst_gs(i)%nam == '' ) cycle
+    call free_gs(lst_gs(i))
   enddo
   deallocate(lst_gs)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine finalize
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine point_grdsys(name, a)
+  implicit none
+  character(*), intent(in) :: name
+  type(gs_)   , pointer    :: a    ! out
+
+  integer :: i_gs
+
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE point_grdsys', logopt())
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call assert_initialized(is_initialized, .true.)
+
+  do i_gs = 1, nmax_gs
+    if( lst_gs(i_gs)%nam == trim(name) )then
+      a => lst_gs(i_gs)
+      call echo(code%ret)
+      return
+    endif
+  enddo
+
+  call eerr('Grid system "'//str(name)//'" is undefined.')
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine point_grdsys
 !===============================================================
 !
 !===============================================================
@@ -374,7 +414,7 @@ subroutine spring_define_grdsys_raster(&
     elseif( present(idx8) )then
       call cpval(idx8, ar%idxmap)
     else
-      call eerr('Raster index map is not given.')
+      call eerr('No raster index map was given.')
     endif
   else
     !-----------------------------------------------------------
@@ -458,7 +498,7 @@ subroutine spring_define_grdsys_raster(&
     !-----------------------------------------------------------
     ! Case: no input
     else
-      call eerr('Raster index map is not given.')
+      call eerr('No raster index map was given.')
     endif
   endif
 
@@ -492,14 +532,6 @@ end subroutine spring_define_grdsys_raster
 !===============================================================
 !
 !===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
 subroutine spring_clear_grdsys(name)
   use common_gs_base, only: &
         free_gs
@@ -524,33 +556,68 @@ end subroutine spring_clear_grdsys
 !===============================================================
 !
 !===============================================================
-subroutine point_grdsys(name, a)
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine spring_print_grdsys_name()
   implicit none
-  character(*), intent(in) :: name
-  type(gs_)   , pointer    :: a    ! out
 
-  integer :: i_gs
+  integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE point_grdsys', logopt())
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE print_grdsys_name', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call assert_initialized(is_initialized, .true.)
-
-  nullify(a)
-  do i_gs = 1, nmax_gs
-    if( lst_gs(i_gs)%nam == trim(name) )then
-      a => lst_gs(i_gs)
-      exit
-    endif
+  call edbg('Grid systems:')
+  do i = 1, size(lst_gs)
+    if( lst_gs(i)%nam == '' ) cycle
+    call edbg('  ('//str(i,dgt(size(lst_gs)))//') '//str(lst_gs(i)%nam))
   enddo
-
-  if( .not. associated(a) )then
-    call eerr('Grid system "'//str(name)//'" has not been defined.')
-  endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine point_grdsys
+end subroutine spring_print_grdsys_name
+!===============================================================
+!
+!===============================================================
+subroutine spring_print_grdsys(name)
+  implicit none
+  character(*), intent(in) :: name
+
+  type(gs_), pointer :: a
+  type(gs_latlon_) , pointer :: al
+  type(gs_raster_) , pointer :: ar
+  type(gs_polygon_), pointer :: ap
+
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE print_grdsys', logopt())
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call point_grdsys(name, a)
+
+  call edbg('gs_type: '//str(a%gs_type))
+
+  selectcase( a%gs_type )
+  case( GS_TYPE_LATLON )
+    al => a%latlon
+    call edbg('  nx: '//str(al%nx)//', ny: '//str(al%ny))
+  case( GS_TYPE_RASTER )
+    ar => a%raster
+    call edbg('  nx: '//str(ar%nx)//', ny: '//str(ar%ny))
+  case( GS_TYPE_POLYGON )
+    ap => a%polygon
+    call edbg('  np: '//str(ap%np)//', nij: '//str(ap%nij))
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  a%gs_type: '//str(a%gs_type))
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine spring_print_grdsys
 !===============================================================
 !
 !===============================================================

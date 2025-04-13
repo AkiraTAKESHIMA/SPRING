@@ -1,14 +1,20 @@
 program main
   use libspring, only: &
-        spring_initialize, &
-        spring_finalize, &
-        spring_set_logopt, &
+        spring_initialize          , &
+        spring_finalize            , &
+        spring_set_logopt          , &
         spring_define_grdsys_latlon, &
         spring_define_grdsys_raster, &
-        spring_make_rmptbl, &
-        spring_remap_data, &
-        spring_get_rmptbl_length, &
-        spring_get_rmptbl_data
+        spring_clear_grdsys        , &
+        spring_print_grdsys_name   , &
+        spring_print_grdsys        , &
+        spring_make_rmptbl         , &
+        spring_clear_rmptbl        , &
+        spring_get_rmptbl_length   , &
+        spring_get_rmptbl_data     , &
+        spring_print_rmptbl_name   , &
+        spring_print_rmptbl        , &
+        spring_remap
   implicit none
   !-------------------------------------------------------------
   !
@@ -108,7 +114,7 @@ subroutine remap_latlon_latlon()
   print*, 'coef', minval(rtcoef), maxval(rtcoef)
 
   ! Remap
-  call spring_remap_data('rt1', sdat, tdat, smiss, tmiss)
+  call spring_remap('rt1', sdat, tdat, smiss, tmiss)
   print*, 'sdat', minval(sdat), maxval(sdat)
   print*, 'tdat', minval(tdat), maxval(tdat)
 
@@ -131,7 +137,6 @@ subroutine remap_raster_raster()
   integer :: aidx_miss
 
   integer :: nbdx, nbdy
-  real(8) :: bwest, beast, bsouth, bnorth
   integer, allocatable :: bidxmap(:,:)
   integer :: bidx_miss
 
@@ -152,7 +157,8 @@ subroutine remap_raster_raster()
 
   allocate(aidxmap(nadx,nady))
   open(11, file='../../dat/grid_system/NLI/wsCode/mesh5/5340.bin', &
-       form='unformatted', access='direct', recl=nadx*nady*4, status='old')
+       form='unformatted', access='direct', recl=nadx*nady*4, &
+       convert='little_endian', status='old')
   read(11, rec=1) aidxmap
   close(11)
 
@@ -168,7 +174,8 @@ subroutine remap_raster_raster()
 
   allocate(bidxmap(nbdx,nbdy))
   open(11, file='../../dat/grid_system/CaMa-Flood/CaMa_v407/glb_06min/matsiro/1min/raster/index_river.bin', &
-       form='unformatted', access='direct', recl=nbdx*nbdy*4, status='old')
+       form='unformatted', access='direct', recl=nbdx*nbdy*4, &
+       convert='little_endian', status='old')
   read(11, rec=1) bidxmap
   close(11)
 
@@ -178,6 +185,24 @@ subroutine remap_raster_raster()
   !
   !-------------------------------------------------------------
   call spring_make_rmptbl('rt1', 'NLI', 'CMF')
+  !-------------------------------------------------------------
+  ! Test "clear_grdsys"
+  !-------------------------------------------------------------
+  call spring_print_grdsys_name()
+
+  call spring_clear_grdsys('CMF')
+
+  call spring_print_grdsys_name()
+  !-------------------------------------------------------------
+  ! Test "clear_rt"
+  !-------------------------------------------------------------
+  call spring_print_rmptbl_name()
+
+  call spring_print_rmptbl('rt1')
+
+  call spring_clear_rmptbl('rt1')
+
+  call spring_print_rmptbl_name()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

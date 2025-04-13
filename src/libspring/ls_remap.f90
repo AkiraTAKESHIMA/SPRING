@@ -18,304 +18,23 @@ module ls_remap
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: spring_get_rmptbl_length
-  public :: spring_get_rmptbl_data
-  public :: spring_make_rmptbl
-  public :: spring_remap_data
-
-  public :: initialize
-  public :: finalize
+  public :: spring_remap
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
   character(32), parameter :: PROCMOD = 'MODULE ls_remap'
-
-  type(rt_), pointer :: lst_rt(:)
-  integer, parameter :: size_lst_rt = 12
-  integer, save :: nmax_rt = 0
-
-  logical :: is_initialized = .false.
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine initialize(size_lst_rt)
-  implicit none
-  integer, intent(in) :: size_lst_rt
-
-  integer :: i
-
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE initialize', logopt())
-  !-------------------------------------------------------------
-  call assert_initialized(is_initialized, .false.)
-  is_initialized = .true.
-
-  allocate(lst_rt(size_lst_rt))
-  do i = 1, size(lst_rt)
-    lst_rt(i)%nam = ''
-  enddo
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine initialize
-!===============================================================
-!
-!===============================================================
-subroutine finalize()
-  implicit none
-
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE finalize', logopt())
-  !-------------------------------------------------------------
-  call assert_initialized(is_initialized, .true.)
-  is_initialized = .false.
-
-  deallocate(lst_rt)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine finalize
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-integer function find_rt(rtname) result(res)
-  implicit none
-  character(*), intent(in) :: rtname
-
-  integer :: i_rt
-
-  call echo(code%bgn, 'find_rt', logopt())
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call assert_initialized(is_initialized, .true.)
-
-  res = 0
-  do i_rt = 1, nmax_rt
-    if( lst_rt(i_rt)%nam == trim(rtname) )then
-      res = i_rt
-      call echo(code%ret)
-      return
-    endif
-  enddo
-
-  call eerr('Remapping table "'//str(rtname)//'" is not defined.')
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end function find_rt
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine spring_get_rmptbl_length(rtname, nij)
-  implicit none
-  character(*), intent(in) :: rtname
-  integer(8)  , intent(out) :: nij
-
-  call echo(code%bgn, 'spring_get_rmptbl_length', logopt())
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  nij = lst_rt(find_rt(rtname))%main%nij
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine spring_get_rmptbl_length
-!===============================================================
-!
-!===============================================================
-subroutine spring_get_rmptbl_data(&
-    rtname, sidx, tidx, area, coef)
-  implicit none
-  character(*), intent(in)  :: rtname
-  integer(8)  , intent(out), optional :: sidx(:)
-  integer(8)  , intent(out), optional :: tidx(:)
-  real(8)     , intent(out), optional :: area(:)
-  real(8)     , intent(out), optional :: coef(:)
-
-  type(rt_main_), pointer :: rtm
-
-  call echo(code%bgn, 'spring_get_rmptbl_data', logopt())
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call assert_initialized(is_initialized, .true.)
-
-  rtm => lst_rt(find_rt(rtname))%main
-
-  if( present(sidx) )then
-    if( rtm%nij /= size(sidx) )then
-      call eerr('Size of $sidx is invalid.'//&
-              '\n  Size of $sidx             : '//str(size(sidx))//&
-              '\n  Actual length of the table: '//str(rtm%nij))
-    endif
-    sidx(:) = rtm%sidx(:)
-  endif
-
-  if( present(tidx) )then
-    if( rtm%nij /= size(tidx) )then
-      call eerr('Size of $tidx is invalid.'//&
-              '\n  Size of $tidx             : '//str(size(tidx))//&
-              '\n  Actual length of the table: '//str(rtm%nij))
-    endif
-    tidx(:) = rtm%tidx(:)
-  endif
-
-  if( present(area) )then
-    if( rtm%nij /= size(area) )then
-      call eerr('Size of $area is invalid.'//&
-              '\n  Size of $area             : '//str(size(area))//&
-              '\n  Actual length of the table: '//str(rtm%nij))
-    endif
-    area(:) = rtm%area(:rtm%nij)
-  endif
-
-  if( present(coef) )then
-    if( rtm%nij /= size(coef) )then
-      call eerr('Size of $coef is invalid.'//&
-              '\n  Size of $coef             : '//str(size(coef))//&
-              '\n  Actual length of the table: '//str(rtm%nij))
-    endif
-    coef(:) = rtm%coef(:)
-  endif
-
-  nullify(rtm)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine spring_get_rmptbl_data
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine spring_make_rmptbl(rtname, sname, tname)
-  ! common1
-  use common_opt_set, only: &
-        set_default_values_opt_sys, &
-        set_default_values_opt_log, &
-        set_default_values_opt_earth
-  ! common2
-  use common_rt_base, only: &
-        init_rt, &
-        set_default_values_rt
-  ! common3
-  use common_rt_driv, only: &
-        make_rt
-  ! this
-  use ls_gs, only: &
-        point_grdsys
-  implicit none
-  character(*), intent(in) :: rtname
-  character(*), intent(in) :: sname, tname
-
-  type(gs_), pointer :: s, t
-  type(rt_), pointer :: rt
-  type(opt_sys_) :: opt_sys
-  type(opt_log_) :: opt_log
-  type(opt_earth_) :: opt_earth
-  integer :: i_rt
-  logical :: output = .false.
-  logical :: free_sgrid = .false.
-  logical :: free_tgrid = .false.
-  logical :: free_rtm = .false.
-  logical :: was_rtm_saved
-  logical :: was_rtv_src_saved, was_rtv_tgt_saved
-
-  call echo(code%bgn, 'spring_make_rmptbl', logopt())
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call assert_initialized(is_initialized, .true.)
-
-  if( rtname == '' )then
-    call eerr('$rtname must not be an empty string.')
-  endif
-
-  nullify(rt)
-  do i_rt = 1, size(lst_rt)
-    if( lst_rt(i_rt)%nam == '' )then
-      rt => lst_rt(i_rt)
-      nmax_rt = max(i_rt, nmax_rt)
-      exit
-    endif
-  enddo
-
-  if( .not. associated(rt) )then
-    call eerr('No slot for remapping table is left.')
-  endif
-  !-------------------------------------------------------------
-  ! Prepare
-  !-------------------------------------------------------------
-  call set_default_values_opt_sys(opt_sys)
-  call set_default_values_opt_log(opt_log)
-  call set_default_values_opt_earth(opt_earth)
-
-  opt_sys%old_files = OPT_OLD_FILES_REMOVE
-  opt_log%print_summary = .false.
-  opt_log%write_summary = .false.
-
-  call init_rt(rt)
-  rt%nam = rtname
-  rt%snam = sname
-  rt%tnam = tname
-  rt%id = 'lst_rt('//str(i_rt)//')'
-  call set_default_values_rt(rt)
-  rt%im%path = joined(opt_sys%dir_im, 'spring.rt.im')
-
-  call point_grdsys(sname, s)
-  call point_grdsys(tname, t)
-  s%cmn%is_source = .true.
-  t%cmn%is_source = .false.
-  !-------------------------------------------------------------
-  ! Make a remapping table
-  !-------------------------------------------------------------
-  call make_rt(s, t, rt, opt_sys, opt_log, opt_earth, &
-               output, free_sgrid, free_tgrid, free_rtm, &
-               was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  nullify(s)
-  nullify(t)
-
-  nullify(rt)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine spring_make_rmptbl
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine spring_remap_data(&
+subroutine spring_remap(&
     rtname, sdata, tdata, &
     smiss, tmiss)
   use ls_gs, only: &
         point_grdsys
+  use ls_rt, only: &
+        point_rt
   implicit none
   character(*), intent(in)  :: rtname
   real(8)     , intent(in)  :: sdata(:,:)
@@ -338,7 +57,7 @@ subroutine spring_remap_data(&
   integer(8) :: ij
   integer(8) :: loc
 
-  call echo(code%bgn, 'spring_remap_data', logopt())
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_remap', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -350,11 +69,9 @@ subroutine spring_remap_data(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  rt => lst_rt(find_rt(rtname))
+  call point_rt(rtname, rt)
   rtm => rt%main
 
-  nullify(s)
-  nullify(t)
   call point_grdsys(rt%snam, s)
   call point_grdsys(rt%tnam, t)
 
@@ -421,8 +138,15 @@ subroutine spring_remap_data(&
     enddo
   enddo
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  nullify(s, t)
+
+  nullify(rtm)
+  nullify(rt)
+  !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine spring_remap_data
+end subroutine spring_remap
 !===============================================================
 !
 !===============================================================

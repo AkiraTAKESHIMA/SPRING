@@ -65,8 +65,6 @@ subroutine make_rt_raster_raster(a, b, rt, opt_sys, opt_earth)
   real(8) :: lapara
   integer(8), parameter :: IJSIZE_INIT = 4_8
 
-real(8) :: lapara_sum
-
   call echo(code%bgn, 'make_rt_raster_raster')
   !-------------------------------------------------------------
   ! Set pointers
@@ -159,8 +157,6 @@ real(8) :: lapara_sum
   enddo
   enddo
 
-  lapara_sum = 0.d0
-
   do iav = azr%vi, azr%vf
     avr => ar%vrel(iav)
     if( avr%vi == 0_8 ) cycle
@@ -229,8 +225,6 @@ real(8) :: lapara_sum
 
             lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh)) &
                        * ar%wgtmap(iah,iav) * br%wgtmap(ibh,ibv)
-
-            call add(lapara_sum, lapara)
 
             if( rt1%mij == 0_8 )then
               rt1%mij = 1_8

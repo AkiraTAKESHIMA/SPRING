@@ -1156,7 +1156,8 @@ subroutine free_gs(a)
     if( associated(al%lon) )&
     deallocate(al%lon, al%lat, al%lonwidth, al%latwidth, al%lon0)
 
-    if( associated(al%idxmap) ) deallocate(al%idxmap, al%wgtmap)
+    if( associated(al%idxmap) ) deallocate(al%idxmap)
+    if( associated(al%wgtmap) ) deallocate(al%wgtmap)
 
     if( associated(al%hrel) ) deallocate(al%hrel, al%vrel)
 
@@ -1191,7 +1192,8 @@ subroutine free_gs(a)
     if( associated(ar%lon) )&
     deallocate(ar%lon, ar%lat, ar%lonwidth, ar%latwidth, ar%lon0)
 
-    if( associated(ar%idxmap) ) deallocate(ar%idxmap, ar%wgtmap)
+    if( associated(ar%idxmap) ) deallocate(ar%idxmap)
+    if( associated(ar%wgtmap) ) deallocate(ar%wgtmap)
 
     if( associated(ar%idxmapall1) ) deallocate(ar%idxmapall1)
     if( associated(ar%idxmapall2) ) deallocate(ar%idxmapall2)
