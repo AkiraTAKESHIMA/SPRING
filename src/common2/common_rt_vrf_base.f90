@@ -97,33 +97,23 @@ subroutine set_default_values_file_rt_vrf(rtv, iFile)
 
   fvrf%form = ''
 
-  fvrf%out_grdidx      = file('', dtype_int4, 1, endian_default, action=action_write)
-  fvrf%out_grdara_true = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_grdara_rt   = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_rerr_grdara = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_grdnum      = file('', dtype_int4, 1, endian_default, action=action_write)
-  fvrf%out_iarea_sum   = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_ifrac_sum   = file('', dtype_dble, 1, endian_default, action=action_write)
+  call set_file_default(action=ACTION_WRITE)
 
-  fvrf%out_tmp_grdidx      = file('', dtype_int8, 1, endian_default, action=action_write)
-  fvrf%out_tmp_grdara_true = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_tmp_grdara_rt   = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_tmp_rerr_grdara = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_tmp_grdnum      = file('', dtype_int4, 1, endian_default, action=action_write)
+  fvrf%out_grdidx      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_grdidx')
+  fvrf%out_grdara_true = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_grdara_true')
+  fvrf%out_grdara_rt   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_grdara_rt')
+  fvrf%out_rerr_grdara = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_rerr_grdara')
+  fvrf%out_grdnum      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_grdnum')
+  fvrf%out_iarea_sum   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_iarea_sum')
+  fvrf%out_iratio_sum  = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_iratio_sum')
 
-  fvrf%out_grdidx%id      = trim(fvrf%id)//'%out_grdidx'
-  fvrf%out_grdara_true%id = trim(fvrf%id)//'%out_grdara_true'
-  fvrf%out_grdara_rt%id   = trim(fvrf%id)//'%out_grdara_rt'
-  fvrf%out_rerr_grdara%id = trim(fvrf%id)//'%out_rerr_grdara'
-  fvrf%out_grdnum%id      = trim(fvrf%id)//'%out_grdnum'
-  fvrf%out_iarea_sum%id   = trim(fvrf%id)//'%out_iarea_sum'
-  fvrf%out_ifrac_sum%id   = trim(fvrf%id)//'%out_ifrac_sum'
+  fvrf%out_tmp_grdidx      = file(dtype=DTYPE_INT8, id=trim(fvrf%id)//'%out_tmp_grdidx')
+  fvrf%out_tmp_grdara_true = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_grdara_true')
+  fvrf%out_tmp_grdara_rt   = file(dtype=DTYPE_DBEL, id=trim(fvrf%id)//'%out_tmp_grdara_rt')
+  fvrf%out_tmp_rerr_grdara = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_rerr_grdara')
+  fvrf%out_tmp_grdnum      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_tmp_grdnum')
 
-  fvrf%out_tmp_grdidx%id      = trim(fvrf%id)//'%out_tmp_grdidx'
-  fvrf%out_tmp_grdara_true%id = trim(fvrf%id)//'%out_tmp_grdara_true'
-  fvrf%out_tmp_grdara_rt%id   = trim(fvrf%id)//'%out_tmp_grdara_rt'
-  fvrf%out_tmp_rerr_grdara%id = trim(fvrf%id)//'%out_tmp_rerr_grdara'
-  fvrf%out_tmp_grdnum%id      = trim(fvrf%id)//'%out_tmp_grdnum'
+  call reset_file_default()
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_file_rt_vrf

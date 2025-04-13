@@ -39,7 +39,7 @@ module common_rt_raster_polygon
 
   real(8), pointer :: iarea(:,:)
   real(8), pointer :: iarea_sum(:,:)
-  real(8), pointer :: ifrac_sum(:,:)
+  real(8), pointer :: iratio_sum(:,:)
   
 
   logical :: debug_a = .false.
@@ -63,7 +63,7 @@ subroutine initialize(ac, bc)
   !-------------------------------------------------------------
   nullify(iarea)
   nullify(iarea_sum)
-  nullify(ifrac_sum)
+  nullify(iratio_sum)
 
   debug_a = ac%debug
   aidx_debug = ac%idx_debug
@@ -87,7 +87,7 @@ subroutine finalize()
   !-------------------------------------------------------------
   call realloc(iarea, 0)
   call realloc(iarea_sum, 0)
-  call realloc(ifrac_sum, 0)
+  call realloc(iratio_sum, 0)
 
   debug_a = .false.
   debug_b = .false.
@@ -95,6 +95,7 @@ subroutine finalize()
   aidx_debug = 0_8
   bidx_debug = 0_8
   !-------------------------------------------------------------
+  call echo(code%ret)
 end subroutine finalize
 !===============================================================
 !
@@ -107,7 +108,7 @@ subroutine make_rt_raster_polygon(&
         update_iarea_polygon, &
         update_iarea_sum, &
         fill_miss_iarea_sum, &
-        calc_ifrac_sum, &
+        calc_iratio_sum, &
         update_rt1d
   implicit none
   type(gs_)       , intent(inout), target :: a  ! raster
@@ -135,9 +136,9 @@ subroutine make_rt_raster_polygon(&
   integer(8) :: bij, bijs
   integer :: iFile_rtv
   real(8), pointer, save :: iarea(:,:)                     ![2024/11/19 bug fix]
-  real(8), pointer, save :: iarea_sum(:,:), ifrac_sum(:,:) ![2024/11/19 bug fix]
-  logical :: is_iarea_updated
-  logical :: is_calc_iarea_sum, is_calc_ifrac_sum
+  real(8), pointer, save :: iarea_sum(:,:), iratio_sum(:,:) ![2024/11/19 bug fix]
+  logical :: iarea_is_updated
+  logical :: if_calc_iarea_sum, if_calc_iratio_sum
   integer, parameter :: buffer_iarea = 1
   integer, parameter :: buffer_iarea_sum = 0
   logical, parameter :: make_rt = .true.
@@ -215,18 +216,18 @@ subroutine make_rt_raster_polygon(&
     rtv => rt%vrf_target
   endif
 
-  is_calc_iarea_sum = .false.
-  is_calc_ifrac_sum = .false.
+  if_calc_iarea_sum = .false.
+  if_calc_iratio_sum = .false.
   do iFile_rtv = 1, rtv%nFiles
     fvrf => rtv%f(iFile_rtv)
-    is_calc_iarea_sum = fvrf%out_iarea_sum%path /= ''
-    is_calc_ifrac_sum = fvrf%out_ifrac_sum%path /= ''
+    if_calc_iarea_sum = fvrf%out_iarea_sum%path /= ''
+    if_calc_iratio_sum = fvrf%out_iratio_sum%path /= ''
   enddo
 
   call edbg('Preparing module variables')
   call set_modvars(ar, bp, make_rt)
   call alloc_iarea(iarea, buffer_iarea)
-  if( is_calc_iarea_sum )then
+  if( if_calc_iarea_sum )then
     call alloc_iarea(iarea_sum, buffer_iarea_sum)
   endif
 
@@ -250,11 +251,11 @@ subroutine make_rt_raster_polygon(&
     !-----------------------------------------------------------
     ! Calc. intersection area
     !-----------------------------------------------------------
-    call update_iarea_polygon(iarea, bp0, is_iarea_updated, ar%idxmap)
+    call update_iarea_polygon(iarea, bp0, iarea_is_updated, ar%idxmap)
 !<time_measurement>
-    if( is_iarea_updated )then
+    if( iarea_is_updated )then
       call update_rt1d(rt1d(bij), iarea, ar%idxmap, ar%wgtmap, ag%idx, ag%idxarg)
-      if( is_calc_iarea_sum )then
+      if( if_calc_iarea_sum )then
         call update_iarea_sum(iarea_sum, iarea)
       endif
     endif
@@ -263,7 +264,7 @@ subroutine make_rt_raster_polygon(&
     ! Output intermediates
     !-----------------------------------------------------------
 !<time_measurement>
-    if( is_iarea_updated )then
+    if( iarea_is_updated )then
       if( rt%im%nij_ulim > 0_8 )then
         if( rtm%nij > rt%im%nij_ulim )then
           call echo(code%ent, 'Outputting intermediates')
@@ -307,17 +308,17 @@ subroutine make_rt_raster_polygon(&
   ! Fill missing values for missing rasters
   !-------------------------------------------------------------
 !<time_measurement>
-  if( is_calc_iarea_sum )then
+  if( if_calc_iarea_sum )then
     call fill_miss_iarea_sum(iarea_sum, ar%idxmap)
   endif
 !<time_measurement/>
   !-------------------------------------------------------------
-  ! Calc. $ifrac_sum
+  ! Calc. $iratio_sum
   !-------------------------------------------------------------
 !<time_measurement>
-  if( is_calc_ifrac_sum )then
-    call alloc_iarea(ifrac_sum, buffer_iarea_sum)
-    call calc_ifrac_sum(ifrac_sum, iarea_sum, ar%idxmap)
+  if( if_calc_iratio_sum )then
+    call alloc_iarea(iratio_sum, buffer_iarea_sum)
+    call calc_iratio_sum(iratio_sum, iarea_sum, ar%idxmap)
   endif
 !<time_measurement/>
   !-------------------------------------------------------------
@@ -325,18 +326,18 @@ subroutine make_rt_raster_polygon(&
   !-------------------------------------------------------------
 !<time_measurement>
   if( .not. ar%is_south_to_north )then
-    if( is_calc_iarea_sum )then
+    if( if_calc_iarea_sum )then
       call reverse(iarea_sum, 2)
     endif
-    if( is_calc_ifrac_sum )then
-      call reverse(ifrac_sum, 2)
+    if( if_calc_iratio_sum )then
+      call reverse(iratio_sum, 2)
     endif
   endif
 !<time_measurement/>
   !-------------------------------------------------------------
   ! Output raster data for verification
   !-------------------------------------------------------------
-  if( is_calc_iarea_sum .or. is_calc_ifrac_sum )then
+  if( if_calc_iarea_sum .or. if_calc_iratio_sum )then
     call echo(code%ent, 'Outputting raster data for verification')
 
     do iFile_rtv = 1, rtv%nFiles
@@ -349,10 +350,10 @@ subroutine make_rt_raster_polygon(&
                   sz=(/ar%nh,ar%nv/), lb=(/azl%xi,azl%yi/), fill=0.d0)
       endif
 
-      f => fvrf%out_ifrac_sum
+      f => fvrf%out_iratio_sum
       if( f%path /= '' )then
-        call edbg('Writing ifrac_sum '//str(fileinfo(f)))
-        call wbin(ifrac_sum, f%path, f%dtype, f%endian, f%rec, &
+        call edbg('Writing iratio_sum '//str(fileinfo(f)))
+        call wbin(iratio_sum, f%path, f%dtype, f%endian, f%rec, &
                   sz=(/ar%nh,ar%nv/), lb=(/azl%xi,azl%yi/), fill=0.d0)
       endif
     enddo  ! iFile_rtv/
@@ -362,8 +363,8 @@ subroutine make_rt_raster_polygon(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( is_calc_iarea_sum ) deallocate(iarea_sum)
-  if( is_calc_ifrac_sum ) deallocate(ifrac_sum)
+  if( if_calc_iarea_sum ) deallocate(iarea_sum)
+  if( if_calc_iratio_sum ) deallocate(iratio_sum)
 
   deallocate(rt1d)
 

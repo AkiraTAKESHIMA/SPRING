@@ -417,7 +417,7 @@ recursive subroutine echo(cd, msg, opt)
     ! Set indent
     !-----------------------------------------------------------
     if( indent == indent_miss ) indent = ls%indent
-    indent = indent + indentInc
+    !indent = indent + indentInc
     !-----------------------------------------------------------
     ! Echo message
     !-----------------------------------------------------------

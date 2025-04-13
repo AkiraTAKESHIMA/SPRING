@@ -22,7 +22,7 @@ module common_area_raster_polygon
   public :: update_iarea_polygon
   public :: update_iarea_sum
   public :: fill_miss_iarea_sum
-  public :: calc_ifrac_sum
+  public :: calc_iratio_sum
 
   public :: update_rt1d
   !-------------------------------------------------------------
@@ -597,35 +597,38 @@ end subroutine fill_miss_iarea_sum
 !===============================================================
 !
 !===============================================================
-subroutine calc_ifrac_sum(ifrac_sum, iarea_sum, sidxmap)
+subroutine calc_iratio_sum(iratio_sum, iarea_sum, sidxmap)
   implicit none
-  real(8), pointer :: ifrac_sum(:,:)  ! out
+  real(8), pointer :: iratio_sum(:,:)  ! out
   real(8), pointer :: iarea_sum(:,:)  ! in
   integer(8), pointer, optional :: sidxmap(:,:)  ! in
 
   integer(8) :: idh, idv
 
-  call echo(code%bgn, 'calc_ifrac_sum', '-p -x2')
+  call echo(code%bgn, 'calc_iratio_sum', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( present(sidxmap) )then
-    ifrac_sum(:,:) = vrf_val_miss
     do idv = sdvi, sdvf
       do idh = sdhi, sdhf
-        if( sidxmap(idh,idv) /= sidx_miss )then
-          ifrac_sum(idh,idv) = iarea_sum(idh,idv) / dara(idv)
+        if( sidxmap(idh,idv) == sidx_miss )then
+          iratio_sum(idh,idv) = vrf_val_miss
+        else
+          iratio_sum(idh,idv) = iarea_sum(idh,idv) / dara(idv)
         endif
       enddo
     enddo
   else
     do idv = sdvi, sdvf
-      ifrac_sum(:,idv) = iarea_sum(:,idv) / dara(idv)
+      do idh = sdhi, sdhf
+        iratio_sum(idh,idv) = iarea_sum(idh,idv) / dara(idv)
+      enddo
     enddo
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine calc_ifrac_sum
+end subroutine calc_iratio_sum
 !===============================================================
 !
 !===============================================================

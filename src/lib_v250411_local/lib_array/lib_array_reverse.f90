@@ -1,11 +1,13 @@
 module lib_array_reverse
   use lib_log, only: &
-    CODE, &
-    str, &
-    dgt, &
-    echo, &
-    edbg, &
-    eerr
+        CODE, &
+        str, &
+        dgt, &
+        echo, &
+        edbg, &
+        eerr
+  use lib_array_copy, only: &
+        cpval
   implicit none
   private
   !-------------------------------------------------------------
@@ -112,9 +114,9 @@ subroutine reverse_int1_2d(arr, d)
   case( 2 )
     allocate(tmp(imax))
     do j = 1_8, jmax/2
-      tmp(:) = arr(:,j)
-      arr(:,j) = arr(:,jmax-j+1)
-      arr(:,jmax-j+1) = tmp(:)
+      call cpval(arr(:,j), tmp)
+      call cpval(arr(:,jmax-j+1_8), arr(:,j))
+      call cpval(tmp, arr(:,jmax-j+1_8))
     enddo
     deallocate(tmp)
   case default
@@ -211,9 +213,9 @@ subroutine reverse_int2_2d(arr, d)
   case( 2 )
     allocate(tmp(imax))
     do j = 1_8, jmax/2
-      tmp(:) = arr(:,j)
-      arr(:,j) = arr(:,jmax-j+1)
-      arr(:,jmax-j+1) = tmp(:)
+      call cpval(arr(:,j), tmp)
+      call cpval(arr(:,jmax-j+1_8), arr(:,j))
+      call cpval(tmp, arr(:,jmax-j+1_8))
     enddo
     deallocate(tmp)
   case default
@@ -308,9 +310,9 @@ subroutine reverse_int4_2d(arr, d)
   case( 2 )
     allocate(tmp(imax))
     do j = 1_8, jmax/2
-      tmp(:) = arr(:,j)
-      arr(:,j) = arr(:,jmax-j+1)
-      arr(:,jmax-j+1) = tmp(:)
+      call cpval(arr(:,j), tmp)
+      call cpval(arr(:,jmax-j+1_8), arr(:,j))
+      call cpval(tmp, arr(:,jmax-j+1_8))
     enddo
     deallocate(tmp)
   case default
@@ -407,9 +409,9 @@ subroutine reverse_int8_2d(arr, d)
   case( 2 )
     allocate(tmp(imax))
     do j = 1_8, jmax/2
-      tmp(:) = arr(:,j)
-      arr(:,j) = arr(:,jmax-j+1)
-      arr(:,jmax-j+1) = tmp(:)
+      call cpval(arr(:,j), tmp)
+      call cpval(arr(:,jmax-j+1_8), arr(:,j))
+      call cpval(tmp, arr(:,jmax-j+1_8))
     enddo
     deallocate(tmp)
   case default
@@ -506,9 +508,9 @@ subroutine reverse_real_2d(arr, d)
   case( 2 )
     allocate(tmp(imax))
     do j = 1_8, jmax/2
-      tmp(:) = arr(:,j)
-      arr(:,j) = arr(:,jmax-j+1)
-      arr(:,jmax-j+1) = tmp(:)
+      call cpval(arr(:,j), tmp)
+      call cpval(arr(:,jmax-j+1_8), arr(:,j))
+      call cpval(tmp, arr(:,jmax-j+1_8))
     enddo
     deallocate(tmp)
   case default
@@ -603,9 +605,9 @@ subroutine reverse_dble_2d(arr, d)
   case( 2 )
     allocate(tmp(imax))
     do j = 1_8, jmax/2
-      tmp(:) = arr(:,j)
-      arr(:,j) = arr(:,jmax-j+1)
-      arr(:,jmax-j+1) = tmp(:)
+      call cpval(arr(:,j), tmp)
+      call cpval(arr(:,jmax-j+1_8), arr(:,j))
+      call cpval(tmp, arr(:,jmax-j+1_8))
     enddo
     deallocate(tmp)
   case default
@@ -688,7 +690,7 @@ function reversed_int1_1d(iarr) result(oarr)
   integer(1), intent(in) :: iarr(:)
   integer(1)             :: oarr(size(iarr,kind=8))
 
-  oarr(:) = iarr(:)
+  call cpval(iarr, oarr)
   call reverse(oarr)
 end function reversed_int1_1d
 !===============================================================
@@ -700,7 +702,7 @@ function reversed_int1_2d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(1)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8))
 
-  oarr(:,:) = iarr(:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int1_2d
 !===============================================================
@@ -712,7 +714,7 @@ function reversed_int1_3d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(1)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8),size(iarr,3,kind=8))
 
-  oarr(:,:,:) = iarr(:,:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int1_3d
 !===============================================================
@@ -723,7 +725,7 @@ function reversed_int2_1d(iarr) result(oarr)
   integer(2), intent(in) :: iarr(:)
   integer(2)             :: oarr(size(iarr,kind=8))
 
-  oarr(:) = iarr(:)
+  call cpval(iarr, oarr)
   call reverse(oarr)
 end function reversed_int2_1d
 !===============================================================
@@ -735,7 +737,7 @@ function reversed_int2_2d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(2)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8))
 
-  oarr(:,:) = iarr(:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int2_2d
 !===============================================================
@@ -747,7 +749,7 @@ function reversed_int2_3d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(2)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8),size(iarr,3,kind=8))
 
-  oarr(:,:,:) = iarr(:,:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int2_3d
 !===============================================================
@@ -758,7 +760,7 @@ function reversed_int4_1d(iarr) result(oarr)
   integer(4), intent(in) :: iarr(:)
   integer(4)             :: oarr(size(iarr,kind=8))
 
-  oarr(:) = iarr(:)
+  call cpval(iarr, oarr)
   call reverse(oarr)
 end function reversed_int4_1d
 !===============================================================
@@ -770,7 +772,7 @@ function reversed_int4_2d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(4)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8))
 
-  oarr(:,:) = iarr(:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int4_2d
 !===============================================================
@@ -782,7 +784,7 @@ function reversed_int4_3d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(4)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8),size(iarr,3,kind=8))
 
-  oarr(:,:,:) = iarr(:,:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int4_3d
 !===============================================================
@@ -793,7 +795,7 @@ function reversed_int8_1d(iarr) result(oarr)
   integer(8), intent(in) :: iarr(:)
   integer(8)             :: oarr(size(iarr,kind=8))
 
-  oarr(:) = iarr(:)
+  call cpval(iarr, oarr)
   call reverse(oarr)
 end function reversed_int8_1d
 !===============================================================
@@ -805,7 +807,7 @@ function reversed_int8_2d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(8)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8))
 
-  oarr(:,:) = iarr(:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int8_2d
 !===============================================================
@@ -817,7 +819,7 @@ function reversed_int8_3d(iarr, d) result(oarr)
   integer   , intent(in) :: d
   integer(8)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8),size(iarr,3,kind=8))
 
-  oarr(:,:,:) = iarr(:,:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_int8_3d
 !===============================================================
@@ -828,7 +830,7 @@ function reversed_real_1d(iarr) result(oarr)
   real(4), intent(in) :: iarr(:)
   real(4)             :: oarr(size(iarr,kind=8))
 
-  oarr(:) = iarr(:)
+  call cpval(iarr, oarr)
   call reverse(oarr)
 end function reversed_real_1d
 !===============================================================
@@ -840,7 +842,7 @@ function reversed_real_2d(iarr, d) result(oarr)
   integer, intent(in) :: d
   real(4)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8))
 
-  oarr(:,:) = iarr(:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_real_2d
 !===============================================================
@@ -852,7 +854,7 @@ function reversed_real_3d(iarr, d) result(oarr)
   integer, intent(in) :: d
   real(4)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8),size(iarr,3,kind=8))
 
-  oarr(:,:,:) = iarr(:,:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_real_3d
 !===============================================================
@@ -863,7 +865,7 @@ function reversed_dble_1d(iarr) result(oarr)
   real(8), intent(in) :: iarr(:)
   real(8)             :: oarr(size(iarr,kind=8))
 
-  oarr(:) = iarr(:)
+  call cpval(iarr, oarr)
   call reverse(oarr)
 end function reversed_dble_1d
 !===============================================================
@@ -875,7 +877,7 @@ function reversed_dble_2d(iarr, d) result(oarr)
   integer, intent(in) :: d
   real(8)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8))
 
-  oarr(:,:) = iarr(:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_dble_2d
 !===============================================================
@@ -887,7 +889,7 @@ function reversed_dble_3d(iarr, d) result(oarr)
   integer, intent(in) :: d
   real(8)             :: oarr(size(iarr,1,kind=8),size(iarr,2,kind=8),size(iarr,3,kind=8))
 
-  oarr(:,:,:) = iarr(:,:,:)
+  call cpval(iarr, oarr)
   call reverse(oarr, d)
 end function reversed_dble_3d
 !===============================================================

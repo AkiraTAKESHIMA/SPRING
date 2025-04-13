@@ -353,7 +353,7 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
         f%lb(:2) = 1_8
         f%ub(:2) = f%sz(:2)
 
-        f => fvrf%out_ifrac_sum
+        f => fvrf%out_iratio_sum
         f%sz(:2) = fr%ub(:2) - fr%lb(:2) + 1_8
         f%lb(:2) = 1_8
         f%ub(:2) = f%sz(:2)
@@ -1685,7 +1685,7 @@ subroutine read_settings_remapping(rt, s, t)
   call set_keynum('fout_vrf_rerr_grdara', 0, -1)
   call set_keynum('fout_vrf_grdnum'     , 0, -1)
   call set_keynum('fout_vrf_iarea_sum'  , 0, -1)
-  call set_keynum('fout_vrf_ifrac_sum'  , 0, -1)
+  call set_keynum('fout_vrf_iratio_sum' , 0, -1)
   call set_keynum('vrf_val_miss'        , 0, 1)
 
   call echo(code%ext)
@@ -1844,8 +1844,8 @@ subroutine read_settings_remapping(rt, s, t)
       call read_value_fvrf_file(fvrf%out_grdnum)
     case( 'fout_vrf_iarea_sum' )
       call read_value_fvrf_file(fvrf%out_iarea_sum)
-    case( 'fout_vrf_ifrac_sum' )
-      call read_value_fvrf_file(fvrf%out_ifrac_sum)
+    case( 'fout_vrf_iratio_sum' )
+      call read_value_fvrf_file(fvrf%out_iratio_sum)
 
     case( 'vrf_val_miss' )
       call read_value(rt%vrf_source%dval_miss)
@@ -1995,12 +1995,12 @@ subroutine assert_cst_vrfForm_vrfData()
   ! Raster
   case( GRID_FORM_RASTER )
     if( key() /= 'fout_vrf_iarea_sum' .and. &
-        key() /= 'fout_vrf_ifrac_sum' )then
+        key() /= 'fout_vrf_iratio_sum' )then
       call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
               '\nOnly the following keys can be used for the group of'//&
                 ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
               '\n  fout_vrf_iarea_sum"'//&
-              '\n  fout_vrf_ifrac_sum"')
+              '\n  fout_vrf_iratio_sum"')
     endif
   !-------------------------------------------------------------
   ! ERROR
@@ -2409,7 +2409,7 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
       call handle_old_file(fvrf%out_rerr_grdara)
       call handle_old_file(fvrf%out_grdnum)
       call handle_old_file(fvrf%out_iarea_sum)
-      call handle_old_file(fvrf%out_ifrac_sum)
+      call handle_old_file(fvrf%out_iratio_sum)
     enddo  ! iFile/
   enddo  ! iGs/
 
@@ -2489,10 +2489,10 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
       ! Raster
       case( grid_form_raster )
         call mkdir(dirname(fvrf%out_iarea_sum%path))
-        call mkdir(dirname(fvrf%out_ifrac_sum%path))
+        call mkdir(dirname(fvrf%out_iratio_sum%path))
 
         call check_permission(fvrf%out_iarea_sum, allow_empty=.true.)
-        call check_permission(fvrf%out_ifrac_sum, allow_empty=.true.)
+        call check_permission(fvrf%out_iratio_sum, allow_empty=.true.)
       !---------------------------------------------------------
       ! ERROR
       case default
@@ -2896,8 +2896,8 @@ subroutine echo_settings_remapping(rt, s, t)
         !-------------------------------------------------------
         ! Raster
         case( grid_form_raster )
-          call edbg('(out) iarea_sum: '//str(fileinfo(fvrf%out_iarea_sum)))
-          call edbg('(out) ifrac_sum: '//str(fileinfo(fvrf%out_ifrac_sum)))
+          call edbg('(out) iarea_sum : '//str(fileinfo(fvrf%out_iarea_sum)))
+          call edbg('(out) iratio_sum: '//str(fileinfo(fvrf%out_iratio_sum)))
         !-------------------------------------------------------
         ! ERROR
         case default

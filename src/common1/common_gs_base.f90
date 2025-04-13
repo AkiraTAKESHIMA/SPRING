@@ -11,7 +11,7 @@ module common_gs_base
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: init_gs
 

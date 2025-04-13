@@ -531,14 +531,14 @@ subroutine set_default_values_rt_main_file(rtm)
   call echo(code%bgn, 'set_default_values_rt_main_file', '-p -x2')
   !-------------------------------------------------------------
   selectcase( rtm%status )
-  case( status_old )
-    action = action_read
-  case( status_new )
-    action = action_write
-  case( status_replace )
-    action = action_write
-  case( status_unknown )
-    action = action_undef
+  case( STATUS_OLD )
+    action = ACTION_READ
+  case( STATUS_NEW )
+    action = ACTION_WRITE
+  case( STATUS_REPLACE )
+    action = ACTION_WRITE
+  case( STATUS_UNKNOWN )
+    action = ACTION_UNDEF
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  rtm%status: '//str(rtm%status))
@@ -546,23 +546,19 @@ subroutine set_default_values_rt_main_file(rtm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  rtm%f%sidx = file('', dtype_int4, 1, endian_default, &
-                    action=action, id=trim(rtm%id)//'%f%sidx')
-  rtm%f%tidx = file('', dtype_int4, 2, endian_default, &
-                    action=action, id=trim(rtm%id)//'%f%tidx')
-  rtm%f%area = file('', dtype_dble, 1, endian_default, &
-                    action=action, id=trim(rtm%id)//'%f%area')
-  rtm%f%coef = file('', dtype_dble, 1, endian_default, &
-                    action=action, id=trim(rtm%id)//'%f%coef')
+  call set_file_default(action=action)
 
-  rtm%f%sidx_tmp = file('', dtype_int4, 1, endian_default, &
-                        action=action, id=trim(rtm%id)//'%f%sidx_tmp')
-  rtm%f%tidx_tmp = file('', dtype_int4, 2, endian_default, &
-                        action=action, id=trim(rtm%id)//'%f%tidx_tmp')
-  rtm%f%area_tmp = file('', dtype_dble, 1, endian_default, &
-                        action=action, id=trim(rtm%id)//'%f%area_tmp')
-  rtm%f%coef_tmp = file('', dtype_dble, 1, endian_default, &
-                        action=action, id=trim(rtm%id)//'%f%coef_tmp')
+  rtm%f%sidx = file(DTYPE_INT4, rec=1, id=trim(rtm%id)//'%f%sidx')
+  rtm%f%tidx = file(DTYPE_INT4, rec=2, id=trim(rtm%id)//'%f%tidx')
+  rtm%f%area = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%area')
+  rtm%f%coef = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%coef')
+
+  rtm%f%sidx_tmp = file(DTYPE_INT4, rec=1, id=trim(rtm%id)//'%f%sidx_tmp')
+  rtm%f%tidx_tmp = file(DTYPE_INT4, rec=2, id=trim(rtm%id)//'%f%tidx_tmp')
+  rtm%f%area_tmp = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%area_tmp')
+  rtm%f%coef_tmp = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%coef_tmp')
+
+  call reset_file_default()
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt_main_file
@@ -662,33 +658,23 @@ subroutine set_default_values_rt_vrf_file(rtv, iFile)
 
   fvrf%form = ''
 
-  fvrf%out_grdidx      = file('', dtype_int4, 1, endian_default, action=action_write)
-  fvrf%out_grdara_true = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_grdara_rt   = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_rerr_grdara = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_grdnum      = file('', dtype_int4, 1, endian_default, action=action_write)
-  fvrf%out_iarea_sum   = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_ifrac_sum   = file('', dtype_dble, 1, endian_default, action=action_write)
+  call set_file_default(action=ACTION_WRITE)
 
-  fvrf%out_tmp_grdidx      = file('', dtype_int8, 1, endian_default, action=action_write)
-  fvrf%out_tmp_grdara_true = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_tmp_grdara_rt   = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_tmp_rerr_grdara = file('', dtype_dble, 1, endian_default, action=action_write)
-  fvrf%out_tmp_grdnum      = file('', dtype_int4, 1, endian_default, action=action_write)
+  fvrf%out_grdidx      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_grdidx')
+  fvrf%out_grdara_true = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_grdara_true')
+  fvrf%out_grdara_rt   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_grdara_rt')
+  fvrf%out_rerr_grdara = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_rerr_grdara')
+  fvrf%out_grdnum      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_grdnum')
+  fvrf%out_iarea_sum   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_iarea_sum')
+  fvrf%out_iratio_sum  = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_iratio_sum')
 
-  fvrf%out_grdidx%id      = trim(fvrf%id)//'%out_grdidx'
-  fvrf%out_grdara_true%id = trim(fvrf%id)//'%out_grdara_true'
-  fvrf%out_grdara_rt%id   = trim(fvrf%id)//'%out_grdara_rt'
-  fvrf%out_rerr_grdara%id = trim(fvrf%id)//'%out_rerr_grdara'
-  fvrf%out_grdnum%id      = trim(fvrf%id)//'%out_grdnum'
-  fvrf%out_iarea_sum%id   = trim(fvrf%id)//'%out_iarea_sum'
-  fvrf%out_ifrac_sum%id   = trim(fvrf%id)//'%out_ifrac_sum'
+  fvrf%out_tmp_grdidx      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_tmp_grdidx')
+  fvrf%out_tmp_grdara_true = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_grdara_true')
+  fvrf%out_tmp_grdara_rt   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_grdara_rt')
+  fvrf%out_tmp_rerr_grdara = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_rerr_grdara')
+  fvrf%out_tmp_grdnum      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_tmp_grdnum')
 
-  fvrf%out_tmp_grdidx%id      = trim(fvrf%id)//'%out_tmp_grdidx'
-  fvrf%out_tmp_grdara_true%id = trim(fvrf%id)//'%out_tmp_grdara_true'
-  fvrf%out_tmp_grdara_rt%id   = trim(fvrf%id)//'%out_tmp_grdara_rt'
-  fvrf%out_tmp_rerr_grdara%id = trim(fvrf%id)//'%out_tmp_rerr_grdara'
-  fvrf%out_tmp_grdnum%id      = trim(fvrf%id)//'%out_tmp_grdnum'
+  call reset_file_default()
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt_vrf_file

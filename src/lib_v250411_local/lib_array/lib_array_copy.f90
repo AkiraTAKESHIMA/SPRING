@@ -6,10 +6,10 @@ module lib_array_copy
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: cparr
   public :: cpval
+  public :: cparr
   !-------------------------------------------------------------
-  !
+  ! Interfaces
   !-------------------------------------------------------------
   interface cpval
     module procedure cpval__int1_to_int1_1d
@@ -84,6 +84,42 @@ module lib_array_copy
     module procedure cpval__dble_to_int8_2d
     module procedure cpval__dble_to_real_2d
     module procedure cpval__dble_to_dble_2d
+    module procedure cpval__int1_to_int1_3d
+    module procedure cpval__int1_to_int2_3d
+    module procedure cpval__int1_to_int4_3d
+    module procedure cpval__int1_to_int8_3d
+    module procedure cpval__int1_to_real_3d
+    module procedure cpval__int1_to_dble_3d
+    module procedure cpval__int2_to_int1_3d
+    module procedure cpval__int2_to_int2_3d
+    module procedure cpval__int2_to_int4_3d
+    module procedure cpval__int2_to_int8_3d
+    module procedure cpval__int2_to_real_3d
+    module procedure cpval__int2_to_dble_3d
+    module procedure cpval__int4_to_int1_3d
+    module procedure cpval__int4_to_int2_3d
+    module procedure cpval__int4_to_int4_3d
+    module procedure cpval__int4_to_int8_3d
+    module procedure cpval__int4_to_real_3d
+    module procedure cpval__int4_to_dble_3d
+    module procedure cpval__int8_to_int1_3d
+    module procedure cpval__int8_to_int2_3d
+    module procedure cpval__int8_to_int4_3d
+    module procedure cpval__int8_to_int8_3d
+    module procedure cpval__int8_to_real_3d
+    module procedure cpval__int8_to_dble_3d
+    module procedure cpval__real_to_int1_3d
+    module procedure cpval__real_to_int2_3d
+    module procedure cpval__real_to_int4_3d
+    module procedure cpval__real_to_int8_3d
+    module procedure cpval__real_to_real_3d
+    module procedure cpval__real_to_dble_3d
+    module procedure cpval__dble_to_int1_3d
+    module procedure cpval__dble_to_int2_3d
+    module procedure cpval__dble_to_int4_3d
+    module procedure cpval__dble_to_int8_3d
+    module procedure cpval__dble_to_real_3d
+    module procedure cpval__dble_to_dble_3d
   end interface
 
   interface cparr
@@ -1116,6 +1152,618 @@ subroutine cpval__dble_to_dble_2d(ain, aout)
     enddo
   enddo
 end subroutine cpval__dble_to_dble_2d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int1_to_int1_3d(ain, aout)
+  implicit none
+  integer(1), intent(in)  :: ain(:,:,:)
+  integer(1), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),1)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int1_to_int1_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int1_to_int2_3d(ain, aout)
+  implicit none
+  integer(1), intent(in)  :: ain(:,:,:)
+  integer(2), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),2)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int1_to_int2_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int1_to_int4_3d(ain, aout)
+  implicit none
+  integer(1), intent(in)  :: ain(:,:,:)
+  integer(4), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int1_to_int4_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int1_to_int8_3d(ain, aout)
+  implicit none
+  integer(1), intent(in)  :: ain(:,:,:)
+  integer(8), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int1_to_int8_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int1_to_real_3d(ain, aout)
+  implicit none
+  integer(1), intent(in)  :: ain(:,:,:)
+  real(4)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int1_to_real_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int1_to_dble_3d(ain, aout)
+  implicit none
+  integer(1), intent(in)  :: ain(:,:,:)
+  real(8)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int1_to_dble_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int2_to_int1_3d(ain, aout)
+  implicit none
+  integer(2), intent(in)  :: ain(:,:,:)
+  integer(1), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),1)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int2_to_int1_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int2_to_int2_3d(ain, aout)
+  implicit none
+  integer(2), intent(in)  :: ain(:,:,:)
+  integer(2), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),2)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int2_to_int2_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int2_to_int4_3d(ain, aout)
+  implicit none
+  integer(2), intent(in)  :: ain(:,:,:)
+  integer(4), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int2_to_int4_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int2_to_int8_3d(ain, aout)
+  implicit none
+  integer(2), intent(in)  :: ain(:,:,:)
+  integer(8), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int2_to_int8_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int2_to_real_3d(ain, aout)
+  implicit none
+  integer(2), intent(in)  :: ain(:,:,:)
+  real(4)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int2_to_real_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int2_to_dble_3d(ain, aout)
+  implicit none
+  integer(2), intent(in)  :: ain(:,:,:)
+  real(8)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int2_to_dble_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int4_to_int1_3d(ain, aout)
+  implicit none
+  integer(4), intent(in)  :: ain(:,:,:)
+  integer(1), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),1)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int4_to_int1_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int4_to_int2_3d(ain, aout)
+  implicit none
+  integer(4), intent(in)  :: ain(:,:,:)
+  integer(2), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),2)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int4_to_int2_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int4_to_int4_3d(ain, aout)
+  implicit none
+  integer(4), intent(in)  :: ain(:,:,:)
+  integer(4), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int4_to_int4_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int4_to_int8_3d(ain, aout)
+  implicit none
+  integer(4), intent(in)  :: ain(:,:,:)
+  integer(8), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int4_to_int8_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int4_to_real_3d(ain, aout)
+  implicit none
+  integer(4), intent(in)  :: ain(:,:,:)
+  real(4)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int4_to_real_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int4_to_dble_3d(ain, aout)
+  implicit none
+  integer(4), intent(in)  :: ain(:,:,:)
+  real(8)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int4_to_dble_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int8_to_int1_3d(ain, aout)
+  implicit none
+  integer(8), intent(in)  :: ain(:,:,:)
+  integer(1), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),1)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int8_to_int1_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int8_to_int2_3d(ain, aout)
+  implicit none
+  integer(8), intent(in)  :: ain(:,:,:)
+  integer(2), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),2)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int8_to_int2_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int8_to_int4_3d(ain, aout)
+  implicit none
+  integer(8), intent(in)  :: ain(:,:,:)
+  integer(4), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int8_to_int4_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int8_to_int8_3d(ain, aout)
+  implicit none
+  integer(8), intent(in)  :: ain(:,:,:)
+  integer(8), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int8_to_int8_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int8_to_real_3d(ain, aout)
+  implicit none
+  integer(8), intent(in)  :: ain(:,:,:)
+  real(4)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int8_to_real_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__int8_to_dble_3d(ain, aout)
+  implicit none
+  integer(8), intent(in)  :: ain(:,:,:)
+  real(8)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__int8_to_dble_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__real_to_int1_3d(ain, aout)
+  implicit none
+  real(4)   , intent(in)  :: ain(:,:,:)
+  integer(1), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),1)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__real_to_int1_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__real_to_int2_3d(ain, aout)
+  implicit none
+  real(4)   , intent(in)  :: ain(:,:,:)
+  integer(2), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),2)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__real_to_int2_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__real_to_int4_3d(ain, aout)
+  implicit none
+  real(4)   , intent(in)  :: ain(:,:,:)
+  integer(4), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__real_to_int4_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__real_to_int8_3d(ain, aout)
+  implicit none
+  real(4)   , intent(in)  :: ain(:,:,:)
+  integer(8), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__real_to_int8_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__real_to_real_3d(ain, aout)
+  implicit none
+  real(4)   , intent(in)  :: ain(:,:,:)
+  real(4)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__real_to_real_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__real_to_dble_3d(ain, aout)
+  implicit none
+  real(4)   , intent(in)  :: ain(:,:,:)
+  real(8)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__real_to_dble_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__dble_to_int1_3d(ain, aout)
+  implicit none
+  real(8)   , intent(in)  :: ain(:,:,:)
+  integer(1), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),1)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__dble_to_int1_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__dble_to_int2_3d(ain, aout)
+  implicit none
+  real(8)   , intent(in)  :: ain(:,:,:)
+  integer(2), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),2)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__dble_to_int2_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__dble_to_int4_3d(ain, aout)
+  implicit none
+  real(8)   , intent(in)  :: ain(:,:,:)
+  integer(4), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__dble_to_int4_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__dble_to_int8_3d(ain, aout)
+  implicit none
+  real(8)   , intent(in)  :: ain(:,:,:)
+  integer(8), intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = int(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__dble_to_int8_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__dble_to_real_3d(ain, aout)
+  implicit none
+  real(8)   , intent(in)  :: ain(:,:,:)
+  real(4)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),4)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__dble_to_real_3d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__dble_to_dble_3d(ain, aout)
+  implicit none
+  real(8)   , intent(in)  :: ain(:,:,:)
+  real(8)   , intent(out) :: aout(:,:,:)
+  integer(8) :: i1, i2, i3
+
+  do i3 = 1, size(ain,3)
+  do i2 = 1, size(ain,2)
+  do i1 = 1, size(ain,1)
+    aout(i1,i2,i3) = real(ain(i1,i2,i3),8)
+  enddo
+  enddo
+  enddo
+end subroutine cpval__dble_to_dble_3d
 !===============================================================
 !
 !===============================================================

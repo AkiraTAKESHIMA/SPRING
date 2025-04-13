@@ -1,24 +1,26 @@
 module lib_io_binary_direct
   use lib_const
   use lib_log
+  use lib_array, only: &
+        cpval
   use lib_io_base, only: &
-    unit_number, &
-    byte_of_dtype, &
-    endian_long_name
+        unit_number, &
+        byte_of_dtype, &
+        endian_long_name
   use lib_io_file, only: &
-    filesize, &
-    check_permission, &
-    make_empty_file, &
-    remove
+        filesize, &
+        check_permission, &
+        make_empty_file, &
+        remove
   use lib_io_binary_common, only: &
-    open_input_file_stream, &
-    open_output_file_stream, &
-    close_file, &
-    action_for_replace
+        open_input_file_stream, &
+        open_output_file_stream, &
+        close_file, &
+        action_for_replace
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: rbin
   public :: wbin
@@ -100,7 +102,7 @@ module lib_io_binary_direct
     module procedure fill_block__dble
   end interface
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
   character(CLEN_VAR), parameter :: NAME_LIB = 'lib_io_binary_direct'
 
@@ -7207,7 +7209,7 @@ subroutine read_block__int1(&
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
+  !integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__int1 ***\n'
@@ -7234,29 +7236,19 @@ subroutine read_block__int1(&
       read(un,pos=pos) dat(:n)
     case( DTYPE_INT2 )
       read(un,pos=pos) tmpi2(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi2(i),1)
-      enddo
+      call cpval(tmpi2(:n), dat(:n))
     case( DTYPE_INT4 )
       read(un,pos=pos) tmpi4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi4(i),1)
-      enddo
+      call cpval(tmpi4(:n), dat(:n))
     case( DTYPE_INT8 )
       read(un,pos=pos) tmpi8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi8(i),1)
-      enddo
+      call cpval(tmpi8(:n), dat(:n))
     case( DTYPE_REAL )
       read(un,pos=pos) tmpr4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr4(i),1)
-      enddo
+      call cpval(tmpr4(:n), dat(:n))
     case( DTYPE_DBLE )
       read(un,pos=pos) tmpr8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr8(i),1)
-      enddo
+      call cpval(tmpr8(:n), dat(:n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -7297,7 +7289,7 @@ subroutine read_block__int2(&
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
+  !integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__int2 ***\n'
@@ -7322,31 +7314,21 @@ subroutine read_block__int2(&
     selectcase( dtype )
     case( DTYPE_INT1 )
       read(un,pos=pos) tmpi1(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi1(i),2)
-      enddo
+      call cpval(tmpi1(:n), dat(:n))
     case( DTYPE_INT2 )
       read(un,pos=pos) dat(:n)
     case( DTYPE_INT4 )
       read(un,pos=pos) tmpi4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi4(i),2)
-      enddo
+      call cpval(tmpi4(:n), dat(:n))
     case( DTYPE_INT8 )
       read(un,pos=pos) tmpi8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi8(i),2)
-      enddo
+      call cpval(tmpi8(:n), dat(:n))
     case( DTYPE_REAL )
       read(un,pos=pos) tmpr4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr4(i),2)
-      enddo
+      call cpval(tmpr4(:n), dat(:n))
     case( DTYPE_DBLE )
       read(un,pos=pos) tmpr8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr8(i),2)
-      enddo
+      call cpval(tmpr8(:n), dat(:n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -7387,7 +7369,7 @@ subroutine read_block__int4(&
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
+  !integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__int4 ***\n'
@@ -7412,31 +7394,21 @@ subroutine read_block__int4(&
     selectcase( dtype )
     case( DTYPE_INT1 )
       read(un,pos=pos) tmpi1(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi1(i),4)
-      enddo
+      call cpval(tmpi1(:n), dat(:n))
     case( DTYPE_INT2 )
       read(un,pos=pos) tmpi2(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi2(i),4)
-      enddo
+      call cpval(tmpi2(:n), dat(:n))
     case( DTYPE_INT4 )
       read(un,pos=pos) dat(:n)
     case( DTYPE_INT8 )
       read(un,pos=pos) tmpi8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi8(i),4)
-      enddo
+      call cpval(tmpi8(:n), dat(:n))
     case( DTYPE_REAL )
       read(un,pos=pos) tmpr4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr4(i),4)
-      enddo
+      call cpval(tmpr4(:n), dat(:n))
     case( DTYPE_DBLE )
       read(un,pos=pos) tmpr8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr8(i),4)
-      enddo
+      call cpval(tmpr8(:n), dat(:n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -7477,7 +7449,6 @@ subroutine read_block__int8(&
   integer(4), allocatable, save :: tmpi4(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__int8 ***\n'
@@ -7502,31 +7473,21 @@ subroutine read_block__int8(&
     selectcase( dtype )
     case( DTYPE_INT1 )
       read(un,pos=pos) tmpi1(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi1(i),8)
-      enddo
+      call cpval(tmpi1(:n), dat(:n))
     case( DTYPE_INT2 )
       read(un,pos=pos) tmpi2(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi2(i),8)
-      enddo
+      call cpval(tmpi2(:n), dat(:n))
     case( DTYPE_INT4 )
       read(un,pos=pos) tmpi4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpi4(i),8)
-      enddo
+      call cpval(tmpi4(:n), dat(:n))
     case( DTYPE_INT8 )
       read(un,pos=pos) dat(:n)
     case( DTYPE_REAL )
       read(un,pos=pos) tmpr4(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr4(i),8)
-      enddo
+      call cpval(tmpr4(:n), dat(:n))
     case( DTYPE_DBLE )
       read(un,pos=pos) tmpr8(:n)
-      do i = 1_8, n
-        dat(i) = int(tmpr8(i),8)
-      enddo
+      call cpval(tmpr8(:n), dat(:n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -7567,7 +7528,6 @@ subroutine read_block__real(&
   integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__real ***\n'
@@ -7592,31 +7552,23 @@ subroutine read_block__real(&
     selectcase( dtype )
     case( DTYPE_INT1 )
       read(un,pos=pos) tmpi1(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi1(i),4)
-      enddo
+      call cpval(tmpi1(:n), dat(:n))
     case( DTYPE_INT2 )
       read(un,pos=pos) tmpi2(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi2(i),4)
-      enddo
+      call cpval(tmpi2(:n), dat(:n))
     case( DTYPE_INT4 )
       read(un,pos=pos) tmpi4(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi4(i),4)
-      enddo
+      call cpval(tmpi4(:n), dat(:n))
     case( DTYPE_INT8 )
       read(un,pos=pos) tmpi8(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi8(i),4)
-      enddo
+      call cpval(tmpi8(:n), dat(:n))
     case( DTYPE_REAL )
       read(un,pos=pos) dat(:n)
     case( DTYPE_DBLE )
       read(un,pos=pos) tmpr8(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpr8(i),4)
-      enddo
+      call cpval(tmpr8(:n), dat(:n))
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
   !-------------------------------------------------------------
   ! Case: Finalize
@@ -7655,7 +7607,6 @@ subroutine read_block__dble(&
   integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__dble ***\n'
@@ -7680,31 +7631,23 @@ subroutine read_block__dble(&
     selectcase( dtype )
     case( DTYPE_INT1 )
       read(un,pos=pos) tmpi1(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi1(i),8)
-      enddo
+      call cpval(tmpi1(:n), dat(:n))
     case( DTYPE_INT2 )
       read(un,pos=pos) tmpi2(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi2(i),8)
-      enddo
+      call cpval(tmpi2(:n), dat(:n))
     case( DTYPE_INT4 )
       read(un,pos=pos) tmpi4(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi4(i),8)
-      enddo
+      call cpval(tmpi4(:n), dat(:n))
     case( DTYPE_INT8 )
       read(un,pos=pos) tmpi8(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpi8(i),8)
-      enddo
+      call cpval(tmpi8(:n), dat(:n))
     case( DTYPE_REAL )
       read(un,pos=pos) tmpr4(:n)
-      do i = 1_8, n
-        dat(i) = real(tmpr4(i),8)
-      enddo
+      call cpval(tmpr4(:n), dat(:n))
     case( DTYPE_DBLE )
       read(un,pos=pos) dat(:n)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
   !-------------------------------------------------------------
   ! Case: Finalize
@@ -7746,13 +7689,11 @@ subroutine write_block__int1(&
   integer(8)  , intent(in) :: pos
   integer(8)  , intent(in) :: n
 
-  integer(1), allocatable, save :: tmpi1(:)
   integer(2), allocatable, save :: tmpi2(:)
   integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__int1 ***\n'
@@ -7762,7 +7703,7 @@ subroutine write_block__int1(&
   ! Case: Initialize
   case( 0 )
     selectcase( dtype )
-    case( DTYPE_INT1 ); allocate(tmpi1(1))
+    case( DTYPE_INT1 ); continue
     case( DTYPE_INT2 ); allocate(tmpi2(n))
     case( DTYPE_INT4 ); allocate(tmpi4(n))
     case( DTYPE_INT8 ); allocate(tmpi8(n))
@@ -7778,29 +7719,19 @@ subroutine write_block__int1(&
     case( DTYPE_INT1 )
       write(un,pos=pos) dat(:n)
     case( DTYPE_INT2 )
-      do i = 1_8, n
-        tmpi2(i) = int(dat(i),2)
-      enddo
+      call cpval(dat(:n), tmpi2(:n))
       write(un,pos=pos) tmpi2(:n)
     case( DTYPE_INT4 )
-      do i = 1_8, n
-        tmpi4(i) = int(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpi4(:n))
       write(un,pos=pos) tmpi4(:n)
     case( DTYPE_INT8 )
-      do i = 1_8, n
-        tmpi8(i) = int(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpi8(:n))
       write(un,pos=pos) tmpi8(:n)
     case( DTYPE_REAL )
-      do i = 1_8, n
-        tmpr4(i) = real(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpr4(:n))
       write(un,pos=pos) tmpr4(:n)
     case( DTYPE_DBLE )
-      do i = 1_8, n
-        tmpr8(i) = real(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpr8(:n))
       write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -7809,7 +7740,7 @@ subroutine write_block__int1(&
   ! Case: Finalize
   case( -1 )
     selectcase( dtype )
-    case( DTYPE_INT1 ); deallocate(tmpi1)
+    case( DTYPE_INT1 ); continue
     case( DTYPE_INT2 ); deallocate(tmpi2)
     case( DTYPE_INT4 ); deallocate(tmpi4)
     case( DTYPE_INT8 ); deallocate(tmpi8)
@@ -7838,12 +7769,10 @@ subroutine write_block__int2(&
   integer(8)  , intent(in) :: n
 
   integer(1), allocatable, save :: tmpi1(:)
-  integer(2), allocatable, save :: tmpi2(:)
   integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__int2 ***\n'
@@ -7854,7 +7783,7 @@ subroutine write_block__int2(&
   case( 0 )
     selectcase( dtype )
     case( DTYPE_INT1 ); allocate(tmpi1(n))
-    case( DTYPE_INT2 ); allocate(tmpi2(1))
+    case( DTYPE_INT2 ); continue
     case( DTYPE_INT4 ); allocate(tmpi4(n))
     case( DTYPE_INT8 ); allocate(tmpi8(n))
     case( DTYPE_REAL ); allocate(tmpr4(n))
@@ -7867,31 +7796,21 @@ subroutine write_block__int2(&
   case( 1 )
     selectcase( dtype )
     case( DTYPE_INT1 )
-      do i = 1_8, n
-        tmpi1(i) = int(dat(i),1)
-      enddo
+      call cpval(dat(:n), tmpi1(:n))
       write(un,pos=pos) tmpi1(:n)
     case( DTYPE_INT2 )
       write(un,pos=pos) dat(:n)
     case( DTYPE_INT4 )
-      do i = 1_8, n
-        tmpi4(i) = int(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpi4(:n))
       write(un,pos=pos) tmpi4(:n)
     case( DTYPE_INT8 )
-      do i = 1_8, n
-        tmpi8(i) = int(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpi8(:n))
       write(un,pos=pos) tmpi8(:n)
     case( DTYPE_REAL )
-      do i = 1_8, n
-        tmpr4(i) = real(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpr4(:n))
       write(un,pos=pos) tmpr4(:n)
     case( DTYPE_DBLE )
-      do i = 1_8, n
-        tmpr8(i) = real(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpr8(:n))
       write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -7901,7 +7820,7 @@ subroutine write_block__int2(&
   case( -1 )
     selectcase( dtype )
     case( DTYPE_INT1 ); deallocate(tmpi1)
-    case( DTYPE_INT2 ); deallocate(tmpi2)
+    case( DTYPE_INT2 ); continue
     case( DTYPE_INT4 ); deallocate(tmpi4)
     case( DTYPE_INT8 ); deallocate(tmpi8)
     case( DTYPE_REAL ); deallocate(tmpr4)
@@ -7930,11 +7849,9 @@ subroutine write_block__int4(&
 
   integer(1), allocatable, save :: tmpi1(:)
   integer(2), allocatable, save :: tmpi2(:)
-  integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__int4 ***\n'
@@ -7946,7 +7863,7 @@ subroutine write_block__int4(&
     selectcase( dtype )
     case( DTYPE_INT1 ); allocate(tmpi1(n))
     case( DTYPE_INT2 ); allocate(tmpi2(n))
-    case( DTYPE_INT4 ); allocate(tmpi4(1))
+    case( DTYPE_INT4 ); continue
     case( DTYPE_INT8 ); allocate(tmpi8(n))
     case( DTYPE_REAL ); allocate(tmpr4(n))
     case( DTYPE_DBLE ); allocate(tmpr8(n))
@@ -7958,31 +7875,21 @@ subroutine write_block__int4(&
   case( 1 )
     selectcase( dtype )
     case( DTYPE_INT1 )
-      do i = 1_8, n
-        tmpi1(i) = int(dat(i),1)
-      enddo
+      call cpval(dat(:n), tmpi1(:n))
       write(un,pos=pos) tmpi1(:n)
     case( DTYPE_INT2 )
-      do i = 1_8, n
-        tmpi2(i) = int(dat(i),2)
-      enddo
+      call cpval(dat(:n), tmpi2(:n))
       write(un,pos=pos) tmpi2(:n)
     case( DTYPE_INT4 )
       write(un,pos=pos) dat(:n)
     case( DTYPE_INT8 )
-      do i = 1_8, n
-        tmpi8(i) = int(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpi8(:n))
       write(un,pos=pos) tmpi8(:n)
     case( DTYPE_REAL )
-      do i = 1_8, n
-        tmpr4(i) = real(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpr4(:n))
       write(un,pos=pos) tmpr4(:n)
     case( DTYPE_DBLE )
-      do i = 1_8, n
-        tmpr8(i) = real(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpr8(:n))
       write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -7993,7 +7900,7 @@ subroutine write_block__int4(&
     selectcase( dtype )
     case( DTYPE_INT1 ); deallocate(tmpi1)
     case( DTYPE_INT2 ); deallocate(tmpi2)
-    case( DTYPE_INT4 ); deallocate(tmpi4)
+    case( DTYPE_INT4 ); continue
     case( DTYPE_INT8 ); deallocate(tmpi8)
     case( DTYPE_REAL ); deallocate(tmpr4)
     case( DTYPE_DBLE ); deallocate(tmpr8)
@@ -8022,10 +7929,8 @@ subroutine write_block__int8(&
   integer(1), allocatable, save :: tmpi1(:)
   integer(2), allocatable, save :: tmpi2(:)
   integer(4), allocatable, save :: tmpi4(:)
-  integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__int8 ***\n'
@@ -8038,7 +7943,7 @@ subroutine write_block__int8(&
     case( DTYPE_INT1 ); allocate(tmpi1(n))
     case( DTYPE_INT2 ); allocate(tmpi2(n))
     case( DTYPE_INT4 ); allocate(tmpi4(n))
-    case( DTYPE_INT8 ); allocate(tmpi8(1))
+    case( DTYPE_INT8 ); continue
     case( DTYPE_REAL ); allocate(tmpr4(n))
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
@@ -8049,31 +7954,21 @@ subroutine write_block__int8(&
   case( 1 )
     selectcase( dtype )
     case( DTYPE_INT1 )
-      do i = 1_8, n
-        tmpi1(i) = int(dat(i),1)
-      enddo
+      call cpval(dat(:n), tmpi1(:n))
       write(un,pos=pos) tmpi1(:n)
     case( DTYPE_INT2 )
-      do i = 1_8, n
-        tmpi2(i) = int(dat(i),2)
-      enddo
+      call cpval(dat(:n), tmpi2(:n))
       write(un,pos=pos) tmpi2(:n)
     case( DTYPE_INT4 )
-      do i = 1_8, n
-        tmpi4(i) = int(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpi4(:n))
       write(un,pos=pos) tmpi4(:n)
     case( DTYPE_INT8 )
       write(un,pos=pos) dat(:n)
     case( DTYPE_REAL )
-      do i = 1_8, n
-        tmpr4(i) = real(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpr4(:n))
       write(un,pos=pos) tmpr4(:n)
     case( DTYPE_DBLE )
-      do i = 1_8, n
-        tmpr8(i) = real(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpr8(:n))
       write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -8085,7 +7980,7 @@ subroutine write_block__int8(&
     case( DTYPE_INT1 ); deallocate(tmpi1)
     case( DTYPE_INT2 ); deallocate(tmpi2)
     case( DTYPE_INT4 ); deallocate(tmpi4)
-    case( DTYPE_INT8 ); deallocate(tmpi8)
+    case( DTYPE_INT8 ); continue
     case( DTYPE_REAL ); deallocate(tmpr4)
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
@@ -8114,9 +8009,7 @@ subroutine write_block__real(&
   integer(2), allocatable, save :: tmpi2(:)
   integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
-  real(4)   , allocatable, save :: tmpr4(:)
   real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__real ***\n'
@@ -8130,7 +8023,7 @@ subroutine write_block__real(&
     case( DTYPE_INT2 ); allocate(tmpi2(n))
     case( DTYPE_INT4 ); allocate(tmpi4(n))
     case( DTYPE_INT8 ); allocate(tmpi8(n))
-    case( DTYPE_REAL ); allocate(tmpr4(1))
+    case( DTYPE_REAL ); continue
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -8140,31 +8033,21 @@ subroutine write_block__real(&
   case( 1 )
     selectcase( dtype )
     case( DTYPE_INT1 )
-      do i = 1_8, n
-        tmpi1(i) = int(dat(i),1)
-      enddo
+      call cpval(dat(:n), tmpi1(:n))
       write(un,pos=pos) tmpi1(:n)
     case( DTYPE_INT2 )
-      do i = 1_8, n
-        tmpi2(i) = int(dat(i),2)
-      enddo
+      call cpval(dat(:n), tmpi2(:n))
       write(un,pos=pos) tmpi2(:n)
     case( DTYPE_INT4 )
-      do i = 1_8, n
-        tmpi4(i) = int(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpi4(:n))
       write(un,pos=pos) tmpi4(:n)
     case( DTYPE_INT8 )
-      do i = 1_8, n
-        tmpi8(i) = int(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpi8(:n))
       write(un,pos=pos) tmpi8(:n)
     case( DTYPE_REAL )
       write(un,pos=pos) dat(:n)
     case( DTYPE_DBLE )
-      do i = 1_8, n
-        tmpr8(i) = real(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpr8(:n))
       write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -8177,7 +8060,7 @@ subroutine write_block__real(&
     case( DTYPE_INT2 ); deallocate(tmpi2)
     case( DTYPE_INT4 ); deallocate(tmpi4)
     case( DTYPE_INT8 ); deallocate(tmpi8)
-    case( DTYPE_REAL ); deallocate(tmpr4)
+    case( DTYPE_REAL ); continue
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
@@ -8206,8 +8089,6 @@ subroutine write_block__dble(&
   integer(4), allocatable, save :: tmpi4(:)
   integer(8), allocatable, save :: tmpi8(:)
   real(4)   , allocatable, save :: tmpr4(:)
-  real(8)   , allocatable, save :: tmpr8(:)
-  integer(8) :: i
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__dble ***\n'
@@ -8222,7 +8103,7 @@ subroutine write_block__dble(&
     case( DTYPE_INT4 ); allocate(tmpi4(n))
     case( DTYPE_INT8 ); allocate(tmpi8(n))
     case( DTYPE_REAL ); allocate(tmpr4(n))
-    case( DTYPE_DBLE ); allocate(tmpr8(1))
+    case( DTYPE_DBLE ); continue
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -8231,29 +8112,19 @@ subroutine write_block__dble(&
   case( 1 )
     selectcase( dtype )
     case( DTYPE_INT1 )
-      do i = 1_8, n
-        tmpi1(i) = int(dat(i),1)
-      enddo
+      call cpval(dat(:n), tmpi1(:n))
       write(un,pos=pos) tmpi1(:n)
     case( DTYPE_INT2 )
-      do i = 1_8, n
-        tmpi2(i) = int(dat(i),2)
-      enddo
+      call cpval(dat(:n), tmpi2(:n))
       write(un,pos=pos) tmpi2(:n)
     case( DTYPE_INT4 )
-      do i = 1_8, n
-        tmpi4(i) = int(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpi4(:n))
       write(un,pos=pos) tmpi4(:n)
     case( DTYPE_INT8 )
-      do i = 1_8, n
-        tmpi8(i) = int(dat(i),8)
-      enddo
+      call cpval(dat(:n), tmpi8(:n))
       write(un,pos=pos) tmpi8(:n)
     case( DTYPE_REAL )
-      do i = 1_8, n
-        tmpr4(i) = real(dat(i),4)
-      enddo
+      call cpval(dat(:n), tmpr4(:n))
       write(un,pos=pos) tmpr4(:n)
     case( DTYPE_DBLE )
       write(un,pos=pos) dat(:n)
@@ -8269,7 +8140,7 @@ subroutine write_block__dble(&
     case( DTYPE_INT4 ); deallocate(tmpi4)
     case( DTYPE_INT8 ); deallocate(tmpi8)
     case( DTYPE_REAL ); deallocate(tmpr4)
-    case( DTYPE_DBLE ); deallocate(tmpr8)
+    case( DTYPE_DBLE ); continue
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect

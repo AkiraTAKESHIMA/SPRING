@@ -113,7 +113,7 @@ module common_type_rt
                    out_rerr_grdara, &
                    out_grdnum
     type(file_) :: out_iarea_sum, &  ! intersection of raster
-                   out_ifrac_sum
+                   out_iratio_sum
     type(file_) :: out_tmp_grdidx, &
                    out_tmp_grdara_true, &
                    out_tmp_grdara_rt, &
