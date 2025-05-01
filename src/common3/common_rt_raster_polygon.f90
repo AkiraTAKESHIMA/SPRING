@@ -164,43 +164,47 @@ subroutine make_rt_raster_polygon(s, t, rt)
     !-------------------------------------------------------------
     ! Make raster verification data
     !-------------------------------------------------------------
-    if( do_calc_iarea_sum )then
-      if( .not. ar%is_south_to_north ) call reverse(iarea_sum,2)
-      call fill_miss_vrf(iarea_sum, arz%mskmap, ar%is_south_to_north)
-      do iFile_rtv = 1, rtv%nFiles
-        f => rtv%f(iFile_rtv)%out_iarea_sum
-        if( f%path /= '' )then
-          call edbg('Writing iarea_sum  '//str(fileinfo(f))//&
-                  '\n  ['//str((/arz%xi,arz%xf/),dgt(ar%nx),':')//&
-                     ', '//str((/arz%yi,arz%yf/),dgt(ar%ny),':')//']')
-          if( fill_vrf )then
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss)
-          else
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/))
-          endif
-        endif
-      enddo  ! iFile_rtv/
-    endif
+    if( do_calc_iarea_sum .or. do_calc_iratio_sum )then
+      if( .not. ar%is_south_to_north ) call reverse(arz%mskmap,2)
 
-    if( do_calc_iratio_sum )then
-      call calc_iratio_sum(iarea_sum, arz%mskmap, ar%is_south_to_north)
-      do iFile_rtv = 1, rtv%nFiles
-        f => rtv%f(iFile_rtv)%out_iratio_sum
-        if( f%path /= '' )then
-          call edbg('Writing iratio_sum '//str(fileinfo(f))//&
-                  '\n  ['//str((/arz%xi,arz%xf/),dgt(ar%nx),':')//&
-                     ', '//str((/arz%yi,arz%yf/),dgt(ar%ny),':')//']')
-          if( fill_vrf )then
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss)
-          else
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/))
+      if( do_calc_iarea_sum )then
+        do iFile_rtv = 1, rtv%nFiles
+          f => rtv%f(iFile_rtv)%out_iarea_sum
+          if( f%path /= '' )then
+            call edbg('Writing iarea_sum  '//str(fileinfo(f))//&
+                    '\n  ['//str((/arz%xi,arz%xf/),dgt(ar%nx),':')//&
+                       ', '//str((/arz%yi,arz%yf/),dgt(ar%ny),':')//']')
+            if( fill_vrf )then
+              call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                        sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss)
+            else
+              call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                        sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/))
+            endif
           endif
-        endif
-      enddo  ! iFile_rtv/
+        enddo  ! iFile_rtv/
+      endif
+
+      if( do_calc_iratio_sum )then
+        call calc_iratio_sum(iarea_sum, arz%mskmap)
+        do iFile_rtv = 1, rtv%nFiles
+          f => rtv%f(iFile_rtv)%out_iratio_sum
+          if( f%path /= '' )then
+            call edbg('Writing iratio_sum '//str(fileinfo(f))//&
+                    '\n  ['//str((/arz%xi,arz%xf/),dgt(ar%nx),':')//&
+                       ', '//str((/arz%yi,arz%yf/),dgt(ar%ny),':')//']')
+            if( fill_vrf )then
+              call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                        sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss)
+            else
+              call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                        sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/))
+            endif
+          endif
+        enddo  ! iFile_rtv/
+      endif
+
+      if( .not. ar%is_south_to_north ) call reverse(arz%mskmap,2)
     endif
 
     if( do_calc_iarea_sum ) deallocate(iarea_sum)

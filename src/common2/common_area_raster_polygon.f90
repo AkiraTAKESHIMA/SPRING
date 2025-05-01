@@ -637,13 +637,12 @@ end subroutine update_iarea_sum
 !===============================================================
 !
 !===============================================================
-subroutine fill_miss_vrf(dat, msk, same_vertical_direction)
+subroutine fill_miss_vrf(dat, msk)
   implicit none
   real(8)   , pointer    :: dat(:,:)  ! inout
   logical(1), pointer    :: msk(:,:)  ! in
-  logical   , intent(in) :: same_vertical_direction
 
-  integer(8) :: dv, dv0, dvinc, idv, idh
+  integer(8) :: idh, idv
 
   call echo(code%bgn, trim(PROCMOD)//' fill_miss_vrf', '-p -x2')
   !-------------------------------------------------------------
@@ -651,17 +650,7 @@ subroutine fill_miss_vrf(dat, msk, same_vertical_direction)
     return
   endif
 
-  if( same_vertical_direction )then
-    dvinc = 1
-    dv0 = sdvi-1
-  else
-    dvinc = -1
-    dv0 = sdvf+1
-  endif
-
-  dv = dv0
   do idv = sdvi, sdvf
-    dv = dv + dvinc
     do idh = sdhi, sdhf
       if( .not. msk(idh,idv) ) dat(idh,idv) = vrf_val_miss
     enddo  ! idh/
