@@ -1231,7 +1231,7 @@ subroutine calc_lat_range_large_arc(&
   south = min(lat1, lat2)
   north = max(lat1, lat2)
 
-  convex = ARC_CONVEX_MONOTONE
+  convex = CONVEX_MONOTONE
   lontop = 0.d0
   lattop = 0.d0
   !-------------------------------------------------------------
@@ -1294,14 +1294,14 @@ subroutine calc_lat_range_large_arc(&
 
         if( lat1 < rad_0deg )then
           if( plat < south )then
-            convex = ARC_CONVEX_DOWNWARD
+            convex = CONVEX_DOWNWARD
             lontop = plon
             lattop = plat
             south  = plat
           endif
         else
           if( plat > north )then
-            convex = ARC_CONVEX_UPWARD
+            convex = CONVEX_UPWARD
             lontop = plon
             lattop = plat
             north  = plat
@@ -1326,14 +1326,14 @@ subroutine calc_lat_range_large_arc(&
 
         if( lat1 < rad_0deg )then
           if( plat < south )then
-            convex = ARC_CONVEX_DOWNWARD
+            convex = CONVEX_DOWNWARD
             lontop = plon
             lattop = plat
             south  = plat
           endif
         else
           if( plat > north )then
-            convex = ARC_CONVEX_UPWARD
+            convex = CONVEX_UPWARD
             lontop = plon
             lattop = plat
             north  = plat
@@ -1991,14 +1991,14 @@ subroutine calc_area_sphere_parallel_to_parallel(&
   !
   !-------------------------------------------------------------
   area = 0.d0
-  arc_rel = arc_rel_lat_para_para_undef
+  arc_rel = ARC_REL_LAT_PARA_PARA_UNDEF
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( sgn_pole )
   case( 1 )
     if( slat >= tlat )then
-      arc_rel = arc_rel_lat_para_para_above
+      arc_rel = ARC_REL_LAT_PARA_PARA_ABOVE
 
       if( debug )then
         call edbg('s is above t')
@@ -2008,7 +2008,7 @@ subroutine calc_area_sphere_parallel_to_parallel(&
     endif
   case( -1 )
     if( slat <= tlat )then
-      arc_rel = arc_rel_lat_para_para_below
+      arc_rel = ARC_REL_LAT_PARA_PARA_BELOW
 
       if( debug )then
         call edbg('s is below t')
@@ -2042,9 +2042,9 @@ subroutine calc_area_sphere_parallel_to_parallel(&
   !-------------------------------------------------------------
   selectcase( sgn_pole )
   case( 1 )
-    arc_rel = arc_rel_lat_para_para_below
+    arc_rel = ARC_REL_LAT_PARA_PARA_BELOW
   case( -1 )
-    arc_rel = arc_rel_lat_para_para_above
+    arc_rel = ARC_REL_LAT_PARA_PARA_ABOVE
   case default
     if( .not. debug ) call echo(code%bgn, proc)
     call eerr(str(msg_invalid_value())//&
@@ -2100,7 +2100,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
   ! Return if area == 0
   !-------------------------------------------------------------
   area = 0.d0
-  arc_rel = arc_rel_lat_norm_para_undef
+  arc_rel = ARC_REL_LAT_NORM_PARA_UNDEF
 
   selectcase( sgn_pole )
   !-------------------------------------------------------------
@@ -2108,10 +2108,10 @@ subroutine calc_area_sphere_normal_to_parallel(&
   !       Return if s is above t
   case( 1 )
     selectcase( sconvex )
-    case( arc_convex_monotone, &
-          arc_convex_upward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_UPWARD )
       ssouth = min(slat1,slat2)
-    case( arc_convex_downward )
+    case( CONVEX_DOWNWARD )
       ssouth = slattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -2120,7 +2120,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     endselect
 
     if( ssouth >= tlat )then
-      arc_rel = arc_rel_lat_norm_para_above
+      arc_rel = ARC_REL_LAT_NORM_PARA_ABOVE
 
       if( debug )then
         call edbg('s is above t')
@@ -2133,10 +2133,10 @@ subroutine calc_area_sphere_normal_to_parallel(&
   !       Return if s is below t
   case( -1 )
     selectcase( sconvex )
-    case( arc_convex_monotone, &
-          arc_convex_downward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_DOWNWARD )
       snorth = max(slat1,slat2)
-    case( arc_convex_upward )
+    case( CONVEX_UPWARD )
       snorth = slattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -2145,7 +2145,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     endselect
 
     if( snorth <= tlat )then
-      arc_rel = arc_rel_lat_norm_para_below
+      arc_rel = ARC_REL_LAT_NORM_PARA_BELOW
 
       if( debug )then
         call edbg('s is below t')
@@ -2229,10 +2229,10 @@ subroutine calc_area_sphere_normal_to_parallel(&
   ! Judge if convex in the shared range of longit.
   !-------------------------------------------------------------
   selectcase( sconvex )
-  case( arc_convex_monotone )
+  case( CONVEX_MONOTONE )
     sconvex_this = sconvex
-  case( arc_convex_upward, &
-        arc_convex_downward )
+  case( CONVEX_UPWARD, &
+        CONVEX_DOWNWARD )
     call get_stat_lon_between(slontop, west, east, stat_lon_between)
 
     selectcase( stat_lon_between )
@@ -2241,7 +2241,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     case( stat_lon_between_west, &
           stat_lon_between_east, &
           stat_lon_between_outside )
-      sconvex_this = arc_convex_monotone
+      sconvex_this = CONVEX_MONOTONE
     case default
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_invalid_value())//&
@@ -2256,47 +2256,47 @@ subroutine calc_area_sphere_normal_to_parallel(&
   ! Judge relations of arcs
   !-------------------------------------------------------------
   selectcase( sconvex_this )
-  case( arc_convex_monotone )
+  case( CONVEX_MONOTONE )
     if( min(slat_west, slat_east) >= tlat )then
-      arc_rel = arc_rel_lat_norm_para_above
+      arc_rel = ARC_REL_LAT_NORM_PARA_ABOVE
     elseif( max(slat_west, slat_east) <= tlat )then
-      arc_rel = arc_rel_lat_norm_para_below
+      arc_rel = ARC_REL_LAT_NORM_PARA_BELOW
     elseif( slat_west < tlat .and. tlat < slat_east )then
-      arc_rel = arc_rel_lat_norm_para_one_intersection_upward
+      arc_rel = ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_UPWARD
     elseif( slat_west > tlat .and. tlat > slat_east )then
-      arc_rel = arc_rel_lat_norm_para_one_intersection_downward
+      arc_rel = ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_DOWNWARD
     else
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_unexpected_condition())//&
               '\nNot in any case.')
     endif
-  case( arc_convex_upward )
+  case( CONVEX_UPWARD )
     if( min(slat_west, slat_east) >= tlat )then
-      arc_rel = arc_rel_lat_norm_para_above
+      arc_rel = ARC_REL_LAT_NORM_PARA_ABOVE
     elseif( slattop <= tlat )then
-      arc_rel = arc_rel_lat_norm_para_below
+      arc_rel = ARC_REL_LAT_NORM_PARA_BELOW
     elseif( slat_west < tlat .and. tlat <= slat_east )then
-      arc_rel = arc_rel_lat_norm_para_one_intersection_upward
+      arc_rel = ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_UPWARD
     elseif( slat_west >= tlat .and. tlat > slat_east )then
-      arc_rel = arc_rel_lat_norm_para_one_intersection_downward
+      arc_rel = ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_DOWNWARD
     elseif( slat_west < tlat .and. tlat > slat_east )then
-      arc_rel = arc_rel_lat_norm_para_two_intersections_convex_upward
+      arc_rel = ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_UPWARD
     else
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_unexpected_condition())//&
               '\nNot in any case.')
     endif
-  case( arc_convex_downward )
+  case( CONVEX_DOWNWARD )
     if( slattop >= tlat )then
-      arc_rel = arc_rel_lat_norm_para_above
+      arc_rel = ARC_REL_LAT_NORM_PARA_ABOVE
     elseif( max(slat_west, slat_east) <= tlat )then
-      arc_rel = arc_rel_lat_norm_para_below
+      arc_rel = ARC_REL_LAT_NORM_PARA_BELOW
     elseif( slat_west <= tlat .and. tlat < slat_east )then
-      arc_rel = arc_rel_lat_norm_para_one_intersection_upward
+      arc_rel = ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_UPWARD
     elseif( slat_west > tlat .and. tlat >= slat_east )then
-      arc_rel = arc_rel_lat_norm_para_one_intersection_downward
+      arc_rel = ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_DOWNWARD
     elseif( slat_west > tlat .and. tlat < slat_east )then
-      arc_rel = arc_rel_lat_norm_para_two_intersections_convex_downward
+      arc_rel = ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_DOWNWARD
     else
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_unexpected_condition())//&
@@ -2323,14 +2323,14 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s is above t
     !       No area
-    case( arc_rel_lat_norm_para_above )
+    case( ARC_REL_LAT_NORM_PARA_ABOVE )
       area = 0.d0
 
       call pdbg_no('Case: s is above t')
     !-----------------------------------------------------------
     ! Case: s is below t
     !       Area is west to east
-    case( arc_rel_lat_norm_para_below )
+    case( ARC_REL_LAT_NORM_PARA_BELOW )
       lon = londiff_rad(west, east)
       sarea = area_sphere_polartri(lon, slat_west, slat_east, sgn_pole)
       tarea = area_sphere_polarrect(lon, sin(tlat), sgn_pole)
@@ -2341,7 +2341,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s intersects with t upward
     !       Area is west to intersection
-    case( arc_rel_lat_norm_para_one_intersection_upward )
+    case( ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, +sdir_lon, sin(tlat), west, east, clon)
       lon = londiff_rad(west, clon)
@@ -2354,7 +2354,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s intersects with t downward
     !       Area is intersection to east
-    case( arc_rel_lat_norm_para_one_intersection_downward )
+    case( ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, -sdir_lon, sin(tlat), west, east, clon)
       lon = londiff_rad(east, clon)
@@ -2367,7 +2367,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s (convex upward) intersects with t twice
     !       Area is between intersections
-    case( arc_rel_lat_norm_para_two_intersections_convex_downward )
+    case( ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, -sdir_lon, sin(tlat), west, east, clon1)
       call calc_intersection_sphere_normal_parallel3(&
@@ -2382,7 +2382,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s (convex downward) intersects with t twice
     !       Area is edges to intersections
-    case( arc_rel_lat_norm_para_two_intersections_convex_upward )
+    case( ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, +sdir_lon, sin(tlat), west, east, clon1)
       lon = londiff_rad(west, clon1)
@@ -2417,14 +2417,14 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s is below t
     !       No area
-    case( arc_rel_lat_norm_para_below )
+    case( ARC_REL_LAT_NORM_PARA_BELOW )
       area = 0.d0
 
       call pdbg_no('Case: s is below t')
     !-----------------------------------------------------------
     ! Case: s is above t
     !       Area is west to east
-    case( arc_rel_lat_norm_para_above )
+    case( ARC_REL_LAT_NORM_PARA_ABOVE )
       lon = londiff_rad(west, east)
       sarea = area_sphere_polartri(lon, slat_west, slat_east, sgn_pole)
       tarea = area_sphere_polarrect(lon, sin(tlat), sgn_pole)
@@ -2435,7 +2435,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s intersects with t downward
     !       Area is west to intersection
-    case( arc_rel_lat_norm_para_one_intersection_downward )
+    case( ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, -sdir_lon, sin(tlat), west, east, clon)
       lon = londiff_rad(west, clon)
@@ -2448,7 +2448,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s intersects with t upward
     !       Area is intersection to east
-    case( arc_rel_lat_norm_para_one_intersection_upward )
+    case( ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, +sdir_lon, sin(tlat), west, east, clon)
       lon = londiff_rad(east, clon)
@@ -2461,7 +2461,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: s (convex upward) intersects with t twice
     !       Area is between intersections
-    case( arc_rel_lat_norm_para_two_intersections_convex_upward )
+    case( ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, +sdir_lon, sin(tlat), west, east, clon1)
       call calc_intersection_sphere_normal_parallel3(&
@@ -2476,7 +2476,7 @@ subroutine calc_area_sphere_normal_to_parallel(&
     !-----------------------------------------------------------
     ! Case: Two intersections (downward)
     !       Area is edges to intersections
-    case( arc_rel_lat_norm_para_two_intersections_convex_downward )
+    case( ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                sa, sb, sc, -sdir_lon, sin(tlat), west, east, clon1)
       lon = londiff_rad(west, clon1)
@@ -2557,7 +2557,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
   !
   !-------------------------------------------------------------
   area = 0.d0
-  arc_rel = arc_rel_lat_para_norm_undef
+  arc_rel = ARC_REL_LAT_PARA_NORM_UNDEF
   !-------------------------------------------------------------
   !
   selectcase( sgn_pole )
@@ -2566,10 +2566,10 @@ subroutine calc_area_sphere_parallel_to_normal(&
   !       Return if s is above t
   case( 1 )
     selectcase( tconvex )
-    case( arc_convex_monotone, &
-          arc_convex_downward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_DOWNWARD )
       tnorth = max(tlat1,tlat2)
-    case( arc_convex_upward )
+    case( CONVEX_UPWARD )
       tnorth = tlattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -2578,7 +2578,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     endselect
 
     if( slat >= tnorth )then
-      arc_rel = arc_rel_lat_para_norm_above
+      arc_rel = ARC_REL_LAT_PARA_NORM_ABOVE
 
       if( debug )then
         call edbg('s is above t')
@@ -2591,10 +2591,10 @@ subroutine calc_area_sphere_parallel_to_normal(&
   !       Return if s is below t
   case( -1 )
     selectcase( tconvex )
-    case( arc_convex_monotone, &
-          arc_convex_upward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_UPWARD )
       tsouth = min(tlat1,tlat2)
-    case( arc_convex_downward )
+    case( CONVEX_DOWNWARD )
       tsouth = tlattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -2603,7 +2603,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     endselect
 
     if( slat <= tsouth )then
-      arc_rel = arc_rel_lat_para_norm_below
+      arc_rel = ARC_REL_LAT_PARA_NORM_BELOW
 
       if( debug )then
         call edbg('t is above s')
@@ -2687,10 +2687,10 @@ subroutine calc_area_sphere_parallel_to_normal(&
   ! Judge if convex in the shared range of longit.
   !-------------------------------------------------------------
   selectcase( tconvex )
-  case( arc_convex_monotone )
+  case( CONVEX_MONOTONE )
     tconvex_this = tconvex
-  case( arc_convex_upward, &
-        arc_convex_downward )
+  case( CONVEX_UPWARD, &
+        CONVEX_DOWNWARD )
     call get_stat_lon_between(tlontop, west, east, stat_lon_between)
 
     selectcase( stat_lon_between )
@@ -2699,7 +2699,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     case( stat_lon_between_west, &
           stat_lon_between_east, &
           stat_lon_between_outside )
-      tconvex_this = arc_convex_monotone
+      tconvex_this = CONVEX_MONOTONE
     case default
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_invalid_value())//&
@@ -2714,47 +2714,47 @@ subroutine calc_area_sphere_parallel_to_normal(&
   ! Judge relations of arcs
   !-------------------------------------------------------------
   selectcase( tconvex_this )
-  case( arc_convex_monotone )
+  case( CONVEX_MONOTONE )
     if( min(tlat_west, tlat_east) >= slat )then
-      arc_rel = arc_rel_lat_para_norm_below
+      arc_rel = ARC_REL_LAT_PARA_NORM_BELOW
     elseif( max(tlat_west, tlat_east) <= slat )then
-      arc_rel = arc_rel_lat_para_norm_above
+      arc_rel = ARC_REL_LAT_PARA_NORM_ABOVE
     elseif( tlat_west < slat .and. slat < tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_one_intersection_upward
+      arc_rel = ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_UPWARD
     elseif( tlat_west > slat .and. slat > tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_one_intersection_downward
+      arc_rel = ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_DOWNWARD
     else
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_unexpected_condition())//&
               '\nNot in any case.')
     endif
-  case( arc_convex_upward )
+  case( CONVEX_UPWARD )
     if( min(tlat_west, tlat_east) >= slat )then
-      arc_rel = arc_rel_lat_para_norm_below
+      arc_rel = ARC_REL_LAT_PARA_NORM_BELOW
     elseif( tlattop <= slat )then
-      arc_rel = arc_rel_lat_para_norm_above
+      arc_rel = ARC_REL_LAT_PARA_NORM_ABOVE
     elseif( tlat_west < slat .and. slat <= tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_one_intersection_upward
+      arc_rel = ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_UPWARD
     elseif( tlat_west >= slat .and. slat > tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_one_intersection_downward
+      arc_rel = ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_DOWNWARD
     elseif( tlat_west < slat .and. slat > tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_two_intersections_convex_upward
+      arc_rel = ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_UPWARD
     else
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_unexpected_condition())//&
               '\nNot in any case.')
     endif
-  case( arc_convex_downward )
+  case( CONVEX_DOWNWARD )
     if( tlattop >= slat )then
-      arc_rel = arc_rel_lat_para_norm_below
+      arc_rel = ARC_REL_LAT_PARA_NORM_BELOW
     elseif( max(tlat_west, tlat_east) <= slat )then
-      arc_rel = arc_rel_lat_para_norm_above
+      arc_rel = ARC_REL_LAT_PARA_NORM_ABOVE
     elseif( tlat_west <= slat .and. slat < tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_one_intersection_upward
+      arc_rel = ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_UPWARD
     elseif( tlat_west > slat .and. slat >= tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_one_intersection_downward
+      arc_rel = ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_DOWNWARD
     elseif( tlat_west > slat .and. slat < tlat_east )then
-      arc_rel = arc_rel_lat_para_norm_two_intersections_convex_downward
+      arc_rel = ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_DOWNWARD
     else
       if( .not. debug ) call echo(code%bgn, proc)
       call eerr(str(msg_unexpected_condition())//&
@@ -2777,14 +2777,14 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: s is above t
     !       No area
-    case( arc_rel_lat_para_norm_above )
+    case( ARC_REL_LAT_PARA_NORM_ABOVE )
       area = 0.d0
 
       call pdbg_no('Case: s is above t')
     !-----------------------------------------------------------
     ! Case: s is below t
     !       Area is west to east
-    case( arc_rel_lat_para_norm_below )
+    case( ARC_REL_LAT_PARA_NORM_BELOW )
       lon = londiff_rad(west, east)
       sarea = area_sphere_polarrect(lon, sin(slat), sgn_pole)
       tarea = area_sphere_polartri(lon, tlat_west, tlat_east, sgn_pole)
@@ -2795,7 +2795,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t intersects with s downward
     !       Area is west to intersection
-    case( arc_rel_lat_para_norm_one_intersection_downward )
+    case( ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, -tdir_lon, sin(slat), west, east, clon)
       lon = londiff_rad(west, clon)
@@ -2808,7 +2808,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t intersects with s upward
     !       Area is intersection to east
-    case( arc_rel_lat_para_norm_one_intersection_upward )
+    case( ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, +tdir_lon, sin(slat), west, east, clon)
       lon = londiff_rad(east, clon)
@@ -2821,7 +2821,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t (convex upward) intersects with s twice
     !       Area is between intersections
-    case( arc_rel_lat_para_norm_two_intersections_convex_upward )
+    case( ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, +tdir_lon, sin(slat), west, east, clon1)
       call calc_intersection_sphere_normal_parallel3(&
@@ -2836,7 +2836,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t (convex downward) intersects with s twice
     !       Area is edges to intersections
-    case( arc_rel_lat_para_norm_two_intersections_convex_downward )
+    case( ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, -tdir_lon, sin(slat), west, east, clon1)
       lon = londiff_rad(west, clon1)
@@ -2871,14 +2871,14 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: s is below t 
     !       No area
-    case( arc_rel_lat_para_norm_below )
+    case( ARC_REL_LAT_PARA_NORM_BELOW )
       area = 0.d0
 
       call pdbg_no('Case: s is below t')
     !-----------------------------------------------------------
     ! Case: s is above t
     !       Area is west to east
-    case( arc_rel_lat_para_norm_above )
+    case( ARC_REL_LAT_PARA_NORM_ABOVE )
       lon = londiff_rad(west, east)
       sarea = area_sphere_polarrect(lon, sin(slat), sgn_pole)
       tarea = area_sphere_polartri(lon, tlat_west, tlat_east, sgn_pole)
@@ -2889,7 +2889,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t intersects with s upward
     !       Area is west to intersection
-    case( arc_rel_lat_para_norm_one_intersection_upward )
+    case( ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, +tdir_lon, sin(slat), west, east, clon)
       lon = londiff_rad(west, clon)
@@ -2902,7 +2902,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t intersects with s downward
     !       Area is intersection to east
-    case( arc_rel_lat_para_norm_one_intersection_downward )
+    case( ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, -tdir_lon, sin(slat), west, east, clon)
       lon = londiff_rad(east, clon)
@@ -2915,7 +2915,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t (convex downward) intersects with s twice
     !       Area is between intersections
-    case( arc_rel_lat_para_norm_two_intersections_convex_downward )
+    case( ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_DOWNWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, -tdir_lon, sin(slat), west, east, clon1)
       call calc_intersection_sphere_normal_parallel3(&
@@ -2930,7 +2930,7 @@ subroutine calc_area_sphere_parallel_to_normal(&
     !-----------------------------------------------------------
     ! Case: t (convex upward) intersects with s twice
     !       Area is edges to intersections
-    case( arc_rel_lat_para_norm_two_intersections_convex_upward )
+    case( ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_UPWARD )
       call calc_intersection_sphere_normal_parallel3(&
                ta, tb, tc, +tdir_lon, sin(slat), west, east, clon1)
       lon = londiff_rad(west, clon1)
@@ -3019,7 +3019,7 @@ subroutine calc_area_sphere_normal_to_normal(&
   !
   !-------------------------------------------------------------
   area = 0.d0
-  arc_rel = arc_rel_lat_norm_norm_undef
+  arc_rel = ARC_REL_LAT_NORM_NORM_UNDEF
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3029,10 +3029,10 @@ subroutine calc_area_sphere_normal_to_normal(&
   !       Return if s is above t
   case( 1 )
     selectcase( sconvex )
-    case( arc_convex_monotone, &
-          arc_convex_upward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_UPWARD )
       ssouth = min(slat1,slat2)
-    case( arc_convex_downward )
+    case( CONVEX_DOWNWARD )
       ssouth = slattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -3041,10 +3041,10 @@ subroutine calc_area_sphere_normal_to_normal(&
     endselect
 
     selectcase( tconvex )
-    case( arc_convex_monotone, &
-          arc_convex_downward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_DOWNWARD )
       tnorth = max(tlat1,tlat2)
-    case( arc_convex_upward )
+    case( CONVEX_UPWARD )
       tnorth = tlattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -3053,7 +3053,7 @@ subroutine calc_area_sphere_normal_to_normal(&
     endselect
 
     if( ssouth >= tnorth )then
-      arc_rel = arc_rel_lat_norm_norm_above
+      arc_rel = ARC_REL_LAT_NORM_NORM_ABOVE
 
       if( debug )then
         call edbg('s is above t')
@@ -3066,10 +3066,10 @@ subroutine calc_area_sphere_normal_to_normal(&
   !   Return if s is below t
   case( -1 )
     selectcase( sconvex )
-    case( arc_convex_monotone, &
-          arc_convex_downward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_DOWNWARD )
       snorth = max(slat1,slat2)
-    case( arc_convex_upward )
+    case( CONVEX_UPWARD )
       snorth = slattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -3078,10 +3078,10 @@ subroutine calc_area_sphere_normal_to_normal(&
     endselect
 
     selectcase( tconvex )
-    case( arc_convex_monotone, &
-          arc_convex_upward )
+    case( CONVEX_MONOTONE, &
+          CONVEX_UPWARD )
       tsouth = min(tlat1,tlat2)
-    case( arc_convex_downward )
+    case( CONVEX_DOWNWARD )
       tsouth = tlattop
     case default
       if( .not. debug ) call echo(code%bgn, proc)
@@ -3090,7 +3090,7 @@ subroutine calc_area_sphere_normal_to_normal(&
     endselect
 
     if( snorth <= tsouth )then
-      arc_rel = arc_rel_lat_norm_norm_below
+      arc_rel = ARC_REL_LAT_NORM_NORM_BELOW
 
       if( debug )then
         call edbg('s is below t')
@@ -3223,14 +3223,14 @@ subroutine calc_area_sphere_normal_to_normal(&
     ! Case: s is above t
     !       No area
     if( slat_west >= tlat_west .and. slat_east >= tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_above
+      arc_rel = ARC_REL_LAT_NORM_NORM_ABOVE
 
       call pdbg_no('Case: s is above t')
     !-----------------------------------------------------------
     ! Case: s is below t
     !       Area is west to east
     elseif( slat_west <= tlat_west .and. slat_east <= tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_below
+      arc_rel = ARC_REL_LAT_NORM_NORM_BELOW
 
       lon = londiff_rad(west, east)
       sarea = area_sphere_polartri(lon, slat_west, slat_east, sgn_pole)
@@ -3243,7 +3243,7 @@ subroutine calc_area_sphere_normal_to_normal(&
     ! Case: s intersects with t upward
     !       Area is west to intersection
     elseif( slat_west < tlat_west .and. slat_east > tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_intersection_upward
+      arc_rel = ARC_REL_LAT_NORM_NORM_INTERSECTION_UPWARD
 
       call calc_intersection_sphere_normal_normal(&
              sx1, sy1, sz1, sx2, sy2, sz2, sa, sb, sc, &
@@ -3265,7 +3265,7 @@ subroutine calc_area_sphere_normal_to_normal(&
     ! Case: s intersects with s downward
     !       Area is intersection to east
     elseif( slat_west > tlat_west .and. slat_east < tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_intersection_downward
+      arc_rel = ARC_REL_LAT_NORM_NORM_INTERSECTION_DOWNWARD
 
       call calc_intersection_sphere_normal_normal(&
              sx1, sy1, sz1, sx2, sy2, sz2, sa, sb, sc, &
@@ -3298,14 +3298,14 @@ subroutine calc_area_sphere_normal_to_normal(&
     ! Case: s is below t
     !       No area
     if( slat_west <= tlat_west .and. slat_east <= tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_below
+      arc_rel = ARC_REL_LAT_NORM_NORM_BELOW
 
       call pdbg_no('Case: s is below t')
     !-----------------------------------------------------------
     ! Case: s is above t
     !       Area is west to east
     elseif( slat_west >= tlat_west .and. slat_east >= tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_above
+      arc_rel = ARC_REL_LAT_NORM_NORM_ABOVE
 
       lon = londiff_rad(west, east)
       sarea = area_sphere_polartri(lon, slat_west, slat_east, sgn_pole)
@@ -3318,7 +3318,7 @@ subroutine calc_area_sphere_normal_to_normal(&
     ! Case: s intersects with t downward
     !       Area is west to intersection
     elseif( slat_west > tlat_west .and. slat_east < tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_intersection_downward
+      arc_rel = ARC_REL_LAT_NORM_NORM_INTERSECTION_DOWNWARD
 
       call calc_intersection_sphere_normal_normal(&
              sx1, sy1, sz1, sx2, sy2, sz2, sa, sb, sc, &
@@ -3340,7 +3340,7 @@ subroutine calc_area_sphere_normal_to_normal(&
     ! Case: s intersects with t upward
     !       Area is intersection to east
     elseif( slat_west < tlat_west .and. slat_east > tlat_east )then
-      arc_rel = arc_rel_lat_norm_norm_intersection_upward
+      arc_rel = ARC_REL_LAT_NORM_NORM_INTERSECTION_UPWARD
 
       call calc_intersection_sphere_normal_normal(&
              sx1, sy1, sz1, sx2, sy2, sz2, sa, sb, sc, &
@@ -4480,7 +4480,7 @@ real(8) function area_sphere_intersection_latlon_polygon(&
       !---------------------------------------------------------
       ! South
       !---------------------------------------------------------
-      call pdbg_ent_arc('s', 1, arc_type_parallel, arc_convex_monotone, &
+      call pdbg_ent_arc('s', 1, arc_type_parallel, CONVEX_MONOTONE, &
                         swest, ssouth, seast, ssouth)
 
       call calc_area_sphere_parallel_to_normal(&
@@ -4498,7 +4498,7 @@ real(8) function area_sphere_intersection_latlon_polygon(&
       !---------------------------------------------------------
       ! North
       !---------------------------------------------------------
-      call pdbg_ent_arc('s', 3, arc_type_parallel, arc_convex_monotone, &
+      call pdbg_ent_arc('s', 3, arc_type_parallel, CONVEX_MONOTONE, &
                         seast, snorth, swest, snorth)
 
       call calc_area_sphere_parallel_to_normal(&
@@ -4780,14 +4780,14 @@ subroutine update_rel_lat_polygons_norm_norm(&
   logical   , intent(inout) :: is_former_below_latter, is_former_above_latter
 
   selectcase( arc_rel_lat_norm_norm )
-  case( arc_rel_lat_norm_norm_undef )
+  case( ARC_REL_LAT_NORM_NORM_UNDEF )
     continue
-  case( arc_rel_lat_norm_norm_below )  ! s is below t
+  case( ARC_REL_LAT_NORM_NORM_BELOW )  ! s is below t
     is_former_above_latter = .false.
-  case( arc_rel_lat_norm_norm_above )  ! s is above t
+  case( ARC_REL_LAT_NORM_NORM_ABOVE )  ! s is above t
     is_former_below_latter = .false.
-  case( arc_rel_lat_norm_norm_intersection_upward, &
-        arc_rel_lat_norm_norm_intersection_downward )
+  case( ARC_REL_LAT_NORM_NORM_INTERSECTION_UPWARD, &
+        ARC_REL_LAT_NORM_NORM_INTERSECTION_DOWNWARD )
     is_former_below_latter = .false.
     is_former_above_latter = .false.
   case default
@@ -4805,16 +4805,16 @@ subroutine update_rel_lat_polygons_para_norm(&
   logical   , intent(inout) :: is_former_below_latter, is_former_above_latter
 
   selectcase( arc_rel_lat_para_norm )
-  case( arc_rel_lat_para_norm_undef )
+  case( ARC_REL_LAT_PARA_NORM_UNDEF )
     continue
-  case( arc_rel_lat_para_norm_below )
+  case( ARC_REL_LAT_PARA_NORM_BELOW )
     is_former_above_latter = .false.
-  case( arc_rel_lat_para_norm_above )
+  case( ARC_REL_LAT_PARA_NORM_ABOVE )
     is_former_below_latter = .false.
-  case( arc_rel_lat_para_norm_one_intersection_upward, &
-        arc_rel_lat_para_norm_one_intersection_downward, &
-        arc_rel_lat_para_norm_two_intersections_convex_upward, &
-        arc_rel_lat_para_norm_two_intersections_convex_downward )
+  case( ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_UPWARD, &
+        ARC_REL_LAT_PARA_NORM_ONE_INTERSECTION_DOWNWARD, &
+        ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_UPWARD, &
+        ARC_REL_LAT_PARA_NORM_TWO_INTERSECTIONS_CONVEX_DOWNWARD )
     is_former_below_latter = .false.
     is_former_above_latter = .false.
   case default
@@ -4832,16 +4832,16 @@ subroutine update_rel_lat_polygons_norm_para(&
   logical   , intent(inout) :: is_former_below_latter, is_former_above_latter
 
   selectcase( arc_rel_lat_norm_para )
-  case( arc_rel_lat_norm_para_undef )
+  case( ARC_REL_LAT_NORM_PARA_UNDEF )
     continue
-  case( arc_rel_lat_norm_para_below )
+  case( ARC_REL_LAT_NORM_PARA_BELOW )
     is_former_above_latter = .false.
-  case( arc_rel_lat_norm_para_above )
+  case( ARC_REL_LAT_NORM_PARA_ABOVE )
     is_former_below_latter = .false.
-  case( arc_rel_lat_norm_para_one_intersection_upward, &
-        arc_rel_lat_norm_para_one_intersection_downward, &
-        arc_rel_lat_norm_para_two_intersections_convex_upward, &
-        arc_rel_lat_norm_para_two_intersections_convex_downward )
+  case( ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_UPWARD, &
+        ARC_REL_LAT_NORM_PARA_ONE_INTERSECTION_DOWNWARD, &
+        ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_UPWARD, &
+        ARC_REL_LAT_NORM_PARA_TWO_INTERSECTIONS_CONVEX_DOWNWARD )
     is_former_below_latter = .false.
     is_former_above_latter = .false.
   case default
@@ -4858,12 +4858,12 @@ subroutine update_rel_lat_polygons_para_para(&
   integer(1), intent(in)    :: arc_rel_lat_para_para
   logical   , intent(inout) :: is_former_below_latter, is_former_above_latter
 
-  selectcase( arc_rel_lat_para_para )
-  case( arc_rel_lat_para_para_undef )
+  selectcase( ARC_REL_LAT_PARA_PARA )
+  case( ARC_REL_LAT_PARA_PARA_UNDEF )
     continue
-  case( arc_rel_lat_para_para_below )
+  case( ARC_REL_LAT_PARA_PARA_BELOW )
     is_former_above_latter = .false.
-  case( arc_rel_lat_para_para_above )
+  case( ARC_REL_LAT_PARA_PARA_ABOVE )
     is_former_below_latter = .false.
   case default
     call eerr(str(msg_invalid_value())//&

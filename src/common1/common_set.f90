@@ -570,17 +570,8 @@ subroutine read_value__char(&
   !-------------------------------------------------------------
   cl = len_trim(val)
   !-------------------------------------------------------------
-  ! Case: Keyword
-  if( is_keyword_ )then
-    val = lower(val)
-    ! Remove quotes
-    if( (val(1:1) == "'" .and. val(cl:cl) == "'") .or. &
-        (val(1:1) == '"' .and. val(cl:cl) == '"') )then
-      val = val(2:cl-1)
-    endif
-  !-------------------------------------------------------------
   ! Case: Path
-  elseif( is_path_ )then
+  if( is_path_ )then
     if( val == '' )then
       call eerr('!!! INTERNAL ERROR !!!'//&
               '\n  len_trim(val) == 0 '//&
@@ -596,9 +587,14 @@ subroutine read_value__char(&
     val = val(2:cl-1)
     val = joined(dir_, val)
   !-------------------------------------------------------------
+  ! Case: Keyword
+  elseif( is_keyword_ )then
+    val = lower(val)
+    call remove_quotes(val)
+  !-------------------------------------------------------------
   ! Case: Neither keyword or path
   else
-    continue
+    call remove_quotes(val)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -609,7 +605,7 @@ end subroutine read_value__char
 subroutine read_value__log(&
     val, pos, key, found)
   implicit none
-  logical, intent(inout) :: val
+  logical     , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
   logical     , intent(out), optional :: found
@@ -686,8 +682,9 @@ subroutine read_this(cval)
   case default
     call eerr('Invalid input @ line '//str(iLine)//&
             '\nBoolean (logical) value must be given by'//&
-              '".true.", "True" or "T" for true and '//&
-              '".false.", "False" or "F" for false.'//&
+              '".true.", "true" or "t" for true and '//&
+              '".false.", "false" or "f" for false '//&
+              '(not case-sensitive).'//&
             '\n  Default position: '//str(pos_)//&
             '\n  Keyword         : '//str(key_)//&
             '\n  Value           : '//str(cval))
@@ -701,7 +698,7 @@ end subroutine read_value__log
 subroutine read_value__int4(&
     val, pos, key, found)
   implicit none
-  integer(4), intent(inout) :: val
+  integer(4)  , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
   logical     , intent(out), optional :: found
@@ -789,7 +786,7 @@ end subroutine read_value__int4
 subroutine read_value__int8(&
     val, pos, key, found)
   implicit none
-  integer(8), intent(inout) :: val
+  integer(8)  , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
   logical     , intent(out), optional :: found
@@ -877,7 +874,7 @@ end subroutine read_value__int8
 subroutine read_value__real(&
     val, pos, key, found)
   implicit none
-  real(4), intent(inout) :: val
+  real(4)     , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
   logical     , intent(out), optional :: found
@@ -965,7 +962,7 @@ end subroutine read_value__real
 subroutine read_value__dble(&
     val, pos, key, found)
   implicit none
-  real(8), intent(inout) :: val
+  real(8)     , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
   logical     , intent(out), optional :: found
@@ -1053,9 +1050,9 @@ end subroutine read_value__dble
 subroutine read_value__fbin(&
     val, dir, getlen)
   implicit none
-  type(file_), intent(inout) :: val
+  type(file_) , intent(inout) :: val
   character(*), intent(in), optional :: dir
-  logical, intent(in), optional :: getlen
+  logical     , intent(in), optional :: getlen
 
   character(CLEN_PATH) :: dir_
   logical :: getlen_

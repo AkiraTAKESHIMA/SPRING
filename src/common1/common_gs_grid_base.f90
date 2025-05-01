@@ -3,6 +3,7 @@ module common_gs_grid_base
   use lib_base
   use lib_log
   use lib_array
+  use common_const
   use common_type_gs
   implicit none
   private
@@ -20,34 +21,41 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine init_grid(grid)
+subroutine init_grid(g)
   implicit none
-  type(grid_), intent(inout) :: grid
+  type(grid_), intent(inout) :: g
 
   call echo(code%bgn, 'init_grid', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  grid%id = ''
+  g%id = ''
 
-  grid%nij = 0_8
+  g%nij = 0_8
 
-  grid%idxmin = 0_8
-  grid%idxmax = 0_8
+  g%idxmin = 0_8
+  g%idxmax = 0_8
 
-  nullify(grid%idx)
-  nullify(grid%idxarg)
-  nullify(grid%msk)
-  nullify(grid%uwa)
-  nullify(grid%ara)
-  nullify(grid%wgt)
-  nullify(grid%x)
-  nullify(grid%y)
-  nullify(grid%z)
-  nullify(grid%lon)
-  nullify(grid%lat)
+  nullify(g%idx)
+  nullify(g%idxarg)
+  nullify(g%msk)
+  nullify(g%uwa)
+  nullify(g%ara)
+  nullify(g%wgt)
+  nullify(g%x)
+  nullify(g%y)
+  nullify(g%z)
+  nullify(g%lon)
+  nullify(g%lat)
+  g%status_idx    = GRID_STATUS__UNDEF
+  g%status_msk    = GRID_STATUS__UNDEF
+  g%status_uwa    = GRID_STATUS__UNDEF
+  g%status_ara    = GRID_STATUS__UNDEF
+  g%status_wgt    = GRID_STATUS__UNDEF
+  g%status_xyz    = GRID_STATUS__UNDEF
+  g%status_lonlat = GRID_STATUS__UNDEF
 
-  grid%ij_debug = 0_8
+  g%ij_debug = 0_8
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_grid
@@ -125,8 +133,8 @@ subroutine realloc_grid(&
   !
   !-------------------------------------------------------------
   if( idx )then
-    call realloc(grid%idx   , 1_8, grid%nij, clear=clear, fill=idx_miss_)
-    call realloc(grid%idxarg, 1_8, grid%nij, clear=clear, fill=0_8)
+    call realloc(grid%idx   , grid%nij, clear=clear, fill=idx_miss_)
+    call realloc(grid%idxarg, grid%nij, clear=clear, fill=0_8)
 
     if( clear )then
       grid%idxmin = idx_miss_
@@ -135,30 +143,30 @@ subroutine realloc_grid(&
   endif
 
   if( msk )then
-    call realloc(grid%msk, 1_8, grid%nij, clear=clear, fill=0_1)
+    call realloc(grid%msk, grid%nij, clear=clear, fill=logical(.false.,1))
   endif
 
   if( uwa )then
-    call realloc(grid%uwa, 1_8, grid%nij, clear=clear, fill=uwa_miss_)
+    call realloc(grid%uwa, grid%nij, clear=clear, fill=uwa_miss_)
   endif
 
   if( ara )then
-    call realloc(grid%ara, 1_8, grid%nij, clear=clear, fill=ara_miss_)
+    call realloc(grid%ara, grid%nij, clear=clear, fill=ara_miss_)
   endif
 
   if( wgt )then
-    call realloc(grid%wgt, 1_8, grid%nij, clear=clear, fill=wgt_miss_)
+    call realloc(grid%wgt, grid%nij, clear=clear, fill=wgt_miss_)
   endif
 
   if( xyz )then
-    call realloc(grid%x, 1_8, grid%nij, clear=clear, fill=xyz_miss_)
-    call realloc(grid%y, 1_8, grid%nij, clear=clear, fill=xyz_miss_)
-    call realloc(grid%z, 1_8, grid%nij, clear=clear, fill=xyz_miss_)
+    call realloc(grid%x, grid%nij, clear=clear, fill=xyz_miss_)
+    call realloc(grid%y, grid%nij, clear=clear, fill=xyz_miss_)
+    call realloc(grid%z, grid%nij, clear=clear, fill=xyz_miss_)
   endif
 
   if( lonlat )then
-    call realloc(grid%lon, 1_8, grid%nij, clear=clear, fill=lonlat_miss_)
-    call realloc(grid%lat, 1_8, grid%nij, clear=clear, fill=lonlat_miss_)
+    call realloc(grid%lon, grid%nij, clear=clear, fill=lonlat_miss_)
+    call realloc(grid%lat, grid%nij, clear=clear, fill=lonlat_miss_)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)

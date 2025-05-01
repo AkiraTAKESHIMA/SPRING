@@ -1,0 +1,67 @@
+{
+	"landType": ["river", "noriv"],
+	"cmf": {
+		"ncx":   720, 
+		"ncy":   360,
+    "ndx": 21600, 
+		"ndy": 10800,
+		"west": -180, 
+		"east":  180, 
+		"south": -90, 
+		"north":  90,
+		"nextxy": {
+			"path"  : "path_nextxy",
+			"dtype" : "int4",
+			"endian": "little",
+			"index" : {
+				"river_mouth" :    -9,
+				"river_inland":   -10,
+				"ocean"       : -9999
+			}
+		},
+		"catmxy": {
+			"path"  : "path_catmxy",
+			"dtype" : "int2",
+			"endian": "little",
+			"index" : {
+				"noriv_coastal":  -999,
+				"noriv_inland" :  -999,
+				"ocean"        : -9999
+			}
+		}
+	},
+	"directory": {
+		"tmp": {
+			"top": "../tmp",
+			"01": "01_make_cmf_mat",
+			"02": "02_make_rt"
+		}
+	},
+	"f_list_tiles": {
+		"glcnmo" : "/data26/nitta/Data/GLCNMO/tiles/all_tiles.txt",
+		"gtopo30": "/data34/nitta/Data/GTOPO30/tiles/dem/all_tiles.txt",
+		"hwsd"   : "/data26/nitta/Data/HWSD/tiles/silt/all_tiles.txt",
+		"jra55"  : "/data26/nitta/Data/JRA55/tiles/all_tiles.txt",
+		"modis"  : "/home/nitta/work2022/MIROC-ILS/matsiro/modis_latlon"
+	},
+	"glcnmo": {
+		"nx": 2400,
+		"ny": 2400,
+		"is_south_to_north": false
+	},
+	"gtopo30": {
+		"nx": 1200,
+		"ny": 1200,
+		"is_south_to_north": false
+	},
+	"modis": {
+		"dir_coords": "/home/nitta/work2022/MIROC-ILS/matsiro/modis_latlon"
+	},
+	"options": {
+		"make_verification_data": true,
+		"earth": {
+			"shape": "sphere",
+			"r": 6371e+3
+		}
+	}
+}

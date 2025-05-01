@@ -14,20 +14,33 @@ module common_rt_base
   public :: init_rt
   public :: init_rt_main
   public :: init_rt_main_data
-  public :: init_rt_im_zone
+  public :: init_file_rt_main
+  public :: init_opt_rt_area
+  public :: init_opt_rt_coef
+  public :: init_rt_vrf
+  public :: init_rt_vrf_grid
+  public :: init_rt_vrf_raster
 
   public :: free_rt
   public :: free_rt_main
   public :: free_rt_vrf
+  public :: free_rt_vrf_grid
+  public :: free_rt_vrf_raster
 
-  public :: clear_rt_main
+  public :: clear_rt
+  public :: clear_rt_main_data
+  public :: clear_rt_vrf_grid
+  public :: clear_rt_vrf_raster
 
   public :: set_default_values_rt
   public :: set_default_values_rt_main
+  public :: set_default_values_rt_main_file
+  public :: set_default_values_opt_rt_area
+  public :: set_default_values_opt_rt_coef
+  public :: set_default_values_rt_vrf
+  public :: set_default_values_rt_vrf_file
 
   public :: set_endian_file_rt_main
-
-  public :: calc_rt_im_nij_ulim
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -40,9 +53,6 @@ subroutine init_rt(rt)
   call echo(code%bgn, 'init_rt', '-p -x2')
   !-------------------------------------------------------------
   rt%id = ''
-!  allocate(character(1) :: rt%nam)
-!  allocate(character(1) :: rt%snam)
-!  allocate(character(1) :: rt%tnam)
   rt%nam = ''
   rt%snam = ''
   rt%tnam = ''
@@ -50,7 +60,6 @@ subroutine init_rt(rt)
   call init_rt_main(rt%main)
   call init_rt_vrf(rt%vrf_source)
   call init_rt_vrf(rt%vrf_target)
-  call init_rt_im(rt%im)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_rt
@@ -65,15 +74,39 @@ subroutine init_rt_main(rtm)
   !-------------------------------------------------------------
   rtm%id = ''
 
-  rtm%grid_coef = ''
-  rtm%grid_sort = ''
+  rtm%status = STATUS_UNDEF
+  rtm%grid_coef = GRID_NONE
+  rtm%grid_sort = GRID_NONE
   rtm%allow_empty = .true.
 
-  rtm%is_sorted_by_sidx = .true.
-  rtm%is_sorted_by_tidx = .true.
+  call init_rt_main_data(rtm)
 
   rtm%nij = 0_8
-  call init_rt_main_data(rtm)
+
+  call init_file_rt_main(rtm%f)
+
+  call init_opt_rt_area(rtm%opt_area)
+  call init_opt_rt_coef(rtm%opt_coef)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine init_rt_main
+!===============================================================
+!
+!===============================================================
+subroutine init_rt_main_data(rtm)
+  implicit none
+  type(rt_main_), intent(inout) :: rtm
+
+  call echo(code%ent, 'init_rt_main_data', '-p -x2')
+  !-------------------------------------------------------------
+  rtm%is_sorted_by_sidx = .false.
+  rtm%is_sorted_by_tidx = .false.
+
+  rtm%ijsize = 0_8
+  nullify(rtm%sidx)
+  nullify(rtm%tidx)
+  nullify(rtm%area)
+  nullify(rtm%coef)
 
   rtm%sidx_vmin = 0_8
   rtm%sidx_vmax = 0_8
@@ -92,28 +125,6 @@ subroutine init_rt_main(rtm)
   rtm%area_imax = 0_8
   rtm%coef_imin = 0_8
   rtm%coef_imax = 0_8
-
-  call init_file_rt_main(rtm%f)
-
-  call init_rt_opt_area(rtm%opt_area)
-  call init_rt_opt_coef(rtm%opt_coef)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt_main
-!===============================================================
-!
-!===============================================================
-subroutine init_rt_main_data(rtm)
-  implicit none
-  type(rt_main_), intent(inout) :: rtm
-
-  call echo(code%ent, 'init_rt_main_data', '-p -x2')
-  !-------------------------------------------------------------
-  rtm%ijsize = 0_8
-  nullify(rtm%sidx)
-  nullify(rtm%tidx)
-  nullify(rtm%area)
-  nullify(rtm%coef)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_rt_main_data
@@ -130,37 +141,32 @@ subroutine init_file_rt_main(f)
   f%tidx = file('')
   f%area = file('')
   f%coef = file('')
-
-  f%sidx_tmp = file('')
-  f%tidx_tmp = file('')
-  f%area_tmp = file('')
-  f%coef_tmp = file('')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_file_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_opt_area(opt)
+subroutine init_opt_rt_area(opt)
   implicit none
-  type(rt_opt_area_), intent(out) :: opt
+  type(opt_rt_area_), intent(out) :: opt
 
-  call echo(code%bgn, 'init_rt_opt_area', '-p -x2')
+  call echo(code%bgn, 'init_opt_rt_area', '-p -x2')
   !-------------------------------------------------------------
   opt%is_ratio_zero_negative_enabled = .true.
   opt%ratio_zero_negative = 0.d0
   opt%allow_le_ratio_zero_negative = .true.
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine init_rt_opt_area
+end subroutine init_opt_rt_area
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_opt_coef(opt)
+subroutine init_opt_rt_coef(opt)
   implicit none
-  type(rt_opt_coef_), intent(out) :: opt
+  type(opt_rt_coef_), intent(out) :: opt
 
-  call echo(code%bgn, 'init_rt_opt_coef', '-p -x2')
+  call echo(code%bgn, 'init_opt_rt_coef', '-p -x2')
   !-------------------------------------------------------------
   opt%is_sum_modify_enabled = .true.
   opt%sum_modify = 0.d0
@@ -180,7 +186,7 @@ subroutine init_rt_opt_coef(opt)
   opt%sum_error_excess = 0.d0
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine init_rt_opt_coef
+end subroutine init_opt_rt_coef
 !===============================================================
 !
 !===============================================================
@@ -192,67 +198,57 @@ subroutine init_rt_vrf(rtv)
   !-------------------------------------------------------------
   rtv%id = ''
 
-  rtv%idx_miss = 0_8
+  rtv%idx_miss  = 0_8
   rtv%dval_miss = 0.d0
   rtv%ival_miss = 0_8
 
   rtv%nFiles = 0
   nullify(rtv%f)
+
+  call init_rt_vrf_grid(rtv)
+  call init_rt_vrf_raster(rtv)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_im(rtim)
+subroutine init_rt_vrf_grid(rtv)
   implicit none
-  type(rt_im_), intent(out) :: rtim
+  type(rt_vrf_), intent(inout) :: rtv
 
-  call echo(code%bgn, 'init_rt_im', '-p -x2')
-  !-------------------------------------------------------------
-  rtim%un = 0
-  rtim%path = ''
-
-  rtim%nZones = 0
-  rtim%iZone = 0
-  nullify(rtim%zone)
-
-  rtim%nij_ulim = 0_8
-  rtim%nij_max = 0_8
-  rtim%mij_group_max = 0_8
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt_im
+  nullify(rtv%grdidx)
+  nullify(rtv%grdara_true)
+  nullify(rtv%grdara_rt)
+  nullify(rtv%rerr_grdara)
+  nullify(rtv%grdnum)
+  rtv%grdara_true_min = 0.d0
+  rtv%grdara_true_max = 0.d0
+  rtv%grdara_rt_min   = 0.d0
+  rtv%grdara_rt_max   = 0.d0
+  rtv%rerr_grdara_min = 0.d0
+  rtv%rerr_grdara_max = 0.d0
+  rtv%grdnum_min      = 0_8
+  rtv%grdnum_max      = 0_8
+  rtv%idx_grdara_true_min = 0_8
+  rtv%idx_grdara_true_max = 0_8
+  rtv%idx_grdara_rt_min   = 0_8
+  rtv%idx_grdara_rt_max   = 0_8
+  rtv%idx_rerr_grdara_min = 0_8
+  rtv%idx_rerr_grdara_max = 0_8
+  rtv%idx_grdnum_min      = 0_8
+  rtv%idx_grdnum_max      = 0_8
+end subroutine init_rt_vrf_grid
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_im_zone(rtim_zone)
+subroutine init_rt_vrf_raster(rtv)
   implicit none
-  type(rt_im_zone_), intent(out), target :: rtim_zone(:)
+  type(rt_vrf_), intent(inout) :: rtv
 
-  type(rt_im_zone_), pointer :: rtiz
-  integer :: iZone
-
-  call echo(code%bgn, 'init_rt_im_zone', '-p -x2')
-  !-------------------------------------------------------------
-  do iZone = 1, size(rtim_zone)
-    rtiz => rtim_zone(iZone)
-
-    rtiz%nij = 0_8
-
-    rtiz%sortidxmin = 0_8
-    rtiz%sortidxmax = 0_8
-    rtiz%sidx_min = 0_8
-    rtiz%sidx_max = 0_8
-    rtiz%tidx_min = 0_8
-    rtiz%tidx_max = 0_8
-
-    rtiz%nGroups = 0
-    nullify(rtiz%group)
-  enddo
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt_im_zone
+  nullify(rtv%iarea_sum)
+  nullify(rtv%iratio_sum)
+end subroutine init_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
@@ -270,11 +266,9 @@ subroutine free_rt(rt)
 
   call echo(code%bgn, 'free_rt', '-p -x2')
   !-------------------------------------------------------------
-!  deallocate(rt%nam)
   call free_rt_main(rt%main)
   call free_rt_vrf(rt%vrf_source)
   call free_rt_vrf(rt%vrf_target)
-  call free_rt_im(rt%im)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine free_rt
@@ -289,7 +283,6 @@ subroutine free_rt_main(rtm)
   !-------------------------------------------------------------
   rtm%is_sorted_by_sidx = .false.
   rtm%is_sorted_by_tidx = .false.
-
   rtm%ijsize = 0_8
   call realloc(rtm%sidx, 0)
   call realloc(rtm%tidx, 0)
@@ -311,75 +304,98 @@ subroutine free_rt_vrf(rtv)
     rtv%nFiles = 0
     deallocate(rtv%f)
   endif
+  call free_rt_vrf_grid(rtv)
+  call free_rt_vrf_raster(rtv)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine free_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine free_rt_im(rtim)
+subroutine free_rt_vrf_grid(rtv)
   implicit none
-  type(rt_im_), intent(inout), target :: rtim
+  type(rt_vrf_), intent(inout) :: rtv
 
-  call echo(code%bgn, 'free_rt_im', '-p -x2')
+  call realloc(rtv%grdidx     , 0)
+  call realloc(rtv%grdara_true, 0)
+  call realloc(rtv%grdara_rt  , 0)
+  call realloc(rtv%rerr_grdara, 0)
+  call realloc(rtv%grdnum     , 0)
+end subroutine free_rt_vrf_grid
+!===============================================================
+!
+!===============================================================
+subroutine free_rt_vrf_raster(rtv)
+  implicit none
+  type(rt_vrf_), intent(inout) :: rtv
+
+  call realloc(rtv%iarea_sum , 0)
+  call realloc(rtv%iratio_sum, 0)
+end subroutine free_rt_vrf_raster
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine clear_rt(rt)
+  implicit none
+  type(rt_), intent(inout) :: rt
+
+  call echo(code%bgn, 'clear_rt', '-p -x2')
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( rtim%nZones > 0 )then
-    rtim%nZones = 0
-    deallocate(rtim%zone)
-  endif
+  call free_rt(rt)
+  call init_rt(rt)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine free_rt_im
+end subroutine clear_rt
 !===============================================================
 !
 !===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine clear_rt_main(rtm)
+subroutine clear_rt_main_data(rtm)
   implicit none
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'clear_rt_main', '-p -x2')
+  call echo(code%bgn, 'clear_rt_main_data', '-p -x2')
   !-------------------------------------------------------------
-  rtm%is_sorted_by_sidx = .false.
-  rtm%is_sorted_by_tidx = .false.
-
-  rtm%ijsize = 0_8
-  rtm%nij = 0_8
-
-  call realloc(rtm%sidx, 0)
-  call realloc(rtm%tidx, 0)
-  call realloc(rtm%area, 0)
-  call realloc(rtm%coef, 0)
-
-  rtm%sidx_vmin = 0_8
-  rtm%sidx_vmax = 0_8
-  rtm%tidx_vmin = 0_8
-  rtm%tidx_vmax = 0_8
-  rtm%area_vmin = 0.d0
-  rtm%area_vmax = 0.d0
-  rtm%coef_vmin = 0.d0
-  rtm%coef_vmax = 0.d0
-
-  rtm%sidx_imin = 0_8
-  rtm%sidx_imax = 0_8
-  rtm%tidx_imin = 0_8
-  rtm%tidx_imax = 0_8
-  rtm%area_imin = 0_8
-  rtm%area_imax = 0_8
-  rtm%coef_imin = 0_8
-  rtm%coef_imax = 0_8
+  call free_rt_main(rtm)
+  call init_rt_main(rtm)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine clear_rt_main
+end subroutine clear_rt_main_data
+!===============================================================
+!
+!===============================================================
+subroutine clear_rt_vrf_grid(rtv)
+  implicit none
+  type(rt_vrf_), intent(inout) :: rtv
+
+  call echo(code%bgn, 'clear_rt_vrf_grid', '-p -x2')
+  !-------------------------------------------------------------
+  call free_rt_vrf_grid(rtv)
+  call init_rt_vrf_grid(rtv)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine clear_rt_vrf_grid
+!===============================================================
+!
+!===============================================================
+subroutine clear_rt_vrf_raster(rtv)
+  implicit none
+  type(rt_vrf_), intent(inout) :: rtv
+
+  call echo(code%bgn, 'clear_rt_vrf_raster', '-p -x2')
+  !-------------------------------------------------------------
+  call free_rt_vrf_raster(rtv)
+  call init_rt_vrf_raster(rtv)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine clear_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
@@ -409,8 +425,6 @@ subroutine set_default_values_rt(rt, nFiles_vrf_source, nFiles_vrf_target)
 
   call set_default_values_rt_vrf(rt%vrf_source, .true. , rt%id, nFiles_vrf_source_)
   call set_default_values_rt_vrf(rt%vrf_target, .false., rt%id, nFiles_vrf_target_)
-
-  call set_default_values_rt_im(rt)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt
@@ -514,8 +528,8 @@ subroutine set_default_values_rt_main(&
 
   call set_default_values_rt_main_file(rtm)
 
-  call set_default_values_rt_opt_area(rtm%opt_area)
-  call set_default_values_rt_opt_coef(rtm%opt_coef)
+  call set_default_values_opt_rt_area(rtm%opt_area)
+  call set_default_values_opt_rt_coef(rtm%opt_coef)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt_main
@@ -553,11 +567,6 @@ subroutine set_default_values_rt_main_file(rtm)
   rtm%f%area = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%area')
   rtm%f%coef = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%coef')
 
-  rtm%f%sidx_tmp = file(DTYPE_INT4, rec=1, id=trim(rtm%id)//'%f%sidx_tmp')
-  rtm%f%tidx_tmp = file(DTYPE_INT4, rec=2, id=trim(rtm%id)//'%f%tidx_tmp')
-  rtm%f%area_tmp = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%area_tmp')
-  rtm%f%coef_tmp = file(DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%coef_tmp')
-
   call reset_file_default()
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -565,26 +574,26 @@ end subroutine set_default_values_rt_main_file
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt_opt_area(opt)
+subroutine set_default_values_opt_rt_area(opt)
   implicit none
-  type(rt_opt_area_), intent(inout) :: opt
+  type(opt_rt_area_), intent(inout) :: opt
 
-  call echo(code%bgn, 'set_default_values_rt_opt_area', '-p -x2')
+  call echo(code%bgn, 'set_default_values_opt_rt_area', '-p -x2')
   !-------------------------------------------------------------
   opt%is_ratio_zero_negative_enabled = .true.
   opt%ratio_zero_negative = -1d-16
   opt%allow_le_ratio_zero_negative = .true.
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_default_values_rt_opt_area
+end subroutine set_default_values_opt_rt_area
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt_opt_coef(opt)
+subroutine set_default_values_opt_rt_coef(opt)
   implicit none
-  type(rt_opt_coef_), intent(inout) :: opt
+  type(opt_rt_coef_), intent(inout) :: opt
 
-  call echo(code%bgn, 'set_default_values_rt_opt_coef', '-p -x2')
+  call echo(code%bgn, 'set_default_values_opt_rt_coef', '-p -x2')
   !-------------------------------------------------------------
   opt%is_sum_modify_enabled = .false.
   opt%sum_modify = 0.d0
@@ -604,7 +613,7 @@ subroutine set_default_values_rt_opt_coef(opt)
   opt%sum_error_excess = 0.d0
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_default_values_rt_opt_coef
+end subroutine set_default_values_opt_rt_coef
 !===============================================================
 !
 !===============================================================
@@ -638,6 +647,12 @@ subroutine set_default_values_rt_vrf(rtv, is_source, id_rt, nFiles)
       call set_default_values_rt_vrf_file(rtv, iFile)
     enddo
   endif
+
+  nullify(rtv%grdidx)
+  nullify(rtv%grdara_true)
+  nullify(rtv%grdara_rt)
+  nullify(rtv%rerr_grdara)
+  nullify(rtv%grdnum)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt_vrf
@@ -668,39 +683,10 @@ subroutine set_default_values_rt_vrf_file(rtv, iFile)
   fvrf%out_iarea_sum   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_iarea_sum')
   fvrf%out_iratio_sum  = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_iratio_sum')
 
-  fvrf%out_tmp_grdidx      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_tmp_grdidx')
-  fvrf%out_tmp_grdara_true = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_grdara_true')
-  fvrf%out_tmp_grdara_rt   = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_grdara_rt')
-  fvrf%out_tmp_rerr_grdara = file(dtype=DTYPE_DBLE, id=trim(fvrf%id)//'%out_tmp_rerr_grdara')
-  fvrf%out_tmp_grdnum      = file(dtype=DTYPE_INT4, id=trim(fvrf%id)//'%out_tmp_grdnum')
-
   call reset_file_default()
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt_vrf_file
-!===============================================================
-!
-!===============================================================
-subroutine set_default_values_rt_im(rt)
-  implicit none
-  type(rt_), intent(inout), target :: rt
-
-  !call echo(code%bgn, 'set_default_values_rt_im', '-p -x2')
-  call echo(code%bgn, 'set_default_values_rt_im')
-  !-------------------------------------------------------------
-  rt%im%un = 0
-  rt%im%path = ''
-
-  rt%im%nZones = 0
-  rt%im%iZone = 0
-  nullify(rt%im%zone)
-
-  rt%im%nij_ulim = 0_8
-  rt%im%nij_max = 0_8
-  rt%im%mij_group_max = 0_8
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_rt_im
 !===============================================================
 !
 !===============================================================
@@ -726,36 +712,9 @@ subroutine set_endian_file_rt_main(&
   f_rtm%tidx%endian = endian
   f_rtm%area%endian = endian
   f_rtm%coef%endian = endian
-
-  f_rtm%sidx_tmp%endian = endian
-  f_rtm%tidx_tmp%endian = endian
-  f_rtm%area_tmp%endian = endian
-  f_rtm%coef_tmp%endian = endian
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_endian_file_rt_main
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine calc_rt_im_nij_ulim(nij_ulim, memory_ulim)
-  implicit none
-  integer(8), intent(out) :: nij_ulim
-  real(8), intent(in) :: memory_ulim
-
-  if( memory_ulim == 0.d0 )then
-    nij_ulim = 0_8
-  else
-    nij_ulim = 0_8
-  endif
-end subroutine calc_rt_im_nij_ulim
 !===============================================================
 !
 !===============================================================

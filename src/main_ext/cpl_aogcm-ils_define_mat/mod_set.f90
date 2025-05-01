@@ -35,7 +35,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
+subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
@@ -49,6 +49,9 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
         msg_invalid_input
   use common_file, only: &
         open_report_file
+  use common_opt_ctrl, only: &
+        set_opt_sys, &
+        set_opt_log
   use common_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log
@@ -58,7 +61,6 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
   type(agcm_)  , intent(out) :: agcm
   type(rm_)    , intent(out) :: rm
   type(lsm_)   , intent(out) :: lsm
-  type(opt_)   , intent(out) :: opt
 
   type counter_
     integer :: input_rt_ogcm_ocean_to_agcm
@@ -68,7 +70,7 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
     integer :: input_rt_rm_ocean_to_agcm
     integer :: input_agcm
     integer :: input_rm
-    integer :: output_rt_opt_coef
+    integer :: output_opt_rt_coef
     integer :: output_rt_lsm_river_to_agcm
     integer :: output_rt_lsm_noriv_to_agcm
     integer :: output_rt_lsm_ocean_to_agcm
@@ -80,10 +82,6 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
     integer :: options
   end type
   type(counter_) :: counter
-
-  character(CLEN_VAR) :: block_name
-
-  type(rt_opt_coef_) :: rt_opt_coef
 
   character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM &
                                             = 'input_rt_ogcm_ocean_to_agcm'
@@ -99,8 +97,8 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
                                             = 'input_agcm'
   character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RM &
                                             = 'input_rm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_OPT_COEF &
-                                            = 'output_rt_opt_coef'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_OPT_RT_COEF &
+                                            = 'output_opt_rt_coef'
   character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM &
                                             = 'output_rt_lsm_river_to_agcm'
   character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM &
@@ -119,6 +117,10 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
                                             = 'output_lsm'
   character(CLEN_VAR), parameter :: BLOCK_NAME_OPTIONS &
                                             = 'options'
+
+  character(CLEN_VAR) :: block_name
+  type(opt_rt_coef_) :: opt_rt_coef
+  type(opt_) :: opt
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
@@ -184,10 +186,10 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
       call update_counter(counter%input_rm)
       call read_settings_input_rm(rm)
     !-----------------------------------------------------------
-    ! Case: rt_opt_coef
-    case( BLOCK_NAME_OUTPUT_RT_OPT_COEF )
-      call update_counter(counter%output_rt_opt_coef)
-      call read_settings_rt_coef_options(rt_opt_coef)
+    ! Case: opt_rt_coef
+    case( BLOCK_NAME_OUTPUT_OPT_RT_COEF )
+      call update_counter(counter%output_opt_rt_coef)
+      call read_settings_rt_coef_options(opt_rt_coef)
     !-----------------------------------------------------------
     ! Case: output rt
     case( BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM )
@@ -253,59 +255,62 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
   lsm%nkx = rm%nkx
   lsm%nky = rm%nky
 
-  if( rt_opt_coef%is_sum_modify_enabled )then
-    call put_opt_coef_sum_modify(rt_opt_coef%sum_modify, rt_out%lsm_river_to_agcm)
-    call put_opt_coef_sum_modify(rt_opt_coef%sum_modify, rt_out%lsm_noriv_to_agcm)
-    call put_opt_coef_sum_modify(rt_opt_coef%sum_modify, rt_out%lsm_ocean_to_agcm)
-    call put_opt_coef_sum_modify(rt_opt_coef%sum_modify, rt_out%agcm_to_lsm_river)
-    call put_opt_coef_sum_modify(rt_opt_coef%sum_modify, rt_out%agcm_to_lsm_noriv)
-    call put_opt_coef_sum_modify(rt_opt_coef%sum_modify, rt_out%agcm_to_lsm_ocean)
+  if( opt_rt_coef%is_sum_modify_enabled )then
+    call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%lsm_river_to_agcm)
+    call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%lsm_noriv_to_agcm)
+    call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%lsm_ocean_to_agcm)
+    call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%agcm_to_lsm_river)
+    call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%agcm_to_lsm_noriv)
+    call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%agcm_to_lsm_ocean)
   endif
 
-  if( rt_opt_coef%is_sum_modify_ulim_enabled )then
-    call put_opt_coef_sum_modify_ulim(rt_opt_coef%sum_modify_ulim, rt_out%lsm_river_to_agcm)
-    call put_opt_coef_sum_modify_ulim(rt_opt_coef%sum_modify_ulim, rt_out%lsm_noriv_to_agcm)
-    call put_opt_coef_sum_modify_ulim(rt_opt_coef%sum_modify_ulim, rt_out%lsm_ocean_to_agcm)
-    call put_opt_coef_sum_modify_ulim(rt_opt_coef%sum_modify_ulim, rt_out%agcm_to_lsm_river)
-    call put_opt_coef_sum_modify_ulim(rt_opt_coef%sum_modify_ulim, rt_out%agcm_to_lsm_noriv)
-    call put_opt_coef_sum_modify_ulim(rt_opt_coef%sum_modify_ulim, rt_out%agcm_to_lsm_ocean)
+  if( opt_rt_coef%is_sum_modify_ulim_enabled )then
+    call put_opt_coef_sum_modify_ulim(opt_rt_coef%sum_modify_ulim, rt_out%lsm_river_to_agcm)
+    call put_opt_coef_sum_modify_ulim(opt_rt_coef%sum_modify_ulim, rt_out%lsm_noriv_to_agcm)
+    call put_opt_coef_sum_modify_ulim(opt_rt_coef%sum_modify_ulim, rt_out%lsm_ocean_to_agcm)
+    call put_opt_coef_sum_modify_ulim(opt_rt_coef%sum_modify_ulim, rt_out%agcm_to_lsm_river)
+    call put_opt_coef_sum_modify_ulim(opt_rt_coef%sum_modify_ulim, rt_out%agcm_to_lsm_noriv)
+    call put_opt_coef_sum_modify_ulim(opt_rt_coef%sum_modify_ulim, rt_out%agcm_to_lsm_ocean)
   endif
 
-  if( rt_opt_coef%is_zero_positive_enabled )then
-    call put_opt_coef_zero_positive(rt_opt_coef%zero_positive, rt_out%lsm_river_to_agcm)
-    call put_opt_coef_zero_positive(rt_opt_coef%zero_positive, rt_out%lsm_noriv_to_agcm)
-    call put_opt_coef_zero_positive(rt_opt_coef%zero_positive, rt_out%lsm_ocean_to_agcm)
-    call put_opt_coef_zero_positive(rt_opt_coef%zero_positive, rt_out%agcm_to_lsm_river)
-    call put_opt_coef_zero_positive(rt_opt_coef%zero_positive, rt_out%agcm_to_lsm_noriv)
-    call put_opt_coef_zero_positive(rt_opt_coef%zero_positive, rt_out%agcm_to_lsm_ocean)
+  if( opt_rt_coef%is_zero_positive_enabled )then
+    call put_opt_coef_zero_positive(opt_rt_coef%zero_positive, rt_out%lsm_river_to_agcm)
+    call put_opt_coef_zero_positive(opt_rt_coef%zero_positive, rt_out%lsm_noriv_to_agcm)
+    call put_opt_coef_zero_positive(opt_rt_coef%zero_positive, rt_out%lsm_ocean_to_agcm)
+    call put_opt_coef_zero_positive(opt_rt_coef%zero_positive, rt_out%agcm_to_lsm_river)
+    call put_opt_coef_zero_positive(opt_rt_coef%zero_positive, rt_out%agcm_to_lsm_noriv)
+    call put_opt_coef_zero_positive(opt_rt_coef%zero_positive, rt_out%agcm_to_lsm_ocean)
   endif
 
-  if( rt_opt_coef%is_zero_negative_enabled )then
-    call put_opt_coef_zero_negative(rt_opt_coef%zero_negative, rt_out%lsm_river_to_agcm)
-    call put_opt_coef_zero_negative(rt_opt_coef%zero_negative, rt_out%lsm_noriv_to_agcm)
-    call put_opt_coef_zero_negative(rt_opt_coef%zero_negative, rt_out%lsm_ocean_to_agcm)
-    call put_opt_coef_zero_negative(rt_opt_coef%zero_negative, rt_out%agcm_to_lsm_river)
-    call put_opt_coef_zero_negative(rt_opt_coef%zero_negative, rt_out%agcm_to_lsm_noriv)
-    call put_opt_coef_zero_negative(rt_opt_coef%zero_negative, rt_out%agcm_to_lsm_ocean)
+  if( opt_rt_coef%is_zero_negative_enabled )then
+    call put_opt_coef_zero_negative(opt_rt_coef%zero_negative, rt_out%lsm_river_to_agcm)
+    call put_opt_coef_zero_negative(opt_rt_coef%zero_negative, rt_out%lsm_noriv_to_agcm)
+    call put_opt_coef_zero_negative(opt_rt_coef%zero_negative, rt_out%lsm_ocean_to_agcm)
+    call put_opt_coef_zero_negative(opt_rt_coef%zero_negative, rt_out%agcm_to_lsm_river)
+    call put_opt_coef_zero_negative(opt_rt_coef%zero_negative, rt_out%agcm_to_lsm_noriv)
+    call put_opt_coef_zero_negative(opt_rt_coef%zero_negative, rt_out%agcm_to_lsm_ocean)
   endif
 
-  if( rt_opt_coef%is_error_excess_enabled )then
-    call put_opt_coef_error_excess(rt_opt_coef%error_excess, rt_out%lsm_river_to_agcm)
-    call put_opt_coef_error_excess(rt_opt_coef%error_excess, rt_out%lsm_noriv_to_agcm)
-    call put_opt_coef_error_excess(rt_opt_coef%error_excess, rt_out%lsm_ocean_to_agcm)
-    call put_opt_coef_error_excess(rt_opt_coef%error_excess, rt_out%agcm_to_lsm_river)
-    call put_opt_coef_error_excess(rt_opt_coef%error_excess, rt_out%agcm_to_lsm_noriv)
-    call put_opt_coef_error_excess(rt_opt_coef%error_excess, rt_out%agcm_to_lsm_ocean)
+  if( opt_rt_coef%is_error_excess_enabled )then
+    call put_opt_coef_error_excess(opt_rt_coef%error_excess, rt_out%lsm_river_to_agcm)
+    call put_opt_coef_error_excess(opt_rt_coef%error_excess, rt_out%lsm_noriv_to_agcm)
+    call put_opt_coef_error_excess(opt_rt_coef%error_excess, rt_out%lsm_ocean_to_agcm)
+    call put_opt_coef_error_excess(opt_rt_coef%error_excess, rt_out%agcm_to_lsm_river)
+    call put_opt_coef_error_excess(opt_rt_coef%error_excess, rt_out%agcm_to_lsm_noriv)
+    call put_opt_coef_error_excess(opt_rt_coef%error_excess, rt_out%agcm_to_lsm_ocean)
   endif
 
-  if( rt_opt_coef%is_sum_error_excess_enabled )then
-    call put_opt_coef_sum_error_excess(rt_opt_coef%sum_error_excess, rt_out%lsm_river_to_agcm)
-    call put_opt_coef_sum_error_excess(rt_opt_coef%sum_error_excess, rt_out%lsm_noriv_to_agcm)
-    call put_opt_coef_sum_error_excess(rt_opt_coef%sum_error_excess, rt_out%lsm_ocean_to_agcm)
-    call put_opt_coef_sum_error_excess(rt_opt_coef%sum_error_excess, rt_out%agcm_to_lsm_river)
-    call put_opt_coef_sum_error_excess(rt_opt_coef%sum_error_excess, rt_out%agcm_to_lsm_noriv)
-    call put_opt_coef_sum_error_excess(rt_opt_coef%sum_error_excess, rt_out%agcm_to_lsm_ocean)
+  if( opt_rt_coef%is_sum_error_excess_enabled )then
+    call put_opt_coef_sum_error_excess(opt_rt_coef%sum_error_excess, rt_out%lsm_river_to_agcm)
+    call put_opt_coef_sum_error_excess(opt_rt_coef%sum_error_excess, rt_out%lsm_noriv_to_agcm)
+    call put_opt_coef_sum_error_excess(opt_rt_coef%sum_error_excess, rt_out%lsm_ocean_to_agcm)
+    call put_opt_coef_sum_error_excess(opt_rt_coef%sum_error_excess, rt_out%agcm_to_lsm_river)
+    call put_opt_coef_sum_error_excess(opt_rt_coef%sum_error_excess, rt_out%agcm_to_lsm_noriv)
+    call put_opt_coef_sum_error_excess(opt_rt_coef%sum_error_excess, rt_out%agcm_to_lsm_ocean)
   endif
+
+  call set_opt_sys(opt%sys)
+  call set_opt_log(opt%log)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -354,7 +359,7 @@ subroutine init_counter()
   counter%input_rt_rm_ocean_to_agcm = 0
   counter%input_agcm = 0
   counter%input_rm   = 0
-  counter%output_rt_opt_coef = 0
+  counter%output_opt_rt_coef = 0
   counter%output_rt_lsm_river_to_agcm = 0
   counter%output_rt_lsm_noriv_to_agcm = 0
   counter%output_rt_lsm_ocean_to_agcm = 0
@@ -403,8 +408,8 @@ subroutine update_counter(n)
          BLOCK_NAME_INPUT_RM, 0, 1)
 
   call check_num_of_key(&
-         counter%output_rt_opt_coef, &
-         BLOCK_NAME_OUTPUT_RT_OPT_COEF, 0, 1)
+         counter%output_opt_rt_coef, &
+         BLOCK_NAME_OUTPUT_OPT_RT_COEF, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_river_to_agcm, &
@@ -483,8 +488,8 @@ subroutine check_number_of_blocks()
          BLOCK_NAME_INPUT_RM, 1, 1)
 
   call check_num_of_key(&
-         counter%output_rt_opt_coef, &
-         BLOCK_NAME_OUTPUT_RT_OPT_COEF, 0, 1)
+         counter%output_opt_rt_coef, &
+         BLOCK_NAME_OUTPUT_OPT_RT_COEF, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_river_to_agcm, &
@@ -981,9 +986,9 @@ subroutine read_settings_rt_coef_options(opt_coef)
         msg_invalid_input      , &
         msg_undesirable_input
   use common_rt_set, only: &
-        init_rt_opt_coef
+        init_opt_rt_coef
   implicit none
-  type(rt_opt_coef_), intent(inout) :: opt_coef
+  type(opt_rt_coef_), intent(inout) :: opt_coef
 
   call echo(code%bgn, 'read_settings_rt_coef_options')
   !-------------------------------------------------------------
@@ -1005,7 +1010,7 @@ subroutine read_settings_rt_coef_options(opt_coef)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call init_rt_opt_coef(opt_coef)
+  call init_opt_rt_coef(opt_coef)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1753,7 +1758,7 @@ subroutine echo_settings_output_rt(rt)
   use common_set, only: &
         bar
   use common_rt_set, only: &
-        echo_settings_rt_opt_coef
+        echo_settings_opt_rt_coef
   implicit none
   type(rt_), intent(in), target :: rt
 
@@ -1774,7 +1779,7 @@ subroutine echo_settings_output_rt(rt)
   call edbg('tidx: '//str(fileinfo(rtm%f%tidx)))
   call edbg('area: '//str(fileinfo(rtm%f%area)))
   call edbg('coef: '//str(fileinfo(rtm%f%coef)))
-  call echo_settings_rt_opt_coef(rtm%opt_coef,0)
+  call echo_settings_opt_rt_coef(rtm%opt_coef,0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_output_rt
@@ -2331,12 +2336,12 @@ subroutine put_opt_coef_sum_modify(fill, rt)
   real(8)  , intent(in)            :: fill
   type(rt_), intent(inout), target :: rt
 
-  type(rt_opt_coef_), pointer :: opt_coef
+  type(opt_rt_coef_), pointer :: opt
 
-  opt_coef => rt%main%opt_coef
-  if( .not. opt_coef%is_sum_modify_enabled )then
-    opt_coef%is_sum_modify_enabled = .true.
-    opt_coef%sum_modify = fill
+  opt => rt%main%opt_coef
+  if( .not. opt%is_sum_modify_enabled )then
+    opt%is_sum_modify_enabled = .true.
+    opt%sum_modify = fill
   endif
 end subroutine put_opt_coef_sum_modify
 !===============================================================
@@ -2347,12 +2352,12 @@ subroutine put_opt_coef_sum_modify_ulim(fill, rt)
   real(8)  , intent(in)            :: fill
   type(rt_), intent(inout), target :: rt
 
-  type(rt_opt_coef_), pointer :: opt_coef
+  type(opt_rt_coef_), pointer :: opt
 
-  opt_coef => rt%main%opt_coef
-  if( .not. opt_coef%is_sum_modify_ulim_enabled )then
-    opt_coef%is_sum_modify_ulim_enabled = .true.
-    opt_coef%sum_modify_ulim = fill
+  opt => rt%main%opt_coef
+  if( .not. opt%is_sum_modify_ulim_enabled )then
+    opt%is_sum_modify_ulim_enabled = .true.
+    opt%sum_modify_ulim = fill
   endif
 end subroutine put_opt_coef_sum_modify_ulim
 !===============================================================
@@ -2363,12 +2368,12 @@ subroutine put_opt_coef_zero_positive(fill, rt)
   real(8)  , intent(in)            :: fill
   type(rt_), intent(inout), target :: rt
 
-  type(rt_opt_coef_), pointer :: opt_coef
+  type(opt_rt_coef_), pointer :: opt
 
-  opt_coef => rt%main%opt_coef
-  if( .not. opt_coef%is_zero_positive_enabled )then
-    opt_coef%is_zero_positive_enabled = .true.
-    opt_coef%zero_positive = fill
+  opt => rt%main%opt_coef
+  if( .not. opt%is_zero_positive_enabled )then
+    opt%is_zero_positive_enabled = .true.
+    opt%zero_positive = fill
   endif
 end subroutine put_opt_coef_zero_positive
 !===============================================================
@@ -2379,12 +2384,12 @@ subroutine put_opt_coef_zero_negative(fill, rt)
   real(8)  , intent(in)            :: fill
   type(rt_), intent(inout), target :: rt
 
-  type(rt_opt_coef_), pointer :: opt_coef
+  type(opt_rt_coef_), pointer :: opt
 
-  opt_coef => rt%main%opt_coef
-  if( .not. opt_coef%is_zero_negative_enabled )then
-    opt_coef%is_zero_negative_enabled = .true.
-    opt_coef%zero_negative = fill
+  opt => rt%main%opt_coef
+  if( .not. opt%is_zero_negative_enabled )then
+    opt%is_zero_negative_enabled = .true.
+    opt%zero_negative = fill
   endif
 end subroutine put_opt_coef_zero_negative
 !===============================================================
@@ -2395,12 +2400,12 @@ subroutine put_opt_coef_error_excess(fill, rt)
   real(8)  , intent(in)            :: fill
   type(rt_), intent(inout), target :: rt
 
-  type(rt_opt_coef_), pointer :: opt_coef
+  type(opt_rt_coef_), pointer :: opt
 
-  opt_coef => rt%main%opt_coef
-  if( .not. opt_coef%is_error_excess_enabled )then
-    opt_coef%is_error_excess_enabled = .true.
-    opt_coef%error_excess = fill
+  opt => rt%main%opt_coef
+  if( .not. opt%is_error_excess_enabled )then
+    opt%is_error_excess_enabled = .true.
+    opt%error_excess = fill
   endif
 end subroutine put_opt_coef_error_excess
 !===============================================================
@@ -2411,12 +2416,12 @@ subroutine put_opt_coef_sum_error_excess(fill, rt)
   real(8)  , intent(in)            :: fill
   type(rt_), intent(inout), target :: rt
 
-  type(rt_opt_coef_), pointer :: opt_coef
+  type(opt_rt_coef_), pointer :: opt
 
-  opt_coef => rt%main%opt_coef
-  if( .not. opt_coef%is_sum_error_excess_enabled )then
-    opt_coef%is_sum_error_excess_enabled = .true.
-    opt_coef%sum_error_excess = fill
+  opt => rt%main%opt_coef
+  if( .not. opt%is_sum_error_excess_enabled )then
+    opt%is_sum_error_excess_enabled = .true.
+    opt%sum_error_excess = fill
   endif
 end subroutine put_opt_coef_sum_error_excess
 !===============================================================

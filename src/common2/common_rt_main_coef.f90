@@ -25,14 +25,14 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine calc_rt_coef(rtm, list_grdidx, list_grdara)
+subroutine calc_rt_coef(rtm, grdidx, grdidxarg, grdara)
   implicit none
   type(rt_main_), intent(inout), target :: rtm
-  integer(8), intent(in) :: list_grdidx(:)
-  real(8)   , intent(in) :: list_grdara(:)
+  integer(8), intent(in) :: grdidx(:)
+  integer(8), intent(in) :: grdidxarg(:)
+  real(8)   , intent(in) :: grdara(:)
 
   type(gs_common_), pointer :: uc
-
   integer(8), pointer :: coefidx(:)
 
   call echo(code%bgn, 'calc_rt_coef', '-p -x2')
@@ -54,7 +54,7 @@ subroutine calc_rt_coef(rtm, list_grdidx, list_grdara)
   if( rtm%opt_coef%is_sum_modify_enabled )then
     call calc_rt_coef_sum_modify_enabled(rtm)
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtm, list_grdidx, list_grdara)
+    call calc_rt_coef_sum_modify_not_enabled(rtm, grdidx, grdidxarg, grdara)
   endif
   !-------------------------------------------------------------
   nullify(uc)
@@ -211,18 +211,18 @@ end subroutine calc_rt_coef_sum_modify_enabled
 !
 !===============================================================
 subroutine calc_rt_coef_sum_modify_not_enabled(&
-    rtm, grdidx, grdara)
+    rtm, grdidx, grdidxarg, grdara)
   use common_rt_error, only: &
         raise_error_coef_above_thresh
   implicit none
   type(rt_main_), intent(inout) :: rtm
   integer(8)    , intent(in)    :: grdidx(:)
+  integer(8)    , intent(in)    :: grdidxarg(:)
   real(8)       , intent(in)    :: grdara(:)
 
   integer(8), pointer :: coefidx(:)
-  integer(8), allocatable :: arg(:)
   integer(8) :: ijs, ije, ij
-  integer(8) :: loc
+  integer(8) :: loc, gij
   real(8)    :: coef_sum
   logical    :: updated
   real(8)    :: vmin, vmax, vmax_negative, vmin_positive
@@ -245,41 +245,73 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
 
   call sort_rt(rtm, rtm%grid_coef)
 
-  allocate(arg(size(grdidx)))
-  call argsort(grdidx, arg)
-
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Calc. coef.
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating coef.', '-p -x2')
 
-  ije = 0_8
-  do while( ije < rtm%nij )
-    ijs = ije + 1_8
-    ije = ije + 1_8
+  !-------------------------------------------------------------
+  ! Case: $grdidx is sorted
+  if( size(grdidxarg) == 1 )then
+    ije = 0_8
     do while( ije < rtm%nij )
-      if( coefidx(ije+1_8) /= coefidx(ijs) ) exit
-      call add(ije)
+      ijs = ije + 1_8
+      ije = ije + 1_8
+      do while( ije < rtm%nij )
+        if( coefidx(ije+1_8) /= coefidx(ijs) ) exit
+        call add(ije)
+      enddo  ! ije/
+
+      call search(coefidx(ijs), grdidx, gij)
+      if( gij == 0_8 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  coefidx(ijs) was not found in grdidx.'//&
+                '\n  ijs: '//str(ijs)//&
+                '\n  coefidx: '//str(coefidx(ijs)))
+      endif
+
+      if( grdara(gij) <= 0.d0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  grdara('//str(gij)//') <= 0.0'//&
+                '\n  grdidx: '//str(grdidx(gij))//&
+                '\n  grdara: '//str(grdara(gij)))
+      endif
+
+      rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(gij)
     enddo  ! ije/
+  !-------------------------------------------------------------
+  ! Case: $grdidx is not sorted
+  else
+    ije = 0_8
+    do while( ije < rtm%nij )
+      ijs = ije + 1_8
+      ije = ije + 1_8
+      do while( ije < rtm%nij )
+        if( coefidx(ije+1_8) /= coefidx(ijs) ) exit
+        call add(ije)
+      enddo  ! ije/
 
-    call search(coefidx(ijs), grdidx, arg, loc)
-    if( loc == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  coefidx(ijs) was not found in grdidx.'//&
-              '\n  ijs: '//str(ijs)//&
-              '\n  coefidx(ijs): '//str(coefidx(ijs)))
-    endif
+      call search(coefidx(ijs), grdidx, grdidxarg, loc)
+      if( loc == 0_8 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  coefidx(ijs) was not found in grdidx.'//&
+                '\n  ijs: '//str(ijs)//&
+                '\n  coefidx: '//str(coefidx(ijs)))
+      endif
 
-    if( grdara(arg(loc)) <= 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  grdara('//str(arg(loc))//') <= 0.0'//&
-              '\n  grdidx('//str(arg(loc))//'): '//str(grdidx(arg(loc)))//&
-              '\n  grdara('//str(arg(loc))//'): '//str(grdara(arg(loc))))
-    endif
+      gij = grdidxarg(loc)
 
-    rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(arg(loc))
-  enddo  ! ije/
+      if( grdara(gij) <= 0.d0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  grdara('//str(gij)//') <= 0.0'//&
+                '\n  grdidx: '//str(grdidx(gij))//&
+                '\n  grdara: '//str(grdara(gij)))
+      endif
+
+      rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(gij)
+    enddo  ! ije/
+  endif
 
   call echo(code%ext)
   !-------------------------------------------------------------

@@ -10,15 +10,6 @@ module common_rt_raster_raster
   use common_type_gs
   ! common2
   use common_type_rt
-  use common_rt1d, only: &
-        init_rt1d, &
-        free_rt1d_data, &
-        reshape_rt1d
-  use common_rt_base, only: &
-        clear_rt_main, &
-        calc_rt_im_nij_ulim
-  use common_rt_io, only: &
-        write_rt_im
   implicit none
   private
   !-------------------------------------------------------------
@@ -26,293 +17,215 @@ module common_rt_raster_raster
   !-------------------------------------------------------------
   public :: make_rt_raster_raster
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  integer :: aidx_debug = 24307
-  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_raster_raster(a, b, rt, opt_sys, opt_earth)
+subroutine make_rt_raster_raster(s, t, rt)
+  ! common2
+  use common_rt1d, only: &
+        init_rt1d   , &
+        clear_rt1d  , &
+        reshape_rt1d
+  ! common3
+  use common_rt_llbnds, only: &
+        calc_relations_llbnds
   implicit none
-  type(gs_)       , intent(inout), target :: a, b
-  type(rt_)       , intent(inout), target :: rt
-  type(opt_sys_)  , intent(in)            :: opt_sys
-  type(opt_earth_), intent(in)            :: opt_earth
+  type(gs_), intent(inout), target :: s, t
+  type(rt_), intent(inout), target :: rt
 
-  type(gs_common_)  , pointer :: ac, bc
+  type(gs_)         , pointer :: a, b
   type(gs_raster_)  , pointer :: ar, br
-  type(zone_latlon_), pointer :: azr, bzr
+  type(raster_zone_), pointer :: arz, brz
   type(hrel_)       , pointer :: ahr
   type(vrel_)       , pointer :: avr
-  type(rt_main_)   , pointer :: rtm
-  type(rt_im_zone_), pointer :: rtiz
-  type(rt1d_)      , pointer :: rt1d(:), rt1
+  type(rt_main_)    , pointer :: rtm
 
+  type(rt1d_), pointer :: rt1d(:), rt1
+  integer    :: iaz, ibz
   integer(8) :: iah, iav
-  integer(8) :: bhi(2), bhf(2), bvi, bvf, ibh, ibv
   integer    :: ibr
-  integer(8) :: iibv0, iibv
-  integer(8) :: iibh_this
+  integer(8) :: ibh, iibh_this, ibv, iibv
   integer(8), allocatable :: iibh(:)
   integer(8) :: aidx, aij
   integer(8) :: bidx
   integer(8) :: ij, ij1, ij2
+  integer(8) :: loc
   integer(8), allocatable :: bidx_prev(:)
   integer(8), allocatable :: ij_prev(:)
-  integer(8), allocatable :: rt1_mij_prev(:)
   real(8) :: lapara
+  integer :: case_wgtmap, case_wgtmap_a, case_wgtmap_b
   integer(8), parameter :: IJSIZE_INIT = 4_8
 
   call echo(code%bgn, 'make_rt_raster_raster')
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting pointers')
-
-  ac => a%cmn
-  bc => b%cmn
-
-  if( ac%gs_type /= GS_TYPE_RASTER .or. &
-      bc%gs_type /= GS_TYPE_RASTER )then
+  if( s%gs_type /= GS_TYPE_RASTER .or. &
+      t%gs_type /= GS_TYPE_RASTER )then
     call eerr(str(msg_invalid_value())//&
-            '\n  a%cmn%gs_type: '//str(ac%gs_type)//&
-            '\n  b%cmn%gs_type: '//str(bc%gs_type))
+            '\n  s%gs_type: '//str(s%gs_type)//&
+            '\n  t%gs_type: '//str(t%gs_type))
   endif
+
+  a => s
+  b => t
 
   ar => a%raster
   br => b%raster
 
-  azr => ar%zone(ar%iZone)
-  bzr => br%zone(br%iZone)
-
-  if( ac%is_source )then
-  else
-  endif
-
   rtm => rt%main
-  rtiz => rt%im%zone(rt%im%iZone)
-
-  call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Calc. relations of grid bounds.
+  !-------------------------------------------------------------
+  call calc_relations_llbnds(ar, br)
+  call calc_relations_llbnds(br, ar)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing')
-
   allocate(iibh(br%hi-1_8:br%hf+1_8))
 
-  allocate(rt1d(azr%mij))
+  allocate(rt1d(ar%nij))
   call init_rt1d(rt1d)
-  do aij = 1_8, azr%mij
+  do aij = 1_8, ar%nij
     rt1 => rt1d(aij)
     rt1%ijsize = IJSIZE_INIT
     allocate(rt1%idx(rt1%ijsize))
     allocate(rt1%ara(rt1%ijsize))
   enddo
 
-  call calc_rt_im_nij_ulim(rt%im%nij_ulim, opt_sys%memory_ulim)
-  call edbg('rt%im%nij_ulim: '//str(rt%im%nij_ulim))
-
-  rtm%nij = 0_8
-  rtiz%nij = 0_8
-
-  allocate(rt1_mij_prev(azr%mij))
-  rt1_mij_prev(:) = 0_8
-
-  allocate(bidx_prev(azr%mij))
+  allocate(bidx_prev(ar%nij))
   bidx_prev(:) = br%idx_miss
 
-  allocate(ij_prev(azr%mij))
+  allocate(ij_prev(ar%nij))
 
-  call echo(code%ext)
+  !
+  !-------------------------------------------------------------
+  selectcase( ar%status_wgtmap )
+  case( GRID_STATUS__PREPARED ); case_wgtmap_a = 1
+  case( GRID_STATUS__NOT_USED ); case_wgtmap_a = 2
+  case default                 ; case_wgtmap_a = 0
+  endselect
+  selectcase( br%status_wgtmap )
+  case( GRID_STATUS__PREPARED ); case_wgtmap_b = 1
+  case( GRID_STATUS__NOT_USED ); case_wgtmap_b = 2
+  case default                 ; case_wgtmap_b = 0
+  endselect
+  case_wgtmap = case_wgtmap_a*10 + case_wgtmap_b
+
+  selectcase( case_wgtmap )
+  case( 11, 12, 21, 22 )
+    continue
+  case default
+    call eerr(str(msg_unexpected_condition())//&
+            '\n  ar%status_wgtmap: '//str(ar%status_wgtmap)//&
+            '\n  br%status_wgtmap: '//str(br%status_wgtmap))
+  endselect
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making a remapping table')
+  rtm%nij = 0_8
 
-  call edbg('bzr h: '//str((/bzr%hi,bzr%hf/),dgt(br%nh),' - '))
+  do iaz = 1, ar%nZone
+    arz => ar%zone(iaz)
+    if( .not. arz%is_valid ) cycle
 
-!  do iah = azr%hi, azr%hf
-!    ahr => ar%hrel(iah)
-!    bhi(:) = max(ahr%hi(:), bzr%hi)
-!    bhf(:) = min(ahr%hf(:), bzr%hf)
-!    call edbg('iah: '//str(iah,dgt(ar%nh))//' bh: '//str((/bhi(1),bhf(1)/),dgt(br%nh),' - ')//&
-!              ', '//str((/bhi(2),bhf(2)/),dgt(br%nh),' - '))
-!  enddo
+    do ibz = 1, br%nZone
+      brz => br%zone(ibz)
+      if( .not. brz%is_valid ) cycle
 
-!  do iav = azr%vi, azr%vf
-!    avr => ar%vrel(iav)
-!    bvi = max(avr%vi, bzr%vi)
-!    bvf = min(avr%vf, bzr%vf)
-!    call edbg('iav: '//str(iav,dgt(ar%nv))//' bv: '//str((/bvi,bvf/),dgt(br%nv),' - '))
-!  enddo
+      do iav = arz%vi, arz%vf
+        avr => ar%vrel(iav)
+        if( avr%vi == 0_8 ) cycle
 
-  call edbg('aidx == '//str(aidx_debug)//' @')
-  do iav = azr%vi, azr%vf
-  do iah = azr%hi, azr%hf
-    if( ar%idxmap(iah,iav) == aidx_debug )then
-      call edbg('  ('//str(iah,dgt(ar%nh))//','//str(iav,dgt(ar%nv))//')')
-    endif
-  enddo
-  enddo
+        do iah = arz%hi, arz%hf
+          if( .not. arz%mskmap(iah,iav) ) cycle
 
-  do iav = azr%vi, azr%vf
-    avr => ar%vrel(iav)
-    if( avr%vi == 0_8 ) cycle
+          ahr => ar%hrel(iah)
+          if( ahr%nr == 0 ) cycle
+          if( all(ahr%hf(:ahr%nr) < brz%hi .or. brz%hf < ahr%hi(:ahr%nr)) ) cycle
 
-    bvi = max(avr%vi, bzr%vi)
-    bvf = min(avr%vf, bzr%vf)
-    iibv0 = max(bzr%vi-avr%vi, 0_8)
+          aidx = arz%idxmap(iah,iav)
 
-    do iah = azr%hi, azr%hf
-      ahr => ar%hrel(iah)
-      if( ahr%nr == 0 ) cycle
-      aidx = ar%idxmap(iah,iav)
-      if( aidx == ar%idx_miss ) cycle
+          call search(aidx, ar%grid%idx, ar%grid%idxarg, loc)
+          if( loc == 0_8 )then
+          call eerr(str(msg_unexpected_condition())//&
+                    '\nIndex of $a, '//str(aidx)//', was not found.')
+          endif
+          aij = ar%grid%idxarg(loc)
+          !-------------------------------------------------------
+          ! Set $rt1
+          !-------------------------------------------------------
+          rt1 => rt1d(aij)
+          rt1%idx_self = aidx
 
-      call search(aidx, ar%grid%idx, ar%grid%idxarg, aij)
-      if( aij == 0_8 )then
-        call eerr('Unexpected condition: aij == '//str(aij))
-      endif
-
-      rt1 => rt1d(aij)
-      rt1%idx_self = aidx
-
-      if( rt1%mij > 0_8 )then
-        if( rt1%idx(ij_prev(aij)) /= bidx_prev(aij) )then
-          call eerr('rt1%idx(ij_prev(aij)) /= bidx_prev(aij)'//&
-                  '\n  aij: '//str(aij)//&
-                  '\n  ij_prev: '//str(ij_prev(aij))//&
-                  '\n  rt1%idx: '//str(rt1%idx(ij_prev(aij)))//&
-                  '\n  bidx_prev: '//str(bidx_prev(aij)))
-        endif
-      endif
-      !---------------------------------------------------------
-      ! Prep. range of $bh
-      !---------------------------------------------------------
-      !call edbg('iah: '//str(iah))
-
-      bhi(:) = max(ahr%hi(:), bzr%hi)
-      bhf(:) = min(ahr%hf(:), bzr%hf)
-
-      iibh_this = 0_8
-      do ibr = 1, ahr%nr
-        do ibh = ahr%hi(ibr), ahr%hf(ibr)
-          call add(iibh_this)
-          iibh(ibh) = iibh_this
-        enddo
-      enddo
-      !---------------------------------------------------------
-      ! Calc. intersection area and update the remapping table
-      !---------------------------------------------------------
-      rt1%mij = rt1_mij_prev(aij)
-
-      iibv = iibv0
-      do ibv = bvi, bvf
-        iibv = iibv + 1_8
-        do ibr = 1, ahr%nr
-          do ibh = bhi(ibr), bhf(ibr)
-            bidx = br%idxmap(ibh,ibv)
-            if( bidx == br%idx_miss ) cycle
-
-!            if( aidx == aidx_debug )then
-!              call edbg('('//str(ibh,dgt(br%nh))//','//str(ibv,dgt(br%nv))//&
-!                        ') bidx this: '//str(bidx,dgt(bzr%idxmax))//&
-!                              ' prev: '//str(bidx_prev(aij),dgt(bzr%idxmax))//&
-!                        ' rt1%mij: '//str(rt1%mij))
-!            endif
-
-            lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh)) &
-                       * ar%wgtmap(iah,iav) * br%wgtmap(ibh,ibv)
-
-            if( rt1%mij == 0_8 )then
-              rt1%mij = 1_8
-              rt1%idx(1_8) = bidx
-              rt1%ara(1_8) = lapara
-
-              ij_prev(aij) = 1_8
-              bidx_prev(aij) = bidx
-            else
-              if( bidx == bidx_prev(aij) )then
-!                if( aidx == aidx_debug )then
-!                  call edbg('rt1%ara: '//str(rt1%ara(ij_prev(aij)),'es10.3')//&
-!                            ' -> '//str(rt1%ara(ij_prev(aij))+lapara,'es10.3'))
-!                endif
-                call add(rt1%ara(ij_prev(aij)), lapara)
-              else
-                bidx_prev(aij) = bidx
-                call search_nearest(bidx, rt1%idx(:rt1%mij), ij1, ij2)
-                !-------------------------------------------------
-                ! Case: $bidx is found in $rt1%idx(:)
-                if( ij1 == ij2 )then
-                  call add(rt1%ara(ij1), lapara)
-                  ij_prev(aij) = ij1
-                !-------------------------------------------------
-                ! Case: $bidx is not found in $rt1%idx(:)
-                !
-                ! If ij1 == 0 and ij2 == 1, then
-                !   bidx < rt1%idx(1)
-                ! Else if ij1 == rt1%mij and ij2 == rt1%mij+1, then
-                !   bidx > rt1%idx(rt1%mij).
-                ! Else,
-                !   rt1%idx(ij1) < bidx < rt1%idx(ij2).
-                ! Therefore,
-                !   copy $rt1%idx(ij2:rt1%mij) to $rt1%idx(ij2+1:rt1%mij+1)
-                !   and put $bidx to $rt1%idx(ij2). Same for $rt1%ara(:).
-                else
-                  if( rt1%mij == rt1%ijsize )then
-                    rt1%ijsize = rt1%ijsize * 2_8
-                    call realloc(rt1%idx, rt1%ijsize, clear=.false.)
-                    call realloc(rt1%ara, rt1%ijsize, clear=.false.)
-                  endif
-
-                  do ij = rt1%mij, ij2, -1_8
-                    rt1%idx(ij+1_8) = rt1%idx(ij)
-                    rt1%ara(ij+1_8) = rt1%ara(ij)
-                  enddo
-                  rt1%idx(ij2) = bidx
-                  rt1%ara(ij2) = lapara
-
-                  ij_prev(aij) = ij2
-                  call add(rt1%mij)
-                endif
-              endif
+          if( rt1%mij > 0_8 )then
+            if( rt1%idx(ij_prev(aij)) /= bidx_prev(aij) )then
+              call eerr('rt1%idx(ij_prev(aij)) /= bidx_prev(aij)'//&
+                      '\n  aij: '//str(aij)//&
+                      '\n  ij_prev: '//str(ij_prev(aij))//&
+                      '\n  rt1%idx: '//str(rt1%idx(ij_prev(aij)))//&
+                      '\n  bidx_prev: '//str(bidx_prev(aij)))
             endif
-            !---------------------------------------------------
-          enddo  ! ibh/
-        enddo  ! ibr/
-      enddo  ! ibv/
+          endif
+          !-------------------------------------------------------
+          ! Calc. range of $ibh
+          !-------------------------------------------------------
+          iibh_this = 0_8
+          do ibr = 1, ahr%nr
+            do ibh = ahr%hi(ibr), ahr%hf(ibr)
+              call add(iibh_this)
+              iibh(ibh) = iibh_this
+            enddo
+          enddo
+          !-------------------------------------------------------
+          ! Loop in $brz
+          !-------------------------------------------------------
+          do ibv = max(avr%vi,brz%vi), min(avr%vf,brz%vf)
+            iibv = ibv - avr%vi + 1_8
+            do ibr = 1, ahr%nr
+              do ibh = max(ahr%hi(ibr),brz%hi), min(ahr%hf(ibr),brz%hf)
+                if( .not. brz%mskmap(ibh,ibv) ) cycle
 
-      rt1_mij_prev(aij) = rt1%mij
-    enddo  ! iah/
-  enddo  ! iav/
+                selectcase( case_wgtmap )
+                case( 11 )
+                  lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh)) &
+                           * arz%wgtmap(iah,iav) * brz%wgtmap(ibh,ibv)
+                case( 12 )
+                  lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh)) &
+                           * arz%wgtmap(iah,iav)
+                case( 21 )
+                  lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh)) &
+                           * brz%wgtmap(ibh,ibv)
+                case( 22 )
+                  lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh))
+                case default
+                  call eerr(str(msg_invalid_value())//&
+                          '\n  case_wgtmap: '//str(case_wgtmap))
+                endselect
+
+                call update_rt1d()
+              enddo  ! ibh/
+            enddo  ! ibr/
+          enddo  ! ibv/
+          !-------------------------------------------------------
+        enddo  ! iah/
+      enddo  ! iav/
+    enddo  ! ibz/
+  enddo  ! iaz/
 
   rtm%nij = sum(rt1d(:)%mij)
 
-  ! Reshape $rt1d
+  ! Reshape 1d-remapping table
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, ac%is_source, rtm, opt_earth)
-
-  if( rt%im%nZones > 1 )then
-    call echo(code%ent, 'outputting intermediates')
-    call write_rt_im(rtm, rt%im, opt_sys%old_files)
-    call clear_rt_main(rtm)
-    call echo(code%ext)
-  endif
+  call reshape_rt1d(rt1d, a%is_source, rtm)
   !-------------------------------------------------------------
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Free
+  ! Free pointers and arrays
   !-------------------------------------------------------------
   nullify(rt1)
-  call free_rt1d_data(rt1d)
-  deallocate(rt1d)
-  nullify(rt1d)
+  call clear_rt1d(rt1d)
 
   nullify(rtm)
-  nullify(rtiz)
-  deallocate(rt1_mij_prev)
 
   deallocate(bidx_prev)
   deallocate(ij_prev)
@@ -320,11 +233,64 @@ subroutine make_rt_raster_raster(a, b, rt, opt_sys, opt_earth)
   deallocate(iibh)
 
   nullify(ahr, avr)
-  nullify(azr, bzr)
+  nullify(arz, brz)
   nullify(ar, br)
-  nullify(ac, bc)
+  nullify(a, b)
   !-------------------------------------------------------------
   call echo(code%ret)
+!---------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine update_rt1d()
+  implicit none
+
+  bidx = brz%idxmap(ibh,ibv)
+
+  if( bidx == bidx_prev(aij) )then
+    call add(rt1%ara(ij_prev(aij)), lapara)
+  elseif( rt1%mij == 0_8 )then
+    rt1%mij = 1_8
+    rt1%idx(1) = bidx
+    rt1%ara(1) = lapara
+    bidx_prev(aij) = bidx
+    ij_prev(aij) = 1_8
+  else
+    call search_nearest(bidx, rt1%idx(:rt1%mij), ij1, ij2)
+    !-------------------------------------------------
+    ! Case: $bidx is found in $rt1%idx(:)
+    if( ij1 == ij2 )then
+      call add(rt1%ara(ij2), lapara)
+    !-------------------------------------------------
+    ! Case: $bidx is not found in $rt1%idx(:)
+    !
+    ! If ij1 == 0 and ij2 == 1, then
+    !   bidx < rt1%idx(1)
+    ! Else if ij1 == rt1%mij and ij2 == rt1%mij+1, then
+    !   bidx > rt1%idx(rt1%mij).
+    ! Else,
+    !   rt1%idx(ij1) < bidx < rt1%idx(ij2).
+    ! Therefore,
+    !   copy $rt1%idx(ij2:rt1%mij) to $rt1%idx(ij2+1:rt1%mij+1)
+    !   and put $bidx to $rt1%idx(ij2). Same for $rt1%ara(:).
+    else
+      if( rt1%mij == rt1%ijsize )then
+        call mul(rt1%ijsize, 2)
+        call realloc(rt1%idx, rt1%ijsize, clear=.false.)
+        call realloc(rt1%ara, rt1%ijsize, clear=.false.)
+      endif
+      do ij = rt1%mij, ij2, -1_8
+        rt1%idx(ij+1_8) = rt1%idx(ij)
+        rt1%ara(ij+1_8) = rt1%ara(ij)
+      enddo
+      rt1%idx(ij2) = bidx
+      rt1%ara(ij2) = lapara
+      call add(rt1%mij)
+    endif
+    bidx_prev(aij) = bidx
+    ij_prev(aij) = ij2
+  endif
+end subroutine update_rt1d
+!---------------------------------------------------------------
 end subroutine make_rt_raster_raster
 !===============================================================
 !

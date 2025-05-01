@@ -10,7 +10,9 @@ module common_rt1d
   ! Public Procedures
   !-------------------------------------------------------------
   public :: init_rt1d
+  public :: alloc_rt1d
   public :: free_rt1d_data
+  public :: clear_rt1d
   public :: reshape_rt1d
   !-------------------------------------------------------------
 contains
@@ -46,6 +48,33 @@ end subroutine init_rt1d
 !===============================================================
 !
 !===============================================================
+subroutine alloc_rt1d(rt1d, n, ijsize)
+  implicit none
+  type(rt1d_), pointer :: rt1d(:)
+  integer(8) , intent(in) :: n
+  integer(8) , intent(in) :: ijsize
+
+  type(rt1d_), pointer :: rt1
+  integer(8) :: i
+
+  call echo(code%bgn, 'alloc_rt1d', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(rt1d(n))
+  do i = 1_8, n
+    rt1 => rt1d(i)
+    rt1%mij = 0_8
+    rt1%ijsize = ijsize
+    allocate(rt1%idx(ijsize))
+    allocate(rt1%ara(ijsize))
+  enddo
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine alloc_rt1d
+!===============================================================
+!
+!===============================================================
 subroutine free_rt1d_data(rt1d)
   implicit none
   type(rt1d_), intent(inout), target :: rt1d(:)
@@ -74,13 +103,31 @@ end subroutine free_rt1d_data
 !===============================================================
 !
 !===============================================================
-subroutine reshape_rt1d(rt1d, self_is_source, rtm, earth)
+subroutine clear_rt1d(rt1d)
+  implicit none
+  type(rt1d_), pointer :: rt1d(:)
+
+  call echo(code%bgn, 'clear_rt1d', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call free_rt1d_data(rt1d)
+  deallocate(rt1d)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine clear_rt1d
+!===============================================================
+!
+!===============================================================
+subroutine reshape_rt1d(rt1d, self_is_source, rtm)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
   type(rt1d_)   , intent(in)   , target :: rt1d(:)
   logical       , intent(in)            :: self_is_source
   type(rt_main_), intent(inout), target :: rtm
-  type(opt_earth_), intent(in) :: earth
 
+  type(opt_earth_) :: earth
   type(rt1d_), pointer :: rt1
   integer(8) :: ij
 
@@ -88,6 +135,8 @@ subroutine reshape_rt1d(rt1d, self_is_source, rtm, earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  earth = get_opt_earth()
+
   rtm%nij = sum(rt1d(:)%mij)
   rtm%ijsize = rtm%nij
   call realloc(rtm%sidx, rtm%ijsize)

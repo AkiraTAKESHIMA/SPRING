@@ -11,6 +11,7 @@ module mod_set
   ! common2
   use common_type_rt
   ! this
+  use def_const
   use def_type
   implicit none
   private
@@ -24,7 +25,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(&
-    rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
+    rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   ! common1
   use common_set, only: &
         open_setting_file      , &
@@ -39,6 +40,10 @@ subroutine read_settings(&
         msg_invalid_input
   use common_file, only: &
         open_report_file
+  use common_opt_ctrl, only: &
+        set_opt_sys, &
+        set_opt_log, &
+        set_opt_earth
   use common_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
@@ -51,7 +56,7 @@ subroutine read_settings(&
   type(rt_)  , intent(out), target :: rt_out_lsm_to_agcm
   type(agcm_), intent(out), target :: agcm
   type(lsm_) , intent(out), target :: lsm
-  type(opt_) , intent(out)         :: opt
+  type(opt_ext_), intent(out) :: opt_ext
 
   type counter_
     integer :: input_rt_agcm_to_ogcm
@@ -71,6 +76,7 @@ subroutine read_settings(&
   character(CLEN_VAR), parameter :: BLOCK_NAME_OPTIONS = 'options'
 
   character(CLEN_VAR) :: block_name
+  type(opt_) :: opt
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
@@ -135,7 +141,7 @@ subroutine read_settings(&
 
     case( block_name_options )
       call update_counter(counter%options)
-      call read_settings_opt(opt)
+      call read_settings_opt(opt, opt_ext)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -154,11 +160,15 @@ subroutine read_settings(&
   ! Detect conflictions
   !-------------------------------------------------------------
   !-------------------------------------------------------------
-  ! Modify values
+  ! Set some variables
   !-------------------------------------------------------------
-  !call echo(code%ent, 'Modifying values')
+  call echo(code%ent, 'Setting some variables')
 
-  !call echo(code%ext)  
+  call set_opt_sys(opt%sys)
+  call set_opt_log(opt%log)
+  call set_opt_earth(opt%earth)
+
+  call echo(code%ext)  
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
@@ -168,7 +178,7 @@ subroutine read_settings(&
   call echo_settings_input_agcm(agcm)
   call echo_settings_input_lsm(lsm)
   call echo_settings_output_rt(rt_out_lsm_to_agcm)
-  call echo_settings_opt(opt)
+  call echo_settings_opt(opt, opt_ext)
   call edbg(str(bar('')))
 
   call echo(code%ext)
@@ -905,7 +915,10 @@ end subroutine read_settings_output_rt
 !===============================================================
 !
 !===============================================================
-subroutine read_settings_opt(opt)
+subroutine read_settings_opt(opt, opt_ext)
+  ! common1
+  use common_const_util, only: &
+        checkval_opt_old_files
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -930,8 +943,12 @@ subroutine read_settings_opt(opt)
         KEY_EARTH_E2
   use common_opt_set, only: &
         set_values_opt_earth
+  ! this
+  use mod_const_util, only: &
+        checkval_method_rivwat
   implicit none
-  type(opt_), intent(inout) :: opt
+  type(opt_)    , intent(inout) :: opt
+  type(opt_ext_), intent(inout) :: opt_ext
 
   call echo(code%bgn, 'read_settings_opt')
   !-------------------------------------------------------------
@@ -939,7 +956,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum(8)
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
@@ -947,6 +964,7 @@ subroutine read_settings_opt(opt)
   call set_keynum(KEY_EARTH_SHAPE, 0, 1)
   call set_keynum(KEY_EARTH_R    , 0, 1)
   call set_keynum(KEY_EARTH_E2   , 0, 1)
+  call set_keynum('method_rivwat', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -986,8 +1004,8 @@ subroutine read_settings_opt(opt)
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
     ! Option
-    case( 'use_weighted_dist' )
-      call read_value(opt%method%use_weighted_dist)
+    case( 'method_rivwat' )
+      call read_value(opt_ext%method_rivwat)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -996,7 +1014,6 @@ subroutine read_settings_opt(opt)
   enddo
 
   call check_keynum()
-  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1004,15 +1021,8 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  selectcase( opt%sys%old_files )
-  case( OPT_OLD_FILES_STOP, &
-        OPT_OLD_FILES_REMOVE, &
-        OPT_OLD_FILES_OVERWRITE )
-    continue
-  case default
-    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "old_files".')
-  endselect
+  call checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files')
+  call checkval_method_rivwat(opt_ext%method_rivwat, 'opt_ext%method_rivwat')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1115,7 +1125,7 @@ subroutine echo_settings_output_rt(rt)
   use common_set, only: &
         bar
   use common_rt_set, only: &
-        echo_settings_rt_opt_coef
+        echo_settings_opt_rt_coef
   implicit none
   type(rt_), intent(in), target :: rt
 
@@ -1136,14 +1146,14 @@ subroutine echo_settings_output_rt(rt)
   call edbg('  area: '//str(fileinfo(rtm%f%area)))
   call edbg('  coef: '//str(fileinfo(rtm%f%coef)))
 
-  call echo_settings_rt_opt_coef(rtm%opt_coef, 0)
+  call echo_settings_opt_rt_coef(rtm%opt_coef, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_output_rt
 !===============================================================
 !
 !===============================================================
-subroutine echo_settings_opt(opt)
+subroutine echo_settings_opt(opt, opt_ext)
   use common_set, only: &
         bar
   use common_opt_set, only: &
@@ -1151,7 +1161,8 @@ subroutine echo_settings_opt(opt)
         echo_settings_opt_log, &
         echo_settings_opt_earth
   implicit none
-  type(opt_), intent(in) :: opt
+  type(opt_)    , intent(in) :: opt
+  type(opt_ext_), intent(in) :: opt_ext
 
   call echo(code%bgn, 'echo_settings_opt', '-p -x2')
   !-------------------------------------------------------------
@@ -1159,8 +1170,7 @@ subroutine echo_settings_opt(opt)
   call echo_settings_opt_log(opt%log)
   call echo_settings_opt_earth(opt%earth)
 
-  call edbg('Method')
-  call edbg('  Use weighted distance: '//str(opt%method%use_weighted_dist))
+  call edbg('Method for river water: '//str(opt_ext%method_rivwat))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_opt

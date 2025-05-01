@@ -12,6 +12,10 @@ module lib_array_copy
   ! Interfaces
   !-------------------------------------------------------------
   interface cpval
+    module procedure cpval__log1_to_log1_1d
+    module procedure cpval__log1_to_log4_1d
+    module procedure cpval__log4_to_log1_1d
+    module procedure cpval__log4_to_log4_1d
     module procedure cpval__int1_to_int1_1d
     module procedure cpval__int1_to_int2_1d
     module procedure cpval__int1_to_int4_1d
@@ -144,6 +148,58 @@ module lib_array_copy
   end interface
 !---------------------------------------------------------------
 contains
+!===============================================================
+!
+!===============================================================
+subroutine cpval__log1_to_log1_1d(ain, aout)
+  implicit none
+  logical(1), intent(in) :: ain(:)
+  logical(1), intent(out) :: aout(:)
+  integer(8) :: i
+
+  do i = 1, size(ain)
+    aout(i) = logical(ain(i),1)
+  enddo
+end subroutine cpval__log1_to_log1_1d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__log1_to_log4_1d(ain, aout)
+  implicit none
+  logical(1), intent(in) :: ain(:)
+  logical(4), intent(out) :: aout(:)
+  integer(8) :: i
+
+  do i = 1, size(ain)
+    aout(i) = logical(ain(i),4)
+  enddo
+end subroutine cpval__log1_to_log4_1d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__log4_to_log1_1d(ain, aout)
+  implicit none
+  logical(4), intent(in) :: ain(:)
+  logical(1), intent(out) :: aout(:)
+  integer(8) :: i
+
+  do i = 1, size(ain)
+    aout(i) = logical(ain(i),1)
+  enddo
+end subroutine cpval__log4_to_log1_1d
+!===============================================================
+!
+!===============================================================
+subroutine cpval__log4_to_log4_1d(ain, aout)
+  implicit none
+  logical(4), intent(in) :: ain(:)
+  logical(4), intent(out) :: aout(:)
+  integer(8) :: i
+
+  do i = 1, size(ain)
+    aout(i) = logical(ain(i),4)
+  enddo
+end subroutine cpval__log4_to_log4_1d
 !===============================================================
 !
 !===============================================================

@@ -11,7 +11,7 @@ module common_opt_set
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: set_default_values_opt_sys
   public :: set_default_values_opt_log
@@ -23,7 +23,7 @@ module common_opt_set
   public :: echo_settings_opt_log
   public :: echo_settings_opt_earth
   !-------------------------------------------------------------
-  ! Public Variables
+  ! Public module variables
   !-------------------------------------------------------------
   public :: key_old_files
   public :: key_dir_intermediates

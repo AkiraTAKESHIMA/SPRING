@@ -248,6 +248,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_input(input)
+  ! common1
   use common_set, only: &
         line_number            , &
         back_to_block_head     , &
@@ -580,6 +581,7 @@ end subroutine read_settings_input
 !
 !===============================================================
 subroutine read_settings_output(output)
+  ! common1
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -594,10 +596,11 @@ subroutine read_settings_output(output)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
+  ! common3
   use common_rt_base, only: &
         set_default_values_rt
   use common_rt_set, only: &
-        check_values_rt_opt_coef
+        check_values_opt_rt_coef
   implicit none
   type(output_), intent(inout), target :: output
 
@@ -657,7 +660,7 @@ subroutine read_settings_output(output)
 !  rtm%f%coef = file('', dtype_dble, 1, endian_default, action=action_write, &
 !                    id=trim(rtm%id)//'f%coef')
 !
-!  call init_rt_opt_coef(rtm%opt_coef)
+!  call init_opt_rt_coef(rtm%opt_coef)
 !!!
 
   output%f_grid%f_idx = file(dtype=DTYPE_INT4, action=ACTION_WRITE, id='output%f_grid%f_idx')
@@ -742,7 +745,7 @@ subroutine read_settings_output(output)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  call check_values_rt_opt_coef(rtm%opt_coef)
+  call check_values_opt_rt_coef(rtm%opt_coef)
 
   selectcase( rtm%grid_coef )
   case( grid_source, &
@@ -799,6 +802,9 @@ end subroutine read_settings_output
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  ! common1
+  use common_const_util, only: &
+        checkval_opt_old_files
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -872,15 +878,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  selectcase( opt%sys%old_files )
-  case( OPT_OLD_FILES_STOP, &
-        OPT_OLD_FILES_REMOVE, &
-        OPT_OLD_FILES_OVERWRITE )
-    continue
-  case default
-    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "old_files".')
-  endselect
+  call checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -917,6 +915,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine check_paths(input, output, opt_sys)
+  ! common1
   use common_file, only: &
         set_opt_old_files, &
         handle_old_file
@@ -1024,6 +1023,7 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_input(input)
+  ! common1
   use common_set, only: &
         bar
   implicit none
@@ -1084,10 +1084,12 @@ end subroutine echo_settings_input
 !
 !===============================================================
 subroutine echo_settings_output(output)
+  ! common1
   use common_set, only: &
         bar
+  ! common2
   use common_rt_set, only: &
-        echo_settings_rt_opt_coef
+        echo_settings_opt_rt_coef
   implicit none
   type(output_), intent(in), target :: output
 
@@ -1112,7 +1114,7 @@ subroutine echo_settings_output(output)
   call edbg('  Area   : '//str(fileinfo(rtm%f%area)))
   call edbg('  Coef   : '//str(fileinfo(rtm%f%coef)))
 
-  call echo_settings_rt_opt_coef(rtm%opt_coef, 2)
+  call echo_settings_opt_rt_coef(rtm%opt_coef, 2)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1127,8 +1129,10 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
+  ! common1
   use common_set, only: &
         bar
+  ! common2
   use common_opt_set, only: &
         echo_settings_opt_sys, &
         echo_settings_opt_log

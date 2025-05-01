@@ -29,8 +29,11 @@ subroutine print_indices(idx, arg, idx_miss, idxmin, idxmax)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call edbg('The set of grid indices:')
+  call echo(code%set, '+x2')
+
   mij = size(idx)
-  call edbg('length: '//str(mij))
+  call edbg('The number of grids: '//str(mij))
 
   if( idxmin == idx_miss )then
     call edbg('No valid index exists.')
@@ -55,131 +58,139 @@ subroutine print_indices(idx, arg, idx_miss, idxmin, idxmax)
       enddo
       msg = msg(:len_trim(msg)-1)
     endif
+    call edbg(str(msg))
   endif
 
-  call edbg(str(msg))
+  call echo(code%set, '-x2')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine print_indices
 !===============================================================
 !
 !===============================================================
-subroutine print_idxmap(idxmap, zl)
+subroutine print_idxmap(idxmap)
   implicit none
-  type(zone_latlon_), intent(in) :: zl
-  integer(8), intent(in) :: idxmap(zl%hi:,zl%vi:)
+  integer(8), pointer :: idxmap(:,:)  ! in
 
-  integer(8) :: ih, iv
+  integer(8) :: hi, hf, vi, vf
   integer(8) :: hi_, hf_, vi_, vf_
+  integer(8) :: mh
+  integer(8) :: ih, iv
   integer :: dgt_idx, dgt_v
   character(4) :: c_south_north
   integer(8), allocatable :: arr(:)
 
   call echo(code%bgn, 'print_idxmap', '-p -x2')
   !-------------------------------------------------------------
-  hi_ = min(zl%hi+2,zl%hf)
-  hf_ = max(zl%hf-2,zl%hi)
-  vi_ = min(zl%vi+2,zl%vf)
-  vf_ = max(zl%vf-2,zl%vi)
-  dgt_idx = max(dgt(zl%hf), &
-                dgt(min(minval(idxmap(zl%hi:hi_,zl%vi:vi_)), &   ! lower left
-                        minval(idxmap(zl%hi:hi_,vf_:zl%vf)), &   ! upper left
-                        minval(idxmap(hf_:zl%hf,zl%vi:vi_)), &   ! lower right
-                        minval(idxmap(hf_:zl%hf,vf_:zl%vf)))), & ! upper right
-                dgt(max(maxval(idxmap(zl%hi:hi_,zl%vi:vi_)), &   ! lower left
-                        maxval(idxmap(zl%hi:hi_,vf_:zl%vf)), &   ! upper left
-                        maxval(idxmap(hf_:zl%hf,zl%vi:vi_)), &   ! lower right
-                        maxval(idxmap(hf_:zl%hf,vf_:zl%vf)))))   ! upper right
-  dgt_v = max(3, dgt(zl%vf))
+  hi = lbound(idxmap,1)
+  hf = ubound(idxmap,1)
+  vi = lbound(idxmap,2)
+  vf = ubound(idxmap,2)
+  mh = hf - hi + 1_8
 
-  if( zl%hf - zl%hi + 1_8 > 6_8 )then
+  hi_ = min(hi+2,hf)
+  hf_ = max(hf-2,hi)
+  vi_ = min(vi+2,vf)
+  vf_ = max(vf-2,vi)
+  dgt_idx = max(dgt(hf), &
+                dgt(min(minval(idxmap(hi:hi_,vi:vi_)), &   ! lower left
+                        minval(idxmap(hi:hi_,vf_:vf)), &   ! upper left
+                        minval(idxmap(hf_:hf,vi:vi_)), &   ! lower right
+                        minval(idxmap(hf_:hf,vf_:vf)))), & ! upper right
+                dgt(max(maxval(idxmap(hi:hi_,vi:vi_)), &   ! lower left
+                        maxval(idxmap(hi:hi_,vf_:vf)), &   ! upper left
+                        maxval(idxmap(hf_:hf,vi:vi_)), &   ! lower right
+                        maxval(idxmap(hf_:hf,vf_:vf)))))   ! upper right
+  dgt_v = max(3, dgt(vf))
+
+  if( hf - hi + 1_8 > 6_8 )then
     call edbg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*6+4-6)//'(E)')
-    call edbg(str('',4+dgt_v+1-4)//'v\h| '//str((/zl%hi,zl%hi+1,zl%hi+2/),dgt_idx,' ')//&
-                                   '     '//str((/zl%hf-2,zl%hf-1,zl%hf/),dgt_idx,' '))
+    call edbg(str('',4+dgt_v+1-4)//'v\h| '//str((/hi,hi+1,hi+2/),dgt_idx,' ')//&
+                                   '     '//str((/hf-2,hf-1,hf/),dgt_idx,' '))
     call edbg(str('',4+dgt_v+1+(dgt_idx+1)*6+4,'-'))
 
-    if( zl%vf - zl%vi + 1_8 > 10_8 )then
-      do iv = zl%vf, zl%vf-2_8, -1_8
-        if( iv == zl%vf )then
+    if( vf - vi + 1_8 > 10_8 )then
+      do iv = vf, vf-2_8, -1_8
+        if( iv == vf )then
           c_south_north = '(N)'
         else
           c_south_north = ''
         endif
         call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(zl%hi:zl%hi+2,iv),dgt_idx)//&
-                              ' ... '//str(idxmap(zl%hf-2:zl%hf,iv),dgt_idx))
+                  str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
+                              ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
       enddo
 
       call edbg(str('',4+dgt_v+1-4)//'...|')
 
-      do iv = zl%vi+2_8, zl%vi, -1_8
-        if( iv == zl%vi )then
+      do iv = vi+2_8, vi, -1_8
+        if( iv == vi )then
           c_south_north = '(S)'
         else
           c_south_north = ''
         endif
         call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(zl%hi:zl%hi+2,iv),dgt_idx)//&
-                              ' ... '//str(idxmap(zl%hf-2:zl%hf,iv),dgt_idx))
+                  str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
+                              ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
       enddo
     else
-      do iv = zl%vf, zl%vi, -1_8
-        if( iv == zl%vf )then
+      do iv = vf, vi, -1_8
+        if( iv == vf )then
           c_south_north = '(N)'
-        elseif( iv == zl%vi )then
+        elseif( iv == vi )then
           c_south_north = '(S)'
         else
           c_south_north = ''
         endif
         call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(zl%hi:zl%hi+2,iv),dgt_idx)//&
-                              ' ... '//str(idxmap(zl%hf-2:zl%hf,iv),dgt_idx))
+                  str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
+                              ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
       enddo
     endif
   else
-    call edbg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*int(zl%hf-zl%hi+1,4)-6)//'(E)')
+    call edbg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*int(hf-hi+1,4)-6)//'(E)')
 
-    allocate(arr(zl%mh))
-    do ih = zl%hi, zl%hf
+    allocate(arr(mh))
+    do ih = hi, hf
       arr(ih) = ih
     enddo
     call edbg(str('',4+dgt_v+1-4)//'v\h| '//str(arr,dgt_idx,' '))
     deallocate(arr)
-    call edbg(str('',4+dgt_v+1+(dgt_idx+1)*int(zl%mh,4),'-'))
+    call edbg(str('',4+dgt_v+1+(dgt_idx+1)*int(mh,4),'-'))
 
-    if( zl%vf - zl%vi + 1_8 > 10_8 )then
-      do iv = zl%vf, zl%vf-2_8, -1_8
-        if( iv == zl%vf )then
+    if( vf - vi + 1_8 > 10_8 )then
+      do iv = vf, vf-2_8, -1_8
+        if( iv == vf )then
           c_south_north = '(N)'
         else
           c_south_north = ''
         endif
         call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(zl%hi:zl%hf,iv),dgt_idx))
+                  str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
       enddo
 
       call edbg(str('',4+dgt_v+1-4)//'...|')
 
-      do iv = zl%vi+2_8, zl%vi, -1_8
-        if( iv == zl%vi )then
+      do iv = vi+2_8, vi, -1_8
+        if( iv == vi )then
           c_south_north = '(S)'
         else
           c_south_north = ''
         endif
         call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(zl%hi:zl%hf,iv),dgt_idx))
+                  str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
       enddo
     else
-      do iv = zl%vf, zl%vi, -1_8
-        if( iv == zl%vf )then
+      do iv = vf, vi, -1_8
+        if( iv == vf )then
           c_south_north = '(N)'
-        elseif( iv == zl%vi )then
+        elseif( iv == vi )then
           c_south_north = '(S)'
         else
           c_south_north = ''
         endif
         call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(zl%hi:zl%hf,iv),dgt_idx))
+                  str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
       enddo
     endif
   endif
@@ -230,7 +241,7 @@ subroutine print_grid_stats(&
     call edbg('No valid grid exists')
     deallocate(mask)
     call echo(code%ret)
-    return  ![2024/11/19 bug fix]
+    return
   endif
 
   if( print_uwa_ )then

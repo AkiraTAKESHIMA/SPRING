@@ -1,7 +1,9 @@
 program main
   use lib_log
+  ! common1
   use common_type_opt
   use common_type_gs
+  ! this
   use def_type
   use mod_set, only: &
         read_settings
@@ -10,18 +12,17 @@ program main
   use mod_finalize, only: &
         finalize
   implicit none
-  type(gs_) :: u
-  type(opt_) :: opt
+  type(gs_) :: a
 
   call echo(code%bgn, 'program main')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call read_settings(u, opt)
+  call read_settings(a)
 
-  call make_grid_data(u, opt)
+  call make_grid_data(a)
 
-  call finalize()
+  call finalize(a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end program main

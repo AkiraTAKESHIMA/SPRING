@@ -1,7 +1,10 @@
 program main
   use lib_log
+  ! common1
   use common_type_gs
-  use def_type
+  ! common3
+  use common_type_rst
+  ! this
   use mod_set, only: &
         read_settings
   use mod_main, only: &
@@ -11,14 +14,13 @@ program main
   implicit none
   type(gs_)     :: org
   type(gs_)     :: dst
-  type(output_) :: dout
-  type(opt_)    :: opt
+  type(output_) :: output
 
   call echo(code%bgn, 'program main', '+tr')
   !-------------------------------------------------------------
-  call read_settings(org, dst, dout, opt)
+  call read_settings(org, dst, output)
 
-  call run(org, dst, dout, opt)
+  call run(org, dst, output)
 
   call finalize()
   !-------------------------------------------------------------

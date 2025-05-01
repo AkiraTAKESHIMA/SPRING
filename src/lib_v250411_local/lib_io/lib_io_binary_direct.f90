@@ -28,6 +28,8 @@ module lib_io_binary_direct
   ! Interfaces
   !-------------------------------------------------------------
   interface rbin
+    module procedure rb__log1_1d
+    module procedure rb__log4_1d
     module procedure rb__int1_1d
     module procedure rb__int2_1d
     module procedure rb__int4_1d
@@ -46,6 +48,8 @@ module lib_io_binary_direct
     module procedure rb__int8_3d
     module procedure rb__real_3d
     module procedure rb__dble_3d
+    module procedure rb__as1d__log1_2d
+    module procedure rb__as1d__log4_2d
     module procedure rb__as1d__int1_2d
     module procedure rb__as1d__int2_2d
     module procedure rb__as1d__int4_2d
@@ -55,6 +59,8 @@ module lib_io_binary_direct
   end interface
 
   interface wbin
+    module procedure wb__log1_1d
+    module procedure wb__log4_1d
     module procedure wb__int1_1d
     module procedure wb__int2_1d
     module procedure wb__int4_1d
@@ -76,6 +82,8 @@ module lib_io_binary_direct
   end interface
 
   interface read_block
+    module procedure read_block__log1
+    module procedure read_block__log4
     module procedure read_block__int1
     module procedure read_block__int2
     module procedure read_block__int4
@@ -85,6 +93,8 @@ module lib_io_binary_direct
   end interface
 
   interface write_block
+    module procedure write_block__log1
+    module procedure write_block__log4
     module procedure write_block__int1
     module procedure write_block__int2
     module procedure write_block__int4
@@ -94,6 +104,8 @@ module lib_io_binary_direct
   end interface
 
   interface fill_block
+    module procedure fill_block__log1
+    module procedure fill_block__log4
     module procedure fill_block__int1
     module procedure fill_block__int2
     module procedure fill_block__int4
@@ -109,6 +121,276 @@ module lib_io_binary_direct
   integer(8), parameter :: THRESH_DATASIZE = 100000000_8
 !---------------------------------------------------------------
 contains
+!===============================================================
+!
+!===============================================================
+subroutine rb__log1_1d(&
+    dat, f, dtype, endian, rec, sz, lb, check_recl, ios)
+  implicit none
+  logical(1)  , intent(out) :: dat(:)  !--dtype--
+  character(*), intent(in)  :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz
+  integer(8)  , intent(in) , optional :: lb
+  logical     , intent(in) , optional :: check_recl
+  integer     , intent(out), optional :: ios
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_
+  integer(8)          :: lb_
+  logical             :: check_recl_
+  integer             :: ios_
+
+  integer(8) :: shp
+  integer(8) :: ub
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: is
+  integer(8) :: pos
+
+  integer :: un
+  character(16) :: opt
+
+  call echo(code%bgn, 'rb__log1_1d', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp = size(dat,kind=8)
+
+  dtype_ = DTYPE_LOG1  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_ = shp
+  lb_ = 1_8
+  check_recl_ = .false.
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_long_name(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_ = sz
+  if( present(lb) ) lb_ = lb
+  if( present(check_recl) ) check_recl_ = check_recl
+
+  ub = lb_-1_8 + shp
+
+  opt = ''
+  if( present(ios) ) opt = '-q -a'
+
+  ios_ = 0
+  if( present(ios) ) ios = 0
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call check_input_file(&
+         f, dtype_, sz_, rec_, check_recl_, opt, ios_)
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  call open_input_file_stream(&
+         un, f, endian_, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp-1_8) / thresh_ndata + 1_8
+  nn = (shp-1_8) / nblock + 1_8
+
+  pos = sz_*(rec_-1)*byte + 1_8
+
+  call read_block(0, dat(:), dtype_, un, 0_8, nn)
+
+  pos = pos + (lb_-1_8)*byte
+  is = 0_8
+  n = shp - nn*(nblock-1_8)
+  do kk = 1_8, nblock
+    call read_block(1, dat(is+1_8:is+n), dtype_, un, pos, n)
+    is = is + n
+    pos = pos + n*byte
+    n = nn
+  enddo
+  pos = pos + (sz_-ub)*byte
+
+  call read_block(-1, dat(:), dtype_, un, 0_8, 0_8)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call close_file(un, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  call finalize()
+  !-------------------------------------------------------------
+  call echo(code%ret)
+!---------------------------------------------------------------
+contains
+subroutine finalize()
+  implicit none
+
+  if( ios_ /= 0 )then
+    if( .not. present(ios) )then
+      call eerr('INTERNAL ERROR: Unexpected condition'//&
+              '\n  ios_ /= 0 .and. .not. present(ios)')
+    endif
+    ios = ios_
+  endif
+end subroutine finalize
+end subroutine rb__log1_1d
+!===============================================================
+!
+!===============================================================
+subroutine rb__log4_1d(&
+    dat, f, dtype, endian, rec, sz, lb, check_recl, ios)
+  implicit none
+  logical(4)  , intent(out) :: dat(:)  !--dtype--
+  character(*), intent(in)  :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz
+  integer(8)  , intent(in) , optional :: lb
+  logical     , intent(in) , optional :: check_recl
+  integer     , intent(out), optional :: ios
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_
+  integer(8)          :: lb_
+  logical             :: check_recl_
+  integer             :: ios_
+
+  integer(8) :: shp
+  integer(8) :: ub
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: is
+  integer(8) :: pos
+
+  integer :: un
+  character(16) :: opt
+
+  call echo(code%bgn, 'rb__log4_1d', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp = size(dat,kind=8)
+
+  dtype_ = DTYPE_LOG4  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_ = shp
+  lb_ = 1_8
+  check_recl_ = .false.
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_long_name(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_ = sz
+  if( present(lb) ) lb_ = lb
+  if( present(check_recl) ) check_recl_ = check_recl
+
+  ub = lb_-1_8 + shp
+
+  opt = ''
+  if( present(ios) ) opt = '-q -a'
+
+  ios_ = 0
+  if( present(ios) ) ios = 0
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call check_input_file(&
+         f, dtype_, sz_, rec_, check_recl_, opt, ios_)
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  call open_input_file_stream(&
+         un, f, endian_, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp-1_8) / thresh_ndata + 1_8
+  nn = (shp-1_8) / nblock + 1_8
+
+  pos = sz_*(rec_-1)*byte + 1_8
+
+  call read_block(0, dat(:), dtype_, un, 0_8, nn)
+
+  pos = pos + (lb_-1_8)*byte
+  is = 0_8
+  n = shp - nn*(nblock-1_8)
+  do kk = 1_8, nblock
+    call read_block(1, dat(is+1_8:is+n), dtype_, un, pos, n)
+    is = is + n
+    pos = pos + n*byte
+    n = nn
+  enddo
+  pos = pos + (sz_-ub)*byte
+
+  call read_block(-1, dat(:), dtype_, un, 0_8, 0_8)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call close_file(un, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  call finalize()
+  !-------------------------------------------------------------
+  call echo(code%ret)
+!---------------------------------------------------------------
+contains
+subroutine finalize()
+  implicit none
+
+  if( ios_ /= 0 )then
+    if( .not. present(ios) )then
+      call eerr('INTERNAL ERROR: Unexpected condition'//&
+              '\n  ios_ /= 0 .and. .not. present(ios)')
+    endif
+    ios = ios_
+  endif
+end subroutine finalize
+end subroutine rb__log4_1d
 !===============================================================
 !
 !===============================================================
@@ -2656,6 +2938,290 @@ end subroutine rb__dble_3d
 !===============================================================
 !
 !===============================================================
+subroutine rb__as1d__log1_2d(&
+    dat, n1, n2, f, dtype, endian, rec, sz, lb, check_recl, ios)
+  implicit none
+  logical(1)  , intent(out) :: dat(:)  !--dtype--
+  integer(8)  , intent(in)  :: n1, n2
+  character(*), intent(in)  :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz(:)
+  integer(8)  , intent(in) , optional :: lb(:)
+  logical     , intent(in) , optional :: check_recl
+  integer     , intent(out), optional :: ios
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_(2)
+  integer(8)          :: lb_(2)
+  logical             :: check_recl_
+  integer             :: ios_
+
+  integer(8) :: shp(2)
+  integer(8) :: ub(2)
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: i2
+  integer(8) :: is
+  integer(8) :: pos
+
+  integer :: un
+  character(16) :: opt
+
+  call echo(code%bgn, 'rb__as1d__log1_2d', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp(1) = n1
+  shp(2) = n2
+
+  dtype_ = DTYPE_LOG1  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_(:) = shp(:)
+  lb_(:) = 1_8
+  check_recl_ = .false.
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_long_name(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_(:) = sz(:)
+  if( present(lb) ) lb_(:) = lb(:)
+  if( present(check_recl) ) check_recl_ = check_recl
+
+  ub(:) = lb_(:) + shp(:) - 1_8
+
+  opt = ''
+  if( present(ios) ) opt = '-q -a'
+
+  ios_ = 0
+  if( present(ios) ) ios = 0
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call check_input_file(&
+         f, dtype_, product(sz_), rec_, check_recl_, opt, ios_)
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  call open_input_file_stream(&
+         un, f, endian_, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp(1)-1_8) / thresh_ndata + 1_8
+  nn = (shp(1)-1_8) / nblock + 1_8
+
+  pos = product(sz_)*(rec_-1)*byte + 1_8
+
+  call read_block(0, dat(:), dtype_, un, 0_8, nn)
+
+  pos = pos + sz_(1)*(lb_(2)-1_8)*byte
+  do i2 = 1_8, shp(2)
+    pos = pos + (lb_(1)-1_8)*byte
+    is = shp(1)*(i2-1_8)
+    n = shp(1) - nn*(nblock-1_8)
+    do kk = 1_8, nblock
+      call read_block(1, dat(is+1_8:is+n), dtype_, un, pos, n)
+      is = is + n
+      pos = pos + n*byte
+      n = nn
+    enddo
+    pos = pos + (sz_(1)-ub(1))*byte
+  enddo
+  pos = pos + sz_(1)*(sz_(2)-ub(2))*byte
+
+  call read_block(-1, dat(:), dtype_, un, 0_8, 0_8)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call close_file(un, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  call finalize()
+  !-------------------------------------------------------------
+  call echo(code%ret)
+!---------------------------------------------------------------
+contains
+subroutine finalize()
+  implicit none
+
+  if( ios_ /= 0 )then
+    if( .not. present(ios) )then
+      call eerr('INTERNAL ERROR: Unexpected condition'//&
+              '\n  ios_ /= 0 .and. .not. present(ios)')
+    endif
+    ios = ios_
+  endif
+end subroutine finalize
+end subroutine rb__as1d__log1_2d
+!===============================================================
+!
+!===============================================================
+subroutine rb__as1d__log4_2d(&
+    dat, n1, n2, f, dtype, endian, rec, sz, lb, check_recl, ios)
+  implicit none
+  logical(4)  , intent(out) :: dat(:)  !--dtype--
+  integer(8)  , intent(in)  :: n1, n2
+  character(*), intent(in)  :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz(:)
+  integer(8)  , intent(in) , optional :: lb(:)
+  logical     , intent(in) , optional :: check_recl
+  integer     , intent(out), optional :: ios
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_(2)
+  integer(8)          :: lb_(2)
+  logical             :: check_recl_
+  integer             :: ios_
+
+  integer(8) :: shp(2)
+  integer(8) :: ub(2)
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: i2
+  integer(8) :: is
+  integer(8) :: pos
+
+  integer :: un
+  character(16) :: opt
+
+  call echo(code%bgn, 'rb__as1d__log4_2d', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp(1) = n1
+  shp(2) = n2
+
+  dtype_ = DTYPE_LOG1  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_(:) = shp(:)
+  lb_(:) = 1_8
+  check_recl_ = .false.
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_long_name(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_(:) = sz(:)
+  if( present(lb) ) lb_(:) = lb(:)
+  if( present(check_recl) ) check_recl_ = check_recl
+
+  ub(:) = lb_(:) + shp(:) - 1_8
+
+  opt = ''
+  if( present(ios) ) opt = '-q -a'
+
+  ios_ = 0
+  if( present(ios) ) ios = 0
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call check_input_file(&
+         f, dtype_, product(sz_), rec_, check_recl_, opt, ios_)
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  call open_input_file_stream(&
+         un, f, endian_, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp(1)-1_8) / thresh_ndata + 1_8
+  nn = (shp(1)-1_8) / nblock + 1_8
+
+  pos = product(sz_)*(rec_-1)*byte + 1_8
+
+  call read_block(0, dat(:), dtype_, un, 0_8, nn)
+
+  pos = pos + sz_(1)*(lb_(2)-1_8)*byte
+  do i2 = 1_8, shp(2)
+    pos = pos + (lb_(1)-1_8)*byte
+    is = shp(1)*(i2-1_8)
+    n = shp(1) - nn*(nblock-1_8)
+    do kk = 1_8, nblock
+      call read_block(1, dat(is+1_8:is+n), dtype_, un, pos, n)
+      is = is + n
+      pos = pos + n*byte
+      n = nn
+    enddo
+    pos = pos + (sz_(1)-ub(1))*byte
+  enddo
+  pos = pos + sz_(1)*(sz_(2)-ub(2))*byte
+
+  call read_block(-1, dat(:), dtype_, un, 0_8, 0_8)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call close_file(un, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  call finalize()
+  !-------------------------------------------------------------
+  call echo(code%ret)
+!---------------------------------------------------------------
+contains
+subroutine finalize()
+  implicit none
+
+  if( ios_ /= 0 )then
+    if( .not. present(ios) )then
+      call eerr('INTERNAL ERROR: Unexpected condition'//&
+              '\n  ios_ /= 0 .and. .not. present(ios)')
+    endif
+    ios = ios_
+  endif
+end subroutine finalize
+end subroutine rb__as1d__log4_2d
+!===============================================================
+!
+!===============================================================
 subroutine rb__as1d__int1_2d(&
     dat, n1, n2, f, dtype, endian, rec, sz, lb, check_recl, ios)
   implicit none
@@ -3513,6 +4079,362 @@ end subroutine rb__as1d__dble_2d
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine wb__log1_1d(&
+    dat, f, dtype, endian, rec, sz, lb, fill, replace, ios)
+  implicit none
+  logical(1)  , intent(in) :: dat(:)  !--dtype--
+  character(*), intent(in) :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz
+  integer(8)  , intent(in) , optional :: lb
+  logical(1)  , intent(in) , optional :: fill  !--dtype--
+  logical     , intent(in) , optional :: replace
+  integer     , intent(out), optional :: ios
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_
+  integer(8)          :: lb_
+  logical(1)          :: fill_  !--dtype--
+  logical             :: replace_
+  integer             :: ios_
+
+  integer(8) :: shp
+  integer(8) :: ub
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: is
+  integer(8) :: pos
+  integer(8) :: fs
+  integer(8) :: nfill_max
+  integer(8) :: nfill
+  integer(8) :: ifillblock
+
+  integer :: un
+  character(16) :: opt
+
+  call echo(code%bgn, 'wb__log1_1d', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp = size(dat,kind=8)
+
+  dtype_ = DTYPE_LOG1  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_ = shp
+  lb_ = 1_8
+  replace_ = .false.
+  fill_ = logical(.true.,1)  !--dtype--
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_long_name(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_ = sz
+  if( present(lb) ) lb_ = lb
+  if( present(replace) ) replace_ = replace
+  if( present(fill) ) fill_ = fill
+
+  ub = lb_ - 1_8 + shp
+
+  opt = ''
+  if( present(ios) ) opt = '-q -a'
+
+  ios_ = 0
+  if( present(ios) ) ios = 0
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call prep_output_file(&
+         f, dtype_, sz_, replace_, opt, fs, ios_)
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  call open_output_file_stream(&
+         un, f, endian_, replace_, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp-1_8) / thresh_ndata + 1_8
+  nn = (shp-1_8) / nblock + 1_8
+
+  ! Allocate
+  call write_block(0, dat(:), dtype_, un, 0_8, nn)
+
+  ! Allocate
+  nfill_max = get_nfill_max(1, fs, present(fill), (/sz_/), (/lb_/), (/ub/))
+  if( nfill_max > 0_8 )then
+    call fill_block(0, fill_, dtype_, un, 0_8, min(nfill_max,thresh_ndata))
+  endif
+
+  pos = sz_*(rec_-1) * byte + 1_8
+
+  ! Fill the head of record
+  if( lb_ > 1_8 .and. (fs == 0_8 .or. present(fill)) )then
+    nfill = mod(lb_-1_8-1_8, thresh_ndata)+1_8
+    do ifillblock = 1_8, (lb_-1_8-1_8)/thresh_ndata+1_8
+      call fill_block(1, fill_, dtype_, un, pos, nfill)
+      pos = pos + nfill*byte
+      nfill = thresh_ndata
+    enddo
+  else
+    pos = pos + (lb_-1_8) * byte
+  endif
+
+  is = 0_8
+  n = shp - nn*(nblock-1_8)
+  do kk = 1_8, nblock
+    call write_block(1, dat(is+1_8:is+n), dtype_, un, pos, n)
+    is = is + n
+    pos = pos + n*byte
+    n = nn
+  enddo
+
+  ! Fill the tail of record
+  if( ub < sz_ .and. (fs == 0_8 .or. present(fill)) )then
+    nfill = mod(sz_-ub-1_8, thresh_ndata)+1_8
+    do ifillblock = 1_8, (sz_-ub-1_8)/thresh_ndata+1_8
+      call fill_block(1, fill_, dtype_, un, pos, nfill)
+      pos = pos + nfill*byte
+      nfill = thresh_ndata
+    enddo
+  else
+    pos = pos + (sz_-ub)*byte
+  endif
+
+  ! Deallocate
+  call write_block(-1, dat(:), dtype_, un, pos, 0_8)
+
+  ! Deallocate
+  if( nfill_max > 0_8 )then
+    call fill_block(-1, fill_, dtype_, un, 0_8, 0_8)
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call close_file(un, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  call finalize()
+  !-------------------------------------------------------------
+  call echo(code%ret)
+!---------------------------------------------------------------
+contains
+subroutine finalize()
+  implicit none
+
+  if( ios_ /= 0 )then
+    if( .not. present(ios) )then
+      call eerr('INTERNAL ERROR: Unexpected condition'//&
+              '\n  ios_ /= 0 .and. .not. present(ios)')
+    endif
+    ios = ios_
+  endif
+end subroutine finalize
+end subroutine wb__log1_1d
+!===============================================================
+!
+!===============================================================
+subroutine wb__log4_1d(&
+    dat, f, dtype, endian, rec, sz, lb, fill, replace, ios)
+  implicit none
+  logical(4)  , intent(in) :: dat(:)  !--dtype--
+  character(*), intent(in) :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz
+  integer(8)  , intent(in) , optional :: lb
+  logical(4)  , intent(in) , optional :: fill  !--dtype--
+  logical     , intent(in) , optional :: replace
+  integer     , intent(out), optional :: ios
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_
+  integer(8)          :: lb_
+  logical(4)          :: fill_  !--dtype--
+  logical             :: replace_
+  integer             :: ios_
+
+  integer(8) :: shp
+  integer(8) :: ub
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: is
+  integer(8) :: pos
+  integer(8) :: fs
+  integer(8) :: nfill_max
+  integer(8) :: nfill
+  integer(8) :: ifillblock
+
+  integer :: un
+  character(16) :: opt
+
+  call echo(code%bgn, 'wb__log4_1d', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp = size(dat,kind=8)
+
+  dtype_ = DTYPE_LOG4  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_ = shp
+  lb_ = 1_8
+  replace_ = .false.
+  fill_ = logical(.true.,4)  !--dtype--
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_long_name(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_ = sz
+  if( present(lb) ) lb_ = lb
+  if( present(replace) ) replace_ = replace
+  if( present(fill) ) fill_ = fill
+
+  ub = lb_ - 1_8 + shp
+
+  opt = ''
+  if( present(ios) ) opt = '-q -a'
+
+  ios_ = 0
+  if( present(ios) ) ios = 0
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call prep_output_file(&
+         f, dtype_, sz_, replace_, opt, fs, ios_)
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  call open_output_file_stream(&
+         un, f, endian_, replace_, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp-1_8) / thresh_ndata + 1_8
+  nn = (shp-1_8) / nblock + 1_8
+
+  ! Allocate
+  call write_block(0, dat(:), dtype_, un, 0_8, nn)
+
+  ! Allocate
+  nfill_max = get_nfill_max(1, fs, present(fill), (/sz_/), (/lb_/), (/ub/))
+  if( nfill_max > 0_8 )then
+    call fill_block(0, fill_, dtype_, un, 0_8, min(nfill_max,thresh_ndata))
+  endif
+
+  pos = sz_*(rec_-1) * byte + 1_8
+
+  ! Fill the head of record
+  if( lb_ > 1_8 .and. (fs == 0_8 .or. present(fill)) )then
+    nfill = mod(lb_-1_8-1_8, thresh_ndata)+1_8
+    do ifillblock = 1_8, (lb_-1_8-1_8)/thresh_ndata+1_8
+      call fill_block(1, fill_, dtype_, un, pos, nfill)
+      pos = pos + nfill*byte
+      nfill = thresh_ndata
+    enddo
+  else
+    pos = pos + (lb_-1_8) * byte
+  endif
+
+  is = 0_8
+  n = shp - nn*(nblock-1_8)
+  do kk = 1_8, nblock
+    call write_block(1, dat(is+1_8:is+n), dtype_, un, pos, n)
+    is = is + n
+    pos = pos + n*byte
+    n = nn
+  enddo
+
+  ! Fill the tail of record
+  if( ub < sz_ .and. (fs == 0_8 .or. present(fill)) )then
+    nfill = mod(sz_-ub-1_8, thresh_ndata)+1_8
+    do ifillblock = 1_8, (sz_-ub-1_8)/thresh_ndata+1_8
+      call fill_block(1, fill_, dtype_, un, pos, nfill)
+      pos = pos + nfill*byte
+      nfill = thresh_ndata
+    enddo
+  else
+    pos = pos + (sz_-ub)*byte
+  endif
+
+  ! Deallocate
+  call write_block(-1, dat(:), dtype_, un, pos, 0_8)
+
+  ! Deallocate
+  if( nfill_max > 0_8 )then
+    call fill_block(-1, fill_, dtype_, un, 0_8, 0_8)
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call close_file(un, ios_, present(ios))
+  if( ios_ /= 0 )then
+    call finalize()
+    call echo(code%ret)
+    return
+  endif
+  !-------------------------------------------------------------
+  call finalize()
+  !-------------------------------------------------------------
+  call echo(code%ret)
+!---------------------------------------------------------------
+contains
+subroutine finalize()
+  implicit none
+
+  if( ios_ /= 0 )then
+    if( .not. present(ios) )then
+      call eerr('INTERNAL ERROR: Unexpected condition'//&
+              '\n  ios_ /= 0 .and. .not. present(ios)')
+    endif
+    ios = ios_
+  endif
+end subroutine finalize
+end subroutine wb__log4_1d
 !===============================================================
 !
 !===============================================================
@@ -7194,6 +8116,116 @@ end subroutine wb__dble_3d
 !===============================================================
 !
 !===============================================================
+subroutine read_block__log1(&
+    job, dat, dtype, un, pos, n)
+  implicit none
+  integer     , intent(in) :: job
+  logical(1)  , intent(inout) :: dat(:)
+  character(*), intent(in) :: dtype
+  integer     , intent(in) :: un
+  integer(8)  , intent(in) :: pos
+  integer(8)  , intent(in) :: n
+
+  logical(4), allocatable, save :: tmpl4(:)
+
+  character(128), parameter :: msg_proc = &
+    '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__log1 ***\n'
+
+  selectcase( job )
+  !-------------------------------------------------------------
+  ! Case: Initialize
+  case( 0 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); continue
+    case( DTYPE_LOG4 ); allocate(tmpl4(n))
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Read data
+  case( 1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 )
+      read(un,pos=pos) dat(:n)
+    case( DTYPE_LOG4 )
+      read(un,pos=pos) tmpl4(:n)
+      call cpval(tmpl4(:n), dat(:n))
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Finalize
+  case( -1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); continue
+    case( DTYPE_LOG4 ); deallocate(tmpl4)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: ERROR
+  case default
+    call eerr(trim(msg_proc)//'Invalid value in $job: '//str(job))
+  endselect
+end subroutine read_block__log1
+!===============================================================
+!
+!===============================================================
+subroutine read_block__log4(&
+    job, dat, dtype, un, pos, n)
+  implicit none
+  integer     , intent(in) :: job
+  logical(4)  , intent(inout) :: dat(:)
+  character(*), intent(in) :: dtype
+  integer     , intent(in) :: un
+  integer(8)  , intent(in) :: pos
+  integer(8)  , intent(in) :: n
+
+  logical(1), allocatable, save :: tmpl1(:)
+
+  character(128), parameter :: msg_proc = &
+    '*** @ '//trim(NAME_LIB)//' SUBROUTINE read_block__log4 ***\n'
+
+  selectcase( job )
+  !-------------------------------------------------------------
+  ! Case: Initialize
+  case( 0 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); allocate(tmpl1(n))
+    case( DTYPE_LOG4 ); continue
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Read data
+  case( 1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 )
+      read(un,pos=pos) tmpl1(:n)
+      call cpval(tmpl1(:n), dat(:n))
+    case( DTYPE_LOG4 )
+      read(un,pos=pos) dat(:n)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Finalize
+  case( -1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); deallocate(tmpl1)
+    case( DTYPE_LOG4 ); continue
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: ERROR
+  case default
+    call eerr(trim(msg_proc)//'Invalid value in $job: '//str(job))
+  endselect
+end subroutine read_block__log4
+!===============================================================
+!
+!===============================================================
 subroutine read_block__int1(&
     job, dat, dtype, un, pos, n)
   implicit none
@@ -7676,6 +8708,116 @@ end subroutine read_block__dble
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine write_block__log1(&
+    job, dat, dtype, un, pos, n)
+  implicit none
+  integer     , intent(in) :: job
+  logical(1)  , intent(in) :: dat(:)
+  character(*), intent(in) :: dtype
+  integer     , intent(in) :: un
+  integer(8)  , intent(in) :: pos
+  integer(8)  , intent(in) :: n
+
+  logical(4), allocatable, save :: tmpl4(:)
+
+  character(128), parameter :: msg_proc = &
+    '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__log1 ***\n'
+
+  selectcase( job )
+  !-------------------------------------------------------------
+  ! Case: Initialize
+  case( 0 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); continue
+    case( DTYPE_LOG4 ); allocate(tmpl4(n))
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Read data
+  case( 1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 )
+      write(un,pos=pos) dat(:n)
+    case( DTYPE_LOG4 )
+      call cpval(dat(:n), tmpl4(:n))
+      write(un,pos=pos) tmpl4(:n)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Finalize
+  case( -1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); continue
+    case( DTYPE_LOG4 ); deallocate(tmpl4)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: ERROR
+  case default
+    call eerr(trim(msg_proc)//'Invalid value in $job: '//str(job))
+  endselect
+end subroutine write_block__log1
+!===============================================================
+!
+!===============================================================
+subroutine write_block__log4(&
+    job, dat, dtype, un, pos, n)
+  implicit none
+  integer     , intent(in) :: job
+  logical(4)  , intent(in) :: dat(:)
+  character(*), intent(in) :: dtype
+  integer     , intent(in) :: un
+  integer(8)  , intent(in) :: pos
+  integer(8)  , intent(in) :: n
+
+  logical(1), allocatable, save :: tmpl1(:)
+
+  character(128), parameter :: msg_proc = &
+    '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__log4 ***\n'
+
+  selectcase( job )
+  !-------------------------------------------------------------
+  ! Case: Initialize
+  case( 0 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); allocate(tmpl1(n))
+    case( DTYPE_LOG4 ); continue
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Read data
+  case( 1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 )
+      call cpval(dat(:n), tmpl1(:n))
+      write(un,pos=pos) tmpl1(:n)
+    case( DTYPE_LOG4 )
+      write(un,pos=pos) dat(:n)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Finalize
+  case( -1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); deallocate(tmpl1)
+    case( DTYPE_LOG4 ); continue
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  !-------------------------------------------------------------
+  ! Case: ERROR
+  case default
+    call eerr(trim(msg_proc)//'Invalid value in $job: '//str(job))
+  endselect
+end subroutine write_block__log4
 !===============================================================
 !
 !===============================================================
@@ -8203,6 +9345,94 @@ end function get_nfill_max
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine fill_block__log1(job, fill, dtype, un, pos, n)
+  implicit none
+  integer     , intent(in) :: job
+  logical(1)  , intent(in) :: fill
+  character(*), intent(in) :: dtype
+  integer     , intent(in) :: un
+  integer(8)  , intent(in) :: pos
+  integer(8)  , intent(in) :: n
+
+  logical(1), allocatable, save :: filll1(:)
+  logical(4), allocatable, save :: filll4(:)
+
+  character(128), parameter :: msg_proc = &
+    '*** @ '//trim(NAME_LIB)//' SUBROUTINE fill_block__log1 ***\n'
+
+  selectcase( job )
+  case( 0 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); allocate(filll1(n)); filll1(:) = logical(fill,1)
+    case( DTYPE_LOG4 ); allocate(filll4(n)); filll4(:) = logical(fill,4)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  case( 1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); write(un,pos=pos) filll1(:n)
+    case( DTYPE_LOG4 ); write(un,pos=pos) filll4(:n)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  case( -1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); deallocate(filll1)
+    case( DTYPE_LOG4 ); deallocate(filll4)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  case default
+    call eerr(trim(msg_proc)//'Invalid value in $job: '//str(job))
+  endselect
+end subroutine fill_block__log1
+!===============================================================
+!
+!===============================================================
+subroutine fill_block__log4(job, fill, dtype, un, pos, n)
+  implicit none
+  integer     , intent(in) :: job
+  logical(4)  , intent(in) :: fill
+  character(*), intent(in) :: dtype
+  integer     , intent(in) :: un
+  integer(8)  , intent(in) :: pos
+  integer(8)  , intent(in) :: n
+
+  logical(1), allocatable, save :: filll1(:)
+  logical(4), allocatable, save :: filll4(:)
+
+  character(128), parameter :: msg_proc = &
+    '*** @ '//trim(NAME_LIB)//' SUBROUTINE fill_block__log4 ***\n'
+
+  selectcase( job )
+  case( 0 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); allocate(filll1(n)); filll1(:) = logical(fill,1)
+    case( DTYPE_LOG4 ); allocate(filll4(n)); filll4(:) = logical(fill,4)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  case( 1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); write(un,pos=pos) filll1(:n)
+    case( DTYPE_LOG4 ); write(un,pos=pos) filll4(:n)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  case( -1 )
+    selectcase( dtype )
+    case( DTYPE_LOG1 ); deallocate(filll1)
+    case( DTYPE_LOG4 ); deallocate(filll4)
+    case default
+      call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
+    endselect
+  case default
+    call eerr(trim(msg_proc)//'Invalid value in $job: '//str(job))
+  endselect
+end subroutine fill_block__log4
 !===============================================================
 !
 !===============================================================

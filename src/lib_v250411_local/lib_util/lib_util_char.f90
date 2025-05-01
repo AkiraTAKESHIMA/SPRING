@@ -119,6 +119,36 @@ end subroutine devide_into_words
 !==============================================================
 !
 !==============================================================
+logical(4) function log4_char(c,varname) result(res)
+  implicit none
+  character(*), intent(in) :: c
+  character(*), intent(in), optional :: varname
+
+  character(:), allocatable :: varname_
+  integer :: ios
+
+  allocate(character(1) :: varname_)
+
+  if( present(varname) )then
+    varname_ = trim(varname)
+  else
+    varname_ = '(no input)'
+  endif
+
+  read(c,*,iostat=ios) res
+
+  if( ios /= 0 )then
+    call eerr(str(msg_io_error())//&
+            '\nFailed to read "'//str(c)//'" as an logical(4).'//&
+            '\n  Variable name: '//str(varname_))
+    res = .true.
+  endif
+
+  deallocate(varname_)
+end function log4_char
+!==============================================================
+!
+!==============================================================
 integer(1) function int1_char(c,varname) result(res)
   implicit none
   character(*), intent(in) :: c
@@ -299,44 +329,35 @@ end function dble_char
 !==============================================================
 !
 !==============================================================
-logical(4) function log4_char(c,varname) result(res)
+!
+!
+!
+!
+!
+!==============================================================
+!
+!==============================================================
+subroutine char_to_log4(v, c)
   implicit none
+  logical(4)  , intent(out) :: v
   character(*), intent(in) :: c
-  character(*), intent(in), optional :: varname
 
-  character(:), allocatable :: varname_
   integer :: ios
 
-  allocate(character(1) :: varname_)
-
-  if( present(varname) )then
-    varname_ = trim(varname)
-  else
-    varname_ = '(no input)'
-  endif
-
-  read(c,*,iostat=ios) res
+  call echo(code%bgn, 'char_to_val__MP__char_to_log4', '-p')
+  !-------------------------------------------------------------
+  read(c,*,iostat=ios) v
 
   if( ios /= 0 )then
     call eerr(str(msg_io_error())//&
-            '\nFailed to read "'//str(c)//'" as an logical(4).'//&
-            '\n  Variable name: '//str(varname_))
-    res = .true.
+            '\n  Failed to convert "'//str(c)//'" to logical(4)')
   endif
-
-  deallocate(varname_)
-end function log4_char
-!==============================================================
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine char_to_log4
+!===============================================================
 !
-!==============================================================
-!
-!
-!
-!
-!
-!==============================================================
-!
-!==============================================================
+!===============================================================
 subroutine char_to_int1(v, c)
   implicit none
   integer(1)  , intent(out) :: v
@@ -478,27 +499,6 @@ end subroutine char_to_dble
 !==============================================================
 !
 !==============================================================
-subroutine char_to_log4(v, c)
-  implicit none
-  logical(4)  , intent(out) :: v
-  character(*), intent(in) :: c
-
-  integer :: ios
-
-  call echo(code%bgn, 'char_to_val__MP__char_to_log4', '-p')
-  !-------------------------------------------------------------
-  read(c,*,iostat=ios) v
-
-  if( ios /= 0 )then
-    call eerr(str(msg_io_error())//&
-            '\n  Failed to convert "'//str(c)//'" to logical(4)')
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine char_to_log4
-!===============================================================
-!
-!===============================================================
 !
 !
 !

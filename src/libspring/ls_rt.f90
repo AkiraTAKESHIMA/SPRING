@@ -134,11 +134,6 @@ end subroutine point_rt
 !
 !===============================================================
 subroutine spring_make_rmptbl(name, sname, tname)
-  ! common1
-  use common_opt_set, only: &
-        set_default_values_opt_sys, &
-        set_default_values_opt_log, &
-        set_default_values_opt_earth
   ! common2
   use common_rt_base, only: &
         init_rt, &
@@ -159,12 +154,9 @@ subroutine spring_make_rmptbl(name, sname, tname)
   type(opt_log_) :: opt_log
   type(opt_earth_) :: opt_earth
   integer :: i_rt
-  logical :: output = .false.
-  logical :: free_sgrid = .false.
-  logical :: free_tgrid = .false.
-  logical :: free_rtm = .false.
-  logical :: was_rtm_saved
-  logical :: was_rtv_src_saved, was_rtv_tgt_saved
+  logical, parameter :: output    = .false.
+  logical, parameter :: calc_coef = .true.
+  logical, parameter :: make_vrf  = .false.
 
   call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_make_rmptbl', logopt())
   !-------------------------------------------------------------
@@ -191,10 +183,6 @@ subroutine spring_make_rmptbl(name, sname, tname)
   !-------------------------------------------------------------
   ! Prepare
   !-------------------------------------------------------------
-  call set_default_values_opt_sys(opt_sys)
-  call set_default_values_opt_log(opt_log)
-  call set_default_values_opt_earth(opt_earth)
-
   opt_sys%old_files = OPT_OLD_FILES_REMOVE
   opt_log%print_summary = .false.
   opt_log%write_summary = .false.
@@ -205,7 +193,6 @@ subroutine spring_make_rmptbl(name, sname, tname)
   rt%tnam = tname
   rt%id = 'lst_rt('//str(i_rt)//')'
   call set_default_values_rt(rt)
-  rt%im%path = joined(opt_sys%dir_im, 'spring.rt.im')
 
   call point_grdsys(sname, s)
   call point_grdsys(tname, t)
@@ -214,9 +201,7 @@ subroutine spring_make_rmptbl(name, sname, tname)
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
-  call make_rt(s, t, rt, opt_sys, opt_log, opt_earth, &
-               output, free_sgrid, free_tgrid, free_rtm, &
-               was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
+  call make_rt(s, t, rt, calc_coef, make_vrf, output)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

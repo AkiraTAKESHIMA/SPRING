@@ -14,6 +14,7 @@ module common_gs_base
   ! Public procedures
   !-------------------------------------------------------------
   public :: init_gs
+  public :: init_gs_raster_zone
 
   public :: alloc_gs_components
   public :: set_gs_common
@@ -37,6 +38,8 @@ module common_gs_base
   public :: set_save_file_grid_out
 
   public :: free_gs
+
+  public :: clear_gs
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -59,6 +62,21 @@ subroutine init_gs(u)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_gs
+!===============================================================
+!
+!===============================================================
+subroutine init_gs_raster_zone(arz)
+  implicit none
+  type(raster_zone_), intent(inout) :: arz
+
+  call echo(code%bgn, 'init_gs_raster_zone', '-p -x2')
+  !-------------------------------------------------------------
+  nullify(arz%idxmap)
+  nullify(arz%mskmap)
+  nullify(arz%wgtmap)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine init_gs_raster_zone
 !===============================================================
 ! Requirements:
 !   1. That SUBROUTINE init_gs has been called.
@@ -84,15 +102,18 @@ subroutine alloc_gs_components(a, gs_type)
     allocate(a%latlon)
     al => a%latlon
     al%id = trim(a%id)//'%latlon'
-    al%nam => a%nam
-    al%is_source = a%is_source
+    al%nam       => a%nam
+    al%is_valid  => a%is_valid
+    al%is_source => a%is_source
     nullify(al%f_latlon_in)
     nullify(al%f_grid_in)
     nullify(al%f_grid_out)
-    nullify(al%zone)
     nullify(al%lon, al%lat)
     nullify(al%lonwidth, al%latwidth)
     nullify(al%lon0)
+    al%status_idxmap = GRID_STATUS__UNDEF
+    al%status_mskmap = GRID_STATUS__UNDEF
+    al%status_wgtmap = GRID_STATUS__UNDEF
     nullify(al%idxmap, al%wgtmap)
     nullify(al%hrel, al%vrel)
     nullify(al)
@@ -100,30 +121,31 @@ subroutine alloc_gs_components(a, gs_type)
     allocate(a%raster)
     ar => a%raster
     ar%id = trim(a%id)//'%raster'
-    ar%nam => a%nam
-    ar%is_source = a%is_source
+    ar%nam       => a%nam
+    ar%is_valid  => a%is_valid
+    ar%is_source => a%is_source
     nullify(ar%f_raster_in)
     nullify(ar%f_grid_in)
     nullify(ar%f_grid_out)
-    nullify(ar%zone)
     nullify(ar%lon, ar%lat)
     nullify(ar%lonwidth, ar%latwidth)
     nullify(ar%lon0)
-    nullify(ar%idxmap, ar%wgtmap)
-    nullify(ar%idxmapall1, ar%idxmapall2, &
-            ar%idxmapall4, ar%idxmapall8)
+    nullify(ar%zone)
+    ar%status_idxmap = GRID_STATUS__UNDEF
+    ar%status_mskmap = GRID_STATUS__UNDEF
+    ar%status_wgtmap = GRID_STATUS__UNDEF
     nullify(ar%hrel, ar%vrel)
     nullify(ar)
   case( GS_TYPE_POLYGON )
     allocate(a%polygon)
     ap => a%polygon
     ap%id = trim(a%id)//'%polygon'
-    ap%nam => a%nam
-    ap%is_source = a%is_source
+    ap%nam       => a%nam
+    ap%is_valid  => a%is_valid
+    ap%is_source => a%is_source
     nullify(ap%f_polygon_in)
     nullify(ap%f_grid_in)
     nullify(ap%f_grid_out)
-    nullify(ap%zone)
     nullify(ap%polygon)
     nullify(ap%n_next, ap%n_prev)
     nullify(ap)
@@ -135,8 +157,9 @@ subroutine alloc_gs_components(a, gs_type)
   allocate(a%cmn)
   ac => a%cmn
   ac%id = trim(a%id)//'%cmn'
-  ac%nam => a%nam
-  ac%gs_type => a%gs_type
+  ac%nam       => a%nam
+  ac%is_valid  => a%is_valid
+  ac%gs_type   => a%gs_type
   ac%is_source => a%is_source
   nullify(ac%f_grid_in)
   nullify(ac%f_grid_out)
@@ -163,50 +186,53 @@ subroutine set_gs_common(u)
   !
   !-------------------------------------------------------------
   uc => u%cmn
+
   selectcase( u%gs_type )
   case( GS_TYPE_LATLON )
     ul => u%latlon
+    uc%f_grid_in   => ul%f_grid_in
+    uc%f_grid_out  => ul%f_grid_out
+    uc%grid        => ul%grid
     uc%idx_miss    => ul%idx_miss
     uc%ara_miss    => ul%ara_miss
     uc%wgt_miss    => ul%wgt_miss
     uc%xyz_miss    => ul%xyz_miss
     uc%lonlat_miss => ul%lonlat_miss
     uc%val_miss    => ul%val_miss
-    uc%f_grid_in  => ul%f_grid_in
-    uc%f_grid_out => ul%f_grid_out
-    uc%grid       => ul%grid
-    uc%debug      => ul%debug
-    uc%idx_debug  => ul%idx_debug
+    uc%debug       => ul%debug
+    uc%idx_debug   => ul%idx_debug
   case( GS_TYPE_RASTER )
     ur => u%raster
+    uc%f_grid_in   => ur%f_grid_in
+    uc%f_grid_out  => ur%f_grid_out
+    uc%grid        => ur%grid
     uc%idx_miss    => ur%idx_miss
     uc%ara_miss    => ur%ara_miss
     uc%wgt_miss    => ur%wgt_miss
     uc%xyz_miss    => ur%xyz_miss
     uc%lonlat_miss => ur%lonlat_miss
     uc%val_miss    => ur%val_miss
-    uc%f_grid_in  => ur%f_grid_in
-    uc%f_grid_out => ur%f_grid_out
-    uc%grid       => ur%grid
-    uc%debug      => ur%debug
-    uc%idx_debug  => ur%idx_debug
+    uc%debug       => ur%debug
+    uc%idx_debug   => ur%idx_debug
   case( GS_TYPE_POLYGON )
     up => u%polygon
+    uc%f_grid_in   => up%f_grid_in
+    uc%f_grid_out  => up%f_grid_out
+    uc%grid        => up%grid
     uc%idx_miss    => up%idx_miss
     uc%ara_miss    => up%ara_miss
     uc%wgt_miss    => up%wgt_miss
     uc%xyz_miss    => up%xyz_miss
     uc%lonlat_miss => up%lonlat_miss
     uc%val_miss    => up%val_miss
-    uc%f_grid_in  => up%f_grid_in
-    uc%f_grid_out => up%f_grid_out
-    uc%grid       => up%grid
-    uc%debug      => up%debug
-    uc%idx_debug  => up%idx_debug
+    uc%debug       => up%debug
+    uc%idx_debug   => up%idx_debug
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  gs_type: '//str(u%gs_type))
   endselect
+
+  nullify(uc)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_gs_common
@@ -223,7 +249,7 @@ end subroutine set_gs_common
 !===============================================================
 subroutine set_default_values_gs_latlon(ul)
   use common_gs_grid_base, only: &
-    init_grid
+        init_grid
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
 
@@ -233,6 +259,8 @@ subroutine set_default_values_gs_latlon(ul)
 
   call echo(code%bgn, 'set_default_values_gs_latlon', '-p -x2')
   !-------------------------------------------------------------
+  ul%is_valid = .true.
+
   allocate(ul%f_latlon_in)
   allocate(ul%f_grid_in)
   allocate(ul%f_grid_out)
@@ -250,18 +278,7 @@ subroutine set_default_values_gs_latlon(ul)
   call set_default_values_file_grid_in(fg_in)
   call set_default_values_file_grid_out(fg_out)
 
-  nullify(ul%zone)
-  ul%nZones = 0
-  ul%iZone = 0
-  ul%iZone_idxmap    = 0
-  ul%iZone_wgtmap    = 0
-  ul%iZone_grdidx    = 0
-  ul%iZone_grduwa    = 0
-  ul%iZone_grdara    = 0
-  ul%iZone_grdwgt    = 0
-  ul%iZone_grdxyz    = 0
-  ul%iZone_grdlonlat = 0
-
+  ul%nij = 0_8
   call init_grid(ul%grid)
 
   ul%nx = 0_8
@@ -277,10 +294,10 @@ subroutine set_default_values_gs_latlon(ul)
   ul%east  = 0.d0
   ul%south = 0.d0
   ul%north = 0.d0
-  ul%is_south_to_north = .true.
   ul%is_cyclic = .true.
-
-  ul%coord_unit = unit_degree
+  ul%is_south_to_north = .true.
+  ul%region_type = REGION_TYPE_UNDEF
+  ul%coord_unit = UNIT_DEGREE
 
   nullify(ul%lon)
   nullify(ul%lat)
@@ -289,21 +306,28 @@ subroutine set_default_values_gs_latlon(ul)
   nullify(ul%lon0)
 
   nullify(ul%idxmap)
+  nullify(ul%mskmap)
   nullify(ul%wgtmap)
+  ul%status_idxmap = GRID_STATUS__TO_BE_PREPARED
+  ul%status_mskmap = GRID_STATUS__TO_BE_PREPARED
+  ul%status_wgtmap = GRID_STATUS__TO_BE_PREPARED
+  ul%idxmin = 0_8
+  ul%idxmax = 0_8
 
-  ul%idx_miss    = idx_miss_default
-  ul%uwa_miss    = uwa_miss_default
-  ul%ara_miss    = ara_miss_default
-  ul%wgt_miss    = wgt_miss_default
-  ul%xyz_miss    = xyz_miss_default
-  ul%lonlat_miss = lonlat_miss_default
-  ul%val_miss    = dval_miss_default
+  ul%idx_miss    = IDX_MISS_DEFAULT
+  ul%uwa_miss    = UWA_MISS_DEFAULT
+  ul%ara_miss    = ARA_MISS_DEFAULT
+  ul%wgt_miss    = WGT_MISS_DEFAULT
+  ul%xyz_miss    = XYZ_MISS_DEFAULT
+  ul%lonlat_miss = LONLAT_MISS_DEFAULT
+  ul%val_miss    = DVAL_MISS_DEFAULT
 
+  !ul%is_source = .true.
   nullify(ul%hrel)
   nullify(ul%vrel)
 
   ul%debug = .false.
-  ul%idx_debug = idx_miss_default
+  ul%idx_debug = IDX_MISS_DEFAULT
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_gs_latlon
@@ -312,7 +336,7 @@ end subroutine set_default_values_gs_latlon
 !===============================================================
 subroutine set_default_values_gs_raster(ur)
   use common_gs_grid_base, only: &
-    init_grid
+        init_grid
   implicit none
   type(gs_raster_), intent(inout), target :: ur
 
@@ -322,6 +346,8 @@ subroutine set_default_values_gs_raster(ur)
 
   call echo(code%bgn, 'set_default_values_gs_raster', '-p -x2')
   !-------------------------------------------------------------
+  ur%is_valid = .true.
+
   allocate(ur%f_raster_in)
   allocate(ur%f_grid_in)
   allocate(ur%f_grid_out)
@@ -339,18 +365,7 @@ subroutine set_default_values_gs_raster(ur)
   call set_default_values_file_grid_in(fg_in)
   call set_default_values_file_grid_out(fg_out)
 
-  nullify(ur%zone)
-  ur%nZones = 0
-  ur%iZone = 0
-  ur%iZone_idxmap    = 0
-  ur%iZone_wgtmap    = 0
-  ur%iZone_grdidx    = 0
-  ur%iZone_grduwa    = 0
-  ur%iZone_grdara    = 0
-  ur%iZone_grdwgt    = 0
-  ur%iZone_grdxyz    = 0
-  ur%iZone_grdlonlat = 0
-
+  ur%nij = 0_8
   call init_grid(ur%grid)
 
   ur%nx = 0_8
@@ -371,8 +386,9 @@ subroutine set_default_values_gs_raster(ur)
   ur%east  =  1.8d2
   ur%south = -9.d1
   ur%north =  9.d1
-  ur%is_south_to_north = .true.
   ur%is_cyclic = .true.
+  ur%is_south_to_north = .true.
+  ur%region_type = REGION_TYPE_UNDEF
 
   nullify(ur%lon)
   nullify(ur%lat)
@@ -380,23 +396,29 @@ subroutine set_default_values_gs_raster(ur)
   nullify(ur%latwidth)
   nullify(ur%lon0)
 
-  ur%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_FILE_PB
-  nullify(ur%idxmap)
-  nullify(ur%wgtmap)
+  ur%nZone = 0
+  nullify(ur%zone)
+  ur%status_idxmap = GRID_STATUS__TO_BE_PREPARED
+  ur%status_mskmap = GRID_STATUS__TO_BE_PREPARED
+  ur%status_wgtmap = GRID_STATUS__TO_BE_PREPARED
+  ur%idxmin = 0_8
+  ur%idxmax = 0_8
+  ur%grdidx_condition = GRDIDX_CONDITION__MATCH
 
-  ur%idx_miss    = idx_miss_default
-  ur%uwa_miss    = uwa_miss_default
-  ur%ara_miss    = ara_miss_default
-  ur%wgt_miss    = wgt_miss_default
-  ur%xyz_miss    = xyz_miss_default
-  ur%lonlat_miss = lonlat_miss_default
-  ur%val_miss    = dval_miss_default
+  ur%idx_miss    = IDX_MISS_DEFAULT
+  ur%uwa_miss    = UWA_MISS_DEFAULT
+  ur%ara_miss    = ARA_MISS_DEFAULT
+  ur%wgt_miss    = WGT_MISS_DEFAULT
+  ur%xyz_miss    = XYZ_MISS_DEFAULT
+  ur%lonlat_miss = LONLAT_MISS_DEFAULT
+  ur%val_miss    = DVAL_MISS_DEFAULT
 
+  !ur%is_source = .true.
   nullify(ur%hrel)
   nullify(ur%vrel)
 
   ur%debug = .false.
-  ur%idx_debug = idx_miss_default
+  ur%idx_debug = IDX_MISS_DEFAULT
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_gs_raster
@@ -405,7 +427,7 @@ end subroutine set_default_values_gs_raster
 !===============================================================
 subroutine set_default_values_gs_polygon(up)
   use common_gs_grid_base, only: &
-    init_grid
+        init_grid
   implicit none
   type(gs_polygon_), intent(inout), target :: up
 
@@ -415,6 +437,8 @@ subroutine set_default_values_gs_polygon(up)
 
   call echo(code%bgn, 'set_default_values_gs_polygon', '-p -x2')
   !-------------------------------------------------------------
+  up%is_valid = .true.
+
   allocate(up%f_polygon_in)
   allocate(up%f_grid_in)
   allocate(up%f_grid_out)
@@ -432,46 +456,41 @@ subroutine set_default_values_gs_polygon(up)
   call set_default_values_file_grid_in(fg_in)
   call set_default_values_file_grid_out(fg_out)
 
-  nullify(up%zone)
-  up%nZones = 0
-  up%iZone = 0
-  up%iZone_polygon   = 0
-  up%iZone_grdidx    = 0
-  up%iZone_grduwa    = 0
-  up%iZone_grdara    = 0
-  up%iZone_grdwgt    = 0
-  up%iZone_grdxyz    = 0
-  up%iZone_grdlonlat = 0
-
-  call init_grid(up%grid)
-
-  nullify(up%polygon)
-
-  up%coord_sys = ''
-  up%coord_unit = '' 
-  up%coord_miss_s = coord_miss_s_default
-  up%coord_miss_c = coord_miss_c_default
-  up%allow_duplicated_vertex = .true.
-
   up%np = 0_8
   up%nij = 0_8
   up%ijs = 0_8
   up%ije = 0_8
 
+  call init_grid(up%grid)
+
+  nullify(up%polygon)
+
+  up%coord_sys  = ''
+  up%coord_unit = '' 
+  up%coord_miss_s = COORD_MISS_S_DEFAULT
+  up%coord_miss_c = COORD_MISS_C_DEFAULT
+
+  up%allow_duplicated_vertex = .true.
   up%arc_parallel = .false.
+
+  up%idxmin = 0_8
+  up%idxmax = 0_8
+
   nullify(up%n_next)
   nullify(up%n_prev)
 
-  up%idx_miss    = idx_miss_default
-  up%uwa_miss    = uwa_miss_default
-  up%ara_miss    = ara_miss_default
-  up%wgt_miss    = wgt_miss_default
-  up%xyz_miss    = xyz_miss_default
-  up%lonlat_miss = lonlat_miss_default
-  up%val_miss    = dval_miss_default
+  up%idx_miss    = IDX_MISS_DEFAULT
+  up%uwa_miss    = UWA_MISS_DEFAULT
+  up%ara_miss    = ARA_MISS_DEFAULT
+  up%wgt_miss    = WGT_MISS_DEFAULT
+  up%xyz_miss    = XYZ_MISS_DEFAULT
+  up%lonlat_miss = LONLAT_MISS_DEFAULT
+  up%val_miss    = DVAL_MISS_DEFAULT
+
+  !up%is_source = .true.
 
   up%debug = .false.
-  up%idx_debug = idx_miss_default
+  up%idx_debug = IDX_MISS_DEFAULT
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_gs_polygon
@@ -498,10 +517,9 @@ subroutine set_default_values_file_grid_in(fg)
   fg%nFiles_val = 0
   nullify(fg%val)
 
-  allocate(fg%sz(filedim))
-  allocate(fg%lb(filedim))
-  allocate(fg%ub(filedim))
-
+  allocate(fg%sz(FILEDIM))
+  allocate(fg%lb(FILEDIM))
+  allocate(fg%ub(FILEDIM))
   fg%sz(:) = 0_8
   fg%lb(:) = 0_8
   fg%ub(:) = 0_8
@@ -520,7 +538,9 @@ subroutine set_default_values_file_grid_in(fg)
   fg%lonlat_miss = 0.d0
   fg%val_miss    = 0.d0
 
-  fg%unit_ara = unit_square_meter
+  fg%unit_ara    = UNIT_SQUARE_METER
+  fg%unit_xyz    = UNIT_METER
+  fg%unit_lonlat = UNIT_DEGREE
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_file_grid_in
@@ -535,8 +555,8 @@ subroutine set_default_values_file_grid_out(fg)
   !-------------------------------------------------------------
   fg%form = ''
 
-  fg%save_msk    = .false.
   fg%save_idx    = .false.
+  fg%save_msk    = .false.
   fg%save_uwa    = .false.
   fg%save_ara    = .false.
   fg%save_wgt    = .false.
@@ -544,8 +564,8 @@ subroutine set_default_values_file_grid_out(fg)
   fg%save_lonlat = .false.
 
   call set_file_default(action=ACTION_WRITE)
-  fg%msk = file(dtype=DTYPE_INT4, id=trim(fg%id)//'%msk')
   fg%idx = file(dtype=DTYPE_INT4, id=trim(fg%id)//'%idx')
+  fg%msk = file(dtype=DTYPE_INT4, id=trim(fg%id)//'%msk')
   fg%uwa = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%uwa')
   fg%ara = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%ara')
   fg%wgt = file(dtype=DTYPE_DBLE, id=trim(fg%id)//'%wgt')
@@ -562,7 +582,6 @@ subroutine set_default_values_file_grid_out(fg)
   allocate(fg%sz(filedim))
   allocate(fg%lb(filedim))
   allocate(fg%ub(filedim))
-
   fg%sz(:) = 0_8
   fg%lb(:) = 0_8
   fg%ub(:) = 0_8
@@ -570,14 +589,6 @@ subroutine set_default_values_file_grid_out(fg)
   fg%nx  = 0_8
   fg%ny  = 0_8
   fg%nij = 0_8
-
-  fg%mij = 0_8
-
-  fg%nZones = 0
-  nullify(fg%zone_im)
-  fg%path_im_base = ''
-  fg%nij_im = 0_8
-  fg%mij_im_max = 0_8
 
   fg%idxmin = 0_8
   fg%idxmax = 0_8
@@ -591,9 +602,9 @@ subroutine set_default_values_file_grid_out(fg)
   fg%lonlat_miss = 0.d0
   fg%val_miss    = 0.d0
 
-  fg%unit_ara    = unit_square_meter
-  fg%unit_xyz    = unit_meter
-  fg%unit_lonlat = unit_radian
+  fg%unit_ara    = UNIT_SQUARE_METER
+  fg%unit_xyz    = UNIT_METER
+  fg%unit_lonlat = UNIT_DEGREE
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_file_grid_out
@@ -606,13 +617,14 @@ subroutine set_default_values_file_latlon_in(fl)
 
   call echo(code%bgn, 'set_default_values_file_latlon_in', '-p -x2')
   !-------------------------------------------------------------
-  fl%lon = file('', dtype_dble, 1, endian_default, id=trim(fl%id)//'%lon', action=action_read)
-  fl%lat = file('', dtype_dble, 1, endian_default, id=trim(fl%id)//'%lat', action=action_read)
+  call set_file_default(action=ACTION_READ)
+  fl%lon = file(dtype=DTYPE_DBLE, id=trim(fl%id)//'%lon')
+  fl%lat = file(dtype=DTYPE_DBLE, id=trim(fl%id)//'%lat')
+  call reset_file_default()
 
-  allocate(fl%sz(filedim))
-  allocate(fl%lb(filedim))
-  allocate(fl%ub(filedim))
-
+  allocate(fl%sz(FILEDIM))
+  allocate(fl%lb(FILEDIM))
+  allocate(fl%ub(FILEDIM))
   fl%sz(:) = 0_8
   fl%lb(:) = 0_8
   fl%ub(:) = 0_8
@@ -628,19 +640,20 @@ subroutine set_default_values_file_raster_in(fr)
 
   call echo(code%bgn, 'set_default_values_file_raster_in', '-p -x2')
   !-------------------------------------------------------------
-  fr%idx = file('', dtype_int4, 1, endian_default, id=trim(fr%id)//'%idx', action=action_read)
-  fr%ara = file('', dtype_dble, 1, endian_default, id=trim(fr%id)//'%ara', action=action_read)
-  fr%wgt = file('', dtype_dble, 1, endian_default, id=trim(fr%id)//'%wgt', action=action_read)
+  call set_file_default(action=ACTION_READ)
+  fr%idx = file(dtype=DTYPE_INT4, id=trim(fr%id)//'%idx')
+  fr%ara = file(dtype=DTYPE_DBLE, id=trim(fr%id)//'%ara')
+  fr%wgt = file(dtype=DTYPE_DBLE, id=trim(fr%id)//'%wgt')
+  call reset_file_default()
 
-  allocate(fr%sz(filedim))
-  allocate(fr%lb(filedim))
-  allocate(fr%ub(filedim))
-
+  allocate(fr%sz(FILEDIM))
+  allocate(fr%lb(FILEDIM))
+  allocate(fr%ub(FILEDIM))
   fr%sz(:) = 0_8
   fr%lb(:) = 0_8
   fr%ub(:) = 0_8
 
-  fr%unit_ara = unit_square_meter
+  fr%unit_ara = UNIT_SQUARE_METER
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_file_raster_in
@@ -653,18 +666,18 @@ subroutine set_default_values_file_polygon_in(fp)
 
   call echo(code%bgn, 'set_default_values_file_polygon_in', '-p -x2')
   !-------------------------------------------------------------
-  fp%x = file('', dtype_dble, 1, endian_default, id=trim(fp%id)//'%x', action=action_read)
-  fp%y = file('', dtype_dble, 1, endian_default, id=trim(fp%id)//'%y', action=action_read)
-  fp%z = file('', dtype_dble, 1, endian_default, id=trim(fp%id)//'%z', action=action_read)
-  fp%lon = file('', dtype_dble, 1, endian_default, id=trim(fp%id)//'%lon', action=action_read)
-  fp%lat = file('', dtype_dble, 1, endian_default, id=trim(fp%id)//'%lat', action=action_read)
-  fp%arctyp = file('', dtype_int4, 1, endian_default, &
-                   id=trim(fp%id)//'%arctyp', action=action_read)
+  call set_file_default(action=ACTION_READ)
+  fp%x      = file(dtype=DTYPE_DBLE, id=trim(fp%id)//'%x')
+  fp%y      = file(dtype=DTYPE_DBLE, id=trim(fp%id)//'%y')
+  fp%z      = file(dtype=DTYPE_DBLE, id=trim(fp%id)//'%z')
+  fp%lon    = file(dtype=DTYPE_DBLE, id=trim(fp%id)//'%lon')
+  fp%lat    = file(dtype=DTYPE_DBLE, id=trim(fp%id)//'%lat')
+  fp%arctyp = file(dtype=DTYPE_INT4, id=trim(fp%id)//'%arctyp')
+  call reset_file_default()
 
-  allocate(fp%sz(filedim))
-  allocate(fp%lb(filedim))
-  allocate(fp%ub(filedim))
-
+  allocate(fp%sz(FILEDIM))
+  allocate(fp%lb(FILEDIM))
+  allocate(fp%ub(FILEDIM))
   fp%sz(:) = 0_8
   fp%lb(:) = 0_8
   fp%ub(:) = 0_8
@@ -687,9 +700,9 @@ subroutine alloc_file_grid_in_val(fg)
 
   do iFile = 1, fg%nFiles_val
     f => fg%val(iFile)
-    f = file('', dtype_dble, 1, endian_default, &
+    f = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, &
              id=trim(fg%id)//'%val('//str(iFile)//')', &
-             action=action_read)
+             action=ACTION_READ)
 
     f%sz = fg%sz
     f%lb = fg%lb
@@ -714,9 +727,9 @@ subroutine alloc_file_grid_out_val(fg)
 
   do iFile = 1, fg%nFiles_val
     f => fg%val(iFile)
-    f = file('', dtype_dble, 1, endian_default, &
+    f = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, &
              id=trim(fg%id)//'%val('//str(iFile)//')', &
-             action=action_write)
+             action=ACTION_WRITE)
 
     f%sz = fg%sz
     f%lb = fg%lb
@@ -1070,6 +1083,7 @@ subroutine set_miss_file_grid_out(&
   call echo(code%bgn, 'set_miss_file_grid_out', '-p -x2')
   !-------------------------------------------------------------
   fg_out%idx_miss    = idx_miss
+  fg_out%uwa_miss    = ara_miss
   fg_out%ara_miss    = ara_miss
   fg_out%wgt_miss    = wgt_miss
   fg_out%xyz_miss    = xyz_miss
@@ -1121,8 +1135,9 @@ subroutine free_gs(a)
   type(file_latlon_in_) , pointer :: fl
   type(file_raster_in_) , pointer :: fr
   type(file_polygon_in_), pointer :: fp
+  integer :: iz
 
-  call echo(code%bgn, 'free_gs')
+  call echo(code%bgn, 'free_gs', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1149,15 +1164,17 @@ subroutine free_gs(a)
       nullify(al%f_grid_out)
     endif
 
-    if( associated(al%zone) ) deallocate(al%zone)
-
     call free_grid(al%grid)
 
     if( associated(al%lon) )&
     deallocate(al%lon, al%lat, al%lonwidth, al%latwidth, al%lon0)
 
     if( associated(al%idxmap) ) deallocate(al%idxmap)
+    if( associated(al%mskmap) ) deallocate(al%mskmap)
     if( associated(al%wgtmap) ) deallocate(al%wgtmap)
+    al%status_idxmap = GRID_STATUS__TO_BE_PREPARED
+    al%status_mskmap = GRID_STATUS__TO_BE_PREPARED
+    al%status_wgtmap = GRID_STATUS__TO_BE_PREPARED
 
     if( associated(al%hrel) ) deallocate(al%hrel, al%vrel)
 
@@ -1185,20 +1202,20 @@ subroutine free_gs(a)
       nullify(ar%f_grid_out)
     endif
 
-    if( associated(ar%zone) ) deallocate(ar%zone)
-
     call free_grid(ar%grid)
 
     if( associated(ar%lon) )&
     deallocate(ar%lon, ar%lat, ar%lonwidth, ar%latwidth, ar%lon0)
 
-    if( associated(ar%idxmap) ) deallocate(ar%idxmap)
-    if( associated(ar%wgtmap) ) deallocate(ar%wgtmap)
+    do iz = 1, ar%nZone
+      call free_gs_raster_zone(ar%zone(iz))
+    enddo
+    if( ar%nZone > 0 ) deallocate(ar%zone)
+    ar%nZone = 0
 
-    if( associated(ar%idxmapall1) ) deallocate(ar%idxmapall1)
-    if( associated(ar%idxmapall2) ) deallocate(ar%idxmapall2)
-    if( associated(ar%idxmapall4) ) deallocate(ar%idxmapall4)
-    if( associated(ar%idxmapall8) ) deallocate(ar%idxmapall8)
+    ar%status_idxmap = GRID_STATUS__TO_BE_PREPARED
+    ar%status_mskmap = GRID_STATUS__TO_BE_PREPARED
+    ar%status_wgtmap = GRID_STATUS__TO_BE_PREPARED
 
     if( associated(ar%hrel) ) deallocate(ar%hrel, ar%vrel)
 
@@ -1226,8 +1243,6 @@ subroutine free_gs(a)
       nullify(ap%f_grid_out)
     endif
 
-    if( associated(ap%zone) ) deallocate(ap%zone)
-
     call free_grid(ap%grid)
 
     if( associated(ap%polygon) ) deallocate(ap%polygon)
@@ -1248,6 +1263,23 @@ end subroutine free_gs
 !===============================================================
 !
 !===============================================================
+subroutine free_gs_raster_zone(arz)
+  implicit none
+  type(raster_zone_), intent(inout) :: arz
+
+  call echo(code%bgn, 'free_gs_raster_zone', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call realloc(arz%idxmap, 0)
+  call realloc(arz%mskmap, 0)
+  call realloc(arz%wgtmap, 0)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine free_gs_raster_zone
+!===============================================================
+!
+!===============================================================
 subroutine free_file_grid_in(fg)
   implicit none
   type(file_grid_in_), intent(inout) :: fg
@@ -1257,7 +1289,6 @@ subroutine free_file_grid_in(fg)
   !
   !-------------------------------------------------------------
   if( fg%nFiles_val > 0 )then
-    deallocate(fg%form_val)
     deallocate(fg%val)
     fg%nFiles_val = 0
   endif
@@ -1283,12 +1314,33 @@ subroutine free_file_grid_out(fg)
   endif
 
   deallocate(fg%sz, fg%lb, fg%ub)
-
-  fg%nZones = 0
-  if( associated(fg%zone_im) ) deallocate(fg%zone_im)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine free_file_grid_out
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine clear_gs(a)
+  implicit none
+  type(gs_), intent(inout) :: a
+
+  call echo(code%bgn, 'clear_gs', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call free_gs(a)
+  call init_gs(a)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine clear_gs
 !===============================================================
 !
 !===============================================================

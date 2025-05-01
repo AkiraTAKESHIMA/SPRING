@@ -11,80 +11,97 @@ module common_area_raster_polygon
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: initialize
   public :: finalize
-  public :: set_modvars
-  public :: alloc_iarea
+  public :: initialize_zone
+  public :: finalize_zone
   public :: get_dhv_polygon
 
-  public :: update_iarea_polygon
+  public :: calc_iarea
   public :: update_iarea_sum
-  public :: fill_miss_iarea_sum
+  public :: fill_miss_vrf
   public :: calc_iratio_sum
 
   public :: update_rt1d
   !-------------------------------------------------------------
-  ! Private variables
+  ! Interfaces
+  !-------------------------------------------------------------
+  interface calc_iratio_sum
+    module procedure calc_iratio_sum__out
+    module procedure calc_iratio_sum__inout
+  end interface
+  !-------------------------------------------------------------
+  ! Private module variables
   !-------------------------------------------------------------
   character(CLEN_VAR) :: PROCMOD = 'common_area_raster_polygon'
+
+  ! Initialization
   !-------------------------------------------------------------
-  integer(8), save :: ndh, ndv
-  real(8)   , save :: dlon, dlat
+  logical :: self_is_initialized = .false.
+  character(:), allocatable :: sname, tname
 
-  real(8), allocatable, save :: dlons(:) !(-1:ndh+1)
-  real(8), allocatable, save :: dlats(:) !(-1:ndv+1)
+  ! For the whole area
+  !-------------------------------------------------------------
+  ! For raster
+  integer(8) :: ndh, dhi, dhf, ndv, dvi, dvf
+  real(8)    :: dlon, dlat
 
-  real(8), allocatable, save :: cos_dlons(:) !(-1:ndh+1)
-  real(8), allocatable, save :: sin_dlons(:)
+  real(8), allocatable :: dlons_all(:) !(-1:ndh+1)
+  real(8), allocatable :: dlats_all(:) !(-1:ndv+1)
 
-  real(8), allocatable, save :: cos_dlats(:) !(-1:ndv+1)
-  real(8), allocatable, save :: sin_dlats(:)
+  real(8), allocatable :: dara_1rad(:) !(ndv)
+  real(8), allocatable :: dara(:)
 
-  real(8), allocatable, save :: dara_1rad(:) !(ndv)
-  real(8), allocatable, save :: dara(:)
+  ! Util. for polygons
+  integer(8), pointer :: n_prev(:,:)
+  integer(8), pointer :: n_next(:,:)
 
-  real(8), allocatable, save :: clons(:) !(-1:ndh+1)
-  real(8), allocatable, save :: clats(:)
+  ! Missing values
+  integer(8) :: sidx_miss
+  integer(8) :: tidx_miss
+  real(8)    :: lonlat_miss
+  real(8), allocatable :: vrf_val_miss
 
-  real(8), allocatable, save :: cos_clons(:) !(-1:ndh+1)
-  real(8), allocatable, save :: sin_clons(:)
+  ! For updating a remapping table
+  integer(8), allocatable :: sidx_prev(:)
+  integer(8), allocatable :: ij_prev(:)
 
-  real(8), allocatable, save :: clons_diff(:) !(-1:ndh+1)
+  ! For each zone
+  !-------------------------------------------------------------
+  real(8), allocatable :: dlons(:) !(sdhi-2:sdhf+1)
+  real(8), allocatable :: dlats(:) !(sdvi-2:sdvf+1)
 
-  integer(8), pointer, save :: n_prev(:,:)
-  integer(8), pointer, save :: n_next(:,:)
+  real(8), allocatable :: cos_dlons(:) !(sdhi-2:sdhf+1)
+  real(8), allocatable :: sin_dlons(:)
 
-  integer(8), pointer, save :: list_rt_ij(:)
-  integer(8), pointer, save :: list_sloc(:)
+  real(8), allocatable :: cos_dlats(:) !(sdvi-2:sdvf+1)
+  real(8), allocatable :: sin_dlats(:)
 
-  integer, save :: szone_typ
-  real(8), save :: swest, seast, ssouth, snorth
+  real(8), allocatable :: clons(:) !(sdhi-2:sdhf+1)
+  real(8), allocatable :: clats(:)
+
+  real(8), allocatable :: cos_clons(:) !(sdhi-2:sdhf+1)
+  real(8), allocatable :: sin_clons(:)
+
+  real(8), allocatable :: clons_diff(:) !(sdhi-2:sdhf+1)
+
+  integer(1), save :: s_region_type
+  real(8)   , save :: swest, seast, ssouth, snorth
   integer(8), save :: sdhi, sdhf, sdvi, sdvf
   integer(8), save :: tdhi_buf, tdhf_buf, tdvi_buf, tdvf_buf
   integer(8), save :: tdhi, tdhf, tdvi, tdvf
 
   integer(8) :: tidx
-
-  integer(8), save :: sidx_miss
-  integer(8), save :: tidx_miss
-  real(8)   , save :: lonlat_miss
-
-  real(8) :: vrf_val_miss
   !-------------------------------------------------------------
-  logical :: debug_s = .false.
-  logical :: debug_t = .false.
-  logical :: debug = .false.
-  integer(8) :: sidx_debug = 0_8
-  integer(8) :: sdhi_debug = 0_8
-  integer(8) :: sdhf_debug = 0_8
-  integer(8) :: sdvi_debug = 0_8
-  integer(8) :: sdvf_debug = 0_8
-  integer(8) :: tidx_debug = 0_8
+  ! For debugging
   !-------------------------------------------------------------
-!  logical, save :: is_iarea_updated
-  !-------------------------------------------------------------
+  logical :: debug
+  logical :: debug_s
+  logical :: debug_t
+  integer(8) :: sidx_debug
+  integer(8) :: tidx_debug
   character(clen_wfmt), parameter :: wfmt_deg = 'f12.7'
   character(clen_wfmt), parameter :: wfmt_dble = 'es24.16'
   integer, save :: dgt_hv
@@ -93,41 +110,102 @@ contains
 !===============================================================
 !
 !===============================================================
+integer function init_is_ok(stat)
+  implicit none
+  logical, intent(in) :: stat
+
+  call echo(code%bgn, trim(PROCMOD)//' init_is_ok', '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  init_is_ok = 0
+
+  if( self_is_initialized .and. .not. stat )then
+    init_is_ok = 1
+    call eerr(str(msg_unexpected_condition())//&
+            '\nThe module "'//trim(PROCMOD)//&
+              '" has already been initialized by '//&
+              'grid system "'//sname//'" and "'//tname//'".')
+    return
+  elseif( .not. self_is_initialized .and. stat )then
+    init_is_ok = 1
+    call eerr(str(msg_unexpected_condition())//&
+            '\nThe module "'//trim(PROCMOD)//&
+              '" has not yet been initialized.')
+    return
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end function init_is_ok
+!===============================================================
+!
+!===============================================================
 subroutine initialize(sr, tp, rt_vrf_val_miss)
   implicit none
   type(gs_raster_) , intent(in) :: sr
   type(gs_polygon_), intent(in) :: tp
-  real(8)          , intent(in) :: rt_vrf_val_miss
+  real(8)          , intent(in), optional :: rt_vrf_val_miss
 
-  integer(8) :: dhi, dhf, dvi, dvf
+  call echo(code%bgn, trim(PROCMOD)//' initialize')
+  !-------------------------------------------------------------
+  ! Initialization status
+  !-------------------------------------------------------------
+  !info = 0
+  if( init_is_ok(.false.) /= 0 )then
+    !info = 1
+    return
+  endif
+  self_is_initialized = .true.
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE initialize')
+  allocate(character(1) :: sname, tname)
+  sname = trim(sr%nam)
+  tname = trim(tp%nam)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  dgt_hv = dgt(max(sr%nh,sr%nv))
-  !-------------------------------------------------------------
-  ! Set params.
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Setting parameters')
+  dlon = sr%lonwidth(sr%hi)
+  dlat = sr%latwidth(sr%vi)
 
-  ! module
-  ndh = sr%nh
-  ndv = sr%nv
+  dhi = sr%hi
+  dhf = sr%hf
+  dvi = sr%vi
+  dvf = sr%vf
 
+  allocate(dlons_all(sr%hi-1_8:sr%hf))
+  allocate(dlats_all(sr%vi-1_8:sr%vf))
+  call cpval(sr%lon, dlons_all)
+  call cpval(sr%lat, dlats_all)
+
+  allocate(dara_1rad(sr%vi:sr%vf))
+  allocate(dara(sr%vi:sr%vf))
+  dara_1rad(:) = area_sphere_rect(dlats_all(sr%vi-1:sr%vf-1), dlats_all(sr%vi:sr%vf))
+  dara(:) = dara_1rad(:) * dlon
+
+  ! Utils. for polygons
+  if( tp%is_valid )then
+    nullify(n_prev, n_next)
+    call cparr(tp%n_prev, n_prev)
+    call cparr(tp%n_next, n_next)
+  endif
+
+  ! For updating a remapping table
+  if( present(rt_vrf_val_miss) )then
+    allocate(sidx_prev(tp%nij))
+    sidx_prev(:) = sr%idx_miss
+
+    allocate(ij_prev(tp%nij))
+  endif
+
+  ! Missing values
   sidx_miss = sr%idx_miss
-
   tidx_miss = tp%idx_miss
-
-  vrf_val_miss = rt_vrf_val_miss
-
-  nullify(n_prev)
-  nullify(n_next)
-  call cparr(tp%n_prev, n_prev)
-  call cparr(tp%n_next, n_next)
-
   lonlat_miss = tp%coord_miss_s
+  if( present(rt_vrf_val_miss) )then
+    allocate(vrf_val_miss)
+    vrf_val_miss = rt_vrf_val_miss
+  endif
 
+  ! For debugging
   debug_s = sr%debug
   sidx_debug = sr%idx_debug
 
@@ -135,64 +213,6 @@ subroutine initialize(sr, tp, rt_vrf_val_miss)
   tidx_debug = tp%idx_debug
 
   debug = debug_s .or. debug_t
-
-  ! local
-  dhi = sr%hi
-  dhf = sr%hf
-  dvi = sr%vi
-  dvf = sr%vf
-
-  ! module
-  dlon = sr%lonwidth(dhi)
-  dlat = sr%latwidth(dvi)
-
-  allocate(dlons(dhi-2:dhf+1))
-  allocate(dlats(dvi-2:dvf+1))
-  dlons(dhi-1:dhf) = sr%lon(dhi-1:dhf)
-  dlats(dvi-1:dvf) = sr%lat(dvi-1:dvf)
-  dlons(dhi-2) = -9999.d0
-  dlons(dhf+1) =  9999.d0
-  dlats(dvi-2) = -9999.d0
-  dlats(dvf+1) =  9999.d0
-
-  allocate(cos_dlons(dhi-2:dhf+1))
-  allocate(sin_dlons(dhi-2:dhf+1))
-  cos_dlons(:) = 0.d0
-  sin_dlons(:) = 0.d0
-  cos_dlons(dhi-1:dhf) = cos(dlons(dhi-1:dhf))
-  sin_dlons(dhi-1:dhf) = sin(dlons(dhi-1:dhf))
-
-  allocate(cos_dlats(dvi-1:dvf))
-  allocate(sin_dlats(dvi-1:dvf))
-  cos_dlats(:) = cos(dlats(dvi-1:dvf))
-  sin_dlats(:) = sin(dlats(dvi-1:dvf))
-
-  allocate(dara_1rad(dvi:dvf))
-  allocate(dara(dvi:dvf))
-  dara_1rad(:) = area_sphere_rect(dlats(dvi-1:dvf-1), dlats(dvi:dvf))
-  dara(:) = dara_1rad(:) * dlon
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Set fields
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Setting fields')
-
-  allocate(clons(dhi-2:dhf+1))
-  allocate(clons_diff(dhi-2:dhf+1))
-  allocate(cos_clons(dhi-2:dhf+1))
-  allocate(sin_clons(dhi-2:dhf+1))
-  allocate(clats(dhi-2:dhf+1))
-
-  clons(:) = dlons(:)
-  clons_diff(:) = dlon
-  cos_clons(:) = cos_dlons(:)
-  sin_clons(:) = sin_dlons(:)
-
-  nullify(list_sloc)
-  nullify(list_rt_ij)
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine initialize
@@ -202,7 +222,120 @@ end subroutine initialize
 subroutine finalize()
   implicit none
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE finalize')
+  call echo(code%bgn, trim(PROCMOD)//' finalize')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  !info = 0
+  if( init_is_ok(.true.) /= 0 )then
+    !info = 1
+    return
+  endif
+  self_is_initialized = .false.
+
+  deallocate(sname, tname)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  deallocate(dlons_all)
+  deallocate(dlats_all)
+
+  deallocate(dara_1rad)
+  deallocate(dara)
+
+  deallocate(n_prev)
+  deallocate(n_next)
+
+  if( allocated(sidx_prev) ) deallocate(sidx_prev)
+  if( allocated(ij_prev) ) deallocate(ij_prev)
+
+  if( allocated(vrf_val_miss) ) deallocate(vrf_val_miss)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine finalize
+!===============================================================
+!
+!===============================================================
+subroutine initialize_zone(srz)
+  implicit none
+  type(raster_zone_), intent(in) :: srz
+
+  call echo(code%bgn, trim(PROCMOD)//' initialize_zone')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  dgt_hv = dgt(max(srz%nh,srz%nv))
+  !-------------------------------------------------------------
+  ! Set const.
+  !-------------------------------------------------------------
+  call edbg('Setting the constant values.')
+
+  ! module
+  ndh = srz%nh
+  ndv = srz%nv
+
+  swest  = srz%west
+  seast  = srz%east
+  ssouth = srz%south
+  snorth = srz%north
+
+  sdhi = int(srz%hi,4)
+  sdhf = int(srz%hf,4)
+  sdvi = int(srz%vi,4)
+  sdvf = int(srz%vf,4)
+
+  s_region_type = srz%region_type
+
+  ! Coords. of pixel lines
+  allocate(dlons(sdhi-2:sdhf+1))
+  allocate(dlats(sdvi-2:sdvf+1))
+  dlons(sdhi:sdhf-1) = dlons_all(sdhi:sdhf-1)
+  dlats(sdvi:sdvf-1) = dlats_all(sdvi:sdvf-1)
+  dlons(sdhi-1) = swest
+  dlons(sdhf  ) = seast
+  dlats(sdvi-1) = ssouth
+  dlats(sdvf  ) = snorth
+  dlons(sdhi-2) = -9999.d0
+  dlons(sdhf+1) =  9999.d0
+  dlats(sdvi-2) = -9999.d0
+  dlats(sdvf+1) =  9999.d0
+
+  allocate(cos_dlons(sdhi-2:sdhf+1))
+  allocate(sin_dlons(sdhi-2:sdhf+1))
+  cos_dlons(:) = 0.d0
+  sin_dlons(:) = 0.d0
+  cos_dlons(sdhi-1:sdhf) = cos(dlons(sdhi-1:sdhf))
+  sin_dlons(sdhi-1:sdhf) = sin(dlons(sdhi-1:sdhf))
+
+  allocate(cos_dlats(sdvi-1:sdvf))
+  allocate(sin_dlats(sdvi-1:sdvf))
+  cos_dlats(:) = cos(dlats(sdvi-1:sdvf))
+  sin_dlats(:) = sin(dlats(sdvi-1:sdvf))
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call edbg('Setting the changable fields.')
+
+  allocate(clons(sdhi-2:sdhf+1))
+  allocate(clons_diff(sdhi-2:sdhf+1))
+  allocate(cos_clons(sdhi-2:sdhf+1))
+  allocate(sin_clons(sdhi-2:sdhf+1))
+  allocate(clats(sdhi-2:sdhf+1))
+
+  clons(:) = dlons(:)
+  clons_diff(:) = dlon
+  cos_clons(:) = cos_dlons(:)
+  sin_clons(:) = sin_dlons(:)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine initialize_zone
+!===============================================================
+!
+!===============================================================
+subroutine finalize_zone()
+  implicit none
+
+  call echo(code%bgn, trim(PROCMOD)//' finalize_zone')
   !-------------------------------------------------------------
   deallocate(dlons)
   deallocate(dlats)
@@ -213,81 +346,14 @@ subroutine finalize()
   deallocate(cos_dlats)
   deallocate(sin_dlats)
 
-  deallocate(dara_1rad)
-  deallocate(dara)
-
   deallocate(clons)
   deallocate(clons_diff)
   deallocate(cos_clons)
   deallocate(sin_clons)
   deallocate(clats)
-
-  call realloc(n_next, 0)
-
-  call realloc(list_rt_ij, 0)
-  call realloc(list_sloc, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine finalize
-!===============================================================
-!
-!===============================================================
-subroutine set_modvars(sr, tp, make_rt)
-  implicit none
-  type(gs_raster_) , intent(in), target :: sr
-  type(gs_polygon_), intent(in), target :: tp
-  logical          , intent(in)         :: make_rt
-
-  type(file_raster_in_) , pointer :: sfr
-  type(zone_latlon_)    , pointer :: szl
-
-  call echo(code%bgn, 'set_modvars', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  sfr => sr%f_raster_in
-  szl => sr%zone(sr%iZone)
-  !-------------------------------------------------------------
-  szone_typ = szl%typ
-
-  swest = szl%west
-  seast = szl%east
-  ssouth = szl%south
-  snorth = szl%north
-
-  sdhi = int(szl%hi,4)
-  sdhf = int(szl%hf,4)
-  sdvi = int(szl%vi,4)
-  sdvf = int(szl%vf,4)
-
-  dlons(sdhi-1) = swest
-  dlons(sdhf)   = seast
-
-  clons(sdhi-1) = swest
-  clons(sdhf)   = seast
-
-  if( make_rt )then
-    call realloc(list_rt_ij, szl%mij, clear=.true., fill=0_8)
-    call realloc(list_sloc, szl%mij, clear=.true., fill=0_8)
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_modvars
-!===============================================================
-!
-!===============================================================
-subroutine alloc_iarea(iarea, buffer)
-  implicit none
-  real(8), pointer :: iarea(:,:)
-  integer, intent(in) :: buffer
-
-  call echo(code%bgn, 'alloc_iarea', '-p -x2')
-  !-------------------------------------------------------------
-  call realloc(iarea, (/sdhi-buffer,sdvi-buffer/), (/sdhf+buffer,sdvf+buffer/), &
-               clear=.true., fill=0.d0)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine alloc_iarea
+end subroutine finalize_zone
 !===============================================================
 !
 !===============================================================
@@ -311,15 +377,17 @@ end subroutine get_dhv_polygon
 !===============================================================
 !
 !===============================================================
-subroutine update_iarea_polygon(&
-    iarea, tp, is_iarea_updated, sidxmap)
+subroutine calc_iarea(&
+    iarea, tp, is_iarea_updated, smskmap)
+  use common_gs_util, only: &
+        print_polygon
   implicit none
   real(8)       , pointer     :: iarea(:,:)  ! out
   type(polygon_), intent(in)  :: tp
   logical       , intent(out) :: is_iarea_updated
-  integer(8)    , pointer, optional :: sidxmap(:,:)  ! in
+  logical(1)    , pointer, optional :: smskmap(:,:)  ! in
 
-  call echo(code%bgn, 'update_iarea_polygon', '-p -x2')
+  call echo(code%bgn, trim(PROCMOD)//' calc_iarea', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -339,39 +407,41 @@ subroutine update_iarea_polygon(&
   ! [DEBUG]
   !-------------------------------------------------------------
   if( debug_t )then
-    if( tp%idx /= tidx_debug )then
+    if( tidx /= tidx_debug )then
       call echo(code%ret)
       return
     endif
-    call debug_print_polygon(tp)
   endif
   !-----------------------------------------------------------
   ! Judge if bboxes intersect
   !-----------------------------------------------------------
-  selectcase( szone_typ )
-  case( zone_type_global )
+  selectcase( s_region_type )
+  case( REGION_TYPE_GLOBAL )
     continue
-  case( zone_type_cyclic )
+  case( REGION_TYPE_CYCLIC )
     if( tp%north <= ssouth .or. tp%south >= snorth )then
       if( debug_t )then
-        call edbg('Polygon does not intersect with the zone of raster.')
+        call edbg('Polygon does not intersect with the raster grid.')
       endif
       call echo(code%ret)
       return
     endif
-  case( zone_type_regional )
+  case( REGION_TYPE_REGIONAL )
     if( .not. bboxes_intersect(&
                 tp%south, tp%north, tp%west, tp%east, (tp%pos == polygon_position_lon0), &
                 ssouth, snorth, swest, seast, .false.) )then
       if( debug_t )then
-        call edbg('Polygon does not intersect with the zone of raster.')
+        call edbg('Polygon does not intersect with the raster grid.')
       endif
       call echo(code%ret)
       return
     endif
+  case( REGION_TYPE_UNDEF )
+    call eerr(str(msg_unexpected_condition())//&
+            '\n  s_region_type == '//str_region_type_long(s_region_type))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  szone_typ: '//str(szone_typ))
+            '\n  s_region_type: '//str(s_region_type))
   endselect
   !-------------------------------------------------------------
   ! Calc. ranges of raster with buffer
@@ -381,8 +451,8 @@ subroutine update_iarea_polygon(&
   ! dlats(tdvf_buf-1) <  tp%north <= dlats(tdvf_buf)
   !-------------------------------------------------------------
   selectcase( tp%pos )
-  case( polygon_position_normal, &
-        polygon_position_lon0 )
+  case( POLYGON_POSITION_NORMAL, &
+        POLYGON_POSITION_LON0 )
     if( swest <= tp%west .and. tp%west <= seast )then
       tdhi_buf = dh_ge_west_lt_east(tp%west, sdhi-1_8, sdhf+1_8)
     else
@@ -394,7 +464,7 @@ subroutine update_iarea_polygon(&
     else
       tdhf_buf = sdhf + 1_8
     endif
-  case( polygon_position_polar )
+  case( POLYGON_POSITION_POLAR )
     tdhi_buf = sdhi - 1_8
     tdhf_buf = sdhf + 1_8
   case default
@@ -402,14 +472,6 @@ subroutine update_iarea_polygon(&
             '\n  tp%pos: '//str(tp%pos))
   endselect
 
-!  tdvi_buf = floor((tp%south-ssouth)/dlat) + sdvi
-!  tdvf_buf = ceiling((tp%north-ssouth)/dlat) + sdvi - 1_8
-!
-!  tdvi_buf = min(max(tdvi_buf, sdvi-1_8), sdvf+1_8)
-!  tdvf_buf = min(max(tdvf_buf, sdvi-1_8), sdvf+1_8)
-
-!  tdvi_buf = dv_ge_south_lt_north(tp%south, sdvi-1_8, sdvf+1_8)
-!  tdvf_buf = dv_gt_south_le_north(tp%north, sdvi-1_8, sdvf+1_8)
   tdvi_buf = max(dv_ge_south_lt_north(tp%south, sdvi-1_8, sdvf+1_8), sdvi-1_8)
   tdvf_buf = min(dv_gt_south_le_north(tp%north, sdvi-1_8, sdvf+1_8), sdvf+1_8)
   !-------------------------------------------------------------
@@ -423,12 +485,7 @@ subroutine update_iarea_polygon(&
   ! [DEBUG] Skip if no raster grid was a target of debugging
   !-------------------------------------------------------------
   if( debug_s )then
-    !if( sdhf_debug < tdhi .or. tdhf < sdhi_debug .or. &
-    !    sdvf_debug < tdvi .or. tdvf < sdvi_debug )then
-    !  call echo(code%ret)
-    !  return
-    !endif
-    if( all(sidxmap(tdhi:tdhf,tdvi:tdvf) /= sidx_debug) )then
+    if( .not. any(smskmap(tdhi:tdhf,tdvi:tdvf)) )then
       call echo(code%ret)
       return
     endif
@@ -436,19 +493,20 @@ subroutine update_iarea_polygon(&
   !-------------------------------------------------------------
   ! [DEBUG] Print
   !-------------------------------------------------------------
-  if( debug_t .or. debug_s )then
+  if( debug )then
     if( .not. debug_t )then
-      call debug_print_polygon(tp)
+      call print_polygon(tp, lonlat_miss)
     endif
-    call edbg('szone ('//str((/sdhi,sdhf/),':')//','//str((/sdvi,sdvf/),':')//')')
+    call edbg('s ('//str((/sdhi,sdhf/),':')//','//str((/sdvi,sdvf/),':')//')')
     call debug_print_range('Range with buffer', tdhi_buf, tdhf_buf, tdvi_buf, tdvf_buf)
     call debug_print_range('Range without buffer', tdhi, tdhf, tdvi, tdvf)
+    call edbg('s is valid: '//str(any(smskmap(tdhi:tdhf,tdvi:tdvf))))
   endif
   !-------------------------------------------------------------
   ! Skip if there was no valid raster
   !-------------------------------------------------------------
-  if( present(sidxmap) )then
-    if( all(sidxmap(tdhi:tdhf,tdvi:tdvf) == sidx_miss) )then
+  if( present(smskmap) )then
+    if( .not. any(smskmap(tdhi:tdhf,tdvi:tdvf)) )then
       call echo(code%ret)
       return
     endif
@@ -458,21 +516,21 @@ subroutine update_iarea_polygon(&
   !-------------------------------------------------------------
   is_iarea_updated = .true.
 
-  call calc_iarea_main(iarea, tp)
+  call calc_iarea_core(iarea, tp)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine update_iarea_polygon
+end subroutine calc_iarea
 !===============================================================
 !
 !===============================================================
-subroutine calc_iarea_main(iarea, tp)
+subroutine calc_iarea_core(iarea, tp)
   implicit none
   real(8)       , pointer    :: iarea(:,:)  ! out
   type(polygon_), intent(in) :: tp
 
   integer(8) :: n, nn
 
-  call echo(code%bgn, 'calc_iarea_main', '-p -x2')
+  call echo(code%bgn, trim(PROCMOD)//' calc_iarea_core', '-p -x2')
   !-------------------------------------------------------------
   ! Update for all sides
   !-------------------------------------------------------------
@@ -556,17 +614,21 @@ subroutine calc_iarea_main(iarea, tp)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine calc_iarea_main
+end subroutine calc_iarea_core
 !===============================================================
 !
 !===============================================================
 subroutine update_iarea_sum(iarea_sum, iarea)
   implicit none
   real(8), pointer :: iarea_sum(:,:)  ! inout
-  real(8), pointer :: iarea(:,:)  ! in
+  real(8), pointer :: iarea(:,:)      ! in
 
-  call echo(code%bgn, 'update_iarea_sum', '-p -x2')
+  call echo(code%bgn, trim(PROCMOD)//' update_iarea_sum', '-p -x2')
   !-------------------------------------------------------------
+  if( init_is_ok(.true.) /= 0 )then
+    return
+  endif
+
   iarea_sum(tdhi:tdhf,tdvi:tdvf) &
     = iarea_sum(tdhi:tdhf,tdvi:tdvf) + iarea(tdhi:tdhf,tdvi:tdvf)
   !-------------------------------------------------------------
@@ -575,60 +637,126 @@ end subroutine update_iarea_sum
 !===============================================================
 !
 !===============================================================
-subroutine fill_miss_iarea_sum(iarea_sum, sidxmap)
+subroutine fill_miss_vrf(dat, msk, same_vertical_direction)
   implicit none
-  real(8)   , pointer :: iarea_sum(:,:)  ! inout
-  integer(8), pointer :: sidxmap(:,:)  ! in
+  real(8)   , pointer    :: dat(:,:)  ! inout
+  logical(1), pointer    :: msk(:,:)  ! in
+  logical   , intent(in) :: same_vertical_direction
 
-  integer(8) :: idh, idv
+  integer(8) :: dv, dv0, dvinc, idv, idh
 
-  call echo(code%bgn, 'fill_miss_iarea_sum', '-p -x2')
+  call echo(code%bgn, trim(PROCMOD)//' fill_miss_vrf', '-p -x2')
   !-------------------------------------------------------------
+  if( init_is_ok(.true.) /= 0 )then
+    return
+  endif
+
+  if( same_vertical_direction )then
+    dvinc = 1
+    dv0 = sdvi-1
+  else
+    dvinc = -1
+    dv0 = sdvf+1
+  endif
+
+  dv = dv0
   do idv = sdvi, sdvf
+    dv = dv + dvinc
     do idh = sdhi, sdhf
-      if( sidxmap(idh,idv) == sidx_miss )then
-        iarea_sum(idh,idv) = vrf_val_miss
-      endif
+      if( .not. msk(idh,idv) ) dat(idh,idv) = vrf_val_miss
     enddo  ! idh/
   enddo  ! idv/
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine fill_miss_iarea_sum
+end subroutine fill_miss_vrf
 !===============================================================
 !
 !===============================================================
-subroutine calc_iratio_sum(iratio_sum, iarea_sum, sidxmap)
+subroutine calc_iratio_sum__out(ratio, area, mask)
   implicit none
-  real(8), pointer :: iratio_sum(:,:)  ! out
-  real(8), pointer :: iarea_sum(:,:)  ! in
-  integer(8), pointer, optional :: sidxmap(:,:)  ! in
+  real(8)   , pointer           :: ratio(:,:)  ! out
+  real(8)   , pointer           :: area(:,:)   ! in
+  logical(1), pointer, optional :: mask(:,:)   ! in
 
   integer(8) :: idh, idv
+  logical :: use_mask
 
-  call echo(code%bgn, 'calc_iratio_sum', '-p -x2')
+  call echo(code%bgn, trim(PROCMOD)//' calc_iratio_sum__out', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( present(sidxmap) )then
+  if( init_is_ok(.true.) /= 0 )then
+    return
+  endif
+
+  if( present(mask) )then
+    use_mask = associated(mask)
+  endif
+
+  if( use_mask )then
     do idv = sdvi, sdvf
       do idh = sdhi, sdhf
-        if( sidxmap(idh,idv) == sidx_miss )then
-          iratio_sum(idh,idv) = vrf_val_miss
+        if( mask(idh,idv) )then
+          ratio(idh,idv) = area(idh,idv) / dara(idv)
         else
-          iratio_sum(idh,idv) = iarea_sum(idh,idv) / dara(idv)
+          ratio(idh,idv) = vrf_val_miss
         endif
       enddo
     enddo
   else
     do idv = sdvi, sdvf
       do idh = sdhi, sdhf
-        iratio_sum(idh,idv) = iarea_sum(idh,idv) / dara(idv)
+        ratio(idh,idv) = area(idh,idv) / dara(idv)
       enddo
     enddo
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine calc_iratio_sum
+end subroutine calc_iratio_sum__out
+!===============================================================
+!
+!===============================================================
+subroutine calc_iratio_sum__inout(area, mask)
+  implicit none
+  real(8)   , pointer              :: area(:,:)   ! inout
+  logical(1), pointer   , optional :: mask(:,:)   ! in
+
+  integer(8) :: idv, idh
+  logical :: use_mask
+
+  call echo(code%bgn, 'calc_iratio_sum__inout', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( init_is_ok(.true.) /= 0 )then
+    return
+  endif
+
+  use_mask = .false.
+  if( present(mask) )then
+    use_mask = associated(mask)
+  endif
+
+  if( use_mask )then
+    do idv = sdvi, sdvf
+      do idh = sdhi, sdhf
+        if( mask(idh,idv) )then
+          area(idh,idv) = area(idh,idv) / dara(idv)
+        else
+          area(idh,idv) = vrf_val_miss
+        endif
+      enddo
+    enddo
+  else
+    do idv = sdvi, sdvf
+      do idh = sdhi, sdhf
+        area(idh,idv) = area(idh,idv) / dara(idv)
+      enddo
+    enddo
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine calc_iratio_sum__inout
 !===============================================================
 !
 !===============================================================
@@ -673,18 +801,18 @@ subroutine update_area_normal(&
   dh_top = 0_8
 
   selectcase( convex )
-  case( arc_convex_monotone )
+  case( CONVEX_MONOTONE )
     continue
-  case( arc_convex_upward, &
-        arc_convex_downward )
+  case( CONVEX_UPWARD, &
+        CONVEX_DOWNWARD )
     if( which_is_western(swest, lontop) == 1 .and. &
         which_is_western(seast, lontop) == 2 )then
       is_convex = .true.
       dh_top = int((lontop - swest) / dlon) + sdhi
     endif
-  case( arc_convex_undef )
+  case( CONVEX_UNDEF )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  convex == arc_convex_undef')
+            '\n  convex == '//str_convex_long(convex))
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  convex: '//str(convex))
@@ -740,8 +868,8 @@ subroutine update_area_normal(&
     if( debug_s .or. debug_t )then
       call edbg('sgn_lon '//str(sgn_lon))
       call edbg('west '//str(wlon*r2d,'f15.10')//' east '//str(elon*r2d,'f15.10'))
-      call edbg('Range of h w/ buffer : ['//str((/ttdhi_buf,ttdhf_buf/),dgt(ndh),':')//']')
-      call edbg('           w/o buffer: ['//str((/ttdhi,ttdhf/),dgt(ndh),':')//']')
+      call edbg('Range of h w/ buffer : ['//str((/ttdhi_buf,ttdhf_buf/),dgt(dhf+1),':')//']')
+      call edbg('           w/o buffer: ['//str((/ttdhi,ttdhf/),dgt(dhf+1),':')//']')
     endif
     !-----------------------------------------------------------
     ! Calc. coords. of intersections with meridians
@@ -1433,7 +1561,7 @@ subroutine update_area_normal_convex_downward(&
   ! Case: Arc is below the zone.
   elseif( max(clats(dh-1_8), clats(dh)) <= dlats(tdvi-1_8) )then
     do idv = tdvi, tdvf
-      call add(iarea(dh,idv), dara_1rad(dh)*clons_diff(dh)*sgn_lon)
+      call add(iarea(dh,idv), dara_1rad(idv)*clons_diff(dh)*sgn_lon)
     enddo
     if( debug )then
       call edbg('Arc is below the zone.')
@@ -1920,24 +2048,6 @@ end function dv_gt_south_le_north
 !===============================================================
 !
 !===============================================================
-subroutine debug_print_polygon(p)
-  implicit none
-  type(polygon_), intent(in) :: p
-
-  call edbg('idx '//str(p%idx)//&
-          '\n  pos: '//str(p%pos)//&
-          '\n  lon: '//str(str(str_coords(p%lon,r2d,lonlat_miss,wfmt_deg)))//&
-          '\n  lat: '//str(str(str_coords(p%lat,r2d,lonlat_miss,wfmt_deg)))//&
-          '\n  arc: '//str(str_arctyp_long(p%arctyp),cl(wfmt_deg),', ')//&
-          '\n  a  : '//str(p%a,'es12.5',', ')//&
-          '\n  b  : '//str(p%b,'es12.5',', ')//&
-          '\n  c  : '//str(p%c,'es12.5',', ')//&
-          '\n  bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,wfmt_deg)//&
-          '\n  n_west: '//str(p%n_west)//' n_east: '//str(p%n_east))
-end subroutine debug_print_polygon
-!===============================================================
-!
-!===============================================================
 subroutine debug_print_range(nam, tdhi, tdhf, tdvi, tdvf)
   implicit none
   character(*), intent(in) :: nam
@@ -1986,93 +2096,69 @@ end subroutine debug_print_area_change
 !
 !===============================================================
 subroutine update_rt1d(&
-    rt1, &
-    iarea, sidxmap, swgtmap, sgrdidx, sgrdidxarg)
+    rt1, tij, &
+    iarea, smskmap, sidxmap)
   implicit none
-  type(rt1d_), intent(out) :: rt1
-  real(8)    , pointer     :: iarea(:,:)  ! in
-  integer(8) , pointer     :: sidxmap(:,:)  ! in
-  real(8)    , pointer     :: swgtmap(:,:)  ! in
-  integer(8) , intent(in)  :: sgrdidx(:)
-  integer(8) , intent(in)  :: sgrdidxarg(:)
+  type(rt1d_), intent(inout) :: rt1
+  integer(8) , intent(in)    :: tij
+  real(8)    , pointer       :: iarea(:,:)    ! in
+  logical(1) , pointer       :: smskmap(:,:)  ! in
+  integer(8) , pointer       :: sidxmap(:,:)  ! in
 
-  integer(8) :: sidx, sidx_prev
-  integer(8) :: sloc
-  integer(8) :: ij
+  integer(8) :: sidx
   integer(8) :: idh, idv
+  integer(8) :: ij, ij1, ij2
 
   call echo(code%bgn, 'update_rt1d', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  rt1%idx_self = tidx
-  rt1%ijsize = 0_8
-  rt1%mij = 0_8
-
-  rt1%ijsize = rt1d_ijsize_init
-  allocate(rt1%idx(rt1%ijsize))
-  allocate(rt1%ara(rt1%ijsize))
-  rt1%ara(:) = 0.d0
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  sidx_prev = sidx_miss
-
   do idv = tdvi, tdvf
     do idh = tdhi, tdhf
+      if( .not. smskmap(idh,idv) ) cycle
+
       sidx = sidxmap(idh,idv)
 
-      if( sidx == sidx_miss ) cycle
-
       if( debug_s )then
-        if( sidx == sidx_debug )then
-          call edbg('iarea('//str((/idh,idv/),dgt(max(ndh,ndv)),',')//'): '//str(iarea(idh,idv)))
-        endif
+        call edbg('iarea('//str((/idh,idv/),dgt(max(ndh,ndv)),',')//'): '//str(iarea(idh,idv)))
       endif
 
       if( iarea(idh,idv) == 0.d0 ) cycle
-      !---------------------------------------------------------
-      ! Update ij
-      !---------------------------------------------------------
-      if( sidx /= sidx_prev )then
-        sidx_prev = sidx
 
-        call search(sidx, sgrdidx, sgrdidxarg, sloc)
+      if( debug_s ) call edbg('rt1d is updated.')
 
-        if( sloc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  sidx '//str(sidx)//' was not found.')
-        endif
-
-        ij = list_rt_ij(sloc)
-        !-------------------------------------------------------
-        ! New index
-        !-------------------------------------------------------
-        if( ij == 0_8 )then
+      if( sidx == sidx_prev(tij) )then
+        call add(rt1%ara(ij_prev(tij)), iarea(idh,idv))
+      elseif( rt1%mij == 0_8 )then
+        rt1%mij = 1_8
+        rt1%idx(1) = sidx
+        rt1%ara(1) = iarea(idh,idv)
+        sidx_prev(tij) = sidx
+        ij_prev(tij) = 1_8
+      else
+        call search_nearest(sidx, rt1%idx(:rt1%mij), ij1, ij2)
+        if( ij1 == ij2 )then
+          call add(rt1%ara(ij1), iarea(idh,idv))
+        else
           if( rt1%mij == rt1%ijsize )then
-            rt1%ijsize = int(rt1%ijsize*real(rt1d_extend_rate,8),8)
+            call mul(rt1%ijsize, 2)
             call realloc(rt1%idx, rt1%ijsize, clear=.false.)
             call realloc(rt1%ara, rt1%ijsize, clear=.false.)
           endif
+          do ij = rt1%mij, ij2, -1_8
+            rt1%idx(ij+1_8) = rt1%idx(ij)
+            rt1%ara(ij+1_8) = rt1%ara(ij)
+          enddo
+          rt1%idx(ij2) = sidx
+          rt1%ara(ij2) = iarea(idh,idv)
           call add(rt1%mij)
-          rt1%idx(rt1%mij) = sidx
-          ij = rt1%mij
-          list_rt_ij(sloc) = ij
-          list_sloc(ij) = sloc
         endif
+        sidx_prev(tij) = sidx
+        ij_prev(tij) = ij2
       endif
       !---------------------------------------------------------
-      !
-      !---------------------------------------------------------
-      call add(rt1%ara(ij), iarea(idh,idv)*swgtmap(idh,idv))
     enddo  ! idh/
   enddo  ! idv/
-  !-------------------------------------------------------------
-  ! Restore list_rt_ij and list_sloc
-  !-------------------------------------------------------------
-  do ij = 1_8, rt1%mij
-    list_rt_ij(list_sloc(ij)) = 0_8
-  enddo
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine update_rt1d

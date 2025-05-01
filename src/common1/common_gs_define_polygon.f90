@@ -13,16 +13,14 @@ module common_gs_define_polygon
   !-------------------------------------------------------------
   ! Public Procedures
   !-------------------------------------------------------------
-  public :: set_grids__polygon
-
-  public :: make_n_list_polygon
+  public :: set_gs__polygon
 
   public :: free_gs_polygon
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   character(clen_wfmt), parameter :: wfmt_coord = 'es10.3'
-  character(clen_wfmt), parameter :: wfmt_lonlat = 'f12.7'
+  character(clen_wfmt), parameter :: WFMT_LONLAT = 'f12.7'
   character(1), parameter :: str_coord_miss = '-'
   character(3), parameter :: str_3dots = '...'
   integer, parameter :: mij_print = 10
@@ -31,62 +29,54 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine set_grids__polygon(up)
-  use common_gs_zone, only: &
-    check_iZone
+subroutine set_gs__polygon(ap)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
 
   type(file_polygon_in_), pointer :: fp
-  type(zone_polygon_)   , pointer :: zp
   type(grid_)           , pointer :: g
   type(polygon_)        , pointer :: p
   integer(8) :: ijs, ije, ij
+  logical :: idx_is_ok, msk_is_ok
 
-  call echo(code%bgn, 'set_grids__polygon')
+  call echo(code%bgn, 'set_gs__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_polygon, up%iZone_polygon, up%iZone, .true.)
-
-  if( up%iZone_polygon == up%iZone )then
-    call edbg('Nothing to do')
+  if( .not. ap%is_valid )then
     call echo(code%ret)
     return
   endif
 
-  up%iZone_polygon = up%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  fp => up%f_polygon_in
-  zp => up%zone(up%iZone)
-  g => up%grid
+  fp => ap%f_polygon_in
+  g  => ap%grid
 
-  if( .not. up%debug )then
-    ijs = 1_8
-    ije = zp%mij
-  else
-    ijs = up%grid%ij_debug
-    ije = up%grid%ij_debug
-  endif
-call edbg('ij: '//str((/ijs,ije/),' - '))
+  idx_is_ok = g%status_idx == GRID_STATUS__PREPARED
+  msk_is_ok = g%status_msk == GRID_STATUS__PREPARED
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( .not. zp%is_valid )then
-    call echo(code%ret)
-    return
+  ijs = 1_8
+  ije = ap%nij
+  if( ap%debug )then
+    if( idx_is_ok )then
+      ijs = g%ij_debug
+      ije = g%ij_debug
+    else
+      call ewrn('Grid index data has not been prepared.')
+      if( 1 <= ap%idx_debug .and. ap%idx_debug <= ap%nij )then
+        ijs = g%ij_debug
+        ije = g%ij_debug
+      else
+        call eerr('$ap%idx_debug = '//str(ap%idx_debug)//' is out of range.')
+      endif
+    endif
   endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  !if( associated(up%polygon) ) deallocate(up%polygon)
 
-  allocate(up%polygon(ijs:ije))
+  allocate(ap%polygon(ijs:ije))
 
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
     nullify(p%lon)
     nullify(p%lat)
@@ -102,80 +92,122 @@ call edbg('ij: '//str((/ijs,ije/),' - '))
     nullify(p%lontop)
     nullify(p%lattop)
 
-    p%idx = g%idx(ij)
+    if( idx_is_ok )then
+      p%idx = g%idx(ij)
+    else
+      p%idx = ij
+    endif
   enddo  ! ij/
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call make_n_list_polygon(ap)
+
   call edbg('Reading grid system data')
-  call read_data_plainbinary(up, ijs, ije)
+  call read_data_plainbinary(ap, ijs, ije)
 
   call edbg('Modifying coords.')
-  call modify_coords(up, ijs, ije)
+  call modify_coords(ap, ijs, ije)
 
   call edbg('Counting the number of vertices')
-  call count_vertices(up, ijs, ije)
+  call count_vertices(ap, ijs, ije)
 
   call edbg('Modifying arc type')
-  call modify_arctyp(up, ijs, ije)
+  call modify_arctyp(ap, ijs, ije)
 
   call edbg('Finding polar vertices')
-  call find_polar_vertices(up, ijs, ije)
+  call find_polar_vertices(ap, ijs, ije)
 
   call edbg('Judging statuses of the arcs')
-  call judge_status_of_arcs(up, ijs, ije)
+  call judge_status_of_arcs(ap, ijs, ije)
 
   call edbg('Judging types of the grids')
-  call judge_type_of_grids(up, ijs, ije)
+  call judge_type_of_grids(ap, ijs, ije)
 
   call edbg('Calculating coefs. of the arcs')
-  call calc_coefs_of_arcs(up, ijs, ije)
+  call calc_coefs_of_arcs(ap, ijs, ije)
 
   call edbg('Calculating the range of longit.')
-  call calc_range_of_longit(up, ijs, ije)
+  call calc_range_of_longit(ap, ijs, ije)
 
   call edbg('Calculating the range of latit.')
-  call calc_range_of_latit(up, ijs, ije)
+  call calc_range_of_latit(ap, ijs, ije)
 
   call edbg('Modifying loop directions')
-  call modify_loop_directions(up, ijs, ije)
+  call modify_loop_directions(ap, ijs, ije)
+
+  call edbg('Updating grid mask')
+  call update_grdmsk(ap, ijs, ije)
   
-  call print_info(up, ijs, ije)
+  call print_info(ap, ijs, ije)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( up%debug )then
-    p => up%polygon(g%ij_debug)
+  if( ap%debug )then
+    p => ap%polygon(ijs)
     call edbg('polygon '//str(g%ij_debug))
     call edbg('n: '//str(p%n))
     call edbg('pos: '//str(str_polygon_pos_long(p%pos)))
-    call edbg('bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,'f12.7',', '))
-    call edbg('n_west: '//str(p%n_west)//' n_east: '//str(p%n_east)//&
-             ' n_pole: '//str(p%n_pole))
-    call edbg('lon   : '//str(str_coords_lonlat(p%lon,up%coord_miss_s)))
-    call edbg('lat   : '//str(str_coords_lonlat(p%lat,up%coord_miss_s)))
-    call edbg('lontop: '//str(str_coords_lonlat(p%lontop,up%coord_miss_s)))
-    call edbg('lattop: '//str(str_coords_lonlat(p%lattop,up%coord_miss_s)))
-    call edbg('convex: '//str(str_convex_long(p%convex),-13,','))
-    call edbg('arctyp: '//str(str_arctyp_long(p%arctyp),-13,','))
-    call edbg('arcpos: '//str(str_arcpos_long(p%arcpos),-13,','))
-    !stop
+    call edbg('bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,WFMT_LONLAT,','))
+    call edbg('n_west: '//str(p%n_west)//', n_east: '//str(p%n_east)//&
+              ', n_pole: '//str(p%n_pole))
+    call edbg('lon   : '//str_coords(p%lon, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call edbg('lat   : '//str_coords(p%lat, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call edbg('lontop: '//str_coords(p%lontop, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call edbg('lattop: '//str_coords(p%lattop, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call edbg('convex: '//str(str_convex_long(p%convex),-cl(WFMT_LONLAT),','))
+    call edbg('arctyp: '//str(str_arctyp_long(p%arctyp),-cl(WFMT_LONLAT),','))
+    call edbg('arcpos: '//str(str_arcpos_long(p%arcpos),-cl(WFMT_LONLAT),','))
+    nullify(p)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_grids__polygon
+end subroutine set_gs__polygon
 !===============================================================
 !
 !===============================================================
-subroutine read_data_plainbinary(up, ijs, ije)
+subroutine make_n_list_polygon(ap)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout) :: ap
+
+  integer :: nmax, n
+
+  call echo(code%bgn, 'make_n_list_polygon', '-p -x2')
+  !-------------------------------------------------------------
+  allocate(ap%n_next(ap%np,ap%np), &
+           ap%n_prev(ap%np,ap%np))
+
+  ap%n_next(:,:) = 0
+  ap%n_prev(:,:) = 0
+
+  do nmax = 3, int(ap%np,4)
+    do n = 1, nmax-1
+      ap%n_next(n,nmax) = n + 1
+    enddo
+    ap%n_next(nmax,nmax) = 1
+
+    ap%n_prev(1,nmax) = nmax
+    do n = 2, nmax
+      ap%n_prev(n,nmax) = n - 1
+    enddo
+
+    call edbg('nmax '//str(nmax)//&
+            '\n  n_prev '//str(ap%n_prev(:nmax,nmax))//&
+            '\n  n_next '//str(ap%n_next(:nmax,nmax)))
+  enddo  ! nmax/
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_n_list_polygon
+!===============================================================
+!
+!===============================================================
+subroutine read_data_plainbinary(ap, ijs, ije)
+  implicit none
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(file_polygon_in_), pointer :: fp
-  type(zone_polygon_)   , pointer :: zp
   type(polygon_)        , pointer :: p
-
   type(file_), pointer :: f
   real(8)   , allocatable :: coord(:,:)
   integer(1), allocatable :: arctyp(:,:)
@@ -186,28 +218,27 @@ subroutine read_data_plainbinary(up, ijs, ije)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fp => up%f_polygon_in
-  zp => up%zone(up%iZone)
+  fp => ap%f_polygon_in
 
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
-    p%n = int(up%np,4)
-    allocate(p%lon(up%np))
-    allocate(p%lat(up%np))
-    allocate(p%x(up%np))
-    allocate(p%y(up%np))
-    allocate(p%z(up%np))
-    allocate(p%arctyp(up%np))
+    p%n = int(ap%np,4)
+    allocate(p%lon(ap%np))
+    allocate(p%lat(ap%np))
+    allocate(p%x(ap%np))
+    allocate(p%y(ap%np))
+    allocate(p%z(ap%np))
+    allocate(p%arctyp(ap%np))
   enddo
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fijs = fp%lb(2) + zp%ijs - 1_8 + ijs - 1_8
+  fijs = fp%lb(2) + ijs - 1_8
 
-  allocate(coord(up%np,ijs:ije))
+  allocate(coord(ap%np,ijs:ije))
 
-  selectcase( up%coord_sys )
+  selectcase( ap%coord_sys )
   !-------------------------------------------------------------
   ! Case: Spherical
   case( coord_sys_spherical )
@@ -219,41 +250,41 @@ subroutine read_data_plainbinary(up, ijs, ije)
     f => fp%lon
     call edbg('Reading lon '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-                     sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
+              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
 
     do ij = ijs, ije
-      up%polygon(ij)%lon(:) = coord(:,ij)
+      ap%polygon(ij)%lon(:) = coord(:,ij)
     enddo
 
     f => fp%lat
     call edbg('Reading lat '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
+              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
 
     do ij = ijs, ije
-      up%polygon(ij)%lat(:) = coord(:,ij)
+      ap%polygon(ij)%lat(:) = coord(:,ij)
     enddo
 
     if( ije-ijs+1_8 > mij_print )then
       do ij = ijs, ijs+2_8
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,up%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord))
+                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,wfmt_coord)//&
+                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,wfmt_coord))
       enddo
       call edbg('...')
       do ij = ije-2_8, ije
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,up%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord))
+                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,wfmt_coord)//&
+                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,wfmt_coord))
       enddo
     else
       do ij = ijs, ije
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,up%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,up%coord_miss_s,wfmt_coord))
+                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,wfmt_coord)//&
+                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,wfmt_coord))
       enddo
     endif
 
@@ -275,53 +306,53 @@ subroutine read_data_plainbinary(up, ijs, ije)
     f => fp%x
     call edbg('Reading x '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
+              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
 
     do ij = ijs, ije
-      up%polygon(ij)%x(:) = coord(:,ij)
+      ap%polygon(ij)%x(:) = coord(:,ij)
     enddo
 
     f => fp%y
     call edbg('Reading y '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
+              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
 
     do ij = ijs, ije
-      up%polygon(ij)%y(:) = coord(:,ij)
+      ap%polygon(ij)%y(:) = coord(:,ij)
     enddo
 
     f => fp%z
     call edbg('Reading z '//str(fileinfo(f)))
     call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
+              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
 
     do ij = ijs, ije
-      up%polygon(ij)%z(:) = coord(:,ij)
+      ap%polygon(ij)%z(:) = coord(:,ij)
     enddo
 
     if( ije-ijs+1_8 > mij_print )then
       do ij = ijs, ijs+2_8
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  x: '//str_coords(p%x,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  y: '//str_coords(p%y,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord))
+                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,wfmt_coord)//&
+                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,wfmt_coord)//&
+                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,wfmt_coord))
       enddo
       call edbg('...')
       do ij = ije-2_8, ije
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  x: '//str_coords(p%x,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  y: '//str_coords(p%y,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord))
+                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,wfmt_coord)//&
+                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,wfmt_coord)//&
+                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,wfmt_coord))
       enddo
     else
       do ij = ijs, ije
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  x: '//str_coords(p%x,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  y: '//str_coords(p%y,1.d0,up%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,up%coord_miss_c,wfmt_coord))
+                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,wfmt_coord)//&
+                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,wfmt_coord)//&
+                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,wfmt_coord))
       enddo
     endif
 
@@ -336,7 +367,7 @@ subroutine read_data_plainbinary(up, ijs, ije)
   ! Case: ERROR
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  up%coord_sys: '//str(up%coord_sys))
+            '\n  ap%coord_sys: '//str(ap%coord_sys))
   endselect
 
   deallocate(coord)
@@ -348,19 +379,19 @@ subroutine read_data_plainbinary(up, ijs, ije)
   f => fp%arctyp
 
   if( f%path == '' )then
-    call edbg('File was not specified.')
+    call edbg('File was not given.')
     do ij = ijs, ije
-      up%polygon(ij)%arctyp(:) = arc_type_normal
+      ap%polygon(ij)%arctyp(:) = ARC_TYPE_NORMAL
     enddo
   else
-    allocate(arctyp(up%np,ijs:ije))
+    allocate(arctyp(ap%np,ijs:ije))
 
     call edbg('Reading arctyp '//str(fileinfo(f)))
     call rbin(arctyp, f%path, f%dtype, f%endian, f%rec, &
               sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
 
     do ij = ijs, ije
-      up%polygon(ij)%arctyp(:) = arctyp(:,ij)
+      ap%polygon(ij)%arctyp(:) = arctyp(:,ij)
     enddo
 
     deallocate(arctyp)
@@ -373,9 +404,9 @@ end subroutine read_data_plainbinary
 !===============================================================
 !
 !===============================================================
-subroutine modify_coords(up, ijs, ije)
+subroutine modify_coords(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -387,34 +418,34 @@ subroutine modify_coords(up, ijs, ije)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( up%coord_sys )
+  selectcase( ap%coord_sys )
   !-------------------------------------------------------------
   ! Case: Spherical
-  case( coord_sys_spherical )
+  case( COORD_SYS_SPHERICAL )
     !-----------------------------------------------------------
     ! Conv. unit
     !-----------------------------------------------------------
     call echo(code%ent, 'Converting unit')
 
-    selectcase( up%coord_unit )
-    case( unit_degree )
+    selectcase( ap%coord_unit )
+    case( UNIT_DEGREE )
       do ij = ijs, ije
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         do n = 1, p%n
-          if( p%lat(n) /= up%coord_miss_s )then
+          if( p%lat(n) /= ap%coord_miss_s )then
             p%lon(n) = p%lon(n) * d2r
             p%lat(n) = p%lat(n) * d2r
             if( abs(p%lat(n)) == rad_90deg )then
-              p%lon(n) = up%coord_miss_s
+              p%lon(n) = ap%coord_miss_s
             endif
           endif
         enddo  ! n/
       enddo  ! ij/
-    case( unit_radian )
+    case( UNIT_RADIAN )
       continue
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  up%coord_unit: '//str(up%coord_unit))
+              '\n  ap%coord_unit: '//str(ap%coord_unit))
     endselect
 
     call echo(code%ext)
@@ -424,28 +455,28 @@ subroutine modify_coords(up, ijs, ije)
     call echo(code%ent, 'Calculating cartesian coords.')
 
     do ij = ijs, ije
-      p => up%polygon(ij)
+      p => ap%polygon(ij)
       call conv_spherical_to_cartesian_rad(&
-             p%lon, p%lat, p%x, p%y, p%z, up%coord_miss_s, up%coord_miss_c)
+             p%lon, p%lat, p%x, p%y, p%z, ap%coord_miss_s, ap%coord_miss_c)
     enddo
 
     call echo(code%ext)
   !-------------------------------------------------------------
   ! Case: Cartesian
-  case( coord_sys_cartesian )
+  case( COORD_SYS_CARTESIAN )
     !-----------------------------------------------------------
     ! Conv. unit
     !-----------------------------------------------------------
     call echo(code%ent, 'Converting unit')
 
-    selectcase( up%coord_unit )
-    case( unit_meter )
+    selectcase( ap%coord_unit )
+    case( UNIT_METER )
       continue
-    case( unit_kilometer )
+    case( UNIT_KILOMETER )
       do ij = ijs, ije
-        p => up%polygon(ij)
+        p => ap%polygon(ij)
         do n = 1, p%n
-          if( p%x(n) /= up%coord_miss_c )then
+          if( p%x(n) /= ap%coord_miss_c )then
             p%x(n) = p%x(n) * 1d3
             p%y(n) = p%y(n) * 1d3
             p%z(n) = p%z(n) * 1d3
@@ -454,7 +485,7 @@ subroutine modify_coords(up, ijs, ije)
       enddo  ! ij/
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  up%coord_unit: '//str(up%coord_unit))
+              '\n  ap%coord_unit: '//str(ap%coord_unit))
     endselect
 
     call echo(code%ext)
@@ -464,9 +495,9 @@ subroutine modify_coords(up, ijs, ije)
     call echo(code%ent, 'Calculating spherical coords.')
 
     do ij = ijs, ije
-      p => up%polygon(ij)
+      p => ap%polygon(ij)
       call conv_cartesian_to_spherical_rad(&
-             p%x, p%y, p%z, p%lon, p%lat, up%coord_miss_c, up%coord_miss_s)
+             p%x, p%y, p%z, p%lon, p%lat, ap%coord_miss_c, ap%coord_miss_s)
     enddo
 
     call echo(code%ext)
@@ -474,7 +505,7 @@ subroutine modify_coords(up, ijs, ije)
   ! Case: ERROR
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  up%coord_sys: '//str(up%coord_sys))
+            '\n  ap%coord_sys: '//str(ap%coord_sys))
   endselect
   !-------------------------------------------------------------
   ! Modify spherical coords. of special points
@@ -482,13 +513,13 @@ subroutine modify_coords(up, ijs, ije)
   call echo(code%ent, 'Modifying spherical coords. of special points')
 
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
     do n = 1, p%n
-      if( p%lat(n) == up%coord_miss_s ) cycle
+      if( p%lat(n) == ap%coord_miss_s ) cycle
 
       if( abs(p%lat(n)) == rad_90deg )then
-        p%lon(n) = up%coord_miss_s
+        p%lon(n) = ap%coord_miss_s
       elseif( p%lon(n) == rad_360deg )then
         p%lon(n) = rad_0deg
       endif
@@ -502,12 +533,12 @@ subroutine modify_coords(up, ijs, ije)
   call echo(code%ent, 'Modifying longit.')
 
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
     found_0deg     = .false.
     found_lt180deg = .false.
     do n = 1, p%n
-      if( p%lon(n) == up%coord_miss_s ) cycle
+      if( p%lon(n) == ap%coord_miss_s ) cycle
 
       if( p%lon(n) < rad_0deg )then
         p%lon(n) = p%lon(n) + rad_360deg
@@ -536,9 +567,9 @@ end subroutine modify_coords
 !===============================================================
 !
 !===============================================================
-subroutine count_vertices(up, ijs, ije)
+subroutine count_vertices(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -552,28 +583,28 @@ subroutine count_vertices(up, ijs, ije)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(p_%x(up%np))
-  allocate(p_%y(up%np))
-  allocate(p_%z(up%np))
-  allocate(p_%lon(up%np))
-  allocate(p_%lat(up%np))
-  allocate(p_%arctyp(up%np))
+  allocate(p_%x(ap%np))
+  allocate(p_%y(ap%np))
+  allocate(p_%z(ap%np))
+  allocate(p_%lon(ap%np))
+  allocate(p_%lat(ap%np))
+  allocate(p_%arctyp(ap%np))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
     p%n = 0
-    do n = 1, up%np
+    do n = 1, ap%np
       lon1 = p%lon(n)
       lat1 = p%lat(n)
-      lon2 = p%lon(up%n_next(n,up%np))
-      lat2 = p%lat(up%n_next(n,up%np))
+      lon2 = p%lon(ap%n_next(n,ap%np))
+      lat2 = p%lat(ap%n_next(n,ap%np))
 
       is_same = .false.
-      if( lat1 == up%coord_miss_s )then
-        if( lon1 /= up%coord_miss_s )then
+      if( lat1 == ap%coord_miss_s )then
+        if( lon1 /= ap%coord_miss_s )then
           call eerr(str(msg_unexpected_condition())//&
                   '\n  lat. is missing value but lon. is not missing value')
         endif
@@ -585,16 +616,16 @@ subroutine count_vertices(up, ijs, ije)
       endif
 
       if( is_same )then
-        if( up%allow_duplicated_vertex )then
+        if( ap%allow_duplicated_vertex )then
           !call edbg('polygon('//str(ij,dgt(ije))//') '//&
-          !          '('//str(n,dgt(up%np))//') == ('//str(up%n_next(n,up%np))//') '//&
-          !          '('//str(str_coords_lonlat((/lon1,lat1/),up%coord_miss_s))//')')
+          !          '('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
+          !          '('//str(str_coords_lonlat((/lon1,lat1/),ap%coord_miss_s))//')')
         else
           call eerr(str(msg_unexpected_condition())//&
                   '\n  Duplicated vertices were found.'//&
                   '\npolygon('//str(ij,dgt(ije))//') '//&
-                    '('//str(n,dgt(up%np))//') == ('//str(up%n_next(n,up%np))//') '//&
-                    '('//str(str_coords_lonlat((/lon1,lat1/),up%coord_miss_s))//')')
+                    '('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
+                    '('//str(str_coords_lonlat((/lon1,lat1/),ap%coord_miss_s))//')')
         endif
         cycle
       endif
@@ -619,7 +650,7 @@ subroutine count_vertices(up, ijs, ije)
               '\n  p%n: '//str(p%n))
     endselect
 
-    if( p%n == up%np ) cycle
+    if( p%n == ap%np ) cycle
 
     p_%x(:) = p%x(:)
     p_%y(:) = p%y(:)
@@ -629,13 +660,13 @@ subroutine count_vertices(up, ijs, ije)
     p_%arctyp(:) = p%arctyp(:)
 
     p%n = 0
-    do n = 1, up%np
+    do n = 1, ap%np
       lon1 = p_%lon(n)
       lat1 = p_%lat(n)
-      lon2 = p_%lon(up%n_next(n,up%np))
-      lat2 = p_%lat(up%n_next(n,up%np))
+      lon2 = p_%lon(ap%n_next(n,ap%np))
+      lat2 = p_%lat(ap%n_next(n,ap%np))
 
-      if( lat1 == up%coord_miss_s )then
+      if( lat1 == ap%coord_miss_s )then
         cycle
       elseif( abs(lat1) == rad_90deg )then
         if( lat1 == lat2 ) cycle
@@ -674,9 +705,9 @@ end subroutine count_vertices
 !===============================================================
 !
 !===============================================================
-subroutine modify_arctyp(up, ijs, ije)
+subroutine modify_arctyp(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -686,15 +717,15 @@ subroutine modify_arctyp(up, ijs, ije)
   call echo(code%bgn, 'modify_arctyp', '-p -x2')
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
     do n = 1, p%n
-      nn = up%n_next(n,p%n)
+      nn = ap%n_next(n,p%n)
 
       if( p%lon(n) == p%lon(nn) )then
-        p%arctyp(n) = arc_type_meridian
-      elseif( p%lat(n) == p%lat(nn) .and. up%arc_parallel )then
-        p%arctyp(n) = arc_type_parallel
+        p%arctyp(n) = ARC_TYPE_MERIDIAN
+      elseif( p%lat(n) == p%lat(nn) .and. ap%arc_parallel )then
+        p%arctyp(n) = ARC_TYPE_PARALLEL
       endif
     enddo  ! n/
   enddo  ! ij/
@@ -704,9 +735,9 @@ end subroutine modify_arctyp
 !===============================================================
 !
 !===============================================================
-subroutine find_polar_vertices(up, ijs, ije)
+subroutine find_polar_vertices(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -720,7 +751,7 @@ subroutine find_polar_vertices(up, ijs, ije)
   is_ok = .true.
   opt = '-q -b'
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
 
     p%n_pole = 0
     do n = 1, p%n
@@ -730,8 +761,8 @@ subroutine find_polar_vertices(up, ijs, ije)
           call eerr(str(msg_unexpected_condition())//&
                   '\n  p%n_pole /= 0'//&
                   '\n  ij: '//str(ij)//&
-                  '\n  lon: '//str_coords(p%lon, r2d, up%coord_miss_s, wfmt_lonlat, n1max=p%n)//&
-                  '\n  lat: '//str_coords(p%lat, r2d, up%coord_miss_s, wfmt_lonlat, n1max=p%n), &
+                  '\n  lon: '//str_coords(p%lon, r2d, ap%coord_miss_s, wfmt_lonlat, n1max=p%n)//&
+                  '\n  lat: '//str_coords(p%lat, r2d, ap%coord_miss_s, wfmt_lonlat, n1max=p%n), &
                     opt)
           opt = '-q -b -p'
           exit
@@ -750,9 +781,9 @@ end subroutine find_polar_vertices
 !===============================================================
 !
 !===============================================================
-subroutine judge_status_of_arcs(up, ijs, ije)
+subroutine judge_status_of_arcs(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -762,14 +793,14 @@ subroutine judge_status_of_arcs(up, ijs, ije)
   call echo(code%bgn, 'judge_status_of_arcs', '-p -x2')
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     if( p%n == 0 ) cycle
 
     allocate(p%arcpos(p%n))
     p%arcpos(:) = arc_position_normal
 
     do n = 1, p%n
-      n_next = up%n_next(n,p%n)
+      n_next = ap%n_next(n,p%n)
 
       if( n == p%n_pole .or. n_next == p%n_pole )then
         p%arctyp(n) = arc_type_meridian
@@ -780,9 +811,9 @@ subroutine judge_status_of_arcs(up, ijs, ije)
         p%arcpos(n) = arc_position_lon0
       endif
 
-      if( up%arc_parallel )then
+      if( ap%arc_parallel )then
         if( p%lat(n) == p%lat(n_next) )then
-          p%arctyp(n) = arc_type_parallel
+          p%arctyp(n) = ARC_TYPE_PARALLEL
         endif
       endif
     enddo  ! n/
@@ -793,9 +824,9 @@ end subroutine judge_status_of_arcs
 !===============================================================
 !
 !===============================================================
-subroutine judge_type_of_grids(up, ijs, ije)
+subroutine judge_type_of_grids(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -806,7 +837,7 @@ subroutine judge_type_of_grids(up, ijs, ije)
   call echo(code%bgn, 'judge_type_of_grids', '-p -x2')
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     if( p%n == 0 ) cycle
     !-----------------------------------------------------------
     ! Count intersections with lon0-line
@@ -831,11 +862,11 @@ subroutine judge_type_of_grids(up, ijs, ije)
     ! Judge the type of the grid
     !-----------------------------------------------------------
     if( counter_lon0 == 0 )then
-      p%pos = polygon_position_normal
+      p%pos = POLYGON_POSITION_NORMAL
     elseif( p%n_pole == 0 .and. mod(counter_lon0,2) == 1 )then
-      p%pos = polygon_position_polar
+      p%pos = POLYGON_POSITION_POLAR
     else
-      p%pos = polygon_position_lon0
+      p%pos = POLYGON_POSITION_LON0
     endif
     !-----------------------------------------------------------
   enddo  ! ij/
@@ -845,9 +876,9 @@ end subroutine judge_type_of_grids
 !===============================================================
 !
 !===============================================================
-subroutine calc_coefs_of_arcs(up, ijs, ije)
+subroutine calc_coefs_of_arcs(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -859,7 +890,7 @@ subroutine calc_coefs_of_arcs(up, ijs, ije)
   !
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     if( p%n == 0 ) cycle
 
     allocate(p%a(p%n))
@@ -867,19 +898,19 @@ subroutine calc_coefs_of_arcs(up, ijs, ije)
     allocate(p%c(p%n))
 
     do n = 1, p%n
-      n_next = up%n_next(n,p%n)
+      n_next = ap%n_next(n,p%n)
 
       selectcase( p%arctyp(n) )
-      case( arc_type_meridian )
+      case( ARC_TYPE_MERIDIAN )
         call calc_coefs_large_arc(&
                p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
                p%a(n), p%b(n), p%c(n))
         p%c(n) = 0.d0
-      case( arc_type_parallel )
+      case( ARC_TYPE_PARALLEL )
         p%a(n) = 0.d0
         p%b(n) = 0.d0
         p%c(n) = 0.d0
-      case( arc_type_normal )
+      case( ARC_TYPE_NORMAL )
         call calc_coefs_large_arc(&
                p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
                p%a(n), p%b(n), p%c(n))
@@ -897,9 +928,9 @@ end subroutine calc_coefs_of_arcs
 !===============================================================
 !
 !===============================================================
-subroutine calc_range_of_longit(up, ijs, ije)
+subroutine calc_range_of_longit(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -911,7 +942,7 @@ subroutine calc_range_of_longit(up, ijs, ije)
   !
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     if( p%n == 0 ) cycle
 
     selectcase( p%pos )
@@ -982,8 +1013,8 @@ subroutine calc_range_of_longit(up, ijs, ije)
       p%east = rad_360deg
 
       call edbg('ij '//str(ij)//' include a pole.'//&
-              '\n  lon: '//str(str_coords_lonlat(p%lon,up%coord_miss_s))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat,up%coord_miss_s)))
+              '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
+              '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s)))
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
@@ -997,9 +1028,9 @@ end subroutine calc_range_of_longit
 !===============================================================
 !
 !===============================================================
-subroutine calc_range_of_latit(up, ijs, ije)
+subroutine calc_range_of_latit(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -1012,15 +1043,15 @@ subroutine calc_range_of_latit(up, ijs, ije)
   !
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     if( p%n == 0 ) cycle
 
     allocate(p%convex(p%n))
     allocate(p%lontop(p%n))
     allocate(p%lattop(p%n))
-    p%convex(:) = ARC_CONVEX_MONOTONE
-    p%lontop(:) = up%coord_miss_s
-    p%lattop(:) = up%coord_miss_s
+    p%convex(:) = CONVEX_MONOTONE
+    p%lontop(:) = ap%coord_miss_s
+    p%lattop(:) = ap%coord_miss_s
 
     selectcase( p%pos )
     !-----------------------------------------------------------
@@ -1039,12 +1070,17 @@ subroutine calc_range_of_latit(up, ijs, ije)
       do n = 1, p%n
         selectcase( p%arctyp(n) )
         case( ARC_TYPE_NORMAL )
-          n_next = up%n_next(n,p%n)
+          n_next = ap%n_next(n,p%n)
 
           call calc_lat_range_large_arc(&
                  p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
                  p%a(n), p%b(n), p%c(n), &
                  south, north, p%convex(n), p%lontop(n), p%lattop(n))
+
+          if( p%convex(n) == CONVEX_MONOTONE )then
+            p%lontop(n) = ap%coord_miss_s
+            p%lattop(n) = ap%coord_miss_s
+          endif
         case( ARC_TYPE_MERIDIAN )
 
         case( ARC_TYPE_PARALLEL )
@@ -1065,12 +1101,17 @@ subroutine calc_range_of_latit(up, ijs, ije)
       do n = 1, p%n
         selectcase( p%arctyp(n) )
         case( ARC_TYPE_NORMAL )
-          n_next = up%n_next(n,p%n)
+          n_next = ap%n_next(n,p%n)
 
           call calc_lat_range_large_arc(&
                  p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
                  p%a(n), p%b(n), p%c(n), &
                  south, north, p%convex(n), p%lontop(n), p%lattop(n))
+
+          if( p%convex(n) == CONVEX_MONOTONE )then
+            p%lontop(n) = ap%coord_miss_s
+            p%lattop(n) = ap%coord_miss_s
+          endif
 
           p%south = min(p%south, south)
           p%north = max(p%north, north)
@@ -1096,9 +1137,9 @@ end subroutine calc_range_of_latit
 !===============================================================
 !
 !===============================================================
-subroutine modify_loop_directions(up, ijs, ije)
+subroutine modify_loop_directions(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -1112,7 +1153,7 @@ subroutine modify_loop_directions(up, ijs, ije)
   !
   !-------------------------------------------------------------
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     if( p%n == 0 ) cycle
 
     selectcase( p%pos )
@@ -1120,8 +1161,8 @@ subroutine modify_loop_directions(up, ijs, ije)
     ! Case: Normal
     case( POLYGON_POSITION_NORMAL )
       n = p%n_west
-      n_prev = up%n_prev(n,p%n)
-      n_next = up%n_next(n,p%n)
+      n_prev = ap%n_prev(n,p%n)
+      n_next = ap%n_next(n,p%n)
 
       if( p%lat(n_prev) == p%lat(n_next) )then
         is_anticlockwise = p%lon(n_prev) < p%lon(n_next)
@@ -1132,8 +1173,8 @@ subroutine modify_loop_directions(up, ijs, ije)
     ! Case: Lon0
     case( POLYGON_POSITION_LON0 )
       n = p%n_west
-      n_prev = up%n_prev(n,p%n)
-      n_next = up%n_next(n,p%n)
+      n_prev = ap%n_prev(n,p%n)
+      n_next = ap%n_next(n,p%n)
 
       if( p%lat(n_prev) == p%lat(n_next) )then
         is_anticlockwise = p%lon(n_prev) > p%lon(n_next)
@@ -1151,8 +1192,8 @@ subroutine modify_loop_directions(up, ijs, ije)
         is_north = .false.
       endif
 
-      call get_n_next_lon_is_unequal(up, ij, n, p%n, p%n_pole, p%lon, n_next)
-      n = up%n_prev(n_next,p%n)
+      call get_n_next_lon_is_unequal(ap, ij, n, p%n, p%n_pole, p%lon, n_next)
+      n = ap%n_prev(n_next,p%n)
 
       if( p%arcpos(n) == ARC_POSITION_LON0 )then
         is_anticlockwise = p%lon(n) > p%lon(n_next) .eqv. is_north
@@ -1205,9 +1246,29 @@ end subroutine modify_loop_directions
 !===============================================================
 !
 !===============================================================
-subroutine get_n_next_lon_is_unequal(up, ij, n, nmax, n_pole, lon, n_next)
+subroutine update_grdmsk(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(in) :: up
+  type(gs_polygon_), intent(in), target :: ap
+  integer(8), intent(in) :: ijs, ije
+
+  integer(8) :: ij
+
+  call echo(code%bgn, 'update_grdmsk', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  do ij = ijs, ije
+    if( ap%polygon(ij)%n < 3 ) ap%grid%msk(ij) = .false.
+  enddo
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine update_grdmsk
+!===============================================================
+!
+!===============================================================
+subroutine get_n_next_lon_is_unequal(ap, ij, n, nmax, n_pole, lon, n_next)
+  implicit none
+  type(gs_polygon_), intent(in) :: ap
   integer(8), intent(in) :: ij
   integer(8), intent(in) :: n
   integer(4), intent(in) :: nmax, n_pole
@@ -1216,9 +1277,9 @@ subroutine get_n_next_lon_is_unequal(up, ij, n, nmax, n_pole, lon, n_next)
 
   !call echo(code%bgn, 'get_n_next_lon_is_unequal', '-p -x2')
   !-------------------------------------------------------------
-  n_next = up%n_next(n,nmax)
+  n_next = ap%n_next(n,nmax)
   do while( lon(n_next) == lon(n) .or. n_next == n_pole )
-    n_next = up%n_next(n_next,nmax)
+    n_next = ap%n_next(n_next,nmax)
     if( n_next == n )then
       call echo(code%bgn, 'get_n_next_lon_is_unequal', '-p -x2')
       call eerr(str(msg_unexpected_condition())//&
@@ -1233,9 +1294,9 @@ end subroutine get_n_next_lon_is_unequal
 !===============================================================
 !
 !===============================================================
-subroutine print_info(up, ijs, ije)
+subroutine print_info(ap, ijs, ije)
   implicit none
-  type(gs_polygon_), intent(in), target :: up
+  type(gs_polygon_), intent(in), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
@@ -1245,7 +1306,7 @@ subroutine print_info(up, ijs, ije)
   !-------------------------------------------------------------
   mij_valid = 0_8
   do ij = ijs, ije
-    p => up%polygon(ij)
+    p => ap%polygon(ij)
     selectcase( p%n )
     case( 0 )
       cycle
@@ -1261,25 +1322,25 @@ subroutine print_info(up, ijs, ije)
 
   if( mij_valid <= mij_print )then
     do ij = ijs, ije
-      p => up%polygon(ij)
+      p => ap%polygon(ij)
       if( p%n == 0 ) cycle
 
-      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(up%np))//&
-              '\n  lon: '//str(str_coords_lonlat(p%lon,up%coord_miss_s))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat,up%coord_miss_s))//' (deg)')
+      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
+              '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
+              '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s))//' (deg)')
     enddo  ! ij/
   else
     mij_valid = 0_8
     ij = ijs - 1_8
     do while( mij_valid < mij_print/2 )
       ij = ij + 1_8
-      p => up%polygon(ij)
+      p => ap%polygon(ij)
       if( p%n == 0 ) cycle
       call add(mij_valid)
 
-      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(up%np))//&
-              '\n  lon: '//str(str_coords_lonlat(p%lon,up%coord_miss_s))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat,up%coord_miss_s))//' (deg)')
+      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
+              '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
+              '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s))//' (deg)')
     enddo
 
     call edbg('...')
@@ -1288,7 +1349,7 @@ subroutine print_info(up, ijs, ije)
     ij = ije + 1_8
     do while( mij_valid < mij_print/2 )
       ij = ij - 1_8
-      p => up%polygon(ij)
+      p => ap%polygon(ij)
       if( p%n == 0 )cycle
       call add(mij_valid)
     enddo
@@ -1296,12 +1357,12 @@ subroutine print_info(up, ijs, ije)
     ij = ij - 1_8
     do while( ij < ije )
       ij = ij + 1
-      p => up%polygon(ij)
+      p => ap%polygon(ij)
       if( p%n == 0 )cycle
 
-      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(up%np))//&
-              '\n  lon: '//str(str_coords_lonlat(p%lon,up%coord_miss_s))//&
-              '\n  lat: '//str(str_coords_lonlat(p%lat,up%coord_miss_s))//' (deg)')
+      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
+              '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
+              '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s))//' (deg)')
     enddo
   endif
   !-------------------------------------------------------------
@@ -1341,63 +1402,17 @@ end function str_coords_lonlat
 !===============================================================
 !
 !===============================================================
-subroutine make_n_list_polygon(up)
+subroutine free_gs_polygon(ap)
   implicit none
-  type(gs_polygon_), intent(inout) :: up
+  type(gs_polygon_), intent(inout), target :: ap
 
-  integer :: nmax, n
-
-  call echo(code%bgn, 'make_n_list_polygon', '-p -x2')
-  !-------------------------------------------------------------
-  allocate(up%n_next(up%np,up%np), &
-           up%n_prev(up%np,up%np))
-
-  up%n_next(:,:) = 0
-  up%n_prev(:,:) = 0
-
-  do nmax = 3, int(up%np,4)
-    do n = 1, nmax-1
-      up%n_next(n,nmax) = n + 1
-    enddo
-    up%n_next(nmax,nmax) = 1
-
-    up%n_prev(1,nmax) = nmax
-    do n = 2, nmax
-      up%n_prev(n,nmax) = n - 1
-    enddo
-
-    call edbg('nmax '//str(nmax)//&
-            '\n  n_prev '//str(up%n_prev(:nmax,nmax))//&
-            '\n  n_next '//str(up%n_next(:nmax,nmax)))
-  enddo  ! nmax/
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_n_list_polygon
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine free_gs_polygon(up)
-  implicit none
-  type(gs_polygon_), intent(inout), target :: up
-
-  type(zone_polygon_), pointer :: zp
   type(polygon_), pointer :: p
   integer(8) :: ij
 
   call echo(code%bgn, 'free_gs_polygon', '-p -x2')
   !-------------------------------------------------------------
-  zp => up%zone(up%iZone)
-
-  do ij = 1_8, zp%mij
-    p => up%polygon(ij)
+  do ij = 1_8, ap%nij
+    p => ap%polygon(ij)
 
     deallocate(p%lon)
     deallocate(p%lat)
@@ -1414,7 +1429,7 @@ subroutine free_gs_polygon(up)
     deallocate(p%lattop)
   enddo
 
-  deallocate(up%polygon)
+  deallocate(ap%polygon)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine free_gs_polygon

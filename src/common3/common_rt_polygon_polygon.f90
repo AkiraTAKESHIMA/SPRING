@@ -8,20 +8,8 @@ module common_rt_polygon_polygon
   use common_const
   use common_type_opt
   use common_type_gs
-  use common_gs_util, only: &
-        print_gs_polygon, &
-        print_polygon
   ! common2
   use common_type_rt
-  use common_rt1d, only: &
-        init_rt1d, &
-        free_rt1d_data, &
-        reshape_rt1d
-  use common_rt_base, only: &
-        clear_rt_main, &
-        calc_rt_im_nij_ulim
-  use common_rt_io, only: &
-        write_rt_im
   implicit none
   private
   !-------------------------------------------------------------
@@ -37,251 +25,186 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_polygon_polygon(s, t, rt, regions, opt_sys, opt_earth)
+subroutine make_rt_polygon_polygon(s, t, rt)
+  ! common1
+  use common_opt_ctrl, only: &
+        get_opt_earth
+  use common_regions_base, only: &
+        clear_regions
+  use common_gs_util, only: &
+        print_polygon
+  ! common2
+  use common_rt1d, only: &
+        init_rt1d   , &
+        clear_rt1d  , &
+        reshape_rt1d
+  ! commno3
+  use common_rt_polygon_polygon_regions, only: &
+        set_regions_polygon_polygon
   implicit none
-  type(gs_)       , intent(inout), target :: s, t
-  type(rt_)       , intent(inout), target :: rt
-  type(regions_)  , intent(in)            :: regions
-  type(opt_sys_)  , intent(in)            :: opt_sys
-  type(opt_earth_), intent(in)            :: opt_earth
+  type(gs_), intent(inout), target :: s, t
+  type(rt_), intent(inout), target :: rt
 
-  type(gs_common_)      , pointer :: sgc, tgc
-  type(gs_polygon_)     , pointer :: sgp, tgp
-  type(file_polygon_in_), pointer :: sfp, tfp
-  type(zone_polygon_)   , pointer :: szp, tzp
-  type(grid_)           , pointer :: sg, tg
-  type(rt_main_)       , pointer :: rtm
-  type(rt1d_)          , pointer :: rt1d(:), rt1
-  type(polygon_)       , pointer :: sp, tp
+  type(gs_)        , pointer :: a, b
+  type(gs_polygon_), pointer :: ap, bp
+  type(grid_)      , pointer :: ag, bg
+  type(rt_main_)   , pointer :: rtm
+  type(polygon_)   , pointer :: ap0, bp0
 
-  type(region_), pointer :: region
-  integer(8) :: ssij, sij, ttij, tij
-  integer(8) :: tijs
+  type(opt_earth_) :: earth
+  type(rt1d_), pointer :: rt1d(:), rt1
+  type(regions_)          :: regions
+  type(region_) , pointer :: region
+  integer(8) :: aaij, aij, bbij, bij
   integer :: iRegion
-  real(8) :: sarea, tarea
+  real(8) :: aarea, barea
   real(8) :: area
+  integer(8) :: IJSIZE_INIT = 4_8
 
   call echo(code%bgn, 'make_rt_polygon_polygon')
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  sgc => s%cmn
-  tgc => t%cmn
-
-  if( sgc%gs_type /= gs_type_polygon .or. &
-      tgc%gs_type /= gs_type_polygon )then
+  if( s%gs_type /= GS_TYPE_POLYGON .or. &
+      t%gs_type /= GS_TYPE_POLYGON )then
     call eerr(str(msg_invalid_value())//&
-            '\n  s%cmn%gs_type: '//str(sgc%gs_type)//&
-            '\n  t%cmn%gs_type: '//str(tgc%gs_type))
+            '\n  s%gs_type: '//str(s%gs_type)//&
+            '\n  t%gs_type: '//str(t%gs_type))
   endif
 
-  sgp => s%polygon
-  tgp => t%polygon
+  a => s
+  b => t
 
-  sfp => sgp%f_polygon_in
-  tfp => tgp%f_polygon_in
+  ap => a%polygon
+  bp => b%polygon
 
-  szp => sgp%zone(sgp%iZone)
-  tzp => tgp%zone(tgp%iZone)
-
-  sg => sgp%grid
-  tg => tgp%grid
-
-  if( sgc%is_source )then
-    call print_gs_polygon(&
-           'Source', sgc%nam, &
-           szp%ijs, szp%ije, sgp%ijs, sgp%ije)
-    call print_gs_polygon(&
-           'Target', tgc%nam, &
-           tzp%ijs, tzp%ije, tgp%ijs, tgp%ije)
-  else
-    call print_gs_polygon(&
-           'Source', tgc%nam, &
-           tzp%ijs, tzp%ije, tgp%ijs, tgp%ije)
-    call print_gs_polygon(&
-           'Target', sgc%nam, &
-           szp%ijs, szp%ije, sgp%ijs, sgp%ije)
-  endif
+  ag => ap%grid
+  bg => bp%grid
 
   rtm => rt%main
+
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   ! Print debugging grids
   !-------------------------------------------------------------
-  debug = sgp%debug .or. tgp%debug
+  debug = ap%debug .or. bp%debug
 
-  if( sgp%debug )then
-    call search(sgp%idx_debug, sgp%grid%idx, sgp%grid%idxarg, sg%ij_debug)
-    if( sg%ij_debug == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  idx_debug was not found in the list of indices of s')
-    endif
-
-    sp => sgp%polygon(sg%ij_debug)
-    call print_polygon('s_debug', sgp, sg%ij_debug)
-  endif
-
-  if( tgp%debug )then
-    call search(tgp%idx_debug, tgp%grid%idx, tgp%grid%idxarg, tg%ij_debug)
-    if( tg%ij_debug == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  idx_debug was not found in the list of indices of t')
-    endif
-
-    tp => tgp%polygon(tg%ij_debug)
-    call print_polygon('t_debug', tgp, tg%ij_debug)
-  endif
+  if( ap%debug ) call print_polygon(ap%polygon(ap%grid%ij_debug), ap%coord_miss_s)
+  if( bp%debug ) call print_polygon(bp%polygon(bp%grid%ij_debug), bp%coord_miss_s)
   !-------------------------------------------------------------
-  ! Init. rt1d
+  ! Set regions
   !-------------------------------------------------------------
-  allocate(rt1d(1_8:tzp%mij))
+  call set_regions_polygon_polygon(ap, bp, regions)
+  !-------------------------------------------------------------
+  ! Initialize
+  !-------------------------------------------------------------
+  allocate(rt1d(bp%nij))
   call init_rt1d(rt1d)
-  !-------------------------------------------------------------
-  ! Init. regridding table
-  !-------------------------------------------------------------
-  if( opt_sys%memory_ulim == 0.d0 )then
-    rt%im%nij_ulim = 0_8
-  else
-!    call calc_rt_im_nij_ulim(rt%im%nij_ulim, s, t, opt_sys%memory_ulim)
-!    call edbg('rt%im%nij_ulim: '//str(rt%im%nij_ulim))
-    rt%im%nij_ulim = 0_8
-  endif
 
-  rtm%nij = 0_8
-  !-------------------------------------------------------------
-  ! Make a remapping table
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Making a remapping table')
+  do bij = bp%ijs, bp%ije
+    rt1 => rt1d(bij)
+    rt1%mij = 0_8
+    rt1%ijsize = IJSIZE_INIT
+    allocate(rt1%idx(rt1%ijsize))
+    allocate(rt1%ara(rt1%ijsize))
+  enddo
 
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.true.)
   endif
 
-  rt1d(:)%idx_self = tgp%polygon(:)%idx
-  rt1d(:)%mij = 0_8
+  !-------------------------------------------------------------
+  ! Make a remapping table
+  !-------------------------------------------------------------
+  rtm%nij = 0_8
 
   do iRegion = 1, regions%nRegions
     region => regions%region(iRegion)
 
-    do ttij = 1_8, region%mtij
-      tij = region%list_tij(ttij)
-      tp => tgp%polygon(tij)
-      if( tp%idx == tgp%idx_miss ) cycle
-      if( tgp%debug .and. tij /= tg%ij_debug ) cycle
+    do bbij = 1_8, region%mbij
+      bij = region%list_bij(bbij)
+      if( .not. bg%msk(bij) ) cycle
 
-      rt1 => rt1d(tij)
+      bp0 => bp%polygon(bij)
 
-      do ssij = 1_8, region%msij
-        sij = region%list_sij(ssij)
-        sp => sgp%polygon(sij)
-        if( sp%idx == sgp%idx_miss ) cycle
-        if( sgp%debug .and. sij /= sg%ij_debug ) cycle
+      barea = bg%ara(bij) / earth%r**2
 
-        if( to_be_skipped(iRegion, regions%s(sij), regions%t(tij)) ) cycle
+      rt1 => rt1d(bij)
+      rt1%idx_self = bp0%idx
 
-        if( bboxes_intersect(&
-              tp%south, tp%north, tp%west, tp%east, tp%pos==polygon_position_lon0, &
-              sp%south, sp%north, sp%west, sp%east, sp%pos==polygon_position_lon0) )then
-          call add(rt1%mij)
-        endif
-      enddo  ! ssij/
-    enddo  ! ttij/
-  enddo  ! iRegion/
+      do aaij = 1_8, region%maij
+        aij = region%list_aij(aaij)
+        if( .not. ag%msk(aij) ) cycle
 
+        ap0 => ap%polygon(aij)
 
-  tijs = 1_8
-  do tij = 1_8, tzp%mij
-    rt1 => rt1d(tij)
-    allocate(rt1%idx(rt1%mij))
-    allocate(rt1%ara(rt1%mij))
-
-    if( tgp%debug .and. tij == tg%ij_debug )then
-      call edbg('mij: '//str(rt1%mij))
-    endif
-  enddo
-
-  rt1d(:)%mij = 0_8
-
-  do iRegion = 1, regions%nRegions
-    region => regions%region(iRegion)
-
-    do ttij = 1_8, region%mtij
-      tij = region%list_tij(ttij)
-      tp => tgp%polygon(tij)
-      if( tp%idx == tgp%idx_miss ) cycle
-      if( tgp%debug .and. tij /= tg%ij_debug ) cycle
-
-      tarea = tgp%grid%ara(tij) / opt_earth%r**2
-
-      rt1 => rt1d(tij)
-
-      do ssij = 1_8, region%msij
-        sij = region%list_sij(ssij)
-        sp => sgp%polygon(sij)
-        if( sp%idx == sgp%idx_miss ) cycle
-        if( sgp%debug .and. sij /= sg%ij_debug ) cycle
-
-        if( to_be_skipped(iRegion, regions%s(sij), regions%t(tij)) ) cycle
+        if( to_be_skipped(iRegion, regions%a(aij), regions%b(bij)) ) cycle
 
         if( .not. bboxes_intersect(&
-              tp%south, tp%north, tp%west, tp%east, tp%pos==polygon_position_lon0, &
-              sp%south, sp%north, sp%west, sp%east, sp%pos==polygon_position_lon0) )then
+              bp0%south, bp0%north, bp0%west, bp0%east, bp0%pos==POLYGON_POSITION_LON0, &
+              ap0%south, ap0%north, ap0%west, ap0%east, ap0%pos==POLYGON_POSITION_LON0) )then
           cycle
         endif
 
-        sarea = sgp%grid%ara(sij) / opt_earth%r**2
+        aarea = ag%ara(aij) / earth%r**2
 
         if( debug )then
-          if( .not. tgp%debug )then
-            call print_polygon('t', tgp, tij)
-          endif
-
-          if( .not. sgp%debug )then
-            call print_polygon('s', sgp, sij)
-          endif
+          if( .not. bp%debug ) call print_polygon(bp0, bp%coord_miss_s)
+          if( .not. ap%debug ) call print_polygon(ap0, ap%coord_miss_s)
         endif
 
         area = area_sphere_intersection_polygon_polygon(&
-                 sp%pos, sp%x, sp%y, sp%z, sp%lon, sp%lat, &
-                 sp%arctyp, sp%a, sp%b, sp%c, &
-                 sp%n_pole, sp%convex, sp%lontop, sp%lattop, sarea, &
-                 tp%pos, tp%x, tp%y, tp%z, tp%lon, tp%lat, &
-                 tp%arctyp, tp%a, tp%b, tp%c, &
-                 tp%n_pole, tp%convex, tp%lontop, tp%lattop, tarea)
+                 ap0%pos   , ap0%x, ap0%y, ap0%z, ap0%lon, ap0%lat,    &
+                 ap0%arctyp, ap0%a, ap0%b, ap0%c,                      &
+                 ap0%n_pole, ap0%convex  , ap0%lontop    , ap0%lattop, &
+                 aarea     ,                                           &
+                 bp0%pos   , bp0%x, bp0%y, bp0%z, bp0%lon, bp0%lat,    &
+                 bp0%arctyp, bp0%a, bp0%b, bp0%c,                      &
+                 bp0%n_pole, bp0%convex  , bp0%lontop    , bp0%lattop, &
+                 barea)
 
         if( debug )then
           call edbg('  intersection area: '//str(area,'es22.15')//&
-                    ' ('//str(area/tarea*1d2,'f8.3')//' % of T, '//&
-                          str(area/sarea*1d2,'f8.3')//' % of S)')
+                    ' ('//str(area/barea*1d2,'f8.3')//' % of T, '//&
+                          str(area/aarea*1d2,'f8.3')//' % of S)')
         endif
 
-        if( area > 0.d0 )then
-          call add(rt1%mij)
-          rt1%idx(rt1%mij) = sp%idx
-          rt1%ara(rt1%mij) = area
+        if( area <= 0.d0 ) cycle
+
+        if( rt1%mij == rt1%ijsize )then
+          call mul(rt1%ijsize, 2)
+          call realloc(rt1%idx, rt1%ijsize, clear=.false.)
+          call realloc(rt1%ara, rt1%ijsize, clear=.false.)
         endif
+        call add(rt1%mij)
+        rt1%idx(rt1%mij) = ap0%idx
+        rt1%ara(rt1%mij) = area
+
       enddo  ! ssij/
     enddo  ! ttij/
   enddo  ! iRegion/
 
-  ! Reshape and output intermediates
+  ! Reshape 1d-remapping table
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d(tijs:tzp%mij), tgc%is_source, rtm, opt_earth)
-
-  if( rt%im%nZones > 1 .or. rt%im%nij_max > 0_8 )then
-    call write_rt_im(rtm, rt%im, opt_sys%old_files)
-    call clear_rt_main(rtm)
-  endif
+  call reshape_rt1d(rt1d, b%is_source, rtm)
 
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
   !-------------------------------------------------------------
-  call echo(code%ext)
-  !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt1d_data(rt1d(tijs:tzp%mij))
-  deallocate(rt1d)
+  nullify(rt1)
+  call clear_rt1d(rt1d)
+
+  nullify(rtm)
+
+  nullify(region)
+  call clear_regions(regions)
+
+  nullify(ap0, bp0)
+  nullify(ag, bg)
+  nullify(ap, bp)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_polygon_polygon

@@ -8,8 +8,7 @@ program main
   use common_type_rt
   ! common3
   use common_gs_driv, only: &
-        set_gs   , &
-        prep_grid
+        set_gs_all
   use common_rt_driv, only: &
         make_rt
   ! this
@@ -24,33 +23,24 @@ program main
   type(gs_)  :: s  ! source
   type(gs_)  :: t  ! target
   type(rt_)  :: rt
-  type(opt_) :: opt
-  logical :: output = .true.
-  logical :: free_sgrid = .true.
-  logical :: free_tgrid = .true.
-  logical :: free_rtm = .true.
-  logical :: was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved
+  logical :: calc_coef = .true.
+  logical :: calc_vrf  = .true.
+  logical :: output    = .true.
 
   call echo(code%bgn, 'program main', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call read_settings(s, t, rt, opt)
+  call read_settings(s, t, rt)
 
-  call set_gs(s, opt%sys)
-  call set_gs(t, opt%sys)
+  call set_gs_all(s)
+  call set_gs_all(t)
 
-  call prep_grid(s, opt%earth)
-  call prep_grid(t, opt%earth)
-
-  call make_rt(&
-         s, t, rt, opt%sys, opt%log, opt%earth, &
-         output, free_sgrid, free_tgrid, free_rtm, &
-         was_rtm_saved, was_rtv_src_saved, was_rtv_tgt_saved)
+  call make_rt(s, t, rt, calc_coef, calc_vrf, output)
 
   call remap(s, t, rt)
 
-  call finalize()
+  call finalize(s, t, rt)
   !-------------------------------------------------------------
   call echo(code%ret)
 end program main

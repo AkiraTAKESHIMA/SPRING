@@ -11,9 +11,9 @@ module common_rt_set
   !-------------------------------------------------------------
   ! Public Procedures
   !-------------------------------------------------------------
-  public :: init_rt_opt_coef
-  public :: check_values_rt_opt_coef
-  public :: echo_settings_rt_opt_coef
+  public :: init_opt_rt_coef
+  public :: check_values_opt_rt_coef
+  public :: echo_settings_opt_rt_coef
   !-----------------------------------------------------------
   ! Public Variables
   !-----------------------------------------------------------
@@ -35,109 +35,109 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_opt_coef(rt_opt_coef)
+subroutine init_opt_rt_coef(coef)
   implicit none
-  type(rt_opt_coef_), intent(out) :: rt_opt_coef
+  type(opt_rt_coef_), intent(out) :: coef
 
-  call echo(code%bgn, 'init_rt_opt_coef', '-p -x2')
+  call echo(code%bgn, 'init_opt_rt_coef', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  rt_opt_coef%is_sum_modify_enabled = .false.
-  rt_opt_coef%sum_modify = 0.d0
+  coef%is_sum_modify_enabled = .false.
+  coef%sum_modify = 0.d0
 
-  rt_opt_coef%is_sum_modify_ulim_enabled = .false.
-  rt_opt_coef%sum_modify_ulim = 0.d0
+  coef%is_sum_modify_ulim_enabled = .false.
+  coef%sum_modify_ulim = 0.d0
 
-  rt_opt_coef%is_zero_positive_enabled = .false.
-  rt_opt_coef%is_zero_negative_enabled = .false.
-  rt_opt_coef%zero_positive = 0.d0
-  rt_opt_coef%zero_negative = 0.d0
+  coef%is_zero_positive_enabled = .false.
+  coef%is_zero_negative_enabled = .false.
+  coef%zero_positive = 0.d0
+  coef%zero_negative = 0.d0
 
-  rt_opt_coef%is_error_excess_enabled = .false.
-  rt_opt_coef%error_excess = 0.d0
+  coef%is_error_excess_enabled = .false.
+  coef%error_excess = 0.d0
 
-  rt_opt_coef%is_sum_error_excess_enabled = .false.
-  rt_opt_coef%sum_error_excess = 0.d0
+  coef%is_sum_error_excess_enabled = .false.
+  coef%sum_error_excess = 0.d0
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine init_rt_opt_coef
+end subroutine init_opt_rt_coef
 !===============================================================
 !
 !===============================================================
-subroutine check_values_rt_opt_coef(rt_opt_coef)
+subroutine check_values_opt_rt_coef(coef)
   implicit none
-  type(rt_opt_coef_), intent(in) :: rt_opt_coef
+  type(opt_rt_coef_), intent(in) :: coef
 
-  call echo(code%bgn, 'check_values_rt_opt_coef', '-p -x2')
+  call echo(code%bgn, 'check_values_opt_rt_coef', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( rt_opt_coef%is_sum_modify_enabled )then
-    if( rt_opt_coef%sum_modify <= 0.d0 )then
+  if( coef%is_sum_modify_enabled )then
+    if( coef%sum_modify <= 0.d0 )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  rt_opt_coef%sum_modify <= 0'//&
+              '\n  coef%sum_modify <= 0'//&
               '\nThe value of "'//str(key_opt_coef_sum_modify)//'" must be positive.')
     endif
   endif
 
-  if( rt_opt_coef%is_sum_modify_ulim_enabled )then
-    if( rt_opt_coef%sum_modify_ulim <= 0.d0 )then
-      call ewrn('  rt_opt_coef%sum_modify_ulim <= 0'//&
+  if( coef%is_sum_modify_ulim_enabled )then
+    if( coef%sum_modify_ulim <= 0.d0 )then
+      call ewrn('  coef%sum_modify_ulim <= 0'//&
               '\nGenerally the value of "'//str(key_opt_coef_sum_modify_ulim)//&
                 '" is positive. Make sure that the value is correct.')
     endif
   endif
 
-  if( rt_opt_coef%is_zero_positive_enabled )then
-    if( rt_opt_coef%zero_positive < 0.d0 )then
+  if( coef%is_zero_positive_enabled )then
+    if( coef%zero_positive < 0.d0 )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  rt_opt_coef%zero_positive < 0'//&
+              '\n  coef%zero_positive < 0'//&
               '\nThe value of "'//str(key_opt_coef_zero_positive)//&
                 '" must be non-negative.')
     endif
   endif
 
-  if( rt_opt_coef%is_zero_negative_enabled )then
-    if( rt_opt_coef%zero_negative > 0.d0 )then
+  if( coef%is_zero_negative_enabled )then
+    if( coef%zero_negative > 0.d0 )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  rt_opt_coef%zero_negative < 0'//&
+              '\n  coef%zero_negative < 0'//&
               '\nThe value of "'//str(key_opt_coef_zero_negative)//&
                 '" must be non-positive.')
     endif
   endif
 
-  if( rt_opt_coef%is_error_excess_enabled )then
-    if( rt_opt_coef%error_excess < 0.d0 )then
+  if( coef%is_error_excess_enabled )then
+    if( coef%error_excess < 0.d0 )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  rt_opt_coef%error_excess < 0'//&
+              '\n  coef%error_excess < 0'//&
               '\nThe value of "'//str(key_opt_coef_error_excess)//&
                 '" must be non-negative.')
     endif
   endif
 
-  if( rt_opt_coef%is_sum_error_excess_enabled )then
-    if( rt_opt_coef%sum_error_excess < 0.d0 )then
+  if( coef%is_sum_error_excess_enabled )then
+    if( coef%sum_error_excess < 0.d0 )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  rt_opt_coef%sum_error_excess < 0'//&
+              '\n  coef%sum_error_excess < 0'//&
               '\nThe value of "'//str(key_opt_coef_error_excess)//&
                '" must be non-negative.')
     endif
   endif 
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine check_values_rt_opt_coef
+end subroutine check_values_opt_rt_coef
 !===============================================================
 !
 !===============================================================
-subroutine echo_settings_rt_opt_coef(rt_opt_coef, indent)
+subroutine echo_settings_opt_rt_coef(coef, indent)
   implicit none
-  type(rt_opt_coef_), intent(in) :: rt_opt_coef
+  type(opt_rt_coef_), intent(in) :: coef
   integer           , intent(in) :: indent
 
   character(8) :: opt1, opt2
 
-  call echo(code%bgn, 'echo_settings_rt_opt_coef', '-p -x2')
+  call echo(code%bgn, 'echo_settings_opt_rt_coef', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -146,46 +146,46 @@ subroutine echo_settings_rt_opt_coef(rt_opt_coef, indent)
 
   call edbg('Modification or checking of coef.', opt1)
 
-  if( rt_opt_coef%is_sum_modify_enabled )then
-    call edbg('Sum.: '//str(rt_opt_coef%sum_modify), opt2)
+  if( coef%is_sum_modify_enabled )then
+    call edbg('Sum.: '//str(coef%sum_modify), opt2)
   else
     call edbg('Sum.: (not enabled)', opt2)
   endif
 
-  if( rt_opt_coef%is_sum_modify_ulim_enabled )then
-    call edbg('Upper lim. of sum.: '//str(rt_opt_coef%sum_modify_ulim), opt2)
+  if( coef%is_sum_modify_ulim_enabled )then
+    call edbg('Upper lim. of sum.: '//str(coef%sum_modify_ulim), opt2)
   else
     call edbg('Upper lim. of sum.: (not enabled)', opt2)
   endif
 
-  if( rt_opt_coef%is_zero_positive_enabled .and. &
-      rt_opt_coef%is_zero_negative_enabled )then
+  if( coef%is_zero_positive_enabled .and. &
+      coef%is_zero_negative_enabled )then
     call edbg('Values in the range ['//&
-              trim(adjustl(str(rt_opt_coef%zero_negative,'es10.3')))//', '//&
-              trim(adjustl(str(rt_opt_coef%zero_positive,'es10.3')))//&
+              trim(adjustl(str(coef%zero_negative,'es10.3')))//', '//&
+              trim(adjustl(str(coef%zero_positive,'es10.3')))//&
              '] will be ignored', opt2)
-  elseif( rt_opt_coef%is_zero_positive_enabled )then
+  elseif( coef%is_zero_positive_enabled )then
     call edbg('Values in the range ['//&
-              '0.0, '//trim(adjustl(str(rt_opt_coef%zero_positive,'es10.3')))//&
+              '0.0, '//trim(adjustl(str(coef%zero_positive,'es10.3')))//&
              '] will be ignored', opt2)
-  elseif( rt_opt_coef%is_zero_negative_enabled )then
+  elseif( coef%is_zero_negative_enabled )then
     call edbg('Values in the range ['//&
-              trim(adjustl(str(rt_opt_coef%zero_negative,'es10.3')))//', 0.0'//&
+              trim(adjustl(str(coef%zero_negative,'es10.3')))//', 0.0'//&
              '] will be ignored', opt2)
   endif
 
-  if( rt_opt_coef%is_error_excess_enabled )then
+  if( coef%is_error_excess_enabled )then
     call edbg('Stop if value is greater than 1.0+'//&
-              trim(adjustl(str(rt_opt_coef%error_excess,'es10.3'))), opt2)
+              trim(adjustl(str(coef%error_excess,'es10.3'))), opt2)
   endif
 
-  if( rt_opt_coef%is_sum_error_excess_enabled )then
+  if( coef%is_sum_error_excess_enabled )then
     call edbg('Stop if sum. of values for each grid is greater than 1.0+'//&
-              trim(adjustl(str(rt_opt_coef%sum_error_excess,'es10.3'))), opt2)
+              trim(adjustl(str(coef%sum_error_excess,'es10.3'))), opt2)
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine echo_settings_rt_opt_coef
+end subroutine echo_settings_opt_rt_coef
 !===============================================================
 !
 !===============================================================

@@ -20,7 +20,7 @@ module mod_set
   !-------------------------------------------------------------
   public :: read_settings
   !-------------------------------------------------------------
-  ! Private variables
+  ! Private module variables
   !-------------------------------------------------------------
 
   !-------------------------------------------------------------
@@ -28,7 +28,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine read_settings(gs_source, gs_target, rt, opt)
+subroutine read_settings(gs_source, gs_target, rt)
   use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
@@ -42,6 +42,10 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
         msg_invalid_input
   use common_file, only: &
         open_report_file
+  use common_opt_ctrl, only: &
+        set_opt_sys, &
+        set_opt_log, &
+        set_opt_earth
   use common_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
@@ -56,7 +60,6 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   implicit none
   type(gs_) , intent(out), target :: gs_source, gs_target
   type(rt_) , intent(out), target :: rt
-  type(opt_), intent(out)         :: opt
 
   type counter_
     integer :: gs
@@ -68,17 +71,14 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
 
   character(CLEN_VAR) :: block_name
 
-  type(gs_)            , pointer :: u
-  type(gs_common_)     , pointer :: uc
-  type(file_raster_in_), pointer :: fr
-  type(rt_main_)       , pointer :: rtm
-  type(rt_vrf_)        , pointer :: rtv
-  type(file_rt_vrf_)   , pointer :: fvrf
-  type(file_grid_out_) , pointer :: fg_out
-  type(file_)          , pointer :: f
+  type(gs_)         , pointer :: a
+  type(gs_common_)  , pointer :: ac
+  type(rt_main_)    , pointer :: rtm
+  type(rt_vrf_)     , pointer :: rtv
+  type(file_rt_vrf_), pointer :: fvrf
+  type(opt_) :: opt
   integer :: iGs
   integer :: iFile_vrf
-  character(CLEN_PATH) :: path_head, path_tail
   character(CLEN_KEY) :: grid
 
   character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'grid_system_latlon'
@@ -141,20 +141,20 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
     ! Case: gs_latlon
     case( BLOCK_NAME_GS_LATLON )
       call update_counter(counter%gs, block_name)
-      call select_gs(counter%gs, gs_source, gs_target, u)
-      call read_settings_gs_latlon(u)
+      call select_gs(counter%gs, gs_source, gs_target, a)
+      call read_settings_gs_latlon(a)
     !-----------------------------------------------------------
     ! Case: gs_raster
     case( BLOCK_NAME_GS_RASTER )
       call update_counter(counter%gs, block_name)
-      call select_gs(counter%gs, gs_source, gs_target, u)
-      call read_settings_gs_raster(u)
+      call select_gs(counter%gs, gs_source, gs_target, a)
+      call read_settings_gs_raster(a)
     !-----------------------------------------------------------
     ! Case: gs_polygon
     case( BLOCK_NAME_GS_POLYGON )
       call update_counter(counter%gs, block_name)
-      call select_gs(counter%gs, gs_source, gs_target, u)
-      call read_settings_gs_polygon(u)
+      call select_gs(counter%gs, gs_source, gs_target, a)
+      call read_settings_gs_polygon(a)
     !-----------------------------------------------------------
     ! Case: rt
     case( BLOCK_NAME_REMAPPING )
@@ -195,18 +195,18 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   !-------------------------------------------------------------
   if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
     do iGs = 1, 2
-      call select_gs(iGs, gs_source, gs_target, u)
+      call select_gs(iGs, gs_source, gs_target, a)
 
-      selectcase( u%gs_type )
+      selectcase( a%gs_type )
       case( GS_TYPE_LATLON, &
             GS_TYPE_RASTER )
         continue
       case( GS_TYPE_POLYGON )
         call eerr(str(msg_unexpected_condition())//&
                 '\n  opt%earth%shp == '//str(opt%earth%shp)//&
-                  ' .and. '//str(u%id)//'%gs_type == '//str(u%gs_type)//&
+                  ' .and. '//str(a%id)//'%gs_type == '//str(a%gs_type)//&
                 '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                  ' for the grid type "'//str(u%gs_type)//'".')
+                  ' for the grid type "'//str(a%gs_type)//'".')
       endselect
     enddo
   endif
@@ -214,8 +214,8 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   ! Verification data and a file of grid index
   !-------------------------------------------------------------
   do iGs = 1, 2
-    call select_gs_rtv(iGs, gs_source, gs_target, rt, u, rtv, grid)
-    uc => u%cmn
+    call select_gs_rtv(iGs, gs_source, gs_target, rt, a, rtv, grid)
+    ac => a%cmn
 
     do iFile_vrf = 1, rtv%nFiles
       fvrf => rtv%f(iFile_vrf)
@@ -228,22 +228,22 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
       !---------------------------------------------------------
       ! Case: Index
       case( GRID_FORM_INDEX )
-        if( uc%f_grid_in%idx%path == '' )then
+        if( ac%f_grid_in%idx%path == '' )then
           call eerr(str(msg_unexpected_condition())//&
                   '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
-                    ' .and. '//str(uc%f_grid_in%idx%id)//'%path == ""'//&
+                    ' .and. '//str(ac%f_grid_in%idx%id)//'%path == ""'//&
                   '\nForm of verification data for '//str(grid)//' grid is "'//&
                     str(GRID_FORM_INDEX)//'", but file of grid index was not specified.')
         endif
       !---------------------------------------------------------
       ! Case: Raster
       case( GRID_FORM_RASTER )
-        if( uc%gs_type /= GS_TYPE_RASTER )then
+        if( ac%gs_type /= GS_TYPE_RASTER )then
           call eerr(str(msg_unexpected_condition())//&
                   '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
-                    ' .and. '//str(uc%id)//'%gs_type /= '//str(GS_TYPE_RASTER)//&
+                    ' .and. '//str(ac%id)//'%gs_type /= '//str(GS_TYPE_RASTER)//&
                   '\nForm of verification data for '//str(grid)//' grid is "'//&
-                    str(GRID_FORM_RASTER)//'", but grid type is "'//str(uc%gs_type)//'".')
+                    str(GRID_FORM_RASTER)//'", but grid type is "'//str(ac%gs_type)//'".')
         endif
       !---------------------------------------------------------
       ! Case: ERROR
@@ -274,148 +274,27 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   ! Path of intermediates of grid
   !-------------------------------------------------------------
   do iGs = 1, 2
-    call select_gs(iGs, gs_source, gs_target, u, grid)
-    uc => u%cmn
+    call select_gs(iGs, gs_source, gs_target, a, grid)
+    ac => a%cmn
 
     call set_miss_file_grid_in(&
-           uc%f_grid_in, &
-           uc%idx_miss, uc%ara_miss, uc%wgt_miss, &
-           uc%xyz_miss, uc%lonlat_miss, uc%val_miss)
+           ac%f_grid_in, &
+           ac%idx_miss, ac%ara_miss, ac%wgt_miss, &
+           ac%xyz_miss, ac%lonlat_miss, ac%val_miss)
 
     call set_miss_file_grid_out(&
-           uc%f_grid_out, &
-           uc%idx_miss, uc%ara_miss, uc%wgt_miss, &
-           uc%xyz_miss, uc%lonlat_miss, uc%val_miss)
+           ac%f_grid_out, &
+           ac%idx_miss, ac%ara_miss, ac%wgt_miss, &
+           ac%xyz_miss, ac%lonlat_miss, ac%val_miss)
 
-    call set_save_file_grid_out(uc%f_grid_out)
-
-    uc%f_grid_out%path_im_base = joined(opt%sys%dir_im, 'spring.grid_'//str(grid)//'.im')
+    call set_save_file_grid_out(ac%f_grid_out)
   enddo
 
-  ! Path of intermediates of remapping table
+  ! Options
   !-------------------------------------------------------------
-  rt%im%path = joined(opt%sys%dir_im, 'spring.rt.im')
-
-  ! Path of tmp. file of remapping table
-  !-------------------------------------------------------------
-  if( rtm%f%sidx%rec == 1 )then
-    rtm%f%sidx_tmp = rtm%f%sidx
-  else
-    rtm%f%sidx_tmp%path = joined(opt%sys%dir_im, 'spring.rt_sidx.im')
-  endif
-
-  if( rtm%f%tidx%rec == 1 )then
-    rtm%f%tidx_tmp = rtm%f%tidx
-  else
-    rtm%f%tidx_tmp%path = joined(opt%sys%dir_im, 'spring.rt_tidx.im')
-  endif
-
-  if( rtm%f%area%rec == 1 )then
-    rtm%f%area_tmp = rtm%f%area
-  else
-    rtm%f%area_tmp%path = joined(opt%sys%dir_im, 'spring.rt_area.im')
-  endif
-
-  if( rtm%f%coef%rec == 1 )then
-    rtm%f%coef_tmp = rtm%f%coef
-  else
-    rtm%f%coef_tmp%path = joined(opt%sys%dir_im, 'spring.rt_coef.im')
-  endif
-
-  ! Path of tmp. file of verification data
-  !-------------------------------------------------------------
-  do iGs = 1, 2
-    call select_gs_rtv(iGs, gs_source, gs_target, rt, u, rtv, grid)
-
-    fg_out => u%cmn%f_grid_out
-
-    do iFile_vrf = 1, rtv%nFiles
-      fvrf => rtv%f(iFile_vrf)
-      !---------------------------------------------------------
-      !
-      !---------------------------------------------------------
-      selectcase( fvrf%form )
-      !---------------------------------------------------------
-      ! Auto
-      case( GRID_FORM_AUTO )
-        continue
-      !---------------------------------------------------------
-      ! Index
-      case( GRID_FORM_INDEX )
-        continue
-      !---------------------------------------------------------
-      ! Raster
-      case( GRID_FORM_RASTER )
-        fr => u%raster%f_raster_in
-
-        f => fvrf%out_iarea_sum
-        f%sz(:2) = fr%ub(:2) - fr%lb(:2) + 1_8
-        f%lb(:2) = 1_8
-        f%ub(:2) = f%sz(:2)
-
-        f => fvrf%out_iratio_sum
-        f%sz(:2) = fr%ub(:2) - fr%lb(:2) + 1_8
-        f%lb(:2) = 1_8
-        f%ub(:2) = f%sz(:2)
-      !---------------------------------------------------------
-      ! ERROR
-      case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  '//str(fvrf%id)//'%form: '//str(fvrf%form))
-      endselect
-      !---------------------------------------------------------
-      !
-      !---------------------------------------------------------
-      path_head = 'spring.rt_vrf_'//str(grid)//'_'
-      path_tail = '.'//str(iFile_vrf,-dgt(rtv%nFiles))//'.tmp'
-
-      if( fvrf%out_grdidx%rec == 1 )then
-        f => fvrf%out_grdidx
-        call update_file(fvrf%out_tmp_grdidx, &
-                         path=f%path, dtype=f%dtype, rec=f%rec, endian=f%endian)
-      else
-        fvrf%out_tmp_grdidx%path &
-          = joined(opt%sys%dir_im, trim(path_head)//'grdidx'//trim(path_tail))
-      endif
-
-      if( fvrf%out_grdara_true%rec == 1 )then
-        f => fvrf%out_grdara_true
-        call update_file(fvrf%out_tmp_grdara_true, &
-                         path=f%path, dtype=f%dtype, rec=f%rec, endian=f%endian)
-      else
-        fvrf%out_tmp_grdara_true%path &
-          = joined(opt%sys%dir_im, trim(path_head)//'grdara_true'//trim(path_tail))
-      endif
-
-      if( fvrf%out_grdara_rt%rec == 1 )then
-        f => fvrf%out_grdara_rt
-        call update_file(fvrf%out_tmp_grdara_rt, &
-                         path=f%path, dtype=f%dtype, rec=f%rec, endian=f%endian)
-      else
-        fvrf%out_tmp_grdara_rt%path &
-          = joined(opt%sys%dir_im, trim(path_head)//'grdara_rt'//trim(path_tail))
-      endif
-
-      if( fvrf%out_rerr_grdara%rec == 1 )then
-        f => fvrf%out_rerr_grdara
-        call update_file(fvrf%out_tmp_rerr_grdara, &
-                         path=f%path, dtype=f%dtype, rec=f%rec, endian=f%endian)
-      else
-        fvrf%out_tmp_rerr_grdara%path &
-          = joined(opt%sys%dir_im, trim(path_head)//'rerr_grdara'//trim(path_tail))
-      endif
-
-      if( fvrf%out_grdnum%rec == 1 )then
-        f => fvrf%out_grdnum
-        call update_file(fvrf%out_tmp_grdnum, &
-                         path=f%path, dtype=f%dtype, rec=f%rec, endian=f%endian)
-      else
-        fvrf%out_tmp_grdnum%path &
-          = joined(opt%sys%dir_im, trim(path_head)//'grdnum'//trim(path_tail))
-      endif
-      !---------------------------------------------------------
-    enddo  ! iFile/
-  enddo  ! iGs/
+  call set_opt_sys(opt%sys)
+  call set_opt_log(opt%log)
+  call set_opt_earth(opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -424,20 +303,20 @@ subroutine read_settings(gs_source, gs_target, rt, opt)
   call echo(code%ent, 'Printing the settings', '-p -x2')
 
   do iGs = 1, 2
-    call select_gs(iGs, gs_source, gs_target, u)
+    call select_gs(iGs, gs_source, gs_target, a)
 
-    selectcase( u%gs_type )
+    selectcase( a%gs_type )
     case( GS_TYPE_LATLON )
-      call echo_settings_gs_latlon(u%latlon)
+      call echo_settings_gs_latlon(a%latlon)
 
     case( GS_TYPE_RASTER )
-      call echo_settings_gs_raster(u%raster)
+      call echo_settings_gs_raster(a%raster)
 
     case( GS_TYPE_POLYGON )
-      call echo_settings_gs_polygon(u%polygon)
+      call echo_settings_gs_polygon(a%polygon)
 
     case default
-      call eerr('Invalid value in '//str(u%id)//'%gs_type: '//str(u%gs_type))
+      call eerr('Invalid value in '//str(a%id)//'%gs_type: '//str(a%gs_type))
     endselect
   enddo
 
@@ -531,7 +410,7 @@ end subroutine read_settings
 !===============================================================
 !
 !===============================================================
-subroutine read_settings_gs_latlon(u)
+subroutine read_settings_gs_latlon(a)
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -547,18 +426,20 @@ subroutine read_settings_gs_latlon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
+        set_gs_common               , &
         set_default_values_gs_latlon, &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out    , &
-        set_gs_common
+        set_bounds_file_grid_out
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
+  use common_gs_util, only: &
+        set_gs_debug
   implicit none
-  type(gs_), intent(inout), target :: u
+  type(gs_), intent(inout), target :: a
 
-  type(gs_latlon_)     , pointer :: ul
+  type(gs_latlon_)     , pointer :: al
   type(file_latlon_in_), pointer :: fl
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
@@ -610,13 +491,14 @@ subroutine read_settings_gs_latlon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, GS_TYPE_LATLON)
-  call set_default_values_gs_latlon(u%latlon)
+  call alloc_gs_components(a, GS_TYPE_LATLON)
+  call set_default_values_gs_latlon(a%latlon)
+  call set_gs_common(a)
 
-  ul => u%latlon
-  fl     => ul%f_latlon_in
-  fg_in  => ul%f_grid_in
-  fg_out => ul%f_grid_out
+  al => a%latlon
+  fl     => al%f_latlon_in
+  fg_in  => al%f_grid_in
+  fg_out => al%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -638,28 +520,27 @@ subroutine read_settings_gs_latlon(u)
     !-----------------------------------------------------------
     ! Name
     case( 'name' )
-      call read_value(u%nam)
-      call remove_quotes(u%nam, QUOTE_BOTH)
+      call read_value(a%nam)
     !-----------------------------------------------------------
     ! Resolution
     case( 'nx' )
-      call read_value(ul%nx)
+      call read_value(al%nx)
     case( 'ny' )
-      call read_value(ul%ny)
+      call read_value(al%ny)
     !-----------------------------------------------------------
     ! Region
     case( 'west' )
-      call read_value(ul%west)
+      call read_value(al%west)
     case( 'east' )
-      call read_value(ul%east)
+      call read_value(al%east)
     case( 'south' )
-      call read_value(ul%south)
+      call read_value(al%south)
     case( 'north' )
-      call read_value(ul%north)
+      call read_value(al%north)
     !-----------------------------------------------------------
     ! Y-axis
     case( 'is_south_to_north' )
-      call read_value(ul%is_south_to_north)
+      call read_value(al%is_south_to_north)
     !-----------------------------------------------------------
     ! Parent directory
     case( 'dir' )
@@ -672,7 +553,7 @@ subroutine read_settings_gs_latlon(u)
       call read_value(fl%lat, dir)
 
     case( 'coord_unit' )
-      call read_value(ul%coord_unit, is_keyword=.true.)
+      call read_value(al%coord_unit, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Grid data
     case( 'idx_bgn' )
@@ -714,21 +595,21 @@ subroutine read_settings_gs_latlon(u)
     !-----------------------------------------------------------
     ! Missing value
     case( 'idx_miss' )
-      call read_value(ul%idx_miss)
+      call read_value(al%idx_miss)
     case( 'ara_miss' )
-      call read_value(ul%ara_miss)
+      call read_value(al%ara_miss)
     case( 'wgt_miss' )
-      call read_value(ul%wgt_miss)
+      call read_value(al%wgt_miss)
     case( 'xyz_miss' )
-      call read_value(ul%xyz_miss)
+      call read_value(al%xyz_miss)
     case( 'lonlat_miss' )
-      call read_value(ul%lonlat_miss)
+      call read_value(al%lonlat_miss)
     case( 'val_miss' )
-      call read_value(ul%val_miss)
+      call read_value(al%val_miss)
     !-----------------------------------------------------------
     ! Debugging
     case( 'idx_debug' )
-      call read_value(ul%idx_debug)
+      call read_value(al%idx_debug)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -745,8 +626,8 @@ subroutine read_settings_gs_latlon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  if( keynum('west' ) == 1 ) call check_bounds_lon(ul%west , ul%east )
-  if( keynum('south') == 1 ) call check_bounds_lat(ul%south, ul%north)
+  if( keynum('west' ) == 1 ) call check_bounds_lon(al%west , al%east )
+  if( keynum('south') == 1 ) call check_bounds_lat(al%south, al%north)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -755,15 +636,12 @@ subroutine read_settings_gs_latlon(u)
   call echo(code%ent, 'Setting the related values')
 
   call set_bounds_file_latlon_in(&
-         fl, ul%nx, ul%ny,                       & ! in
-         ul%nh, ul%hi, ul%hf, ul%nv, ul%vi, ul%vf) ! out
-  call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
-  call set_bounds_file_grid_out(fg_out, ul%nx, ul%ny)
+         fl, al%nx, al%ny,                       & ! in
+         al%nh, al%hi, al%hf, al%nv, al%vi, al%vf) ! out
+  call set_bounds_file_grid_in(fg_in, al%nx, al%ny)
+  call set_bounds_file_grid_out(fg_out, al%nx, al%ny)
 
-  call set_gs_common(u)
-
-  ul%debug = keynum('idx_debug') == 1
-  if( .not. ul%debug ) ul%idx_debug = ul%idx_miss
+  call set_gs_debug(al%debug, al%idx_debug, al%idx_miss, keynum('idx_debug')==1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -898,7 +776,9 @@ end subroutine read_settings_gs_latlon
 !===============================================================
 !
 !===============================================================
-subroutine read_settings_gs_raster(u)
+subroutine read_settings_gs_raster(a)
+  use common_const_util, only: &
+        checkval_grdidx_condition
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -914,18 +794,20 @@ subroutine read_settings_gs_raster(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
+        set_gs_common               , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out    , &
-        set_gs_common
+        set_bounds_file_grid_out
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
+  use common_gs_util, only: &
+        set_gs_debug
   implicit none
-  type(gs_), intent(inout), target :: u
+  type(gs_), intent(inout), target :: a
 
-  type(gs_raster_)     , pointer :: ur
+  type(gs_raster_)     , pointer :: ar
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
@@ -938,7 +820,7 @@ subroutine read_settings_gs_raster(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(37)
+  call alloc_keynum(38)
   call set_keynum('name', 0, 1)
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
@@ -969,6 +851,7 @@ subroutine read_settings_gs_raster(u)
   call set_keynum('in_grid_sz', 0, 1)
   call set_keynum('in_grid_lb', 0, 1)
   call set_keynum('in_grid_ub', 0, 1)
+  call set_keynum('grdidx_condition', 0, 1)
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('ara_miss', 0, 1)
   call set_keynum('wgt_miss', 0, 1)
@@ -983,13 +866,14 @@ subroutine read_settings_gs_raster(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, GS_TYPE_RASTER)
-  call set_default_values_gs_raster(u%raster)
+  call alloc_gs_components(a, GS_TYPE_RASTER)
+  call set_default_values_gs_raster(a%raster)
+  call set_gs_common(a)
 
-  ur => u%raster
-  fr     => ur%f_raster_in
-  fg_in  => ur%f_grid_in
-  fg_out => ur%f_grid_out
+  ar => a%raster
+  fr     => ar%f_raster_in
+  fg_in  => ar%f_grid_in
+  fg_out => ar%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1011,36 +895,35 @@ subroutine read_settings_gs_raster(u)
     !-----------------------------------------------------------
     ! Name
     case( 'name' )
-      call read_value(u%nam)
-      call remove_quotes(u%nam, QUOTE_BOTH)
+      call read_value(a%nam)
     !-----------------------------------------------------------
     ! Resolution
     case( 'nx' )
-      call read_value(ur%nx)
+      call read_value(ar%nx)
     case( 'ny' )
-      call read_value(ur%ny)
+      call read_value(ar%ny)
     case( 'xi' )
-      call read_value(ur%xi)
+      call read_value(ar%xi)
     case( 'xf' )
-      call read_value(ur%xf)
+      call read_value(ar%xf)
     case( 'yi' )
-      call read_value(ur%yi)
+      call read_value(ar%yi)
     case( 'yf' )
-      call read_value(ur%yf)
+      call read_value(ar%yf)
     !-----------------------------------------------------------
     ! Region
     case( 'west' )
-      call read_value(ur%west)
+      call read_value(ar%west)
     case( 'east' )
-      call read_value(ur%east)
+      call read_value(ar%east)
     case( 'south' )
-      call read_value(ur%south)
+      call read_value(ar%south)
     case( 'north' )
-      call read_value(ur%north)
+      call read_value(ar%north)
     !-----------------------------------------------------------
     ! Y-axis
     case( 'is_south_to_north' )
-      call read_value(ur%is_south_to_north)
+      call read_value(ar%is_south_to_north)
     !-----------------------------------------------------------
     ! Parent directory
     case( 'dir' )
@@ -1081,24 +964,27 @@ subroutine read_settings_gs_raster(u)
     case( 'in_grid_ub' )
       call read_value(fg_in%ub(1), pos=1)
       call read_value(fg_in%ub(2), pos=2)
+
+    case( 'grdidx_condition' )
+      call read_value(ar%grdidx_condition, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Missing values
     case( 'idx_miss' )
-      call read_value(ur%idx_miss)
+      call read_value(ar%idx_miss)
     case( 'ara_miss' )
-      call read_value(ur%ara_miss)
+      call read_value(ar%ara_miss)
     case( 'wgt_miss' )
-      call read_value(ur%wgt_miss)
+      call read_value(ar%wgt_miss)
     case( 'xyz_miss' )
-      call read_value(ur%xyz_miss)
+      call read_value(ar%xyz_miss)
     case( 'lonlat_miss' )
-      call read_value(ur%lonlat_miss)
+      call read_value(ar%lonlat_miss)
     case( 'val_miss' )
-      call read_value(ur%val_miss)
+      call read_value(ar%val_miss)
     !-----------------------------------------------------------
     ! Debugging
     case( 'idx_debug' )
-      call read_value(ur%idx_debug)
+      call read_value(ar%idx_debug)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -1115,8 +1001,10 @@ subroutine read_settings_gs_raster(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  call check_bounds_lon(ur%west , ur%east )
-  call check_bounds_lat(ur%south, ur%north)
+  call check_bounds_lon(ar%west , ar%east )
+  call check_bounds_lat(ar%south, ar%north)
+
+  call checkval_grdidx_condition(ar%grdidx_condition, 'ar%grdidx_condition')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1126,16 +1014,13 @@ subroutine read_settings_gs_raster(u)
 
   call set_bounds_file_raster_in(&
          fr,                                     & ! inout
-         ur%nx, ur%ny, ur%is_south_to_north,     & ! in
-         ur%xi, ur%xf, ur%yi, ur%yf,             & ! out
-         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) ! out
+         ar%nx, ar%ny, ar%is_south_to_north,     & ! in
+         ar%xi, ar%xf, ar%yi, ar%yf,             & ! out
+         ar%nh, ar%hi, ar%hf, ar%nv, ar%vi, ar%vf) ! out
   call set_bounds_file_grid_in(fg_in)
-  call set_bounds_file_grid_out(fg_out, ur%nx, ur%ny)
+  call set_bounds_file_grid_out(fg_out, ar%nx, ar%ny)
 
-  call set_gs_common(u)
-
-  ur%debug = keynum('idx_debug') == 1
-  if( .not. ur%debug ) ur%idx_debug = ur%idx_miss
+  call set_gs_debug(ar%debug, ar%idx_debug, ar%idx_miss, keynum('idx_debug')==1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1236,7 +1121,7 @@ end subroutine read_settings_gs_raster
 !===============================================================
 !
 !===============================================================
-subroutine read_settings_gs_polygon(u)
+subroutine read_settings_gs_polygon(a)
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -1252,15 +1137,17 @@ subroutine read_settings_gs_polygon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components          , &
+        set_gs_common                , &
         set_default_values_gs_polygon, &
         set_bounds_file_polygon_in   , &
         set_bounds_file_grid_in      , &
-        set_bounds_file_grid_out     , &
-        set_gs_common
+        set_bounds_file_grid_out
+  use common_gs_util, only: &
+        set_gs_debug
   implicit none
-  type(gs_), intent(inout), target :: u
+  type(gs_), intent(inout), target :: a
 
-  type(gs_polygon_)     , pointer :: up
+  type(gs_polygon_)     , pointer :: ap
   type(file_polygon_in_), pointer :: fp
   type(file_grid_in_)   , pointer :: fg_in
   type(file_grid_out_)  , pointer :: fg_out
@@ -1313,13 +1200,14 @@ subroutine read_settings_gs_polygon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, GS_TYPE_POLYGON)
-  call set_default_values_gs_polygon(u%polygon)
+  call alloc_gs_components(a, GS_TYPE_POLYGON)
+  call set_default_values_gs_polygon(a%polygon)
+  call set_gs_common(a)
 
-  up => u%polygon
-  fp     => up%f_polygon_in
-  fg_in  => up%f_grid_in
-  fg_out => up%f_grid_out
+  ap => a%polygon
+  fp     => ap%f_polygon_in
+  fg_in  => ap%f_grid_in
+  fg_out => ap%f_grid_out
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1341,16 +1229,15 @@ subroutine read_settings_gs_polygon(u)
     !-----------------------------------------------------------
     ! Name
     case( 'name' )
-      call read_value(u%nam)
-      call remove_quotes(u%nam, QUOTE_BOTH)
+      call read_value(a%nam)
     !-----------------------------------------------------------
     ! Shape
     case( 'np' )
-      call read_value(up%np)
+      call read_value(ap%np)
     !-----------------------------------------------------------
     ! Resolution
     case( 'nij' )
-      call read_value(up%nij)
+      call read_value(ap%nij)
     !-----------------------------------------------------------
     ! Parent directory
     case( 'dir' )
@@ -1369,7 +1256,7 @@ subroutine read_settings_gs_polygon(u)
       call read_value(fp%z, dir)
 
     case( 'coord_unit' )
-      call read_value(up%coord_unit, is_keyword=.true.)
+      call read_value(ap%coord_unit, is_keyword=.true.)
 
     case( 'coord_miss' )
       call read_value(coord_miss)
@@ -1379,7 +1266,7 @@ subroutine read_settings_gs_polygon(u)
       call read_value(fp%arctyp, dir)
 
     case( 'arc_parallel' )
-      call read_value(up%arc_parallel)
+      call read_value(ap%arc_parallel)
     !-----------------------------------------------------------
     ! Grid data
     case( 'idx_bgn' )
@@ -1414,21 +1301,21 @@ subroutine read_settings_gs_polygon(u)
     !-----------------------------------------------------------
     ! Missing value
     case( 'idx_miss' )
-      call read_value(up%idx_miss)
+      call read_value(ap%idx_miss)
     case( 'ara_miss' )
-      call read_value(up%ara_miss)
+      call read_value(ap%ara_miss)
     case( 'wgt_miss' )
-      call read_value(up%wgt_miss)
+      call read_value(ap%wgt_miss)
     case( 'xyz_miss' )
-      call read_value(up%xyz_miss)
+      call read_value(ap%xyz_miss)
     case( 'lonlat_miss' )
-      call read_value(up%lonlat_miss)
+      call read_value(ap%lonlat_miss)
     case( 'val_miss' )
-      call read_value(up%val_miss)
+      call read_value(ap%val_miss)
     !-----------------------------------------------------------
     ! Debugging
     case( 'idx_debug' )
-      call read_value(up%idx_debug)
+      call read_value(ap%idx_debug)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -1445,48 +1332,45 @@ subroutine read_settings_gs_polygon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the related values')
 
-  call set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij)
-  call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
-  call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
-
-  call set_gs_common(u)
+  call set_bounds_file_polygon_in(fp, ap%ijs, ap%ije, ap%np, ap%nij)
+  call set_bounds_file_grid_in(fg_in, ap%nij, 1_8)
+  call set_bounds_file_grid_out(fg_out, ap%nij, 1_8)
 
   ! Coordinate system
   !-------------------------------------------------------------
   if( fp%lon%path /= '' )then
-    up%coord_sys = COORD_SYS_SPHERICAL
+    ap%coord_sys = COORD_SYS_SPHERICAL
 
     if( keynum('coord_unit') == 0 )then
-      up%coord_unit = UNIT_DEGREE
+      ap%coord_unit = UNIT_DEGREE
     else
-      if( up%coord_unit /= UNIT_DEGREE .and. &
-          up%coord_unit /= UNIT_RADIAN )then
-        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
+      if( ap%coord_unit /= UNIT_DEGREE .and. &
+          ap%coord_unit /= UNIT_RADIAN )then
+        call eerr('Invalid value in $ap%coord_unit: '//str(ap%coord_unit)//&
                 '\nThis is invalid when "f_lon_vertex" is given.')
       endif
     endif
 
-    if( keynum('coord_miss') == 1 ) up%coord_miss_s = coord_miss
+    if( keynum('coord_miss') == 1 ) ap%coord_miss_s = coord_miss
   else
-    up%coord_sys = COORD_SYS_CARTESIAN
+    ap%coord_sys = COORD_SYS_CARTESIAN
 
     if( keynum('coord_unit') == 0 )then
-      up%coord_unit = UNIT_METER
+      ap%coord_unit = UNIT_METER
     else
-      if( up%coord_unit /= UNIT_METER .and. &
-          up%coord_unit /= UNIT_KILOMETER )then
-        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
+      if( ap%coord_unit /= UNIT_METER .and. &
+          ap%coord_unit /= UNIT_KILOMETER )then
+        call eerr('Invalid value in $ap%coord_unit: '//str(ap%coord_unit)//&
                 '\nThis is invalid when "f_x_vertex" is given.')
       endif
     endif
 
-    if( keynum('coord_miss') == 1 ) up%coord_miss_c = coord_miss
+    if( keynum('coord_miss') == 1 ) ap%coord_miss_c = coord_miss
   endif
 
   ! About debugging
   !-------------------------------------------------------------
-  up%debug = keynum('idx_debug') == 1
-  if( .not. up%debug ) up%idx_debug = up%idx_miss
+  call set_gs_debug(ap%debug, ap%idx_debug, ap%idx_miss, keynum('idx_debug')==1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1640,7 +1524,7 @@ subroutine read_settings_remapping(rt, s, t)
         KEY_OPT_COEF_ERROR_EXCESS    , &
         KEY_OPT_COEF_SUM_ERROR_EXCESS
   use common_rt_set, only: &
-        check_values_rt_opt_coef
+        check_values_opt_rt_coef
   implicit none
   type(rt_), intent(inout), target :: rt
   type(gs_), intent(inout), target :: s, t
@@ -1866,7 +1750,7 @@ subroutine read_settings_remapping(rt, s, t)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  call check_values_rt_opt_coef(rtm%opt_coef)
+  call check_values_opt_rt_coef(rtm%opt_coef)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1914,10 +1798,10 @@ subroutine assert_cst_vrfForm_gsType(gsType)
   call echo(code%ret)
 end subroutine assert_cst_vrfForm_gsType
 !----------------------------------------------------------------
-subroutine read_value_fvrfForm(rt_vrf, uc, grid)
+subroutine read_value_fvrfForm(rt_vrf, ac, grid)
   implicit none
   type(rt_vrf_), intent(inout), target :: rt_vrf
-  type(gs_common_), intent(in), target :: uc
+  type(gs_common_), intent(in), target :: ac
   character(*), intent(in) :: grid
 
   call echo(code%bgn, '__IP__read_value_fvrfForm', '-p -x2')
@@ -1928,7 +1812,7 @@ subroutine read_value_fvrfForm(rt_vrf, uc, grid)
   call add(rt_vrf%nFiles)
   fvrf => rt_vrf%f(rt_vrf%nFiles)
   call read_value(fvrf%form, is_keyword=.true.)
-  call assert_cst_vrfForm_gsType(uc%gs_type)
+  call assert_cst_vrfForm_gsType(ac%gs_type)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine read_value_fvrfForm
@@ -2113,6 +1997,8 @@ end subroutine read_settings_remapping
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_const_util, only: &
+        checkval_opt_old_files
   use common_set, only: &
         key                    , &
         keynum                 , &
@@ -2198,7 +2084,6 @@ subroutine read_settings_opt(opt)
   enddo
 
   call check_keynum()
-  !call check_keynum_relations()
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -2206,15 +2091,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  selectcase( opt%sys%old_files )
-  case( OPT_OLD_FILES_STOP, &
-        OPT_OLD_FILES_REMOVE, &
-        OPT_OLD_FILES_OVERWRITE )
-    continue
-  case default
-    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "old_files".')
-  endselect
+  call checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -2276,7 +2153,7 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   type(rt_)     , intent(in), target :: rt
   type(opt_sys_), intent(in)         :: opt_sys
 
-  type(gs_)             , pointer :: u
+  type(gs_)             , pointer :: a
   type(file_latlon_in_) , pointer :: fl
   type(file_raster_in_) , pointer :: fr
   type(file_polygon_in_), pointer :: fp
@@ -2300,26 +2177,26 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   call echo(code%ent, 'Grid system')
 
   do iGs = 1, 2
-    call select_gs(iGs, gs_source, gs_target, u)
+    call select_gs(iGs, gs_source, gs_target, a)
 
-    selectcase( u%gs_type )
+    selectcase( a%gs_type )
     !-----------------------------------------------------------
     ! Case: Lattice
     case( gs_type_latlon )
-      fl => u%latlon%f_latlon_in
+      fl => a%latlon%f_latlon_in
       call check_permission(fl%lon, allow_empty=.true.)
       call check_permission(fl%lat, allow_empty=.true.)
     !-----------------------------------------------------------
     ! Case: Raster
     case( gs_type_raster )
-      fr => u%raster%f_raster_in
+      fr => a%raster%f_raster_in
       call check_permission(fr%idx, allow_empty=.true.)
       call check_permission(fr%ara, allow_empty=.true.)
       call check_permission(fr%wgt, allow_empty=.true.)
     !-----------------------------------------------------------
     ! Case: Polygon
     case( gs_type_polygon )
-      fp => u%polygon%f_polygon_in
+      fp => a%polygon%f_polygon_in
       call check_permission(fp%lon   , allow_empty=.true.)
       call check_permission(fp%lat   , allow_empty=.true.)
       call check_permission(fp%x     , allow_empty=.true.)
@@ -2330,12 +2207,12 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
     ! Case: ERROR
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  '//str(u%id)//'%gs_type: '//str(u%gs_type))
+              '\n  '//str(a%id)//'%gs_type: '//str(a%gs_type))
     endselect
     !-----------------------------------------------------------
     ! Fundamental grid data
     !-----------------------------------------------------------
-    fg_in => u%cmn%f_grid_in
+    fg_in => a%cmn%f_grid_in
     call check_permission(fg_in%idx, allow_empty=.true.)
     call check_permission(fg_in%ara, allow_empty=.true.)
     call check_permission(fg_in%wgt, allow_empty=.true.)
@@ -2390,13 +2267,6 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   call handle_old_file(rtm%f%area)
   call handle_old_file(rtm%f%coef)
 
-  call handle_old_file(rtm%f%sidx_tmp)
-  call handle_old_file(rtm%f%tidx_tmp)
-  call handle_old_file(rtm%f%area_tmp)
-  call handle_old_file(rtm%f%coef_tmp)
-
-  call handle_old_file(rt%im%path, 'rt%im%path')
-
   do iGs = 1, 2
     call select_rt_vrf(iGs, rt, rtv)
 
@@ -2441,16 +2311,6 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   call check_permission(rtm%f%area, allow_empty=.true.)
   call check_permission(rtm%f%coef, allow_empty=.true.)
 
-  call mkdir(dirname(rtm%f%sidx_tmp%path))
-  call mkdir(dirname(rtm%f%tidx_tmp%path))
-  call mkdir(dirname(rtm%f%area_tmp%path))
-  call mkdir(dirname(rtm%f%coef_tmp%path))
-
-  call check_permission(rtm%f%sidx_tmp, allow_empty=.true.)
-  call check_permission(rtm%f%tidx_tmp, allow_empty=.true.)
-  call check_permission(rtm%f%area_tmp, allow_empty=.true.)
-  call check_permission(rtm%f%coef_tmp, allow_empty=.true.)
-
   do iGs = 1, 2
     call select_rt_vrf(iGs, rt, rtv)
 
@@ -2468,23 +2328,11 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
         call mkdir(dirname(fvrf%out_rerr_grdara%path))
         call mkdir(dirname(fvrf%out_grdnum%path))
 
-        call mkdir(dirname(fvrf%out_tmp_grdidx%path))
-        call mkdir(dirname(fvrf%out_tmp_grdara_true%path))
-        call mkdir(dirname(fvrf%out_tmp_grdara_rt%path))
-        call mkdir(dirname(fvrf%out_tmp_rerr_grdara%path))
-        call mkdir(dirname(fvrf%out_tmp_grdnum%path))
-
         call check_permission(fvrf%out_grdidx     , allow_empty=.true.)
         call check_permission(fvrf%out_grdara_true, allow_empty=.true.)
         call check_permission(fvrf%out_grdara_rt  , allow_empty=.true.)
         call check_permission(fvrf%out_rerr_grdara, allow_empty=.true.)
         call check_permission(fvrf%out_grdnum     , allow_empty=.true.)
-
-        call check_permission(fvrf%out_tmp_grdidx     , allow_empty=.true.)
-        call check_permission(fvrf%out_tmp_grdara_true, allow_empty=.true.)
-        call check_permission(fvrf%out_tmp_grdara_rt  , allow_empty=.true.)
-        call check_permission(fvrf%out_tmp_rerr_grdara, allow_empty=.true.)
-        call check_permission(fvrf%out_tmp_grdnum     , allow_empty=.true.)
       !---------------------------------------------------------
       ! Raster
       case( grid_form_raster )
@@ -2501,9 +2349,6 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
       endselect
     enddo  ! iFile/
   enddo  ! iGs/
-
-  call mkdir(dirname(rt%im%path))
-  call check_permission(rt%im%path, action_write, allow_empty=.true.)
 
   ! Grid values for remapping
   !-------------------------------------------------------------
@@ -2535,11 +2380,11 @@ end subroutine check_paths
 !===============================================================
 !
 !===============================================================
-subroutine echo_settings_gs_latlon(ul)
+subroutine echo_settings_gs_latlon(al)
   use common_set, only: &
         bar
   implicit none
-  type(gs_latlon_), intent(in), target :: ul
+  type(gs_latlon_), intent(in), target :: al
 
   type(file_latlon_in_), pointer :: fl
   type(file_grid_in_), pointer :: fg_in
@@ -2549,41 +2394,42 @@ subroutine echo_settings_gs_latlon(ul)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( ul%is_source )then
+  if( al%is_source )then
     call edbg(bar(str(str_bgn_sentence(grid_source))//' grid '))
   else
     call edbg(bar(str(str_bgn_sentence(grid_target))//' grid '))
   endif
 
-  fl => ul%f_latlon_in
-  fg_in => ul%f_grid_in
+  fl => al%f_latlon_in
+  fg_in => al%f_grid_in
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  dgt_nxy = dgt(max(ul%nx, ul%ny, maxval(fg_in%sz(:2))))
+  dgt_nxy = dgt(max(al%nx, al%ny, maxval(fg_in%sz(:2))))
 
-  call edbg('Name: '//str(ul%nam))
+  call edbg('Name: '//str(al%nam))
 
   call edbg('Grid type: '//str(gs_type_latlon))
 
-  call edbg('nx: '//str(ul%nx))
-  call edbg('ny: '//str(ul%ny))
+  call edbg('The number of grids')
+  call edbg('  X: '//str(al%nx,dgt_nxy))
+  call edbg('  Y: '//str(al%ny,dgt_nxy))
 
   if( fl%lon%path == '' )then
-    call edbg('West : '//str(ul%west,'f12.5'))
-    call edbg('East : '//str(ul%east,'f12.5'))
+    call edbg('West : '//str(al%west,'f12.5'))
+    call edbg('East : '//str(al%east,'f12.5'))
   else
     call edbg('Bounds of longit.: '//str(fl%lon%path))
   endif
 
   if( fl%lat%path == '' )then
-    call edbg('South: '//str(ul%south,'f12.5'))
-    call edbg('North: '//str(ul%north,'f12.5'))
+    call edbg('South: '//str(al%south,'f12.5'))
+    call edbg('North: '//str(al%north,'f12.5'))
   else
     call edbg('Bounds of latit. : '//str(fl%lat%path))
   endif
 
-  call edbg('Is south to north: '//str(ul%is_south_to_north))
+  call edbg('Is south to north: '//str(al%is_south_to_north))
 
   call edbg('Grid data (in)')
   if( fg_in%idx%path /= '' .or. fg_in%ara%path /= '' .or. fg_in%wgt%path /= '' )then
@@ -2607,23 +2453,23 @@ subroutine echo_settings_gs_latlon(ul)
   endif
 
   call edbg('Missing values')
-  call edbg('  Index : '//str(ul%idx_miss))
-  call edbg('  Area  : '//str(ul%ara_miss))
-  call edbg('  Weight: '//str(ul%wgt_miss))
-  call edbg('  XYZ   : '//str(ul%xyz_miss))
-  call edbg('  LatLon: '//str(ul%lonlat_miss))
-  call edbg('  Value : '//str(ul%val_miss))
+  call edbg('  Index : '//str(al%idx_miss))
+  call edbg('  Area  : '//str(al%ara_miss))
+  call edbg('  Weight: '//str(al%wgt_miss))
+  call edbg('  XYZ   : '//str(al%xyz_miss))
+  call edbg('  LatLon: '//str(al%lonlat_miss))
+  call edbg('  Value : '//str(al%val_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_latlon
 !===============================================================
 !
 !===============================================================
-subroutine echo_settings_gs_raster(ur)
+subroutine echo_settings_gs_raster(ar)
   use common_set, only: &
         bar
   implicit none
-  type(gs_raster_), intent(in), target :: ur
+  type(gs_raster_), intent(in), target :: ar
 
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_), pointer :: fg_in
@@ -2633,32 +2479,33 @@ subroutine echo_settings_gs_raster(ur)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( ur%is_source )then
+  if( ar%is_source )then
     call edbg(bar(str(str_bgn_sentence(grid_source))//' grid '))
   else
     call edbg(bar(str(str_bgn_sentence(grid_target))//' grid '))
   endif
 
-  fr => ur%f_raster_in
-  fg_in => ur%f_grid_in
+  fr => ar%f_raster_in
+  fg_in => ar%f_grid_in
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   dgt_nxy = dgt(maxval(fr%sz(:2)))
 
-  call edbg('Name: '//str(ur%nam))
+  call edbg('Name: '//str(ar%nam))
 
   call edbg('Grid type: '//str(gs_type_raster))
 
-  call edbg('nx: '//str(ur%nx,dgt_nxy)//', x: '//str((/ur%xi,ur%xf/),dgt_nxy,' ~ '))
-  call edbg('ny: '//str(ur%ny,dgt_nxy)//', y: '//str((/ur%yi,ur%yf/),dgt_nxy,' ~ '))
+  call edbg('The number of grids')
+  call edbg('  X: '//str(ar%nx,dgt_nxy)//' ('//str((/ar%xi,ar%xf/),dgt_nxy,' - ')//')')
+  call edbg('  Y: '//str(ar%ny,dgt_nxy)//' ('//str((/ar%yi,ar%yf/),dgt_nxy,' - ')//')')
 
-  call edbg('West : '//str(ur%west,'f12.5'))
-  call edbg('East : '//str(ur%east,'f12.5'))
-  call edbg('South: '//str(ur%south,'f12.5'))
-  call edbg('North: '//str(ur%north,'f12.5'))
+  call edbg('West : '//str(ar%west,'f12.5'))
+  call edbg('East : '//str(ar%east,'f12.5'))
+  call edbg('South: '//str(ar%south,'f12.5'))
+  call edbg('North: '//str(ar%north,'f12.5'))
 
-  call edbg('Is south to north: '//str(ur%is_south_to_north))
+  call edbg('Is south to north: '//str(ar%is_south_to_north))
 
   call edbg('Raster data (in)')
   call edbg('  Index : '//str(fileinfo(fr%idx)))
@@ -2676,28 +2523,34 @@ subroutine echo_settings_gs_raster(ur)
     call edbg('  Size : ('//str(fg_in%sz(:2),dgt_nxy,', ')//')')
     call edbg('  Input: ('//str((/fg_in%lb(1),fg_in%ub(1)/),dgt_nxy,':')//&
                       ', '//str((/fg_in%lb(2),fg_in%ub(2)/),dgt_nxy,':')//')')
+    if( fg_in%idx%path /= '' )then
+      call edbg('  Condition for index: '//str(ar%grdidx_condition))
+    endif
+    if( fg_in%ara%path /= '' )then
+      call edbg('  Unit of Area: '//str(fg_in%unit_ara))
+    endif
   else
     call edbg('  (No input)')
   endif
 
   call edbg('Missing values')
-  call edbg('  Index : '//str(ur%idx_miss))
-  call edbg('  Area  : '//str(ur%ara_miss))
-  call edbg('  Weight: '//str(ur%wgt_miss))
-  call edbg('  XYZ   : '//str(ur%xyz_miss))
-  call edbg('  LatLon: '//str(ur%lonlat_miss))
-  call edbg('  Value : '//str(ur%val_miss))
+  call edbg('  Index : '//str(ar%idx_miss))
+  call edbg('  Area  : '//str(ar%ara_miss))
+  call edbg('  Weight: '//str(ar%wgt_miss))
+  call edbg('  XYZ   : '//str(ar%xyz_miss))
+  call edbg('  LatLon: '//str(ar%lonlat_miss))
+  call edbg('  Field : '//str(ar%val_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_raster
 !===============================================================
 !
 !===============================================================
-subroutine echo_settings_gs_polygon(up)
+subroutine echo_settings_gs_polygon(ap)
   use common_set, only: &
         bar
   implicit none
-  type(gs_polygon_), intent(in), target :: up
+  type(gs_polygon_), intent(in), target :: ap
 
   type(file_polygon_in_), pointer :: fp
   type(file_grid_in_)   , pointer :: fg_in
@@ -2707,20 +2560,20 @@ subroutine echo_settings_gs_polygon(up)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( up%is_source )then
+  if( ap%is_source )then
     call edbg(bar(str(str_bgn_sentence(grid_source))//' grid '))
   else
     call edbg(bar(str(str_bgn_sentence(grid_target))//' grid '))
   endif
 
-  fp => up%f_polygon_in
-  fg_in => up%f_grid_in
+  fp => ap%f_polygon_in
+  fg_in => ap%f_grid_in
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   dgt_ij = dgt(maxval(fp%sz(:2)))
 
-  call edbg('Name: '//str(up%nam))
+  call edbg('Name: '//str(ap%nam))
 
   call edbg('Grid type: '//str(gs_type_polygon))
 
@@ -2728,34 +2581,34 @@ subroutine echo_settings_gs_polygon(up)
   call edbg('  Size : '//str(fp%sz(2),dgt_ij))
   call edbg('  Input: ('//str((/fp%lb(2),fp%ub(2)/),dgt_ij,':')//')')
 
-  call edbg('Max. num. of vertices of a grid: '//str(up%np))
+  call edbg('Max. num. of vertices of a grid: '//str(ap%np))
 
   call edbg('Coordinates')
-  call edbg('  Coordinate system: '//str(up%coord_sys))
+  call edbg('  Coordinate system: '//str(ap%coord_sys))
   call edbg('  Files of coords. of vertices')
-  selectcase( up%coord_sys )
-  case( coord_sys_spherical )
-    call edbg('    Lon: '//str(fileinfo(fp%lon)))
-    call edbg('    Lat: '//str(fileinfo(fp%lat)))
-  case( coord_sys_cartesian )
+  selectcase( ap%coord_sys )
+  case( COORD_SYS_SPHERICAL )
+    call edbg('    Longit.: '//str(fileinfo(fp%lon)))
+    call edbg('    Latit. : '//str(fileinfo(fp%lat)))
+  case( COORD_SYS_CARTESIAN )
     call edbg('    X: '//str(fileinfo(fp%x)))
     call edbg('    Y: '//str(fileinfo(fp%y)))
     call edbg('    Z: '//str(fileinfo(fp%z)))
   case default
     call eerr(str(msg_invalid_value())//&
-           '\n  up%coord_sys: '//str(up%coord_sys))
+           '\n  ap%coord_sys: '//str(ap%coord_sys))
   endselect
 
-  call edbg('  Unit: '//str(up%coord_unit))
+  call edbg('  Unit: '//str(ap%coord_unit))
 
   call edbg('  Missing value of coords.')
-  call edbg('    Spherical: '//str(up%coord_miss_s))
-  call edbg('    Cartesian: '//str(up%coord_miss_c))
+  call edbg('    Spherical: '//str(ap%coord_miss_s))
+  call edbg('    Cartesian: '//str(ap%coord_miss_c))
 
 
   if( fp%arctyp%path == '' )then
     call edbg('Treat the arcs whose edges have same lattitude as small arcs: '//&
-              str(up%arc_parallel))
+              str(ap%arc_parallel))
   else
     call edbg('Types of the arcs: '//str(fileinfo(fp%arctyp)))
   endif
@@ -2769,7 +2622,7 @@ subroutine echo_settings_gs_polygon(up)
     call edbg('  Area  : '//str(fileinfo(fg_in%ara)))
     call edbg('  Weight: '//str(fileinfo(fg_in%wgt)))
     if( fg_in%ara%path /= '' )then
-      call edbg('  Unit of Area: '//str(fg_in%unit_ara))
+      call edbg('  Unit of area: '//str(fg_in%unit_ara))
     endif
   else
     call edbg('  (No input)')
@@ -2779,12 +2632,12 @@ subroutine echo_settings_gs_polygon(up)
   endif
 
   call edbg('Missing values')
-  call edbg('  Index : '//str(up%idx_miss))
-  call edbg('  Area  : '//str(up%ara_miss))
-  call edbg('  Weight: '//str(up%wgt_miss))
-  call edbg('  XYZ   : '//str(up%xyz_miss))
-  call edbg('  LatLon: '//str(up%lonlat_miss))
-  call edbg('  Value : '//str(up%val_miss))
+  call edbg('  Index : '//str(ap%idx_miss))
+  call edbg('  Area  : '//str(ap%ara_miss))
+  call edbg('  Weight: '//str(ap%wgt_miss))
+  call edbg('  XYZ   : '//str(ap%xyz_miss))
+  call edbg('  LatLon: '//str(ap%lonlat_miss))
+  call edbg('  Field : '//str(ap%val_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_polygon
@@ -2802,7 +2655,7 @@ subroutine echo_settings_remapping(rt, s, t)
         KEY_OPT_COEF_ERROR_EXCESS    , &
         KEY_OPT_COEF_SUM_ERROR_EXCESS
   use common_rt_set, only: &
-        echo_settings_rt_opt_coef
+        echo_settings_opt_rt_coef
   implicit none
   type(rt_), intent(in), target :: rt
   type(gs_), intent(in), target :: s, t
@@ -2847,7 +2700,7 @@ subroutine echo_settings_remapping(rt, s, t)
   call edbg('Grid to calc coef.: '//str(rtm%grid_coef))
   call edbg('Grid to sort by index: '//str(rtm%grid_sort))
 
-  call echo_settings_rt_opt_coef(rtm%opt_coef, 0)
+  call echo_settings_opt_rt_coef(rtm%opt_coef, 0)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -2977,23 +2830,23 @@ end subroutine echo_settings_opt
 !===============================================================
 !
 !===============================================================
-subroutine select_gs(iGs, gs_source, gs_target, u, grid)
+subroutine select_gs(iGs, gs_source, gs_target, a, grid)
   implicit none
   integer, intent(in) :: iGs
   type(gs_)   , intent(in), target :: gs_source, gs_target
-  type(gs_)   , pointer            :: u
+  type(gs_)   , pointer            :: a
   character(*), intent(out), optional :: grid
 
-  call echo(code%bgn, 'select_gs', '')
+  call echo(code%bgn, 'select_gs', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( iGs )
   case( 1 )
-    u => gs_source
+    a => gs_source
     if( present(grid) ) grid = grid_source
   case( 2 )
-    u => gs_target
+    a => gs_target
     if( present(grid) ) grid = grid_target
   case default
     call eerr(str(msg_invalid_value())//&
@@ -3030,12 +2883,12 @@ end subroutine select_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine select_gs_rtv(iGs, gs_source, gs_target, rt, u, rtv, grid)
+subroutine select_gs_rtv(iGs, gs_source, gs_target, rt, a, rtv, grid)
   implicit none
   integer, intent(in) :: iGs
   type(gs_), intent(in), target :: gs_source, gs_target
   type(rt_), intent(in), target :: rt
-  type(gs_), pointer :: u
+  type(gs_), pointer :: a
   type(rt_vrf_), pointer :: rtv
   character(*), intent(out) :: grid
 
@@ -3044,11 +2897,11 @@ subroutine select_gs_rtv(iGs, gs_source, gs_target, rt, u, rtv, grid)
   selectcase( iGs )
   case( 1 )
     rtv => rt%vrf_source
-    u => gs_source
+    a => gs_source
     grid = grid_source
   case( 2 )
     rtv => rt%vrf_target
-    u => gs_target
+    a => gs_target
     grid = grid_target
   case default
     call eerr(str(msg_invalid_value())//&

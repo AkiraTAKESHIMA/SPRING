@@ -7,6 +7,7 @@ module def_type
 
   type opt_
     type(opt_sys_) :: sys
+    type(opt_log_) :: log
     type(opt_earth_) :: earth
   end type
 end module def_type

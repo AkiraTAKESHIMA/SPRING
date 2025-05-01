@@ -28,13 +28,16 @@ module common_const
   character(CLEN_KEY), parameter :: origin_lower = 'lower'
   character(CLEN_KEY), parameter :: origin_upper = 'upper'
 
-  integer, parameter :: tag_in_raster_idxmap_undef   = -9
-  integer, parameter :: tag_in_raster_idxmap_given   = 0
-  integer, parameter :: tag_in_raster_idxmap_file_pb = 1
-  integer, parameter :: tag_in_raster_idxmap_int1    = 11
-  integer, parameter :: tag_in_raster_idxmap_int2    = 12
-  integer, parameter :: tag_in_raster_idxmap_int4    = 13
-  integer, parameter :: tag_in_raster_idxmap_int8    = 14
+  character(CLEN_KEY), parameter :: grid_status__undef          = 'undef'
+  character(CLEN_KEY), parameter :: grid_status__prepared       = 'prepared'
+  character(CLEN_KEY), parameter :: grid_status__to_be_prepared = 'to_be_prepared'
+  character(CLEN_KEY), parameter :: grid_status__not_used       = 'not_uesd'
+
+  character(CLEN_KEY), parameter :: grdidx_condition__undef      = 'undef'
+  character(CLEN_KEY), parameter :: grdidx_condition__match      = 'match'
+  character(CLEN_KEY), parameter :: grdidx_condition__grd_in_rst = 'grid_in_raster'
+  character(CLEN_KEY), parameter :: grdidx_condition__rst_in_grd = 'raster_in_grid'
+  character(CLEN_KEY), parameter :: grdidx_condition__none       = 'none'
 
   integer, parameter :: rec_im_idx = 1
   integer, parameter :: rec_im_msk = 2
@@ -90,8 +93,6 @@ module common_const
   !-------------------------------------------------------------
   ! Remapping
   !-------------------------------------------------------------
-  public :: remap_mode_1st_order_conservative
-
   character(clen_key), parameter :: remap_mode_1st_order_conservative = '1st_order_conservative'
   !-------------------------------------------------------------
   ! Remapping table

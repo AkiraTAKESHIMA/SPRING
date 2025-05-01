@@ -25,80 +25,68 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__latlon_latlon(&
-    sl, tl, opt_earth)
+subroutine calc_relations_llbnds__latlon_latlon(sl, tl)
   implicit none
   type(gs_latlon_), intent(inout) :: sl
   type(gs_latlon_), intent(inout) :: tl
-  type(opt_earth_) , intent(in)   :: opt_earth
 
   call echo(code%bgn, 'calc_realtions_llbnds__latlon_latlon')
   !-------------------------------------------------------------
   call calc_relations_llbnds_core(&
          sl%hrel, sl%vrel, sl%nam, tl%nam, &
          sl%lon, sl%lat, sl%lonwidth, &
-         tl%lon, tl%lat, tl%lonwidth, tl%is_cyclic, tl%lon0, &
-         opt_earth)
+         tl%lon, tl%lat, tl%lonwidth, tl%is_cyclic, tl%lon0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine calc_relations_llbnds__latlon_latlon
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__latlon_raster(&
-    sl, tr, opt_earth)
+subroutine calc_relations_llbnds__latlon_raster(sl, tr)
   implicit none
   type(gs_latlon_), intent(inout) :: sl
   type(gs_raster_), intent(inout) :: tr
-  type(opt_earth_), intent(in)    :: opt_earth
 
   call echo(code%bgn, 'calc_relations_llbnds__latlon_raster')
   !-------------------------------------------------------------
   call calc_relations_llbnds_core(&
          sl%hrel, sl%vrel, sl%nam, tr%nam, &
          sl%lon, sl%lat, sl%lonwidth, &
-         tr%lon, tr%lat, tr%lonwidth, tr%is_cyclic, tr%lon0, &
-         opt_earth)
+         tr%lon, tr%lat, tr%lonwidth, tr%is_cyclic, tr%lon0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine calc_relations_llbnds__latlon_raster
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__raster_latlon(&
-    sr, tl, opt_earth)
+subroutine calc_relations_llbnds__raster_latlon(sr, tl)
   implicit none
   type(gs_raster_), intent(inout) :: sr
   type(gs_latlon_), intent(inout) :: tl
-  type(opt_earth_), intent(in)    :: opt_earth
 
   call echo(code%bgn, 'calc_relations_llbnds__raster_latlon')
   !-------------------------------------------------------------
   call calc_relations_llbnds_core(&
          sr%hrel, sr%vrel, sr%nam, tl%nam, &
          sr%lon, sr%lat, sr%lonwidth, &
-         tl%lon, tl%lat, tl%lonwidth, tl%is_cyclic, tl%lon0, &
-         opt_earth)
+         tl%lon, tl%lat, tl%lonwidth, tl%is_cyclic, tl%lon0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine calc_relations_llbnds__raster_latlon
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__raster_raster(&
-    sr, tr, opt_earth)
+subroutine calc_relations_llbnds__raster_raster(sr, tr)
   implicit none
   type(gs_raster_), intent(inout) :: sr
   type(gs_raster_), intent(inout) :: tr
-  type(opt_earth_), intent(in)    :: opt_earth
 
   call echo(code%bgn, 'calc_relations_llbnds__raster_raster')
   !-------------------------------------------------------------
   call calc_relations_llbnds_core(&
          sr%hrel, sr%vrel, sr%nam, tr%nam, &
          sr%lon, sr%lat, sr%lonwidth, &
-         tr%lon, tr%lat, tr%lonwidth, tr%is_cyclic, tr%lon0, &
-         opt_earth)
+         tr%lon, tr%lat, tr%lonwidth, tr%is_cyclic, tr%lon0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine calc_relations_llbnds__raster_raster
@@ -116,8 +104,9 @@ end subroutine calc_relations_llbnds__raster_raster
 subroutine calc_relations_llbnds_core(&
     shrel, svrel, snam, tnam, &
     slon, slat, slonwidth, &
-    tlon, tlat, tlonwidth, tcyclic, tlon0, &
-    opt_earth)
+    tlon, tlat, tlonwidth, tcyclic, tlon0)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
   type(hrel_)     , pointer    :: shrel(:) ! out
   type(vrel_)     , pointer    :: svrel(:) ! out
@@ -128,8 +117,8 @@ subroutine calc_relations_llbnds_core(&
   real(8)         , pointer    :: tlonwidth(:) ! in
   logical         , intent(in) :: tcyclic
   logical         , pointer    :: tlon0(:) ! in
-  type(opt_earth_), intent(in) :: opt_earth
 
+  type(opt_earth_) :: earth
   type(hrel_), pointer :: shr
   type(vrel_), pointer :: svr
   integer(8) :: ish, isv
@@ -180,6 +169,8 @@ subroutine calc_relations_llbnds_core(&
   dgt_sv = dgt(svf)
   dgt_th = dgt(thf)
   dgt_tv = dgt(tvf)
+
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -516,7 +507,7 @@ subroutine calc_relations_llbnds_core(&
 
   lapara_1rad_sum = 0.d0
 
-  selectcase( opt_earth%shp )
+  selectcase( earth%shp )
   case( earth_shape_sphere )
     do isv = svi, svf
       svr => svrel(isv)
@@ -531,13 +522,13 @@ subroutine calc_relations_llbnds_core(&
       svr => svrel(isv)
       if( svr%mv > 0_8 )then
         allocate(svr%lapara_1rad(svr%mv))
-        svr%lapara_1rad(:) = area_ellips_rect(svr%south(:), svr%north(:), opt_earth%e2)
+        svr%lapara_1rad(:) = area_ellips_rect(svr%south(:), svr%north(:), earth%e2)
         lapara_1rad_sum = lapara_1rad_sum + sum(svr%lapara_1rad)
       endif
     enddo
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  opt_earth%shp: '//str(opt_earth%shp))
+            '\n  earth%shp: '//str(earth%shp))
   endselect
 
   call edbg('Total: '//str(lapara_1rad_sum)//' (m2)')

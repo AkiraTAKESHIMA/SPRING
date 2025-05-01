@@ -9,19 +9,8 @@ module mod_main
   use common_const
   ! common2
   use common_type_rt
-  use common_rt_main_util, only: &
-        merge_elems_same_index, &
-        sort_rt
-  use common_rt_main_coef, only: &
-        calc_rt_coef_sum_modify_enabled    , &
-        calc_rt_coef_sum_modify_not_enabled
-  use common_rt_stats, only: &
-        get_rt_main_stats     , &
-        report_rt_main_summary
-  use common_rt_io, only: &
-        read_rt_main , &
-        write_rt_main
   ! this
+  use def_const
   use def_type
   implicit none
   private
@@ -52,14 +41,33 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
+subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
+  ! common1
+  use common_opt_ctrl, only: &
+        get_opt_sys, &
+        get_opt_log, &
+        get_opt_earth
+  ! common2
+  use common_rt_main_util, only: &
+        merge_elems_same_index, &
+        sort_rt
+  use common_rt_main_coef, only: &
+        calc_rt_coef_sum_modify_enabled    , &
+        calc_rt_coef_sum_modify_not_enabled
+  use common_rt_stats, only: &
+        get_rt_main_stats     , &
+        report_rt_main_summary
+  use common_rt_main_io, only: &
+        read_rt_main , &
+        write_rt_main
   implicit none
   type(rt_)  , intent(inout), target :: rt_in_agcm_to_ogcm
   type(rt_)  , intent(inout), target :: rt_out_lsm_to_agcm
   type(agcm_), intent(inout), target :: agcm
   type(lsm_) , intent(inout), target :: lsm
-  type(opt_) , intent(in)            :: opt
+  type(opt_ext_), intent(in) :: opt_ext
 
+  type(opt_) :: opt
   type(layer_) :: layer
 
   type(rt_main_), pointer :: rtim_a_o, &
@@ -113,6 +121,14 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
 
   call echo(code%bgn, 'make_rt')
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  opt%sys   = get_opt_sys()
+  opt%log   = get_opt_log()
+  opt%earth = get_opt_earth()
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   rtim_a_o => rt_in_agcm_to_ogcm%main
   rtom_l_a => rt_out_lsm_to_agcm%main
   !-------------------------------------------------------------
@@ -127,7 +143,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
 
   call read_grid_data(&
     agcm%f_grdidx, agcm%f_grdara, agcm%f_grdlon, agcm%f_grdlat, &
-    agcm%nij, agcm%idx, agcm%ara, agcm%lon, agcm%lat)
+    agcm%nij, agcm%idx, agcm%idxarg, agcm%ara, agcm%lon, agcm%lat)
 
   call print_grid_stats(agcm%nij, agcm%idx, agcm%ara, agcm%lon, agcm%lat, agcm%idx_miss)
 
@@ -144,7 +160,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
 
   call read_grid_data(&
     lsm%f_grdidx, lsm%f_grdara, lsm%f_grdlon, lsm%f_grdlat, &
-    lsm%nij, lsm%idx, lsm%ara, lsm%lon, lsm%lat)
+    lsm%nij, lsm%idx, lsm%idxarg, lsm%ara, lsm%lon, lsm%lat)
 
   call print_grid_stats(lsm%nij, lsm%idx, lsm%ara, lsm%lon, lsm%lat, lsm%idx_miss)
 
@@ -272,9 +288,9 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make remapping table
+  ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making remapping table')
+  call echo(code%ent, 'Making a remapping table')
 
   allocate(rto1_l_a(lsm%nij))
 
@@ -379,13 +395,17 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
             call add(list_agcm%n)
             list_agcm%ij(list_agcm%n) = aij
 
-            if( opt%method%use_weighted_dist )then
+            selectcase( opt_ext%method_rivwat )
+            case( METHOD_RIVWAT__WEIGHTED_DIST )
               list_agcm%dist(list_agcm%n) &
                 = weighted_dist(lsm%lon(lij), lsm%lat(lij), agcm%lon(aij), agcm%lat(aij))
-            else
+            case( METHOD_RIVWAT__DIST )
               list_agcm%dist(list_agcm%n) &
                 = dist_sphere(lsm%lon(lij), lsm%lat(lij), agcm%lon(aij), agcm%lat(aij))
-            endif
+            case default
+              call eerr(str(msg_invalid_value())//&
+                      '\n  opt_ext%method_rivwat: '//str(opt_ext%method_rivwat))
+            endselect
 
             dist_agcm_min = min(dist_agcm_min, list_agcm%dist(list_agcm%n))
 
@@ -404,13 +424,17 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
           !-----------------------------------------------------
           ! Update min. of distance to the new blocks
           !-----------------------------------------------------
-          if( opt%method%use_weighted_dist )then
+          selectcase( opt_ext%method_rivwat )
+          case( METHOD_RIVWAT__WEIGHTED_DIST )
             dist_new_block &
               = weighted_dist(lsm%lon(lij), lsm%lat(lij), layer%lon(ilx), layer%lat(ily))
-          else
+          case( METHOD_RIVWAT__DIST )
             dist_new_block &
               = dist_sphere(lsm%lon(lij), lsm%lat(lij), layer%lon(ilx), layer%lat(ily))
-          endif
+          case default
+            call eerr(str(msg_invalid_value())//&
+                    '\n  opt_ext%method_rivwat: '//str(opt_ext%method_rivwat))
+          endselect
           dist_new_block_min = min(dist_new_block_min, dist_new_block)
           !-----------------------------------------------------
           if( debug_lsm ) call echo(code%ext)
@@ -586,13 +610,15 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt)
     if( rtom_l_a%opt_coef%is_sum_modify_enabled )then
       call calc_rt_coef_sum_modify_enabled(rtom_l_a)
     else
-      call calc_rt_coef_sum_modify_not_enabled(rtom_l_a, lsm%idx, lsm%ara)
+      call calc_rt_coef_sum_modify_not_enabled(&
+             rtom_l_a, lsm%idx, lsm%idxarg, lsm%ara)
     endif
   case( grid_target )
     if( rtom_l_a%opt_coef%is_sum_modify_enabled )then
       call calc_rt_coef_sum_modify_enabled(rtom_l_a)
     else
-      call calc_rt_coef_sum_modify_not_enabled(rtom_l_a, agcm%idx, agcm%ara)
+      call calc_rt_coef_sum_modify_not_enabled(&
+             rtom_l_a, agcm%idx, agcm%idxarg, agcm%ara)
     endif
   case( grid_none )
     rtom_l_a%coef(:) = rtom_l_a%area(:)
@@ -655,7 +681,7 @@ end subroutine make_rt
 !===============================================================
 subroutine read_grid_data(&
     f_idx, f_ara, f_lon, f_lat, &
-    nij, idx, ara, lon, lat)
+    nij, idx, idxarg, ara, lon, lat)
   implicit none
   type(file_), intent(in), target :: f_idx
   type(file_), intent(in), target :: f_ara
@@ -663,6 +689,7 @@ subroutine read_grid_data(&
   type(file_), intent(in), target :: f_lat
   integer(8) , intent(in)  :: nij
   integer(8) , intent(out) :: idx(:)
+  integer(8) , pointer     :: idxarg(:)  ! out
   real(8)    , intent(out) :: ara(:)
   real(8)    , intent(out) :: lon(:)
   real(8)    , intent(out) :: lat(:)
@@ -678,11 +705,14 @@ subroutine read_grid_data(&
   if( f%path /= '' )then
     call edbg('Reading index   '//str(fileinfo(f)))
     call rbin(idx, f%path, f%dtype, f%endian, f%rec)
+    call realloc(idxarg, size(idx))
+    call argsort(idx, idxarg)
   else
     call edbg('File of grid index was not specified. Index is automatically set.')
     do ij = 1_8, nij
       idx(ij) = ij
     enddo
+    idxarg(1) = 1_8
   endif
 
   f => f_ara

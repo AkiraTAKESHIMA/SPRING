@@ -12,17 +12,21 @@ module common_gs_grid_core
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: make_idxmap
   public :: make_wgtmap
   public :: make_grdidx
-  public :: make_grdmsk
   public :: make_grduwa
   public :: make_grdara
   public :: make_grdwgt
   public :: make_grdxyz
   public :: make_grdlonlat
+
+  public :: make_idxmap_gs
+  public :: make_wgtmap_gs
+  public :: make_grdidx_gs
+  public :: make_grdara_gs
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
@@ -35,137 +39,232 @@ module common_gs_grid_core
     module procedure make_wgtmap__latlon
     module procedure make_wgtmap__raster
   end interface
- 
+
   interface make_grdidx
     module procedure make_grdidx__latlon
     module procedure make_grdidx__raster
     module procedure make_grdidx__polygon
   end interface
- 
-  interface make_grdmsk
-    module procedure make_grdmsk__latlon
-    module procedure make_grdmsk__raster
-    module procedure make_grdmsk__polygon
-  end interface
- 
+
   interface make_grduwa
     module procedure make_grduwa__latlon
     module procedure make_grduwa__raster
     module procedure make_grduwa__polygon
   end interface
- 
+
   interface make_grdara
     module procedure make_grdara__latlon
     module procedure make_grdara__raster
     module procedure make_grdara__polygon
   end interface
- 
+
   interface make_grdwgt
     module procedure make_grdwgt__latlon
     module procedure make_grdwgt__raster
     module procedure make_grdwgt__polygon
   end interface
- 
+
   interface make_grdxyz
     module procedure make_grdxyz__latlon
     module procedure make_grdxyz__raster
     module procedure make_grdxyz__polygon
   end interface
- 
+
   interface make_grdlonlat
     module procedure make_grdlonlat__latlon
     module procedure make_grdlonlat__raster
     module procedure make_grdlonlat__polygon
+  end interface
+
+  interface read_lattice_data
+    module procedure read_lattice_data__int8
+    module procedure read_lattice_data__dble
   end interface
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_idxmap_gs(a)
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
+  type(gs_), intent(inout) :: a
 
-  type(zone_latlon_)  , pointer :: zl
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
+  call echo(code%bgn, 'make_idxmap_gs', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%gs_type )
+  case( GS_TYPE_LATLON )
+    call make_idxmap__latlon(a%latlon)
+  case( GS_TYPE_RASTER )
+    call make_idxmap__raster(a%raster)
+  case( GS_TYPE_POLYGON )
+    continue
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_idxmap_gs
+!===============================================================
+!
+!===============================================================
+subroutine make_wgtmap_gs(a)
+  implicit none
+  type(gs_), intent(inout) :: a
+
+  call echo(code%bgn, 'make_wgtmap_gs', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%gs_type )
+  case( GS_TYPE_LATLON )
+    call make_wgtmap__latlon(a%latlon)
+  case( GS_TYPE_RASTER )
+    call make_wgtmap__raster(a%raster)
+  case( GS_TYPE_POLYGON )
+    continue
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_wgtmap_gs
+!===============================================================
+!
+!===============================================================
+subroutine make_grdidx_gs(a)
+  implicit none
+  type(gs_), intent(inout) :: a
+
+  call echo(code%bgn, 'make_grdidx_gs', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%gs_type )
+  case( GS_TYPE_LATLON )
+    call make_grdidx__latlon(a%latlon)
+  case( GS_TYPE_RASTER )
+    call make_grdidx__raster(a%raster)
+  case( GS_TYPE_POLYGON )
+    continue
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_grdidx_gs
+!===============================================================
+!
+!===============================================================
+subroutine make_grdara_gs(a)
+  implicit none
+  type(gs_), intent(inout) :: a
+
+  call echo(code%bgn, 'make_grdara_gs', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%gs_type )
+  case( GS_TYPE_LATLON )
+    call make_grdara__latlon(a%latlon)
+  case( GS_TYPE_RASTER )
+    call make_grdara__raster(a%raster)
+  case( GS_TYPE_POLYGON )
+    call make_grdara__polygon(a%polygon)
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_grdara_gs
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine make_idxmap__latlon(al)
+  implicit none
+  type(gs_latlon_), intent(inout), target :: al
+
+  type(file_latlon_in_) , pointer :: fl
+  type(file_grid_in_)   , pointer :: fg_in
   integer(8) :: ih, iv
   integer :: stat
+
+  if( al%status_idxmap == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_idxmap__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .true.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
+  fl    => al%f_latlon_in
+  fg_in => al%f_grid_in
 
-  if( ul%iZone_idxmap == ul%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  ul%iZone_idxmap = ul%iZone
+  al%status_idxmap = GRID_STATUS__PREPARED
+  allocate(al%idxmap(al%hi:al%hf,al%vi:al%vf))
+  allocate(al%mskmap(al%hi:al%hf,al%vi:al%vf))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  zl     => ul%zone(ul%iZone)
-  fg_in  => ul%f_grid_in
-  fg_out => ul%f_grid_out
+  ! Case: Index data were not given
+  if( fg_in%idx%path == '' )then
+    call echo(code%ent, 'Case: Index data were not given')
 
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  call realloc(ul%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: Set indices automatically
-  if( ul%f_grid_in%idx%path == '' )then
-    if( ul%is_south_to_north )then
-      do iv = zl%vi, zl%vf
-        do ih = zl%hi, zl%hf
-          ul%idxmap(ih,iv) = (iv-1_8)*ul%nh + ih + (fg_in%idx_bgn - 1_8)
+    if( al%is_south_to_north )then
+      do iv = al%vi, al%vf
+        do ih = al%hi, al%hf
+          al%idxmap(ih,iv) = (iv-1_8)*al%nh + ih + (fg_in%idx_bgn - 1_8)
         enddo
       enddo
-      zl%idxmin = ul%idxmap(zl%hi,zl%vi)
-      zl%idxmax = ul%idxmap(zl%hf,zl%vf)
+      al%idxmin = al%idxmap(al%hi,al%vi)
+      al%idxmax = al%idxmap(al%hf,al%vf)
     else
-      do iv = zl%vi, zl%vf
-        do ih = zl%hi, zl%hf
-          ul%idxmap(ih,iv) = (ul%nv-iv)*ul%nh + ih + (fg_in%idx_bgn - 1_8)
+      do iv = al%vi, al%vf
+        do ih = al%hi, al%hf
+          al%idxmap(ih,iv) = (al%nv-iv)*al%nh + ih + (fg_in%idx_bgn - 1_8)
         enddo
       enddo
-      zl%idxmin = ul%idxmap(zl%hi,zl%vf)
-      zl%idxmax = ul%idxmap(zl%hf,zl%vi)
+      al%idxmin = al%idxmap(al%hi,al%vf)
+      al%idxmax = al%idxmap(al%hf,al%vi)
     endif
+
+    call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Read index map
+  ! Case: Index data were given
   else
-    call read_grid_data_latlon(&
-           ul%idxmap, fg_in%idx, varname_grdidx, &
-           zl, 1_8, 1_8, ul%is_south_to_north)
+    call echo(code%ent, 'Case: Index data were given')
+
+    call read_lattice_data(al%idxmap, fg_in%idx, al%is_south_to_north)
+
+    call echo(code%ext)
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  al%nij = size(al%idxmap)
+
+  call get_stats(al%idxmap, vmin=al%idxmin, vmax=al%idxmax, miss=al%idx_miss, stat=stat)
+  al%is_valid = stat == 0
+
+  do iv = al%vi, al%vf
+    do ih = al%hi, al%hf
+      al%mskmap(ih,iv) = al%idxmap(ih,iv) /= al%idx_miss
+    enddo
+  enddo
+
+  if( al%is_valid )then
+    call edbg('The number of grids        : '//str(size(al%idxmap))//&
+            '\nidx min: '//str(al%idxmin,dgt((/al%idxmin,al%idxmax/),DGT_OPT_MAX))//&
+            '\n    max: '//str(al%idxmax,dgt((/al%idxmin,al%idxmax/),DGT_OPT_MAX)))
+  else
+    call ewrn('No valid index was found.')
   endif
 
-  call get_stats(ul%idxmap, vmin=zl%idxmin, vmax=zl%idxmax, miss=ul%idx_miss, stat=stat)
-  zl%is_valid = stat == 0
-
-  if( zl%is_valid )then
-    call edbg('Num. of valid grids: '//str(count(ul%idxmap/=ul%idx_miss))//&
-            '\nidx min: '//str(zl%idxmin,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max))//&
-            '\n    max: '//str(zl%idxmax,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max)))
-  else
-    call ewrn('No valid index is found.')
+  if( al%debug )then
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        al%mskmap(ih,iv) = al%idxmap(ih,iv) == al%idx_debug
+      enddo
+    enddo
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -173,388 +272,207 @@ end subroutine make_idxmap__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_wgtmap__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_wgtmap__latlon(al)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
+  type(gs_latlon_), intent(inout), target :: al
 
-  type(zone_latlon_)  , pointer :: zl
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(grid_)         , pointer :: g
-
+  type(file_latlon_in_), pointer :: fl
+  type(file_grid_in_)  , pointer :: fg_in
+  type(grid_)          , pointer :: g
+  type(opt_earth_) :: earth
   integer(8) :: ih, iv
-  integer(8) :: idx
-  integer(8) :: loc
+  integer(8) :: ij
+
+  if( al%status_wgtmap == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_wgtmap__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
+  call make_grdidx__latlon(al)
 
-  if( ul%iZone_wgtmap == ul%iZone )then
-    call edbg('Nothing to do.')
+  fl     => al%f_latlon_in
+  fg_in  => al%f_grid_in
+  g      => al%grid
+
+  al%status_wgtmap = GRID_STATUS__PREPARED
+  allocate(al%wgtmap(al%hi:al%hf,al%vi:al%vf))
+
+  if( .not. al%is_valid )then
+    al%wgtmap(:,:) = al%wgt_miss
     call echo(code%ret)
     return
   endif
 
-  ul%iZone_grdidx = ul%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  zl      => ul%zone(ul%iZone)
-  fg_in   => ul%f_grid_in
-  fg_out  => ul%f_grid_out
-  zone_im => fg_out%zone_im(ul%iZone)
-  g       => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  if( g%nij == 0_8 ) g%nij = zl%mij
-
-  call realloc(ul%wgtmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: Weighted area is input
+  ! Case: Weighted area were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area is input')
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ul%iZone_grdidx == 0 )then
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ul%iZone_grdwgt == 0 )then
-      allocate(g%wgt(g%nij))
-      call rbin(g%wgt, zone_im%path, rec=rec_im_wgt)
-    endif
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ul%idxmap(ih,iv)
-        if( idx == ul%idx_miss )then
-          ul%wgtmap(ih,iv) = ul%wgt_miss
-        else
-          call search(idx, g%idx, g%idxarg, loc)
-          if( loc == 0_8 )then
-            call eerr(str(msg_unexpected_condition())//&
-                    '\n  Index '//str(idx)//' was not found.')
-          endif
-          ul%wgtmap(ih,iv) = g%wgt(g%idxarg(loc))
-        endif
+    call echo(code%ent, 'Case: Weighted area data were given')
+
+    call make_grduwa__latlon(al)
+    call make_grdara__latlon(al)
+
+    al%wgtmap(:,:) = al%wgt_miss
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        if( .not. g%msk(ij) ) cycle
+        al%wgtmap(ih,iv) = g%ara(ij) / g%uwa(ij)
       enddo
     enddo
-    !---------------------------------------------------------
-    if( ul%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ul%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-    if( ul%iZone_grdwgt == 0 ) call realloc(g%wgt, 0)
-    !---------------------------------------------------------
+
     call echo(code%ext)
   !-----------------------------------------------------------
-  ! Case: Weight was input
+  ! Case: Weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight is input')
-    !---------------------------------------------------------
-    call read_grid_data_latlon(&
-           ul%wgtmap, fg_in%wgt, varname_grdwgt, zl, ul%is_south_to_north)
-    !---------------------------------------------------------
+    call echo(code%ent, 'Case: Weight data were given')
+
+    call read_lattice_data(al%wgtmap, fg_in%wgt, al%is_south_to_north)
+
     call echo(code%ext)
   !-----------------------------------------------------------
   ! Case: No input
   else
     call echo(code%ent, 'Case: No input')
-    !---------------------------------------------------------
-    ul%wgtmap(:,:) = 1.d0
-    !---------------------------------------------------------
+
+    al%wgtmap(:,:) = 1.d0
+
     call echo(code%ext)
   endif
   !-------------------------------------------------------------
-  !
+  ! Put missing values in
   !-------------------------------------------------------------
-  do iv = zl%vi, zl%vf
-    do ih = zl%hi, zl%hf
-      if( ul%idxmap(ih,iv) == ul%idx_miss ) ul%wgtmap(ih,iv) = ul%wgt_miss
+  ij = 0_8
+  do iv = al%vi, al%vf
+    do ih = al%hi, al%hf
+      ij = ij + 1_8
+      if( .not. g%msk(ij) ) al%wgtmap(ih,iv) = al%wgt_miss
     enddo
   enddo
-
-  call edbg('min: '//str(minval(ul%wgtmap,mask=ul%wgtmap/=ul%wgt_miss))//&
-          ', max: '//str(maxval(ul%wgtmap,mask=ul%wgtmap/=ul%wgt_miss)))
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call edbg('min: '//str(minval(al%wgtmap,mask=al%wgtmap/=al%wgt_miss))//&
+          ', max: '//str(maxval(al%wgtmap,mask=al%wgtmap/=al%wgt_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_wgtmap__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grdidx__latlon(al)
   use common_gs_grid_util, only: &
         print_indices
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
+  type(gs_latlon_), intent(inout), target :: al
 
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
+  type(grid_), pointer :: g
   integer(8) :: ih, iv
+  integer(8) :: ij
   integer(8) :: loc
+
+  if( al%grid%status_idx == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdidx__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
 
-  if( ul%iZone_grdidx == ul%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
+  g => al%grid
 
-  ul%iZone_grdidx = ul%iZone
+  g%status_idx = GRID_STATUS__PREPARED
+  g%status_msk = GRID_STATUS__PREPARED
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_out => ul%f_grid_out
-  zl     => ul%zone(ul%iZone)
-  g      => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  ul%iZone_grdidx = ul%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  zl%mij = 0_8
-  do iv = zl%vi, zl%vf
-    do ih = zl%hi, zl%hf
-      if( ul%idxmap(ih,iv) == ul%idx_miss ) cycle
-      call add(zl%mij)
-    enddo
-  enddo
-
-  zl%is_valid = zl%mij /= 0_8
-  if( .not. zl%is_valid )then
-    call edbg('No valid grid')
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  g%idxmin = zl%idxmin
-  g%idxmax = zl%idxmax
+  g%nij = al%nij
+  g%idxmin = al%idxmin
+  g%idxmax = al%idxmax
   allocate(g%idx(g%nij))
   allocate(g%idxarg(g%nij))
+  allocate(g%msk(g%nij))
 
-  g%nij = 0_8
-  do iv = zl%vi, zl%vf
-    do ih = zl%hi, zl%hf
-      if( ul%idxmap(ih,iv) == ul%idx_miss ) cycle
-      call add(g%nij)
-      g%idx(g%nij) = ul%idxmap(ih,iv)
+  ij = 0_8
+  do iv = al%vi, al%vf
+    do ih = al%hi, al%hf
+      ij = ij + 1_8
+      g%idx(ij) = al%idxmap(ih,iv)
+      g%msk(ij) = al%mskmap(ih,iv)
     enddo
   enddo
 
   call argsort(g%idx, g%idxarg)
 
-  call print_indices(g%idx, g%idxarg, ul%idx_miss, g%idxmin, g%idxmax)
+  call print_indices(g%idx, g%idxarg, al%idx_miss, g%idxmin, g%idxmax)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( ul%debug )then
-    call search(ul%idx_debug, g%idx, g%idxarg, loc)
-
-    zl%is_valid = loc /= 0_8
-    if( zl%is_valid ) g%ij_debug = g%idxarg(loc)
-  else
-    g%ij_debug = 0_8
+  g%ij_debug = 0_8
+  if( al%debug .and. al%is_valid )then
+    g%msk(:) = .false.
+    call search(al%idx_debug, g%idx, g%idxarg, loc)
+    g%ij_debug = g%idxarg(loc)
+    g%msk(g%ij_debug) = .true.
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdidx__latlon
 !===============================================================
-!
-!===============================================================
-subroutine make_grdmsk__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
-  implicit none
-  type(gs_latlon_), intent(inout), target :: ul
-
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
-  integer(8) :: ij
-
-  call echo(code%bgn, 'make_grdmsk__latlon')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .true.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
-
-  if( ul%iZone_grdmsk == ul%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  ul%iZone_grdmsk = ul%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  fg_in   => ul%f_grid_in
-  fg_out  => ul%f_grid_out
-  zone_im => fg_out%zone_im(ul%iZone)
-  zl      => ul%zone(ul%iZone)
-  g       => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%msk, g%nij, clear=.true., fill=0_1)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( ul%iZone_grdidx == 0 )then
-    call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_latlon)
-    allocate(g%idx(g%nij))
-    call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  do ij = 1_8, g%nij
-    if( g%idx(ij) == ul%idx_miss )then
-      g%msk(ij) = 0_1
-    else
-      g%msk(ij) = 1_1
-    endif
-  enddo
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( ul%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdmsk__latlon
-!===============================================================
 ! Calc. unweighted area
 !===============================================================
-subroutine make_grduwa__latlon(ul, earth)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grduwa__latlon(al)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
-  type(opt_earth_), intent(in) :: earth
+  type(gs_latlon_), intent(inout), target :: al
 
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(opt_earth_) :: earth
   real(8), allocatable :: grduwa_1rad(:)
-  integer(8) :: loc
-  integer(8) :: idx
   integer(8) :: ih, iv
+  integer(8) :: ij
+
+  if( al%grid%status_uwa == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grduwa__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
+  call make_grdidx__latlon(al)
 
-  if( ul%iZone_grduwa == ul%iZone )then
-    call edbg('Nothing to do.')
+  fg_in => al%f_grid_in
+  g     => al%grid
+
+  g%status_uwa = GRID_STATUS__PREPARED
+  allocate(g%uwa(g%nij))
+
+  if( .not. al%is_valid )then
+    g%uwa(:) = al%uwa_miss
     call echo(code%ret)
     return
   endif
 
-  ul%iZone_grduwa = ul%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_in   => ul%f_grid_in
-  fg_out  => ul%f_grid_out
-  zone_im => fg_out%zone_im(ul%iZone)
-  zl      => ul%zone(ul%iZone)
-  g       => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%uwa, g%nij, clear=.true., fill=0.d0)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( ul%iZone_grdidx == 0 )then
-    call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_latlon)
-
-    allocate(g%idx(g%nij))
-    allocate(g%idxarg(g%nij))
-    call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-    call argsort(g%idx, g%idxarg)
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  allocate(grduwa_1rad(zl%vi:zl%vf))
+  allocate(grduwa_1rad(al%vi:al%vf))
 
   selectcase( earth%shp )
-  case( earth_shape_sphere )
-    grduwa_1rad(:) = area_sphere_rect(ul%lat(zl%vi-1_8:zl%vf-1_8), ul%lat(zl%vi:zl%vf))
-  case( earth_shape_ellips )
-    grduwa_1rad(:) = area_ellips_rect(ul%lat(zl%vi-1_8:zl%vf-1_8), ul%lat(zl%vi:zl%vf), &
+  case( EARTH_SHAPE_SPHERE )
+    grduwa_1rad(:) = area_sphere_rect(al%lat(al%vi-1_8:al%vf-1_8), al%lat(al%vi:al%vf))
+  case( EARTH_SHAPE_ELLIPS )
+    grduwa_1rad(:) = area_ellips_rect(al%lat(al%vi-1_8:al%vf-1_8), al%lat(al%vi:al%vf), &
                                       earth%e2)
   case default
     call eerr(str(msg_invalid_value())//&
@@ -563,35 +481,25 @@ subroutine make_grduwa__latlon(ul, earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  g%uwa(:) = ul%uwa_miss
-  do iv = zl%vi, zl%vf
-    do ih = zl%hi, zl%hf
-      idx = ul%idxmap(ih,iv)
-
-      if( ul%debug .and. idx /= ul%idx_debug ) cycle
-      if( idx == ul%idx_miss ) cycle
-
-      call search(idx, g%idx, g%idxarg, loc)
-      if( loc == 0_8 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(idx)//' is not found.')
-      endif
+  g%uwa(:) = al%uwa_miss
+  ij = 0_8
+  do iv = al%vi, al%vf
+    do ih = al%hi, al%hf
+      ij = ij + 1_8
+      if( .not. g%msk(ij) ) cycle
 
       ! Divide equation to control the order of calculation
-      g%uwa(g%idxarg(loc)) = grduwa_1rad(iv) * ul%lonwidth(ih)
-      g%uwa(g%idxarg(loc)) = g%uwa(g%idxarg(loc)) * earth%r**2
+      g%uwa(ij) = grduwa_1rad(iv) * al%lonwidth(ih)
+      g%uwa(ij) = g%uwa(ij) * earth%r**2
     enddo  ! ih/
   enddo  ! iv/
 
-  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=ul%uwa_miss))//&
-          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ul%uwa_miss))//&
-          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ul%uwa_miss),'es20.13'))
+  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=al%uwa_miss))//&
+          ', max: '//str(maxval(g%uwa,mask=g%uwa/=al%uwa_miss))//&
+          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=al%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( ul%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-  if( ul%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-
   deallocate(grduwa_1rad)
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -599,683 +507,511 @@ end subroutine make_grduwa__latlon
 !===============================================================
 ! Calc. weighted area
 !===============================================================
-subroutine make_grdara__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_grdara__latlon(al)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
+  type(gs_latlon_), intent(inout), target :: al
 
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(opt_earth_) :: earth
   real(8), allocatable :: aramap(:,:)
-  real(8), allocatable :: wgtmap(:,:)
   integer(8) :: ih, iv
-  integer(8) :: loc
-  integer(8) :: idx
+  integer(8) :: ij
+
+  if( al%grid%status_ara == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdara__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
+  call make_grdidx__latlon(al)
 
-  if( ul%iZone_grdara == ul%iZone )then
-    call edbg('Nothing to do.')
+  fg_in => al%f_grid_in
+  g     => al%grid
+
+  al%grid%status_ara = GRID_STATUS__PREPARED
+  allocate(g%ara(g%nij))
+
+  if( .not. al%is_valid )then
+    g%ara(:) = al%ara_miss
     call echo(code%ret)
     return
   endif
 
-  ul%iZone_grdara = ul%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_in   => ul%f_grid_in
-  fg_out  => ul%f_grid_out
-  zone_im => fg_out%zone_im(ul%iZone)
-  zl      => ul%zone(ul%iZone)
-  g       => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%ara, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Weighted area is input
+  ! Case: Weighted area data were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area is input')
-    !-------------------------------------------------------------
-    ! Prep. index
-    !-------------------------------------------------------------
-    if( ul%iZone_grdidx == 0 )then
-      call echo(code%ent, 'Preparing index')
+    call echo(code%ent, 'Case: Weighted area data were given')
 
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_latlon)
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
+    allocate(aramap(al%hi:al%hf,al%vi:al%vf))
 
-      call echo(code%ext)
-    endif
-    !-------------------------------------------------------------
-    ! Read input
-    !-------------------------------------------------------------
-    call echo(code%ent, 'Reading input')
+    call read_lattice_data(aramap, fg_in%ara, al%is_south_to_north)
+    call conv_unit(aramap, fg_in%unit_ara, UNIT_SQUARE_METER)
 
-    allocate(aramap(zl%hi:zl%hf,zl%vi:zl%vf))
-
-    call read_grid_data_latlon(&
-           aramap, fg_in%ara, varname_grdara, zl, ul%is_south_to_north)
-    call conv_unit(aramap, fg_in%unit_ara, unit_square_meter)
-
-    call echo(code%ext)
-    !-------------------------------------------------------------
-    ! Put values in
-    !-------------------------------------------------------------
-    call echo(code%ent, 'Putting values in')
-
-    g%ara(:) = ul%ara_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ul%idxmap(ih,iv)
-        if( ul%debug .and. idx /= ul%idx_debug ) cycle
-        if( idx == ul%idx_miss ) cycle
-
-        call search(idx, g%idx, g%idxarg, loc)
-        if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' is not found.')
-        endif
-
-        g%ara(g%idxarg(loc)) = aramap(ih,iv)
+    g%ara(:) = al%ara_miss
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        if( .not. g%msk(ij) ) cycle
+        g%ara(ij) = aramap(ih,iv)
       enddo  ! ih/
     enddo  ! iv/
 
-    call echo(code%ext)
-    !-------------------------------------------------------------
-    !
-    !-------------------------------------------------------------
     deallocate(aramap)
 
-    if( ul%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ul%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-    !-------------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Weight is input
+  ! Case: Weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight is input')
-    !-------------------------------------------------------------
-    ! Prep. index
-    !-------------------------------------------------------------
-    if( ul%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_latlon)
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-----------------------------------------------------------
-    ! Prep. unweighted area
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_latlon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-    !-----------------------------------------------------------
-    ! Read input
-    !-----------------------------------------------------------
-    allocate(wgtmap(zl%hi:zl%hf,zl%vi:zl%vf))
+    call echo(code%ent, 'Case: Weight data were given')
 
-    call read_grid_data_latlon(&
-             wgtmap, fg_in%wgt, varname_grdwgt, zl, ul%is_south_to_north)
-    !-----------------------------------------------------------
-    ! Calc. weighted area
-    !-----------------------------------------------------------
-    g%ara(:) = ul%ara_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ul%idxmap(ih,iv)
-        if( ul%debug .and. idx /= ul%idx_debug ) cycle
-        if( idx == ul%idx_miss ) cycle
+    call make_grduwa__latlon(al)
+    call make_wgtmap__latlon(al)
 
-        call search(idx, g%idx, g%idxarg, loc)
-        if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' is not found.')
-        endif
-
-        g%ara(g%idxarg(loc)) = g%uwa(g%idxarg(loc)) * wgtmap(ih,iv)
+    g%ara(:) = al%ara_miss
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        if( .not. g%msk(ij) ) cycle
+        g%ara(ij) = g%uwa(ij) * al%wgtmap(ih,iv)
       enddo  ! ih/
     enddo  ! iv/
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    deallocate(wgtmap)
 
-    if( ul%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ul%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-    if( ul%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
-    !-------------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
   ! Case: No input
   else
     call echo(code%ent, 'Case: No input')
-    !-----------------------------------------------------------
-    ! Prep. unweighted area
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_latlon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    g%ara(:) = g%uwa(:)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
-    !-------------------------------------------------------------
+
+    call make_grduwa__latlon(al)
+
+    call cpval(g%uwa, g%ara)
+
     call echo(code%ext)
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%ara,mask=g%ara/=ul%ara_miss))//&
-          ', max: '//str(maxval(g%ara,mask=g%ara/=ul%ara_miss))//&
-          '\ntotal: '//str(sum(g%ara,mask=g%ara/=ul%ara_miss),'es20.13'))
+  call edbg('min: '//str(minval(g%ara,mask=g%ara/=al%ara_miss))//&
+          ', max: '//str(maxval(g%ara,mask=g%ara/=al%ara_miss))//&
+          '\ntotal: '//str(sum(g%ara,mask=g%ara/=al%ara_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdara__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdwgt__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_grdwgt__latlon(al)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
+  type(gs_latlon_), intent(inout), target :: al
 
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
-  real(8), allocatable :: wgtmap(:,:)
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(opt_earth_) :: earth
   integer(8) :: ih, iv
   integer(8) :: ij
-  integer(8) :: idx
-  integer(8) :: loc
+
+  if( al%grid%status_wgt == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdwgt__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
+  call make_grdidx__latlon(al)
 
-  if( ul%iZone_grdwgt == ul%iZone )then
-    call edbg('Nothing to do.')
+  fg_in => al%f_grid_in
+  g     => al%grid
+
+  g%status_wgt = GRID_STATUS__PREPARED
+  allocate(g%wgt(g%nij))
+
+  if( .not. al%is_valid )then
+    g%wgt(:) = al%wgt_miss
     call echo(code%ret)
     return
   endif
 
-  ul%iZone_grdwgt = ul%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_in   => ul%f_grid_in
-  fg_out  => ul%f_grid_out
-  zone_im => fg_out%zone_im(ul%iZone)
-  zl      => ul%zone(ul%iZone)
-  g       => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%wgt, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: Weight is input
+  ! Case: Weight data were given
   if( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: weight is input')
-    !-----------------------------------------------------------
-    ! Read input
-    !-----------------------------------------------------------
-    allocate(wgtmap(zl%hi:zl%hf,zl%vi:zl%vf))
+    call echo(code%ent, 'Case: Weight data were given')
 
-    call read_grid_data_latlon(&
-           wgtmap, fg_in%wgt, varname_grdwgt, zl, ul%is_south_to_north)
-    !-----------------------------------------------------------
-    ! Put values in
-    !-----------------------------------------------------------
-    g%wgt(:) = ul%wgt_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ul%idxmap(ih,iv)
-        if( ul%debug .and. idx /= ul%idx_debug ) cycle
-        if( idx == ul%idx_miss ) cycle
+    call make_wgtmap__latlon(al)
 
-        call search(idx, g%idx, g%idxarg, loc)
-        if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' is not found.')
-        endif
-
-        g%wgt(g%idxarg(loc)) = wgtmap(ih,iv)
+    g%wgt(:) = al%wgt_miss
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        if( .not. g%msk(ij) ) cycle
+        g%wgt(ij) = al%wgtmap(ih,iv)
       enddo
     enddo
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    deallocate(wgtmap)
 
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Weighted area is input
+  ! Case: Weighted area were given
   elseif( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area is input')
-    !-----------------------------------------------------------
-    ! Prep. unweighted grid area
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_latlon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-    !-----------------------------------------------------------
-    ! Prep. weighted area
-    !-----------------------------------------------------------
-    if( ul%iZone_grdara == 0 )then
-      call verify_im_saved(zone_im%is_saved_ara, varname_ara, gs_type_latlon)
-      allocate(g%ara(g%nij))
-      call rbin(g%ara, zone_im%path, rec=rec_im_ara)
-    endif
-    !-----------------------------------------------------------
-    ! Calc. weight
-    !-----------------------------------------------------------
+    call echo(code%ent, 'Case: Weighted area data were given')
+
+    call make_grduwa__latlon(al)
+    call make_grdara__latlon(al)
+
     do ij = 1_8, g%nij
-      if( g%uwa(ij) == ul%uwa_miss )then
-        g%wgt(ij) = ul%wgt_miss
+      if( .not. g%msk(ij) )then
+        g%wgt(ij) = al%wgt_miss
+      elseif( g%ara(ij) == al%ara_miss )then
+        g%wgt(ij) = al%wgt_miss
+      elseif( g%uwa(ij) == al%uwa_miss )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  g%uwa(ij) == al%uwa_miss')
+      elseif( g%uwa(ij) <= 0.d0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  g%uwa(ij) <= 0')
       else
         g%wgt(ij) = g%ara(ij) / g%uwa(ij)
       endif
     enddo  ! ij/
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
-    if( ul%iZone_grdara == 0 ) call realloc(g%ara, 0)
 
     call echo(code%ext)
   !-------------------------------------------------------------
   ! Case: Neither weight or area was input
   else
-    call echo(code%ent, 'No input')
-    !-----------------------------------------------------------
-    ! Prep. unweighted grid area
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_latlon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-    !-----------------------------------------------------------
-    ! Calc. weight
-    !-----------------------------------------------------------
+    call echo(code%ent, 'Case: No input')
+
+    g%wgt(:) = al%wgt_miss
     do ij = 1_8, g%nij
-      if( g%uwa(ij) == ul%uwa_miss )then
-        g%wgt(ij) = ul%wgt_miss
-      else
-        g%wgt(ij) = 1.d0
-      endif
-    enddo  ! ij/
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ul%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
+      if( g%msk(ij) ) g%wgt(ij) = 1.d0
+    enddo
 
     call echo(code%ext)
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=ul%wgt_miss))//&
-          ', max: '//str(maxval(g%wgt,mask=g%wgt/=ul%wgt_miss)))
+  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=al%wgt_miss))//&
+          ', max: '//str(maxval(g%wgt,mask=g%wgt/=al%wgt_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdwgt__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz__latlon(ul, earth)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grdxyz__latlon(al)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
-  type(opt_earth_), intent(in) :: earth
+  type(gs_latlon_), intent(inout), target :: al
 
   type(file_grid_in_), pointer :: fg_in
-  type(zone_latlon_) , pointer :: zl
   type(grid_)        , pointer :: g
-
+  type(opt_earth_) :: earth
   real(8), allocatable :: cos_grdlon(:), sin_grdlon(:)
   real(8), allocatable :: cos_grdlat(:), sin_grdlat(:)
+  real(8), allocatable :: xmap(:,:), ymap(:,:), zmap(:,:)
   integer(8) :: ih, iv
   integer(8) :: ij
-  integer(8) :: loc
   real(8) :: r
+  real(8), parameter :: THRESH_EARTH_R_ERROR = 1d-6
+
+  if( al%grid%status_xyz == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdxyz__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
-  call check_iZone(varname_grdxyz, ul%iZone_grdwgt, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
+  call make_grdidx__latlon(al)
 
-  if( ul%iZone_grdxyz == ul%iZone )then
-    call edbg('Nothing to do.')
+  fg_in => al%f_grid_in
+  g     => al%grid
+
+  g%status_xyz = GRID_STATUS__PREPARED
+  allocate(g%x(g%nij))
+  allocate(g%y(g%nij))
+  allocate(g%z(g%nij))
+
+  if( .not. al%is_valid )then
+    g%x(:) = al%xyz_miss
+    g%y(:) = al%xyz_miss
+    g%z(:) = al%xyz_miss
     call echo(code%ret)
     return
   endif
 
-  ul%iZone_grdxyz = ul%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_in => ul%f_grid_in
-  zl    => ul%zone(ul%iZone)
-  g     => ul%grid
+  ! Case: Cartesian coordinate data were given
+  if( fg_in%x%path /= '' )then
+    call echo(code%ent, 'Cartesian coordinate data were given')
 
-  call realloc(g%x, zl%mij, clear=.true., fill=0.d0)
-  call realloc(g%y, zl%mij, clear=.true., fill=0.d0)
-  call realloc(g%z, zl%mij, clear=.true., fill=0.d0)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing utilities')
+    allocate(xmap(al%hi:al%hf,al%vi:al%vf))
+    allocate(ymap(al%hi:al%hf,al%vi:al%vf))
+    allocate(zmap(al%hi:al%hf,al%vi:al%vf))
+    call read_lattice_data(xmap, fg_in%x, al%is_south_to_north)
+    call read_lattice_data(ymap, fg_in%y, al%is_south_to_north)
+    call read_lattice_data(zmap, fg_in%z, al%is_south_to_north)
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        g%x(ij) = xmap(ih,iv)
+        g%y(ij) = ymap(ih,iv)
+        g%z(ij) = zmap(ih,iv)
+      enddo
+    enddo
+    deallocate(xmap)
+    deallocate(ymap)
+    deallocate(zmap)
 
-  allocate(cos_grdlon(zl%hi:zl%hf))
-  allocate(sin_grdlon(zl%hi:zl%hf))
-  allocate(cos_grdlat(zl%vi:zl%vf))
-  allocate(sin_grdlat(zl%vi:zl%vf))
-
-  do ih = zl%hi, zl%hf
-    if( ul%lon0(ih) )then
-      cos_grdlon(ih) = cos(((ul%lon(ih-1_8) - rad_360deg) + ul%lon(ih)) * 0.5d0)
-      sin_grdlon(ih) = sin(((ul%lon(ih-1_8) - rad_360deg) + ul%lon(ih)) * 0.5d0)
-    else
-      cos_grdlon(ih) = cos((ul%lon(ih-1_8) + ul%lon(ih)) * 0.5d0)
-      sin_grdlon(ih) = sin((ul%lon(ih-1_8) + ul%lon(ih)) * 0.5d0)
-    endif
-  enddo
-
-  cos_grdlat(:) = cos((ul%lat(zl%vi-1_8:zl%vf-1_8) + ul%lat(zl%vi:zl%vf)) * 0.5d0)
-  sin_grdlat(:) = sin((ul%lat(zl%vi-1_8:zl%vf-1_8) + ul%lat(zl%vi:zl%vf)) * 0.5d0)
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating coords.')
-
-  do iv = zl%vi, zl%vf
-    do ih = zl%hi, zl%hf
-      if( ul%idxmap(ih,iv) == ul%idx_miss ) cycle
-
-      call search(ul%idxmap(ih,iv), g%idx, g%idxarg, loc)
-      if( loc == 0_8 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(ul%idxmap(ih,iv))//' is not found.')
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
+        if( abs(r-earth%r)/earth%r > THRESH_EARTH_R_ERROR )then
+          call eerr("Earth's diameter calculated from the input cartesian coordinate"//&
+                    ' differs from the true value.')
+        endif
+      else
+        g%x(ij) = al%xyz_miss
+        g%y(ij) = al%xyz_miss
+        g%z(ij) = al%xyz_miss
       endif
+    enddo
 
-      g%x(g%idxarg(loc)) = cos_grdlat(iv) * cos_grdlon(ih)
-      g%y(g%idxarg(loc)) = cos_grdlat(iv) * sin_grdlon(ih)
-      g%z(g%idxarg(loc)) = sin_grdlat(iv)
-    enddo  ! ih/
-  enddo  ! iv/
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: Spherical coordinate data were given
+  elseif( fg_in%lon%path /= '' )then
+    call echo(code%ent, 'Case: Spherical coordinate data were given')
 
-  do ij = 1_8, zl%mij
-    if( g%idx(ij) == ul%idx_miss )then
-      g%x(ij) = ul%xyz_miss
-      g%y(ij) = ul%xyz_miss
-      g%z(ij) = ul%xyz_miss
-      cycle
-    endif
+    call make_grdlonlat__latlon(al)
 
-    if( g%x(ij) == 0.d0 .and. g%y(ij) == 0.d0 .and. g%z(ij) == 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  (x,y,z) == (0,0,0)'//&
-              '\n  ij: '//str(ij)//&
-              '\n  idx: '//str(g%idx(ij)))
-    endif
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        call conv_spherical_to_cartesian_rad(&
+               g%lon(ij), g%lat(ij), g%x(ij), g%y(ij), g%z(ij))
+      else
+        g%lon(ij) = al%lonlat_miss
+        g%lat(ij) = al%lonlat_miss
+      endif
+    enddo
 
-    r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
-    g%x(ij) = g%x(ij) / r * earth%r
-    g%y(ij) = g%y(ij) / r * earth%r
-    g%z(ij) = g%z(ij) / r * earth%r
-  enddo  ! ij/
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: No input
+  else
+    call echo(code%ent, 'Case: No input')
 
-  call echo(code%ext)
+    allocate(cos_grdlon(al%hi:al%hf))
+    allocate(sin_grdlon(al%hi:al%hf))
+    allocate(cos_grdlat(al%vi:al%vf))
+    allocate(sin_grdlat(al%vi:al%vf))
+
+    do ih = al%hi, al%hf
+      if( al%lon0(ih) )then
+        cos_grdlon(ih) = cos(((al%lon(ih-1_8) - rad_360deg) + al%lon(ih)) * 0.5d0)
+        sin_grdlon(ih) = sin(((al%lon(ih-1_8) - rad_360deg) + al%lon(ih)) * 0.5d0)
+      else
+        cos_grdlon(ih) = cos((al%lon(ih-1_8) + al%lon(ih)) * 0.5d0)
+        sin_grdlon(ih) = sin((al%lon(ih-1_8) + al%lon(ih)) * 0.5d0)
+      endif
+    enddo
+
+    cos_grdlat(:) = cos((al%lat(al%vi-1_8:al%vf-1_8) + al%lat(al%vi:al%vf)) * 0.5d0)
+    sin_grdlat(:) = sin((al%lat(al%vi-1_8:al%vf-1_8) + al%lat(al%vi:al%vf)) * 0.5d0)
+    !-------------------------------------------------------------
+    g%x(:) = al%xyz_miss
+    g%y(:) = al%xyz_miss
+    g%z(:) = al%xyz_miss
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        if( .not. g%msk(ij) ) cycle
+
+        g%x(ij) = cos_grdlat(iv) * cos_grdlon(ih)
+        g%y(ij) = cos_grdlat(iv) * sin_grdlon(ih)
+        g%z(ij) = sin_grdlat(iv)
+
+        if( g%x(ij) == 0.d0 .and. g%y(ij) == 0.d0 .and. g%z(ij) == 0.d0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  (x,y,z) == (0,0,0)'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij)))
+        endif
+
+        r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
+        g%x(ij) = g%x(ij) / r * earth%r
+        g%y(ij) = g%y(ij) / r * earth%r
+        g%z(ij) = g%z(ij) / r * earth%r
+      enddo  ! ih/
+    enddo  ! iv/
+    !-------------------------------------------------------------
+    deallocate(cos_grdlon)
+    deallocate(sin_grdlon)
+    deallocate(cos_grdlat)
+    deallocate(sin_grdlat)
+
+    call echo(code%ext)
+  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('x min: '//str(minval(g%x,mask=g%x/=ul%xyz_miss))//&
-            ', max: '//str(maxval(g%x,mask=g%x/=ul%xyz_miss))//&
-          '\ny min: '//str(minval(g%y,mask=g%y/=ul%xyz_miss))//&
-            ', max: '//str(maxval(g%y,mask=g%y/=ul%xyz_miss))//&
-          '\nz min: '//str(minval(g%z,mask=g%z/=ul%xyz_miss))//&
-            ', max: '//str(maxval(g%z,mask=g%z/=ul%xyz_miss)))
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  deallocate(cos_grdlon)
-  deallocate(sin_grdlon)
-  deallocate(cos_grdlat)
-  deallocate(sin_grdlat)
+  call edbg('x min: '//str(minval(g%x,mask=g%x/=al%xyz_miss))//&
+            ', max: '//str(maxval(g%x,mask=g%x/=al%xyz_miss))//&
+          '\ny min: '//str(minval(g%y,mask=g%y/=al%xyz_miss))//&
+            ', max: '//str(maxval(g%y,mask=g%y/=al%xyz_miss))//&
+          '\nz min: '//str(minval(g%z,mask=g%z/=al%xyz_miss))//&
+            ', max: '//str(maxval(g%z,mask=g%z/=al%xyz_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdxyz__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat__latlon(ul)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_grdlonlat__latlon(al)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_latlon_), intent(inout), target :: ul
+  type(gs_latlon_), intent(inout), target :: al
 
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
-  real(8), allocatable :: xmap(:,:)
-  real(8), allocatable :: ymap(:,:)
-  real(8), allocatable :: zmap(:,:)
+  type(file_latlon_in_), pointer :: fl
+  type(file_grid_in_)  , pointer :: fg_in
+  type(grid_)          , pointer :: g
+  type(opt_earth_) :: earth
+  real(8), allocatable :: lonmap(:,:), latmap(:,:)
   integer(8) :: ih, iv
-  integer(8) :: idx
-  integer(8) :: loc
+  integer(8) :: ij
+
+  if( al%grid%status_lonlat == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdlonlat__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ul%iZone_idxmap, ul%iZone, .false.)
-  call check_iZone(varname_grdidx, ul%iZone_grdidx, ul%iZone, .true.)
-  call check_iZone(varname_grduwa, ul%iZone_grduwa, ul%iZone, .true.)
-  call check_iZone(varname_grdara, ul%iZone_grdara, ul%iZone, .true.)
-  call check_iZone(varname_grdwgt, ul%iZone_grdwgt, ul%iZone, .true.)
-  call check_iZone(varname_wgtmap, ul%iZone_wgtmap, ul%iZone, .true.)
-  call check_iZone(varname_grdxyz, ul%iZone_grdwgt, ul%iZone, .true.)
+  call make_idxmap__latlon(al)
+  call make_grdidx__latlon(al)
 
-  if( ul%iZone_grdlonlat == ul%iZone )then
-    call edbg('Nothing to do.')
+  fl    => al%f_latlon_in
+  fg_in => al%f_grid_in
+  g     => al%grid
+
+  g%status_lonlat = GRID_STATUS__PREPARED
+  allocate(g%lon(g%nij))
+  allocate(g%lat(g%nij))
+
+  if( .not. al%is_valid )then
+    g%lon(:) = al%lonlat_miss
+    g%lat(:) = al%lonlat_miss
     call echo(code%ret)
     return
   endif
 
-  ul%iZone_grdlonlat = ul%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_in   => ul%f_grid_in
-  fg_out  => ul%f_grid_out
-  zone_im => fg_out%zone_im(ul%iZone)
-  zl      => ul%zone(ul%iZone)
-  g       => ul%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%lon, g%nij, clear=.true.)
-  call realloc(g%lat, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: LonLat is input
+  ! Case: Spherical coord. data were given
   if( fg_in%lon%path /= '' )then
-    call echo(code%ent, 'Case: LonLat is input')
-    !-------------------------------------------------------------
-    ! Prep. index
-    !-------------------------------------------------------------
-    if( ul%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_latlon)
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-------------------------------------------------------------
-    ! Read input
-    !-------------------------------------------------------------
-    allocate(xmap(zl%hi:zl%hf,zl%vi:zl%vf))
-    allocate(ymap(zl%hi:zl%hf,zl%vi:zl%vf))
-    allocate(zmap(zl%hi:zl%hf,zl%vi:zl%vf))
+    call echo(code%ent, 'Case: Spherical coordinate data were given')
 
-    call read_grid_data_latlon(&
-           xmap(:,:), fg_in%x, varname_grdx, zl, ul%is_south_to_north)
-    call read_grid_data_latlon(&
-           ymap(:,:), fg_in%y, varname_grdx, zl, ul%is_south_to_north)
-    call read_grid_data_latlon(&
-           zmap(:,:), fg_in%z, varname_grdx, zl, ul%is_south_to_north)
-    !-------------------------------------------------------------
-    ! Put values in
-    !-------------------------------------------------------------
-    g%lon(:) = ul%lonlat_miss
-    g%lat(:) = ul%lonlat_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ul%idxmap(ih,iv)
-        if( ul%debug .and. idx /= ul%idx_debug ) cycle
-        if( idx == ul%idx_miss ) cycle
+    allocate(lonmap(al%hi:al%hf,al%vi:al%vf))
+    allocate(latmap(al%hi:al%hf,al%vi:al%vf))
+    call read_lattice_data(lonmap, fg_in%lon, al%is_south_to_north)
+    call read_lattice_data(latmap, fg_in%lat, al%is_south_to_north)
+    ij = 0_8
+    do iv = al%vi, al%vf
+      do ih = al%hi, al%hf
+        ij = ij + 1_8
+        g%lon(ij) = lonmap(ih,iv)
+        g%lat(ij) = latmap(ih,iv)
+      enddo
+    enddo
+    deallocate(lonmap)
+    deallocate(latmap)
 
-        call search(idx, g%idx, g%idxarg, loc)
-        if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(idx)//' is not found.')
+    selectcase( fg_in%unit_lonlat )
+    case( UNIT_DEGREE )
+      do ij = 1_8, g%nij
+        if( g%msk(ij) )then
+          if( g%lon(ij) < -180.d0 .or. g%lon(ij) > 360.d0 )then
+            call eerr(str(msg_invalid_value())//&
+                    '\nLongitude is out of range.')
+          elseif( g%lat(ij) < -90.d0 .or. g%lat(ij) > 90.d0 )then
+            call eerr(str(msg_invalid_value())//&
+                    '\nLatitude is out of range.')
+          endif
+        else
+          g%lon(ij) = al%lonlat_miss
+          g%lat(ij) = al%lonlat_miss
         endif
-
-        call conv_cartesian_to_spherical_rad(&
-               xmap(ih,iv), ymap(ih,iv), zmap(ih,iv), &
-               g%lon(g%idxarg(loc)), g%lat(g%idxarg(loc)), &
-               ul%xyz_miss, ul%lonlat_miss)
-      enddo  ! ih/
-    enddo  ! iv/
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    deallocate(xmap)
-    deallocate(ymap)
-    deallocate(zmap)
+      enddo
+    case( UNIT_RADIAN )
+      do ij = 1_8, g%nij
+        if( g%msk(ij) )then
+          if( g%lon(ij) < -rad_180deg .or. g%lon(ij) > rad_360deg )then
+            call eerr(str(msg_invalid_value())//&
+                    '\nLongitude is out of range.')
+          elseif( g%lat(ij) < -90.d0 .or. g%lat(ij) > 90.d0 )then
+            call eerr(str(msg_invalid_value())//&
+                    '\nLatitude is out of range.')
+          endif
+        else
+          g%lon(ij) = al%lonlat_miss
+          g%lat(ij) = al%lonlat_miss
+        endif
+      enddo
+    case default
+      call eerr('Invalid value in $fg_in%unit_lonlat: '//str(fg_in%unit_lonlat))
+    endselect
 
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: xyz has been calculated
-  elseif( ul%iZone_grdxyz == ul%iZone )then
-    call echo(code%ent, 'Case: xyz has been calculated')
-    !-----------------------------------------------------------
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, ul%xyz_miss, ul%lonlat_miss)
-    !-----------------------------------------------------------
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: xyz has been saved
-  elseif( zone_im%is_saved_xyz )then
-    call echo(code%ent, 'Case: xyz has been saved')
-    !-----------------------------------------------------------
-    allocate(g%x(g%nij))
-    allocate(g%y(g%nij))
-    allocate(g%z(g%nij))
+  ! Case: Cartesian coord. data were given
+  elseif( fg_in%x%path /= '' )then
+    call echo(code%ent, 'Case: Cartesian coordinate data were given')
 
-    call rbin(g%x, zone_im%path, rec=rec_im_x)
-    call rbin(g%y, zone_im%path, rec=rec_im_y)
-    call rbin(g%z, zone_im%path, rec=rec_im_z)
+    call make_grdxyz__latlon(al)
 
     call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, ul%xyz_miss, ul%lonlat_miss)
+           g%x, g%y, g%z, g%lon, g%lat, al%xyz_miss, al%lonlat_miss)
 
-    call realloc(g%x, 0)
-    call realloc(g%y, 0)
-    call realloc(g%z, 0)
-    !-----------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
+  ! Case: No input
   else
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  Not matched any condition')
+    call echo(code%ent, 'Case: No input')
+
+    call make_grdxyz__latlon(al)
+
+    call conv_cartesian_to_spherical_rad(&
+           g%x, g%y, g%z, g%lon, g%lat, al%xyz_miss, al%lonlat_miss)
+
+    call echo(code%ext)
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ul%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=ul%lonlat_miss))//&
-          '\nlat min: '//str(minval(g%lat,mask=g%lat/=ul%lonlat_miss))//&
-              ', max: '//str(maxval(g%lat,mask=g%lat/=ul%lonlat_miss)))
+  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=al%lonlat_miss))//&
+              ', max: '//str(maxval(g%lon,mask=g%lon/=al%lonlat_miss))//&
+          '\nlat min: '//str(minval(g%lat,mask=g%lat/=al%lonlat_miss))//&
+              ', max: '//str(maxval(g%lat,mask=g%lat/=al%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdlonlat__latlon
@@ -1290,315 +1026,355 @@ end subroutine make_grdlonlat__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap__raster(ur)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
   use common_gs_grid_util, only: &
         print_idxmap
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
+  type(gs_raster_), intent(inout), target :: ar
+  integer(1), intent(in), optional :: mi1(:,:)
+  integer(2), intent(in), optional :: mi2(:,:)
+  integer(4), intent(in), optional :: mi4(:,:)
+  integer(8), intent(in), optional :: mi8(:,:)
+  real(4)   , intent(in), optional :: mr4(:,:)
+  real(8)   , intent(in), optional :: mr8(:,:)
 
   type(file_raster_in_), pointer :: fr
-  type(zone_latlon_)   , pointer :: zl
+  type(raster_zone_)   , pointer :: arz
+  integer(8) :: idx
+  integer(8) :: n_valid
+  integer    :: iz
+  integer(8) :: ih, iv
+  integer(8) :: h0, v0
+  integer    :: vsgn
 
-  integer :: stat
+  if( ar%status_idxmap == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_idxmap__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .true.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  fr => ar%f_raster_in
 
-  if( ur%iZone_idxmap == ur%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  ur%iZone_idxmap = ur%iZone
+  ar%status_idxmap = GRID_STATUS__PREPARED
+  do iz = 1, ar%nZone
+    arz => ar%zone(iz)
+    allocate(arz%idxmap(arz%hi:arz%hf,arz%vi:arz%vf))
+    allocate(arz%mskmap(arz%hi:arz%hf,arz%vi:arz%vf))
+  enddo
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  zl => ur%zone(ur%iZone)
-  fr => ur%f_raster_in
+  ! Case: Index map was given as an argument (libspring)
+  if( present(mi1) .or. present(mi2) .or. &
+      present(mi4) .or. present(mi8) .or. &
+      present(mr4) .or. present(mr8) )then
+    if( ar%is_south_to_north )then
+      v0 = ar%vi - 1_8
+      vsgn = 1
+    else
+      v0 = ar%vf + 1_8
+      vsgn = -1
+    endif
+    h0 = ar%zone(1)%hi - 1_8
 
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
+    if( present(mi1) )then
+      do iz = 1, ar%nZone
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            arz%idxmap(ih,iv) = int(mi1(ih-h0,vsgn*(iv-v0)),8)
+          enddo
+        enddo
+      enddo
+    elseif( present(mi2) )then
+  
+    elseif( present(mi4) )then
+      do iz = 1, ar%nZone
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            arz%idxmap(ih,iv) = int(mi4(ih-h0,vsgn*(iv-v0)),8)
+          enddo
+        enddo
+      enddo
+    elseif( present(mi8) )then
+      do iz = 1, ar%nZone
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            arz%idxmap(ih,iv) = mi8(ih-h0,vsgn*(iv-v0))
+          enddo
+        enddo
+      enddo
+    elseif( present(mr4) )then
+
+    elseif( present(mr8) )then
+
+    endif
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  selectcase( ur%tag_in_idxmap )
-  case( TAG_IN_RASTER_IDXMAP_GIVEN )
-    continue
-
-  case( TAG_IN_RASTER_IDXMAP_UNDEF )
-    call eerr(str(msg_unexpected_condition())//&
-            '\nur%tag_in_idxmap == '//str(ur%tag_in_idxmap))
-
-  case( TAG_IN_RASTER_IDXMAP_INT1 )
-    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-    call cpval(ur%idxmapall1(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
-
-  case( TAG_IN_RASTER_IDXMAP_INT2 )
-    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-    call cpval(ur%idxmapall2(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
-
-  case( TAG_IN_RASTER_IDXMAP_INT4 )
-    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-    call cpval(ur%idxmapall4(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
-
-  case( TAG_IN_RASTER_IDXMAP_INT8 )
-    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-    call cpval(ur%idxmapall8(zl%hi:zl%hf,zl%vi:zl%vf), ur%idxmap)
-
-  case( TAG_IN_RASTER_IDXMAP_FILE_PB )
-    call realloc(ur%idxmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-    call read_grid_data_latlon(&
-           ur%idxmap, fr%idx, varname_rstidx, &
-           zl, ur%xi, ur%yi, ur%is_south_to_north)
-
-  case default
-    call eerr(str(msg_invalid_value())//&
-            '\nur%tag_in_idxmap == '//str(ur%tag_in_idxmap))
-  endselect
-
-  call print_idxmap(ur%idxmap, zl)
-
-  call get_stats(ur%idxmap, vmin=zl%idxmin, vmax=zl%idxmax, miss=ur%idx_miss, stat=stat)
-  zl%is_valid = stat == 0
-
-  if( zl%is_valid )then
-    call edbg('Num. of valid rasters: '//str(count(ur%idxmap/=ur%idx_miss))//&
-            '\nidx min: '//str(zl%idxmin,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max))//&
-            '\n    max: '//str(zl%idxmax,dgt((/zl%idxmin,zl%idxmax/),dgt_opt_max)))
+  ! Case: Index map was given via a file
   else
-    call ewrn('No valid index is found.')
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      call read_lattice_data(arz%idxmap, fr%idx, ar%is_south_to_north, arz%xi, arz%yi)
+    enddo
+  endif
+
+  do iz = 1, ar%nZone
+    call print_idxmap(ar%zone(iz)%idxmap)
+  enddo
+
+  n_valid = 0_8
+  do iz = 1, ar%nZone
+    arz => ar%zone(iz)
+    arz%idxmin = INT8_ULIM
+    arz%idxmax = INT8_LLIM
+    do iv = arz%vi, arz%vf
+      do ih = arz%hi, arz%hf
+        idx = arz%idxmap(ih,iv)
+        if( idx == ar%idx_miss )then
+          arz%mskmap(ih,iv) = .false.
+        else
+          arz%mskmap(ih,iv) = .true.
+          arz%idxmin = min(arz%idxmin, idx)
+          arz%idxmax = max(arz%idxmax, idx)
+          call add(n_valid)
+        endif
+      enddo
+    enddo
+
+    if( arz%idxmin <= arz%idxmax )then
+      arz%is_valid = .true.
+    else
+      arz%is_valid = .false.
+      arz%idxmin = ar%idx_miss
+      arz%idxmax = ar%idx_miss
+    endif
+  enddo
+
+  ar%is_valid = any(ar%zone(:)%is_valid)
+  ar%idxmin = minval(ar%zone(:)%idxmin)
+  ar%idxmax = maxval(ar%zone(:)%idxmax)
+
+  if( ar%is_valid )then
+    call edbg('Num. of valid rasters: '//str(n_valid)//&
+            '\nidx min: '//str(ar%idxmin,dgt((/ar%idxmin,ar%idxmax/),DGT_OPT_MAX))//&
+            '\n    max: '//str(ar%idxmax,dgt((/ar%idxmin,ar%idxmax/),DGT_OPT_MAX)))
+  else
+    call ewrn('No valid index was found.')
+  endif
+
+  if( .not. ar%is_valid )then
+    call echo(code%ret)
+    return
+  endif
+
+  if( ar%debug )then
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      arz%is_valid = .false.
+      do iv = arz%vi, arz%vf
+        do ih = arz%hi, arz%hf
+          if( arz%idxmap(ih,iv) == ar%idx_debug )then
+            arz%mskmap(ih,iv) = .true.
+            arz%is_valid = .true.
+          else
+            arz%mskmap(ih,iv) = .false.
+          endif
+        enddo  ! ih/
+      enddo  ! iv/
+    enddo  ! iz/
+
+    ar%is_valid = any(ar%zone(:)%is_valid)
+    if( .not. ar%is_valid )then
+      call edbg('No valid raster was found in debugging mode.')
+    endif
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_idxmap__raster
 !===============================================================
-! It can be called after 
-!   subroutine make_idxmap__raster
-!   subroutine make_grdidx__raster
-!   subroutine make_grduwa__raster
-!   subroutine make_grdara__raster
-!   subroutine make_grdwgt__raster
-! were called and grid data were output to the intermediate file.
+!
 !===============================================================
-subroutine make_wgtmap__raster(ur, earth)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_wgtmap__raster(ar)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
-  type(opt_earth_), intent(in) :: earth
+  type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_)  , pointer :: fg_in
-  type(file_grid_out_) , pointer :: fg_out
-  type(zone_grid_im_)  , pointer :: zone_im
-  type(zone_latlon_)   , pointer :: zl
   type(grid_)          , pointer :: g
-
-  real(8), allocatable :: aramap(:,:)
+  type(raster_zone_)   , pointer :: arz
+  type(opt_earth_) :: earth
   real(8), allocatable :: rstuwa_col(:)  ! unweighted area of raster
   integer(8) :: ih, iv
-  integer(8) :: idx, idx_prev
-  integer(8) :: loc
+  integer(8) :: idx_prev
+  integer(8) :: ij, ij_prev
+  integer :: iz
+
+  if( ar%status_wgtmap == GRID_STATUS__PREPARED .or. &
+      ar%status_wgtmap == GRID_STATUS__NOT_USED ) return
 
   call echo(code%bgn, 'make_wgtmap__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .false.)
-  call check_iZone(varname_grdidx ,ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
+  call make_grdidx__raster(ar)
 
-  if( ur%iZone_wgtmap == ur%iZone )then
-    call edbg('Nothing to do.')
+  fr    => ar%f_raster_in
+  fg_in => ar%f_grid_in
+  g     => ar%grid
+
+  if( .not. ar%is_valid )then
+    ar%status_wgtmap = GRID_STATUS__NOT_USED
     call echo(code%ret)
     return
   endif
 
-  ur%iZone_wgtmap = ur%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fr      => ur%f_raster_in
-  fg_in   => ur%f_grid_in
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
+  ! Case: Grid area data were given
+  if( fg_in%ara%path /= '' )then
+    call echo(code%ent, 'Grid area data were given')
 
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
+    ar%status_wgtmap = GRID_STATUS__PREPARED
 
-  call realloc(ur%wgtmap, (/zl%hi,zl%vi/), (/zl%hf,zl%vf/), clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: Grid data is input
-  if( fg_in%ara%path /= '' .or. fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Grid data is input')
-    !-----------------------------------------------------------
-    ! Read index
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
+    call make_grduwa__raster(ar)
+    call make_grdara__raster(ar)
 
-      g%nij = zl%mij
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-----------------------------------------------------------
-    ! Read weight
-    !-----------------------------------------------------------
-    if( ur%iZone_grdwgt == 0 )then
-      call verify_im_saved(zone_im%is_saved_wgt, varname_wgt, gs_type_raster)
-
-      g%nij = zl%mij
-      allocate(g%wgt(g%nij))
-      call rbin(g%wgt, zone_im%path, rec=rec_im_wgt)
-    endif
-    !-----------------------------------------------------------
-    ! Put values in
-    !-----------------------------------------------------------
-    ur%wgtmap(:,:) = ur%wgt_miss
-    idx_prev = ur%idx_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ur%idxmap(ih,iv)
-        if( idx == ur%idx_miss ) cycle
-        if( idx /= idx_prev )then
-          call search(idx, g%idx, g%idxarg, loc)
-          if( loc == 0_8 )then
+    idx_prev = ar%idx_miss
+    ij_prev = 0_8
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+      do iv = arz%vi, arz%vf
+        do ih = arz%hi, arz%hf
+          if( .not. arz%mskmap(ih,iv) ) cycle
+          ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
+          if( g%uwa(ij) <= 0.d0 .or. g%ara(ij) <= 0.d0 )then
             call eerr(str(msg_unexpected_condition())//&
-                    '\n  Index '//str(idx)//' is not found '//&
-                      'in the intermediate data.')
+                    '\n  g%uwa(ij) <= 0 .or. g%ara(ij) <= 0.d0')
           endif
-          idx_prev = idx
-        endif
-        ur%wgtmap(ih,iv) = g%wgt(g%idxarg(loc))
-      enddo  ! ih/
-    enddo  ! iv/
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-    if( ur%iZone_grdwgt == 0 ) call realloc(g%wgt, 0)
-    !-----------------------------------------------------------
+          arz%wgtmap(ih,iv) = g%ara(ij) / g%uwa(ij)
+        enddo  ! ih/
+      enddo  ! iv/
+    enddo  ! iz/
+
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Raster data (weighted area) was input
+  ! Case: Grid weight data were given
+  elseif( fg_in%wgt%path /= '' )then
+    call echo(code%ent, 'Grid weight data were given')
+
+    call make_grdidx__raster(ar)
+    call make_grdwgt__raster(ar)
+
+    if( all(g%wgt(:)==1.d0 .eqv. g%msk) )then
+      ar%status_wgtmap = GRID_STATUS__NOT_USED
+    else
+      ar%status_wgtmap = GRID_STATUS__PREPARED
+
+      idx_prev = ar%idx_miss
+      ij_prev = 0_8
+      do iz = 1, ar%nZone
+        arz => ar%zone(iz)
+        allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            if( .not. arz%mskmap(ih,iv) ) cycle
+            ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
+            arz%wgtmap(ih,iv) = g%wgt(ij)
+          enddo  ! ih/
+        enddo  ! iv/
+      enddo  ! iz/
+    endif
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: Raster data of weighted area were given
   elseif( fr%ara%path /= '' )then
-    call echo(code%ent, 'Case: Raster data (weighted area) is input')
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    allocate(aramap(zl%hi:zl%hf,zl%vi:zl%vf))
-    allocate(rstuwa_col(zl%vi:zl%vf))
+    call echo(code%ent, 'Case: Raster data of weighted area were given')
 
-    call read_grid_data_latlon(&
-           aramap, fr%ara, 'rstara', zl, ur%is_south_to_north)
-    call conv_unit(aramap, fr%unit_ara, unit_square_meter)
+    ar%status_wgtmap = GRID_STATUS__PREPARED
 
+    allocate(rstuwa_col(ar%vi:ar%vf))
     selectcase( earth%shp )
-    case( earth_shape_sphere )
-      rstuwa_col(:) = area_sphere_rect(ur%lat(zl%vi-1_8:zl%vf-1_8), ur%lat(zl%vi:zl%vf)) &
-                        * ur%lonwidth(1)
-    case( earth_shape_ellips )
-      rstuwa_col(:) = area_ellips_rect(ur%lat(zl%vi-1_8:zl%vf-1_8), ur%lat(zl%vi:zl%vf), &
-                                        earth%e2) &
-                        * ur%lonwidth(1)
+    case( EARTH_SHAPE_SPHERE )
+      rstuwa_col(:) = area_sphere_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf)) &
+                        * ar%lonwidth(1)
+    case( EARTH_SHAPE_ELLIPS )
+      rstuwa_col(:) = area_ellips_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf), &
+                                       earth%e2) &
+                        * ar%lonwidth(1)
     case default
       call eerr(str(msg_invalid_value())//&
               '\n  earth%shp: '//str(earth%shp))
     endselect
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        if( ur%idxmap(ih,iv) /= ur%idx_miss )then
-          if( aramap(ih,iv) < 0.d0 )then
-            call eerr(str(msg_unexpected_condition())//&
-                    '\n  Negative value was found in aramap.'//&
-                    '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
-                    '\n  ara: '//str(aramap(ih,iv))//&
-                    '\n  idx: '//str(ur%idxmap(ih,iv)))
+
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call read_lattice_data(arz%wgtmap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi)
+      call conv_unit(arz%wgtmap, fr%unit_ara, UNIT_SQUARE_METER)
+
+      do iv = arz%vi, arz%vf
+        do ih = arz%hi, arz%hf
+          if( arz%mskmap(ih,iv) )then
+            if( arz%wgtmap(ih,iv) < 0.d0 )then
+              call eerr(str(msg_unexpected_condition())//&
+                      '\n  Negative value was found in aramap.'//&
+                      '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
+                      '\n  ara: '//str(arz%wgtmap(ih,iv))//&
+                      '\n  idx: '//str(arz%idxmap(ih,iv)))
+            endif
+            arz%wgtmap(ih,iv) = arz%wgtmap(ih,iv) / rstuwa_col(iv)
+          else
+            arz%wgtmap(ih,iv) = ar%wgt_miss
           endif
-          ur%wgtmap(ih,iv) = aramap(ih,iv) / rstuwa_col(iv)
-        else
-          ur%wgtmap(ih,iv) = ur%wgt_miss
-        endif
-      enddo
-    enddo
-    !-----------------------------------------------------------
-    deallocate(aramap)
+        enddo  ! ih/
+      enddo  ! iv/
+    enddo  ! iz/
+
     deallocate(rstuwa_col)
-    !-----------------------------------------------------------
+
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Raster data (weight) was input
+  ! Case: Raster data of weight were given
   elseif( fr%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Raster data (weight) is input')
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    call read_grid_data_latlon(&
-           ur%wgtmap, fr%wgt, 'rstwgt', zl, ur%is_south_to_north)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        if( ur%idxmap(ih,iv) /= ur%idx_miss )then
-          if( ur%wgtmap(ih,iv) < 0.d0 )then
-            call eerr(str(msg_unexpected_condition())//&
-                    '\n  Negative value was found in wgtmap.'//&
-                    '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
-                    '\n  wgt: '//str(ur%wgtmap(ih,iv))//&
-                    '\n  idx: '//str(ur%idxmap(ih,iv)))
+    call echo(code%ent, 'Case: Raster data of weight were given')
+
+    ar%status_wgtmap = GRID_STATUS__PREPARED
+
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call read_lattice_data(arz%wgtmap, fr%wgt, ar%is_south_to_north, arz%xi, arz%yi)
+
+      do iv = arz%vi, arz%vf
+        do ih = arz%hi, arz%hf
+          if( arz%mskmap(ih,iv) )then
+            if( arz%wgtmap(ih,iv) < 0.d0 )then
+              call eerr(str(msg_unexpected_condition())//&
+                      '\n  Negative value was found in wgtmap.'//&
+                      '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
+                      '\n  wgt: '//str(arz%wgtmap(ih,iv))//&
+                      '\n  idx: '//str(arz%idxmap(ih,iv)))
+            endif
+          else
+            arz%wgtmap(ih,iv) = ar%wgt_miss
           endif
-        else
-          ur%wgtmap(ih,iv) = ur%wgt_miss
-        endif
-      enddo
-    enddo
-    !-----------------------------------------------------------
+        enddo  ! ih/
+      enddo  ! iv/
+    enddo  ! iz/
+
     call echo(code%ext)
   !-------------------------------------------------------------
   ! Case: No input
   else
     call echo(code%ent, 'Case: No input')
 
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        if( ur%idxmap(ih,iv) /= ur%idx_miss )then
-          ur%wgtmap(ih,iv) = 1.d0
-        else
-          ur%wgtmap(ih,iv) = ur%wgt_miss
-        endif
-      enddo
-    enddo
+    ar%status_wgtmap = GRID_STATUS__NOT_USED
 
     call echo(code%ext)
   endif
@@ -1608,908 +1384,698 @@ end subroutine make_wgtmap__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx__raster(ur)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grdidx__raster(ar)
   use common_gs_grid_util, only: &
         print_indices
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
+  type(gs_raster_), intent(inout), target :: ar
 
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(raster_zone_) , pointer :: arz
+  type(file_), pointer :: f
+  logical(1), allocatable :: is_valid(:)
+  integer(8) :: idx, idx_prev
+  integer    :: iz
+  integer(8) :: ih, iv
+  integer(8) :: ij, ij_prev
   integer(8) :: loc
+  integer :: stat
+  integer :: dgt_idx
+
+  if( ar%grid%status_idx == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdidx__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .false.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
 
-  if( ur%iZone_grdidx == ur%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
+  fg_in => ar%f_grid_in
+  g => ar%grid
 
-  ur%iZone_grdidx = ur%iZone
+  g%status_idx = GRID_STATUS__PREPARED
+  g%status_msk = GRID_STATUS__PREPARED
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
+  ! Case: Index data were given
+  if( fg_in%idx%path /= '' )then
+    call echo(code%ent, 'Case: Index data were given')
 
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
+    ar%nij = fg_in%nij
+    g%nij = fg_in%nij
+    allocate(g%idx(g%nij))
+    allocate(g%idxarg(g%nij))
+    allocate(g%msk(g%nij))
 
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exist
-  if( zone_im%is_saved_idx )then
-    call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
-
-    g%nij = zl%mij
-    call realloc(g%idx, g%nij, clear=.true.)
-    call realloc(g%idxarg, g%nij, clear=.true.)
-    call rbin(g%idx, zone_im%path, rec=rec_im_idx)
+    f => fg_in%idx
+    call rbin(g%idx, fg_in%nx, fg_in%ny, &
+              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
     call argsort(g%idx, g%idxarg)
 
+    allocate(is_valid(ar%idxmin:ar%idxmax))
+
+    selectcase( ar%grdidx_condition )
+    !-----------------------------------------------------------
+    ! Case: Set of indices from grdidx and that from rstidx must match
+    case( GRDIDX_CONDITION__MATCH )
+      call echo(code%ent, 'Case: Set of indices from grdidx and that from rstidx must match')
+      !---------------------------------------------------------
+      ! Check if the ranges match
+      !---------------------------------------------------------
+      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( ar%is_valid )then
+        if( stat /= 0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nNo valid index found in the given set of indices.')
+        elseif( g%idxmin /= ar%idxmin .or. g%idxmax /= ar%idxmax )then
+          dgt_idx = dgt((/g%idxmin,g%idxmax,ar%idxmin,ar%idxmax/),DGT_OPT_MAX)
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe ranges of the given set of indices and the one '//&
+                    'generated from the raster map does not match.'//&
+                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),dgt_idx,' - ')//&
+                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),dgt_idx,' - '))
+        endif
+      else
+        if( stat == 0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe ranges of the given set of indices and the one '//&
+                    'generated from the raster map does not match.'//&
+                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
+                  '\n  Made from raster map: (no valid index)')
+        endif
+      endif
+      !---------------------------------------------------------
+      ! Check if the sets are identical
+      !---------------------------------------------------------
+      is_valid(:) = .false.
+      idx_prev = ar%idx_miss
+      ij_prev = 0_8
+      do iz = 1, ar%nZone
+        arz => ar%zone(iz)
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            if( .not. arz%mskmap(ih,iv) ) cycle
+            ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .true.)
+            if( ij == 0_8 )then
+              call eerr(str(msg_unexpected_condition())//&
+                      '\nThe given set of grid indices and the one made from '//&
+                        'raster index map do not match.'//&
+                      '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
+                        'was not found in the raster map.')
+            endif
+            is_valid(arz%idxmap(ih,iv)) = .true.
+          enddo  ! ih/
+        enddo  ! iv/
+      enddo  ! iz/
+
+      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      do ij = 1_8, g%nij
+        if( g%idx(ij) == ar%idx_miss ) cycle
+        if( .not. is_valid(g%idx(ij)) )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe set of grid indices given as "grdidx" and the one '//&
+                    'made from raster index map do not match.'//&
+                  '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
+                    'was not found in the raster map.')
+        endif
+      enddo  ! ij/
+      !---------------------------------------------------------
+      ! Make the grid mask
+      !---------------------------------------------------------
+      g%msk(:) = g%idx(:) /= ar%idx_miss
+      !---------------------------------------------------------
+      call echo(code%ext)
+    !-----------------------------------------------------------
+    ! Case: Set of indices from rstidx must be an element of that from grdidx
+    case( GRDIDX_CONDITION__RST_IN_GRD )
+      call echo(code%ent, 'Case: Set of indices of rstidx '//&
+                'must be an element of that of grdidx')
+      !---------------------------------------------------------
+      ! Check the ranges
+      !---------------------------------------------------------
+      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( ar%is_valid )then
+        if( stat /= 0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe range of indices made from raster map '//&
+                    'is not in the range of the one given as "grdidx".'//&
+                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - ')//&
+                  '\n  Given as "grdidx"   : (no valid index)')
+        elseif( ar%idxmin < g%idxmin .or. g%idxmax < ar%idxmax )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe range of indices made from raster map '//&
+                    'is not in the range of the one given as "grdidx".'//&
+                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - ')//&
+                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - '))
+        endif
+      endif
+      !---------------------------------------------------------
+      ! Check if the sets fulfill the condition
+      !---------------------------------------------------------
+      is_valid(:) = .false.
+      idx_prev = ar%idx_miss
+      ij_prev = 0_8
+      do iz = 1, ar%nZone
+        arz => ar%zone(iz)
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            if( .not. arz%mskmap(ih,iv) ) cycle
+            ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .true.)
+            if( ij == 0_8 )then
+              call eerr(str(msg_unexpected_condition())//&
+                      '\nThe set of grid indices made from raster index map '//&
+                        'is not an element of the one given as "grdidx".'//&
+                      '\nIndex '//str(arz%idxmap(ih,iv))//', that is in the raster map, '//&
+                        'was not found in the given set.')
+            endif
+            is_valid(arz%idxmap(ih,iv)) = .true.
+          enddo  ! ih/
+        enddo  ! iv/
+      enddo  ! iz/
+      !---------------------------------------------------------
+      ! Make the grid mask
+      !---------------------------------------------------------
+      do ij = 1_8, g%nij
+        if( g%idx(ij) == ar%idx_miss )then
+          g%msk(ij) = .false.
+        elseif( g%idx(ij) < ar%idxmin .or. ar%idxmax < g%idx(ij) )then
+          g%msk(ij) = .false.
+        else
+          g%msk(ij) = is_valid(g%idx(ij))
+        endif
+      enddo
+      !---------------------------------------------------------
+      call echo(code%ext)
+    !-----------------------------------------------------------
+    ! Case: Set of indices from grdidx must be an element of that from rstidx
+    case( GRDIDX_CONDITION__GRD_IN_RST )
+      call echo(code%ent, 'Case: Set of indices of grdidx '//&
+                'must be an element of that of rstidx')
+      !---------------------------------------------------------
+      ! Check the ranges
+      !---------------------------------------------------------
+      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( ar%is_valid )then
+        if( stat /= 0 )then
+          continue
+        elseif( g%idxmin < ar%idxmin .or. ar%idxmax < g%idxmax )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe range of indices given as "grdidx" '//&
+                    'is not in the range of the one made from raster map.'//&
+                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
+                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - '))
+        endif
+      else
+        if( stat == 0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe range of indices given as "grdidx" '//&
+                    'is not in the range of the one made from raster map.'//&
+                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
+                  '\n  Made from raster map: (no valid index)')
+        endif
+      endif
+      !---------------------------------------------------------
+      ! Check if the sets fulfills the condition
+      !---------------------------------------------------------
+      idx_prev = ar%idx_miss
+      ij_prev = 0_8
+      do iz = 1, ar%nZone
+        arz => ar%zone(iz)
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            if( .not. arz%mskmap(ih,iv) ) cycle
+            ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .true.)
+            if( ij == 0_8 )then
+              arz%mskmap(ih,iv) = .false.
+            else
+              is_valid(arz%idxmap(ih,iv)) = .true.
+            endif
+          enddo  ! ih/
+        enddo  ! iv/
+      enddo  ! iz/
+
+      do ij = 1_8, g%nij
+        if( g%idx(ij) == ar%idx_miss ) cycle
+        if( .not. is_valid(g%idx(ij)) )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\nThe set of grid indices given as "grdidx" '//&
+                    'is not an element of the one made from raster index map.'//&
+                  '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
+                    'was not found in the raster map.')
+        endif
+      enddo
+      !---------------------------------------------------------
+      ! Make the grid mask
+      !---------------------------------------------------------
+      g%msk(:) = g%idx(:) /= ar%idx_miss
+      !---------------------------------------------------------
+      call echo(code%ext)
+    !-----------------------------------------------------------
+    ! Case: No condition
+    case( GRDIDX_CONDITION__NONE )
+      call echo(code%ent, 'No condition')
+
+      g%msk(:) = g%idx(:) /= ar%idx_miss
+
+      call echo(code%ext)
+    !-----------------------------------------------------------
+    ! Case: ERROR (undef)
+    case( GRDIDX_CONDITION__UNDEF )
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  ar%condition_grdidx: '//str(ar%grdidx_condition))
+    !-----------------------------------------------------------
+    ! Case: ERROR
+    case default
+      call eerr(str(msg_invalid_value())//&
+              '\n  ar%condition_grdidx: '//str(ar%grdidx_condition))
+    endselect
+    !-----------------------------------------------------------
+    !
+    !-----------------------------------------------------------
+    deallocate(is_valid)
+    !-----------------------------------------------------------
+    !
+    !-----------------------------------------------------------
+    if( .not. any(g%msk) )then
+      g%idxmin = ar%idx_miss
+      g%idxmax = ar%idx_miss
+    else
+      g%idxmin = minval(g%idx, mask=g%msk)
+      g%idxmax = maxval(g%idx, mask=g%msk)
+    endif
+
+    call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Intermediate data do not eixst
+  ! Case: No input
   else
-    call make_index_list_raster(&
-           ur%idxmap, ur%idx_miss, zl%idxmin, zl%idxmax, & ! in
-           zl%mij, g%idx, g%idxarg) ! out
+    call echo(code%ent, 'Case: No input')
 
-    zl%is_valid = zl%mij > 0_8
+    allocate(is_valid(ar%idxmin:ar%idxmax))
+    is_valid(:) = .false.
 
-    g%nij = zl%mij
-    g%idxmin = zl%idxmin
-    g%idxmax = zl%idxmax
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      do iv = arz%vi, arz%vf
+        do ih = arz%hi, arz%hf
+          if( arz%idxmap(ih,iv) /= ar%idx_miss ) is_valid(arz%idxmap(ih,iv)) = .true.
+        enddo  ! ih/
+      enddo  ! iv/
+    enddo  ! iz/
 
-    call print_indices(g%idx, g%idxarg, ur%idx_miss, g%idxmin, g%idxmax)
+    ar%nij = count(is_valid)
+
+    g%nij = ar%nij
+    g%idxmin = ar%idxmin
+    g%idxmax = ar%idxmax
+    allocate(g%idx(g%nij))
+    allocate(g%idxarg(g%nij))
+    allocate(g%msk(g%nij))
+
+    ij = 0_8
+    do idx = ar%idxmin, ar%idxmax
+      if( is_valid(idx) )then
+        ij = ij + 1_8
+        g%idx(ij) = idx
+        g%idxarg(ij) = ij
+        g%msk(ij) = .true.
+      endif
+    enddo
+
+    deallocate(is_valid)
+
+    call echo(code%ext)
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( ur%debug )then
-    call search(ur%idx_debug, g%idx, g%idxarg, loc)
+  call print_indices(g%idx, g%idxarg, ar%idx_miss, g%idxmin, g%idxmax)
 
-    zl%is_valid = loc /= 0_8
-    if( zl%is_valid ) g%ij_debug = g%idxarg(loc)
-  else
-    g%ij_debug = 0_8
+  g%ij_debug = 0_8
+  if( ar%debug )then
+    g%msk(:) = .false.
+    call search(ar%idx_debug, g%idx, g%idxarg, loc)
+    if( loc == 0_8 .or. ar%idx_debug == ar%idx_miss )then
+      ar%is_valid = .false.
+    else
+      g%ij_debug = g%idxarg(loc)
+      g%msk(g%ij_debug) = .true.
+    endif
   endif
+
+  ar%is_valid = any(g%msk)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdidx__raster
 !===============================================================
-!
+! Calc. unweighted grid area.
 !===============================================================
-subroutine make_grdmsk__raster(ur)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grduwa__raster(ar)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
+  type(gs_raster_), intent(inout), target :: ar
 
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
-  integer(8) :: ij
-
-  call echo(code%bgn, 'make_grdmsk__raster')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .true.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
-
-  if( ur%iZone_grdmsk == ur%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  ur%iZone_grdmsk = ur%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%msk, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_msk )then
-    call rbin(g%msk, zone_im%path, rec=rec_im_msk)
-
-  !-------------------------------------------------------------
-  ! Case: Intermediate data does not exist
-  else
-    !-----------------------------------------------------------
-    ! Prep. index
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
-      allocate(g%idx(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-    endif
-    !-----------------------------------------------------------
-    ! Make mask
-    !-----------------------------------------------------------
-    do ij = 1_8, g%nij
-      if( g%idx(ij) == ur%idx_miss )then
-        g%msk(ij) = 0_1
-      else
-        g%msk(ij) = 1_1
-      endif
-    enddo
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdmsk__raster
-!===============================================================
-! Calc. unweighted area of grid.
-! It can be called after
-!   subroutine make_idxmap__raster
-!   subroutine make_grdidx__raster
-! were called.
-!===============================================================
-subroutine make_grduwa__raster(ur, earth)
-  use common_gs_zone, only: &
-        check_iZone
-  implicit none
-  type(gs_raster_), intent(inout), target :: ur
-  type(opt_earth_), intent(in) :: earth
-
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_latlon_)  , pointer :: zl
-  type(grid_)         , pointer :: g
-
+  type(grid_)       , pointer :: g
+  type(raster_zone_), pointer :: arz
+  type(opt_earth_) :: earth
   real(8), allocatable :: rstuwa_col(:)
+  integer    :: iz
   integer(8) :: ih, iv
-  integer(8) :: idx, idx_prev
-  integer(8) :: loc
-  integer(8) :: ij
+  integer(8) :: idx_prev
+  integer(8) :: ij, ij_prev
+
+  if( ar%grid%status_uwa == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grduwa__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .false.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
+  call make_grdidx__raster(ar)
 
-  if( ur%iZone_grduwa == ur%iZone )then
-    call edbg('Nothing to do.')
+  g => ar%grid
+
+  g%status_uwa = GRID_STATUS__PREPARED
+  allocate(g%uwa(g%nij))
+
+  if( .not. ar%is_valid )then
+    g%uwa(:) = ar%uwa_miss
     call echo(code%ret)
     return
   endif
 
-  ur%iZone_grduwa = ur%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
-  !
+  ! Calc. unweighted area of raster column
   !-------------------------------------------------------------
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
+  allocate(rstuwa_col(ar%vi:ar%vf))
 
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%uwa, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_uwa )then
-    call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-
-  !-------------------------------------------------------------
-  ! Case: Intermediate data does not exist
-  else
-    !-----------------------------------------------------------
-    ! Prep. index
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-----------------------------------------------------------
-    ! Calc. unweighted area of raster column
-    !-----------------------------------------------------------
-    allocate(rstuwa_col(zl%vi:zl%vf))
-
-    selectcase( earth%shp )
-    case( earth_shape_sphere )
-      rstuwa_col(:) = area_sphere_rect(ur%lat(zl%vi-1_8:zl%vf-1_8), ur%lat(zl%vi:zl%vf)) &
-                        * ur%lonwidth(ur%hi)
-    case( earth_shape_ellips )
-      rstuwa_col(:) = area_ellips_rect(ur%lat(zl%vi-1_8:zl%vf-1_8), ur%lat(zl%vi:zl%vf), &
-                                        earth%e2) &
-                        * ur%lonwidth(ur%hi)
-    case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  earth%shp: '//str(earth%shp))
-    endselect
-    !-----------------------------------------------------------
-    ! Calc. unweighted area of grids
-    !-----------------------------------------------------------
-    g%uwa(:) = 0.d0
-    idx_prev = ur%idx_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ur%idxmap(ih,iv)
-        if( idx == ur%idx_miss ) cycle
-        if( idx /= idx_prev )then
-          call search(idx, g%idx, g%idxarg, loc)
-          if( loc == 0_8 )then
-            call eerr(str(msg_unexpected_condition())//&
-                    '\n  Index '//str(idx)//' is not found')
-          endif
-          idx_prev = idx
-        endif
-        call add(g%uwa(g%idxarg(loc)), rstuwa_col(iv))
+  selectcase( earth%shp )
+  case( EARTH_SHAPE_SPHERE )
+    rstuwa_col(:) = area_sphere_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf)) &
+                      * ar%lonwidth(ar%hi)
+  case( EARTH_SHAPE_ELLIPS )
+    rstuwa_col(:) = area_ellips_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf), &
+                                      earth%e2) &
+                      * ar%lonwidth(ar%hi)
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  earth%shp: '//str(earth%shp))
+  endselect
+  !-----------------------------------------------------------
+  ! Calc. unweighted area of grids
+  !-----------------------------------------------------------
+  g%uwa(:) = 0.d0
+  idx_prev = ar%idx_miss
+  ij_prev = 0_8
+  do iz = 1, ar%nZone
+    arz => ar%zone(iz)
+    do iv = arz%vi, arz%vf
+      do ih = arz%hi, arz%hf
+        if( .not. arz%mskmap(ih,iv) ) cycle
+        ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
+        call add(g%uwa(ij), rstuwa_col(iv))
       enddo  ! ih/
     enddo  ! iv/
+  enddo  ! iz/
 
-    g%uwa(:) = g%uwa(:) * earth%r**2
-
-    deallocate(rstuwa_col)
-    !-----------------------------------------------------------
-    ! Check values
-    !-----------------------------------------------------------
-    do ij = 1_8, g%nij
+  do ij = 1_8, g%nij
+    if( g%msk(ij) )then
       if( g%uwa(ij) <= 0.d0 )then
         call eerr(str(msg_unexpected_condition())//&
-                '\n  g%uwa(ij) < 0.0'//&
+                '\n  g%uwa(ij) <= 0.0'//&
                 '\n  ij: '//str(ij)//&
                 '\n  idx: '//str(g%idx(ij))//&
                 '\n  uwa: '//str(g%uwa(ij)))
       endif
-    enddo
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    call edbg('min: '//str(minval(g%uwa))//' max: '//str(maxval(g%uwa))//&
-            '\ntotal: '//str(sum(g%uwa),'es20.13'))
-  endif
-  !-------------------------------------------------------------
+      g%uwa(ij) = g%uwa(ij) * earth%r**2
+    else
+      g%uwa(ij) = ar%uwa_miss
+    endif
+  enddo
+
+  deallocate(rstuwa_col)
+  !-----------------------------------------------------------
   !
-  !-------------------------------------------------------------
-  if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-  if( ur%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
+  !-----------------------------------------------------------
+  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=ar%uwa_miss))//&
+          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ar%uwa_miss))//&
+          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ar%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grduwa__raster
 !===============================================================
-! Calc. weighted area of grid.
-! It can be called after 
-!   subroutine make_idxmap__raster
-!   subroutine make_grdidx__raster
-!   subroutine make_grduwa__raster
-! were called.
+! Calc. weighted grid area.
 !===============================================================
-subroutine make_grdara__raster(ur, earth)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_base, only: &
-        init_grid, &
-        free_grid
-  use common_gs_grid_io, only: &
-        read_grid_data_latlon
+subroutine make_grdara__raster(ar)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
-  type(opt_earth_), intent(in) :: earth
+  type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_)  , pointer :: fg_in
-  type(file_grid_out_) , pointer :: fg_out
-  type(zone_grid_im_)  , pointer :: zone_im
-  type(zone_latlon_)   , pointer :: zl
   type(grid_)          , pointer :: g
-
+  type(raster_zone_)   , pointer :: arz
   type(file_), pointer :: f
-  type(grid_) :: g_in
-  real(8), allocatable :: rstara(:,:)
-  real(8), allocatable :: rstwgt(:,:)
-  real(8), allocatable :: rstuwa_col(:)  ! unweighted area of raster
+  type(opt_earth_) :: earth
+  real(8)   , allocatable :: aramap(:,:)
+  real(8)   , allocatable :: uwacol(:)  ! unweighted area of raster
+  integer    :: iz
   integer(8) :: ih, iv
-  integer(8) :: idx, idx_prev
-  integer(8) :: ij
-  integer(8) :: loc
-  integer(8) :: loc_in
+  integer(8) :: idx_prev
+  integer(8) :: ij, ij_prev
+
+  if( ar%grid%status_ara == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdara__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .true.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
+  call make_grdidx__raster(ar)
 
-  if( ur%iZone_grdara == ur%iZone )then
-    call edbg('Nothing to do.')
+  fr    => ar%f_raster_in
+  fg_in => ar%f_grid_in
+  g     => ar%grid
+
+  g%status_ara = GRID_STATUS__PREPARED
+  allocate(g%ara(g%nij))
+
+  if( .not. ar%is_valid )then
+    g%ara(:) = ar%ara_miss
     call echo(code%ret)
     return
   endif
 
-  ur%iZone_grdara = ur%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fr      => ur%f_raster_in
-  fg_in   => ur%f_grid_in
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%ara, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_ara )then
-    call rbin(g%ara, zone_im%path, rec=rec_im_ara)
-  !-------------------------------------------------------------
-  ! Case: grdara is input
-  elseif( fg_in%ara%path /= '' )then
-    !-----------------------------------------------------------
-    ! Prep. index
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
-
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-----------------------------------------------------------
-    ! Read input
-    !-----------------------------------------------------------
-    call init_grid(g_in)
-    g_in%nij = fg_in%nij
-    allocate(g_in%idx(g_in%nij))
-    allocate(g_in%idxarg(g_in%nij))
-    allocate(g_in%ara(g_in%nij))
-
-    f => fg_in%idx
-    call rbin(g_in%idx, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
-    call argsort(g_in%idx, g_in%idxarg)
+  ! Case: Grid area data were given
+  if( fg_in%ara%path /= '' )then
+    call echo(code%ent, 'Case: Grid area data were given')
 
     f => fg_in%ara
-    call rbin(g_in%ara, fg_in%nx, fg_in%ny, &
+    call rbin(g%ara, fg_in%nx, fg_in%ny, &
               f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
-    call conv_unit(g_in%ara, fg_in%unit_ara, unit_square_meter)
-    !-----------------------------------------------------------
-    ! Put values in
-    !-----------------------------------------------------------
-    do ij = 1_8, g%nij
-      call search(g%idx(ij), g_in%idx, g_in%idxarg, loc_in)
-      if( loc_in == 0_8 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(g%idx(ij))//' was not found in the input grid data.')
-      endif
 
-      g%ara(ij) = g_in%ara(g_in%idxarg(loc_in))
-      !---------------------------------------------------------
-      if( g%ara(ij) < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%ara(ij) < 0.d0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  ara: '//str(g%ara(ij)))
-      endif
-    enddo
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-    if( ur%iZone_grdara == 0 ) call realloc(g%ara, 0)
-
-    call free_grid(g_in)
+    call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: grdwgt is input
+  ! Case: Grid weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight is input')
-    !-----------------------------------------------------------
-    ! Prep. grid index
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Preparing grid index')
+    call echo(code%ent, 'Case: Grid weight data were given')
 
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
+    call make_grdwgt__raster(ar)
 
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    ! Prep. unweighted grid area
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Preparing unweighted grid area')
-
-    if( ur%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_raster)
-
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, fg_out%zone_im(ur%iZone)%path, rec=rec_im_uwa)
-    endif
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    ! Read input
-    !-----------------------------------------------------------
-    call echo(code%ent, 'Reading input')
-
-    call init_grid(g_in)
-    g_in%nij = fg_in%nij
-    allocate(g_in%idx(g_in%nij))
-    allocate(g_in%idxarg(g_in%nij))
-    allocate(g_in%wgt(g_in%nij))
-
-    f => fg_in%idx
-    call edbg('Reading '//str(fileinfo(f)))
-    call rbin(g_in%idx, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
-    call argsort(g_in%idx, g_in%idxarg)
-
-    f => fg_in%wgt
-    call edbg('Reading '//str(fileinfo(f)))
-    call rbin(g_in%wgt, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
-
-    call edbg('idx min: '//str(minval(g_in%idx,mask=g_in%idx/=fg_in%idx_miss))//&
-                 ' max: '//str(maxval(g_in%idx,mask=g_in%idx/=fg_in%idx_miss)))
-    call edbg('wgt min: '//str(minval(g_in%wgt,mask=g_in%idx/=fg_in%idx_miss))//&
-                 ' max: '//str(maxval(g_in%wgt,mask=g_in%idx/=fg_in%idx_miss)))
-
-    call echo(code%ext)
-    !-----------------------------------------------------------
-    ! Calc. weighted grid area
-    !-----------------------------------------------------------
     do ij = 1_8, g%nij
-      call search(g%idx(ij), g_in%idx, g_in%idxarg, loc)
-      if( loc == 0_8 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(g%idx(ij))//' was not found in the input grid data.')
-      endif
-
-      g%ara(ij) = g%uwa(ij) * g_in%wgt(g_in%idxarg(loc))
-      !---------------------------------------------------------
-      if( g%ara(ij) < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%ara(ij) < 0.d0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  ara: '//str(g%ara(ij))//&
-                '\n  uwa: '//str(g%uwa(ij))//&
-                '\n  wgt: '//str(g_in%wgt(g_in%idxarg(loc))))
-      endif
+      if( g%msk(ij) ) g%ara(ij) = g%uwa(ij)*g%wgt(ij)
     enddo
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
-    if( ur%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
 
-    call free_grid(g_in)
-    !-----------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Raster area or raster weight is input
-  elseif( fr%ara%path /= '' .or. fr%wgt%path /= '' )then
+  ! Case: Raster data of area were given
+  elseif( fr%ara%path /= '' )then
+    call echo(code%ent, 'Case: Raster data of area were given')
+
+    g%ara(:) = 0.d0
+    idx_prev = ar%idx_miss
+    ij_prev = 0_8
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+      allocate(aramap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call read_lattice_data(aramap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi)
+      do iv = arz%vi, arz%vf
+        do ih = arz%hi, arz%hf
+          ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
+          call add(g%ara(ij), aramap(ih,iv))
+        enddo
+      enddo
+      deallocate(aramap)
+    enddo
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: Raster data of weight were given
+  elseif( fr%wgt%path /= '' )then
+    call echo(code%ent, 'Case: Raster data of weight were given')
+
+    call make_wgtmap__raster(ar)
+
+    selectcase( ar%status_wgtmap )
     !-----------------------------------------------------------
-    ! Prep. weighted raster area
-    !-----------------------------------------------------------
-    allocate(rstara(zl%hi:zl%hf,zl%vi:zl%vf))
+    ! Case: $wgtmap was prepared
+    case( GRID_STATUS__PREPARED )
+      call echo(code%ent, 'Case: Raster weight map was prepared')
 
-    if( fr%ara%path /= '' )then
-      call read_grid_data_latlon(&
-             rstara, fr%ara, 'rstara', zl, ur%is_south_to_north)
-    elseif( fr%wgt%path /= '' )then
-      allocate(rstwgt(zl%hi:zl%hf,zl%vi:zl%vf))
-      allocate(rstuwa_col(zl%vi:zl%vf))
-
-      call read_grid_data_latlon(&
-             rstwgt, fr%wgt, 'rstwgt', zl, ur%is_south_to_north)
-
-      rstuwa_col(:) &
-        = area_sphere_rect(ur%lat(zl%vi-1_8:zl%vf-1_8), ur%lat(zl%vi:zl%vf)) * ur%lonwidth(1) &
+      allocate(uwacol(ar%vi:ar%vf))
+      uwacol(:) &
+        = area_sphere_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf)) * ar%lonwidth(1) &
             * earth%r**2
 
-      do iv = zl%vi, zl%vf
-        rstara(:,iv) = rstuwa_col(iv) * rstwgt(:,iv)
-      enddo
+      g%ara(:) = 0.d0
+      idx_prev = ar%idx_miss
+      ij_prev = 0_8
+      do iz = 1, ar%nZone
+        arz => ar%zone(iz)
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
+            call add(g%ara(ij), arz%wgtmap(ih,iv)*uwacol(iv))
+          enddo  ! ih/
+        enddo  ! iv/
+      enddo  ! iz/
 
-      deallocate(rstwgt)
-      deallocate(rstuwa_col)
-    endif
+      deallocate(uwacol)
+
+      call echo(code%ext)
     !-----------------------------------------------------------
-    ! Calc. weighted grid area
+    ! Case: $wgtmap is not used
+    case( GRID_STATUS__NOT_USED )
+      call echo(code%ent, 'Case: Raster weight map is not used')
+
+      call make_grduwa__raster(ar)
+
+      call cpval(g%uwa, g%ara)
+
+      call echo(code%ext)
     !-----------------------------------------------------------
-    g%ara(:) = 0.d0
-    idx_prev = ur%idx_miss
-    do iv = zl%vi, zl%vf
-      do ih = zl%hi, zl%hf
-        idx = ur%idxmap(ih,iv)
-        if( idx == ur%idx_miss ) cycle
-        if( idx /= idx_prev )then
-          call search(idx, g%idx, g%idxarg, loc)
-          idx_prev = idx
-        endif
-        call add(g%ara(g%idxarg(loc)), rstara(ih,iv))
-      enddo  ! ih/
-    enddo  ! iv/
+    ! 
+    case( GRID_STATUS__TO_BE_PREPARED )
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  ar%status_wgtmap == GRID_STATUS__TO_BE_PREPARED')
     !-----------------------------------------------------------
-    ! Check values
-    !-----------------------------------------------------------
-    do ij = 1_8, g%nij
-      if( g%ara(ij) <= 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%ara(ij) < 0.0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  ara: '//str(g%ara(ij)))
-      endif
-    enddo
+    ! 
+    case default
+      call eerr(str(msg_invalid_value())//&
+              '\b  ar%status_wgtmap: '//str(ar%status_wgtmap))
+    endselect
+
+    call echo(code%ext)
   !-------------------------------------------------------------
   ! Case: No input
   else
-    if( ur%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_raster)
+    call echo(code%ent, 'Case: No input')
 
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
+    call make_grduwa__raster(ar)
 
-    g%ara(:) = g%uwa(:)
+    call cpval(g%uwa, g%ara)
 
-    if( ur%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
+    call echo(code%ext)
   endif
+  !-------------------------------------------------------------
+  ! Check values and put the missing value in
+  !-------------------------------------------------------------
+  do ij = 1_8, g%nij
+    if( g%msk(ij) )then
+      if( g%ara(ij) < 0.d0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  g%ara(ij) < 0.d0'//&
+                '\n  ij: '//str(ij)//&
+                '\n  idx: '//str(g%idx(ij))//&
+                '\n  ara: '//str(g%ara(ij)))
+      endif
+    else
+      g%ara(ij) = ar%ara_miss
+    endif
+  enddo  ! ij/
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%ara))//' max: '//str(maxval(g%ara)))
-  call edbg('total: '//str(sum(g%ara),'es20.13'))
+  call edbg('min: '//str(minval(g%ara,mask=g%ara/=ar%ara_miss))//&
+          ', max: '//str(maxval(g%ara,mask=g%ara/=ar%ara_miss))//&
+          '\ntotal: '//str(sum(g%ara,mask=g%ara/=ar%ara_miss),'es20.13'))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdara__raster
 !===============================================================
-! Calc. weight of grid.
-! It can be called after
-!   subroutine make_idxmap__raster
-!   subroutine make_grdidx__raster
-!   subroutine make_grduwa__raster
-!   subroutine make_grdara__raster
-! were called.
-! Also, grduwa and grdara must be output if divided into zones.
+! Calc. grid weight.
 !===============================================================
-subroutine make_grdwgt__raster(ur)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_base, only: &
-        init_grid, &
-        free_grid
+subroutine make_grdwgt__raster(ar)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
+  type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr
   type(file_grid_in_)  , pointer :: fg_in
-  type(file_grid_out_) , pointer :: fg_out
-  type(zone_grid_im_)  , pointer :: zone_im
-  type(zone_latlon_)   , pointer :: zl
   type(grid_)          , pointer :: g
-
   type(file_), pointer :: f
-  type(grid_) :: g_in
-  type(grid_) :: g_tmp
-  type(grid_) :: g_im
-  type(zone_grid_im_), pointer :: zone_im_this
-  integer :: iZone
+  type(opt_earth_) :: earth
   integer(8) :: ij
-  integer(8) :: ij_im
-  integer(8) :: ij_tmp
-  integer(8) :: loc
-  integer(8) :: loc_in
-  integer(8) :: loc_tmp
+
+  if( ar%grid%status_wgt == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdwgt__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .true.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
+  call make_grdidx__raster(ar)
 
-  if( ur%iZone_grdwgt == ur%iZone )then
-    call edbg('Nothing to do.')
+  fr    => ar%f_raster_in
+  fg_in => ar%f_grid_in
+  g     => ar%grid
+
+  g%status_wgt = GRID_STATUS__PREPARED
+  allocate(g%wgt(g%nij))
+
+  if( .not. ar%is_valid )then
+    g%wgt(:) = ar%wgt_miss
     call echo(code%ret)
     return
   endif
 
-  ur%iZone_grdwgt = ur%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fr      => ur%f_raster_in
-  fg_in   => ur%f_grid_in
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
-
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%wgt, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_wgt )then
-    call echo(code%ent, 'Case: Intermediate data exists')
-
-    call rbin(g%wgt, zone_im%path, rec=rec_im_wgt)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Grid weight was input
-  elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Grid data (weight) was input')
-    !-----------------------------------------------------------
-    ! Prep. index
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
-      allocate(g%idx(g%nij))
-      allocate(g%idxarg(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g%idx, g%idxarg)
-    endif
-    !-----------------------------------------------------------
-    ! Read input data
-    !-----------------------------------------------------------
-    call init_grid(g_in)
-    g_in%nij = fg_in%nij
-    allocate(g_in%idx(g_in%nij))
-    allocate(g_in%idxarg(g_in%nij))
-    allocate(g_in%wgt(g_in%nij))
-
-    f => fg_in%idx
-    call rbin(g_in%idx, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
-    call argsort(g_in%idx, g_in%idxarg)
+  ! Case: Grid weight data were given
+  if( fg_in%wgt%path /= '' )then
+    call echo(code%ent, 'Case: Grid weight data were given')
 
     f => fg_in%wgt
-    call rbin(g_in%wgt, fg_in%nx, fg_in%ny, &
+    call rbin(g%wgt, fg_in%nx, fg_in%ny, &
               f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
-    !-----------------------------------------------------------
-    ! Put values in
-    !-----------------------------------------------------------
-    do ij = 1_8, g%nij
-      call search(g%idx(ij), g_in%idx, g_in%idxarg, loc)
-      g%wgt(ij) = g_in%wgt(g_in%idxarg(loc))
-      !---------------------------------------------------------
-      ! Check values
-      !---------------------------------------------------------
-      if( g%wgt(ij) < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%wgt(ij) < 0.d0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  wgt: '//str(g%wgt(ij)))
-      endif
-    enddo  ! ij/
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-    if( ur%iZone_grdidx == 0 ) call realloc(g%idxarg, 0)
 
-    call free_grid(g_in)
-    !-----------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Grid area was input
+  ! Case: Grid area data were given
   elseif( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Grid data (area) was input')
-    !-----------------------------------------------------------
-    ! Prep. index
-    !-----------------------------------------------------------
-    call init_grid(g_tmp)
-    g_tmp%nij = g%nij
-    allocate(g_tmp%idx(g_tmp%nij))
-    allocate(g_tmp%idxarg(g_tmp%nij))
+    call echo(code%ent, 'Grid area data were given')
 
-    if( ur%iZone_grdidx == 0 )then
-      call verify_im_saved(zone_im%is_saved_idx, varname_idx, gs_type_raster)
-      call rbin(g_tmp%idx, zone_im%path, rec=rec_im_idx)
-      call argsort(g_tmp%idx, g_tmp%idxarg)
-    else
-      g_tmp%idx(:) = g%idx(:)
-      g_tmp%idxarg(:) = g%idxarg(:)
-    endif
-    !-----------------------------------------------------------
-    ! Prep. unweighted area and weighted area of grid
-    !-----------------------------------------------------------
-    allocate(g_tmp%uwa(g_tmp%nij))
-    allocate(g_tmp%ara(g_tmp%nij))
-    !-----------------------------------------------------------
-    ! Case: Not divided into zones
-    if( ur%nZones == 1 )then
-      call echo(code%ent, 'Case: Not divided into zones')
-      !---------------------------------------------------------
-      ! Prep. uwa
-      !---------------------------------------------------------
-      if( ur%iZone_grduwa == ur%iZone )then
-        g_tmp%uwa(:) = g%uwa(:)
-      elseif( ur%iZone_grduwa == 0 )then
-        call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_raster)
-        call rbin(g_tmp%uwa, zone_im%path, rec=rec_im_uwa)
+    call make_grdara__raster(ar)
+
+    do ij = 1_8, g%nij
+      if( g%idx(ij) /= ar%idx_miss )then
+        g%wgt(ij) = g%ara(ij) / g%uwa(ij)
       else
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  ur%iZone_grduwa: '//str(ur%iZone_grduwa)//&
-                '\n  ur%iZone       : '//str(ur%iZone))
+        g%wgt(ij) = ar%wgt_miss
       endif
-      !---------------------------------------------------------
-      ! Prep. ara
-      !---------------------------------------------------------
-      if( ur%iZone_grdara == ur%iZone )then
-        g_tmp%ara = g%ara
-      elseif( ur%iZone_grdara == 0 )then
-        if( zone_im%is_saved_ara )then
-          call rbin(g_tmp%ara, zone_im%path, rec=rec_im_ara)
-        else
-          call init_grid(g_in)
-          g_in%nij = fg_in%nij
-          allocate(g_in%idx(g_in%nij))
-          allocate(g_in%idxarg(g_in%nij))
-          allocate(g_in%ara(g_in%nij))
-
-          f => fg_in%idx
-          call edbg('Reading '//fileinfo(f))
-          call rbin(g_in%idx, f%path, f%dtype, f%endian, f%rec)
-          call argsort(g_in%idx, g_in%idxarg)
-
-          f => fg_in%ara
-          call edbg('Reading '//fileinfo(f))
-          call rbin(g_in%ara, f%path, f%dtype, f%endian, f%rec)
-
-          do ij_tmp = 1_8, g_tmp%nij
-            if( g_tmp%idx(ij_tmp) == ur%idx_miss ) cycle
-            call search(g_tmp%idx(ij_tmp), g_in%idx, g_in%idxarg, loc_in)
-            if( loc_in == 0_8 )then
-              call eerr(str(msg_unexpected_condition())//&
-                      '\n  Index '//str(g_tmp%idx(ij_tmp))//' was not found '//&
-                        'in the input data of grid.'//&
-                        '  idx: '//str(g_tmp%idx(ij_tmp)))
-            endif
-            g_tmp%ara(ij_tmp) = g_in%ara(g_in%idxarg(loc_in))
-          enddo
-
-          call free_grid(g_in)
-        endif
-      else
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  ur%iZone_grduwa: '//str(ur%iZone_grduwa)//&
-                '\n  ur%iZone       : '//str(ur%iZone))
-      endif
-      !---------------------------------------------------------
-      call echo(code%ext)
-    !-----------------------------------------------------------
-    ! Case: Divided into zones
-    else
-      call echo(code%ent, 'Divided into zones')
-      !---------------------------------------------------------
-      call init_grid(g_im)
-
-      g_tmp%uwa(:) = 0.d0
-      g_tmp%ara(:) = 0.d0
-      do iZone = 1, fg_out%nZones
-        zone_im_this => fg_out%zone_im(iZone)
-        if( g%idxmax < zone_im_this%idxmin .or. zone_im_this%idxmax < g%idxmin ) cycle
-
-        call verify_im_saved(zone_im_this%is_saved_idx, varname_idx, gs_type_raster)
-        call verify_im_saved(zone_im_this%is_saved_uwa, varname_uwa, gs_type_raster)
-        call verify_im_saved(zone_im_this%is_saved_ara, varname_ara, gs_type_raster)
-
-        g_im%nij = zone_im_this%mij
-        call realloc(g_im%idx, g_im%nij, clear=.true.)
-        call realloc(g_im%uwa, g_im%nij, clear=.true.)
-        call realloc(g_im%ara, g_im%nij, clear=.true.)
-
-        call rbin(g_im%idx, zone_im_this%path, rec=rec_im_idx)
-        call rbin(g_im%uwa, zone_im_this%path, rec=rec_im_uwa)
-        call rbin(g_im%ara, zone_im_this%path, rec=rec_im_ara)
-
-        do ij_im = 1_8, g_im%nij
-          call search(g_im%idx(ij_im), g_tmp%idx, g_tmp%idxarg, loc_tmp)
-          if( loc_tmp /= 0_8 )then
-            call add(g_tmp%uwa(g_tmp%idxarg(loc_tmp)), g_im%uwa(ij_im))
-            call add(g_tmp%ara(g_tmp%idxarg(loc_tmp)), g_im%ara(ij_im))
-          endif
-        enddo  ! ij_im/
-      enddo  ! iZone/
-
-      call free_grid(g_im)
-      !---------------------------------------------------------
-      call echo(code%ext)
-    endif
-    !-----------------------------------------------------------
-    ! Calc. grid weight
-    !-----------------------------------------------------------
-    allocate(g_tmp%wgt(g_tmp%nij))
-
-    do ij_tmp = 1_8, g_tmp%nij
-      g_tmp%wgt(ij_tmp) = g_tmp%ara(ij_tmp) / g_tmp%uwa(ij_tmp)
     enddo
 
-    g%wgt(:) = g_tmp%wgt(:)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    call free_grid(g_tmp)
-    !-----------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
   ! Case: No input
@@ -2521,117 +2087,140 @@ subroutine make_grdwgt__raster(ur)
     call echo(code%ext)
   endif
   !-------------------------------------------------------------
+  ! Check values and put the missing value in
+  !-------------------------------------------------------------
+  do ij = 1_8, g%nij
+    if( g%msk(ij) )then
+      if( g%wgt(ij) < 0.d0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  g%ara(ij) < 0.d0'//&
+                '\n  ij: '//str(ij)//&
+                '\n  idx: '//str(g%idx(ij))//&
+                '\n  wgt: '//str(g%wgt(ij)))
+      endif
+    else
+      g%wgt(ij) = ar%wgt_miss
+    endif
+  enddo  ! ij/
+  !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%wgt))//' max: '//str(maxval(g%wgt)))
+  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=ar%wgt_miss))//&
+          ', max: '//str(maxval(g%wgt,mask=g%wgt/=ar%wgt_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdwgt__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz__raster(ur, earth)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grdxyz__raster(ar)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
-  type(opt_earth_), intent(in) :: earth
+  type(gs_raster_), intent(inout), target :: ar
 
-  type(zone_latlon_), pointer :: zl
-  type(grid_), pointer :: g
-
+  type(grid_)       , pointer :: g
+  type(raster_zone_), pointer :: arz
+  type(opt_earth_) :: earth
   real(8), allocatable :: cos_rstlon(:), sin_rstlon(:)
   real(8), allocatable :: cos_rstlat(:), sin_rstlat(:)
   real(8), allocatable :: rstara(:)
+  integer    :: iz
   integer(8) :: ih, iv
-  integer(8) :: ij
-  integer(8) :: loc
+  integer(8) :: idx_prev
+  integer(8) :: ij, ij_prev
   real(8) :: r
+
+  if( ar%grid%status_xyz == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdxyz__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .true.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
+  call make_grdidx__raster(ar)
 
-  if( ur%iZone_grdxyz == ur%iZone )then
-    call edbg('Nothing to do.')
+  g => ar%grid
+
+  g%status_xyz = GRID_STATUS__PREPARED
+  allocate(g%x(g%nij))
+  allocate(g%y(g%nij))
+  allocate(g%z(g%nij))
+
+  if( .not. ar%is_valid )then
+    g%x(:) = ar%xyz_miss
+    g%y(:) = ar%xyz_miss
+    g%z(:) = ar%xyz_miss
     call echo(code%ret)
     return
   endif
 
-  ur%iZone_grdxyz = ur%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  zl => ur%zone(ur%iZone)
-  g  => ur%grid
+  allocate(cos_rstlon(ar%hi:ar%hf))
+  allocate(sin_rstlon(ar%hi:ar%hf))
+  allocate(cos_rstlat(ar%vi:ar%vf))
+  allocate(sin_rstlat(ar%vi:ar%vf))
 
-  call realloc(g%x, zl%mij, clear=.true., fill=0.d0)
-  call realloc(g%y, zl%mij, clear=.true., fill=0.d0)
-  call realloc(g%z, zl%mij, clear=.true., fill=0.d0)
+  cos_rstlon(:) = cos((ar%lon(ar%hi-1_8:ar%hf-1_8) + ar%lon(ar%hi:ar%hf)) * 0.5d0)
+  sin_rstlon(:) = sin((ar%lon(ar%hi-1_8:ar%hf-1_8) + ar%lon(ar%hi:ar%hf)) * 0.5d0)
+  cos_rstlat(:) = cos((ar%lat(ar%vi-1_8:ar%vf-1_8) + ar%lat(ar%vi:ar%vf)) * 0.5d0)
+  sin_rstlat(:) = sin((ar%lat(ar%vi-1_8:ar%vf-1_8) + ar%lat(ar%vi:ar%vf)) * 0.5d0)
+
+  allocate(rstara(ar%vi:ar%vf))
+  rstara(:) = area_sphere_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf)) * ar%lonwidth(1)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(cos_rstlon(zl%hi:zl%hf))
-  allocate(sin_rstlon(zl%hi:zl%hf))
-  allocate(cos_rstlat(zl%vi:zl%vf))
-  allocate(sin_rstlat(zl%vi:zl%vf))
+  g%x(:) = 0.d0
+  g%y(:) = 0.d0
+  g%z(:) = 0.d0
+  idx_prev = ar%idx_miss
+  ij_prev = 0_8
+  do iz = 1, ar%nZone
+    arz => ar%zone(iz)
+    do iv = arz%vi, arz%vf
+      do ih = arz%hi, arz%hf
+        if( .not. arz%mskmap(ih,iv) ) cycle
+        ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
 
-  cos_rstlon(:) = cos((ur%lon(zl%hi-1_8:zl%hf-1_8) + ur%lon(zl%hi:zl%hf)) * 0.5d0)
-  sin_rstlon(:) = sin((ur%lon(zl%hi-1_8:zl%hf-1_8) + ur%lon(zl%hi:zl%hf)) * 0.5d0)
-  cos_rstlat(:) = cos((ur%lat(zl%vi-1_8:zl%vf-1_8) + ur%lat(zl%vi:zl%vf)) * 0.5d0)
-  sin_rstlat(:) = sin((ur%lat(zl%vi-1_8:zl%vf-1_8) + ur%lat(zl%vi:zl%vf)) * 0.5d0)
+        call add(g%x(ij), rstara(iv)*cos_rstlat(iv)*cos_rstlon(ih))
+        call add(g%y(ij), rstara(iv)*cos_rstlat(iv)*sin_rstlon(ih))
+        call add(g%z(ij), rstara(iv)*sin_rstlat(iv))
+      enddo  ! ih/
+    enddo  ! iv/
+  enddo  ! iz/
 
-  allocate(rstara(zl%vi:zl%vf))
-  rstara(:) = area_sphere_rect(ur%lat(zl%vi-1_8:zl%vf-1_8), ur%lat(zl%vi:zl%vf)) * ur%lonwidth(1)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  do iv = zl%vi, zl%vf
-    do ih = zl%hi, zl%hf
-      if( ur%idxmap(ih,iv) == ur%idx_miss ) cycle
-
-      call search(ur%idxmap(ih,iv), g%idx, g%idxarg, loc)
-      if( loc == 0_8 )then
+  do ij = 1_8, ar%nij
+    if( g%msk(ij) )then
+      if( g%x(ij) == 0.d0 .and. g%y(ij) == 0.d0 .and. g%z(ij) == 0.d0 )then
         call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(ur%idxmap(ih,iv))//' was not found.')
+                '\n  (x,y,z) are zero.'//&
+                '\n  ij: '//str(ij)//&
+                '\n  idx: '//str(g%idx(ij)))
       endif
 
-      call add(g%x(g%idxarg(loc)), rstara(iv)*cos_rstlat(iv)*cos_rstlon(ih))
-      call add(g%y(g%idxarg(loc)), rstara(iv)*cos_rstlat(iv)*sin_rstlon(ih))
-      call add(g%z(g%idxarg(loc)), rstara(iv)*sin_rstlat(iv))
-    enddo  ! ih/
-  enddo  ! iv/
-
-  do ij = 1_8, zl%mij
-    if( g%idx(ij) == ur%idx_miss ) cycle
-    if( g%x(ij) == 0.d0 .and. g%y(ij) == 0.d0 .and. g%z(ij) == 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  (x,y,z) == (0,0,0)'//&
-              '\n  ij: '//str(ij)//&
-              '\n  idx: '//str(g%idx(ij)))
+      r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
+      g%x(ij) = g%x(ij) / r * earth%r
+      g%y(ij) = g%y(ij) / r * earth%r
+      g%z(ij) = g%z(ij) / r * earth%r
+    else
+      g%x(ij) = ar%xyz_miss
+      g%y(ij) = ar%xyz_miss
+      g%z(ij) = ar%xyz_miss
     endif
-
-    r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
-    g%x(ij) = g%x(ij) / r * earth%r
-    g%y(ij) = g%y(ij) / r * earth%r
-    g%z(ij) = g%z(ij) / r * earth%r
   enddo  ! ij/
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('x min: '//str(minval(g%x,mask=g%x/=ur%xyz_miss))//&
-            ', max: '//str(maxval(g%x,mask=g%x/=ur%xyz_miss)))
-  call edbg('y min: '//str(minval(g%y,mask=g%y/=ur%xyz_miss))//&
-            ', max: '//str(maxval(g%y,mask=g%y/=ur%xyz_miss)))
-  call edbg('z min: '//str(minval(g%z,mask=g%z/=ur%xyz_miss))//&
-            ', max: '//str(maxval(g%z,mask=g%z/=ur%xyz_miss)))
+  call edbg('x min: '//str(minval(g%x,mask=g%x/=ar%xyz_miss))//&
+            ', max: '//str(maxval(g%x,mask=g%x/=ar%xyz_miss)))
+  call edbg('y min: '//str(minval(g%y,mask=g%y/=ar%xyz_miss))//&
+            ', max: '//str(maxval(g%y,mask=g%y/=ar%xyz_miss)))
+  call edbg('z min: '//str(minval(g%z,mask=g%z/=ar%xyz_miss))//&
+            ', max: '//str(maxval(g%z,mask=g%z/=ar%xyz_miss)))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2647,123 +2236,56 @@ end subroutine make_grdxyz__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat__raster(ur)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grdlonlat__raster(ar)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
+  type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr_in
   type(file_grid_in_)  , pointer :: fg_in
-  type(file_grid_out_) , pointer :: fg_out
-  type(zone_grid_im_)  , pointer :: zone_im
-  type(zone_latlon_)   , pointer :: zl
   type(grid_)          , pointer :: g
+  type(opt_earth_) :: earth
+
+  if( ar%grid%status_lonlat == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdlonlat__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_idxmap, ur%iZone_idxmap, ur%iZone, .true.)
-  call check_iZone(varname_grdidx, ur%iZone_grdidx, ur%iZone, .true.)
-  call check_iZone(varname_grduwa, ur%iZone_grduwa, ur%iZone, .true.)
-  call check_iZone(varname_grdara, ur%iZone_grdara, ur%iZone, .true.)
-  call check_iZone(varname_grdwgt, ur%iZone_grdwgt, ur%iZone, .true.)
-  call check_iZone(varname_wgtmap, ur%iZone_wgtmap, ur%iZone, .true.)
-  call check_iZone(varname_grdxyz, ur%iZone_grdxyz, ur%iZone, .true.)
+  call make_idxmap__raster(ar)
+  call make_grdidx__raster(ar)
 
-  if( ur%iZone_grdlonlat == ur%iZone )then
-    call edbg('Nothing to do.')
+  fr_in => ar%f_raster_in
+  fg_in => ar%f_grid_in
+  g     => ar%grid
+
+  g%status_lonlat = GRID_STATUS__PREPARED
+  allocate(g%lon(g%nij))
+  allocate(g%lat(g%nij))
+
+  if( .not. ar%is_valid )then
+    g%lon(:) = ar%lonlat_miss
+    g%lat(:) = ar%lonlat_miss
     call echo(code%ret)
     return
   endif
 
-  ur%iZone_grdlonlat = ur%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fr_in   => ur%f_raster_in
-  fg_in   => ur%f_grid_in
-  fg_out  => ur%f_grid_out
-  zone_im => fg_out%zone_im(ur%iZone)
-  zl      => ur%zone(ur%iZone)
-  g       => ur%grid
+  call make_grdxyz__raster(ar)
 
-  if( .not. zl%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zl%mij
-  call realloc(g%lon, g%nij, clear=.true.)
-  call realloc(g%lat, g%nij, clear=.true.)
+  call conv_cartesian_to_spherical_rad(&
+         g%x, g%y, g%z, g%lon, g%lat, ar%xyz_miss, ar%lonlat_miss)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-!  ! Case: Grid lonlat is input
-!  if( fg_in%lon%path /= '' )then
-!    call echo(code%ent, 'Case: Grid lonlat is input')
-!    !-----------------------------------------------------------
-!
-!    call eerr('Not implemented yet')
-!
-!    !-----------------------------------------------------------
-!    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Raster lonlat is input
-!  elseif( fr_in%lon%path /= '' )then
-!    call echo(code%ent, 'Case: Raster lonlat is input')
-!    !-----------------------------------------------------------
-!
-!    call eerr('Not implemented yet')
-!
-!    !-----------------------------------------------------------
-!    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: xyz has been calculated
-  if( ur%iZone_grdxyz == ur%iZone )then
-    call echo(code%ent, 'Case: xyz has been calculated')
-    !-----------------------------------------------------------
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, &
-           ur%xyz_miss, ur%lonlat_miss)
-    !-----------------------------------------------------------
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: xyz has been saved
-  elseif( zone_im%is_saved_xyz )then
-    call echo(code%ent, 'Case: xyz has been saved')
-    !-----------------------------------------------------------
-    call realloc(g%x, g%nij)
-    call realloc(g%y, g%nij)
-    call realloc(g%z, g%nij)
-
-    call rbin(g%x, zone_im%path, rec=rec_im_x)
-    call rbin(g%y, zone_im%path, rec=rec_im_y)
-    call rbin(g%z, zone_im%path, rec=rec_im_z)
-
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, &
-           ur%xyz_miss, ur%lonlat_miss)
-
-    call realloc(g%x, 0)
-    call realloc(g%y, 0)
-    call realloc(g%z, 0)
-    !-----------------------------------------------------------
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: ERROR
-  else
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  Not matched any case')
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ur%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=ur%lonlat_miss)))
-  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=ur%lonlat_miss))//&
-              ', max: '//str(maxval(g%lat,mask=g%lat/=ur%lonlat_miss)))
+  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ar%lonlat_miss))//&
+              ', max: '//str(maxval(g%lon,mask=g%lon/=ar%lonlat_miss)))
+  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=ar%lonlat_miss))//&
+              ', max: '//str(maxval(g%lat,mask=g%lat/=ar%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdlonlat__raster
@@ -2778,322 +2300,426 @@ end subroutine make_grdlonlat__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx__polygon(up)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_base, only: &
-        init_grid, &
-        free_grid
+subroutine make_grdidx__polygon(ap)
   use common_gs_grid_util, only: &
         print_indices
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
 
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_polygon_) , pointer :: zp
-  type(grid_)         , pointer :: g
-
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
   type(file_), pointer :: f
-  type(grid_) :: g_in
   integer(8) :: ij
   integer(8) :: loc
+
+  if( ap%grid%status_idx == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdidx__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .true.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
+  fg_in => ap%f_grid_in
+  g     => ap%grid
 
-  if( up%iZone_grdidx == up%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  up%iZone_grdidx = up%iZone
+  g%status_idx = GRID_STATUS__PREPARED
+  g%status_msk = GRID_STATUS__PREPARED
+  g%nij = ap%nij
+  allocate(g%idx(g%nij))
+  allocate(g%idxarg(g%nij))
+  allocate(g%msk(g%nij))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  fg_in   => up%f_grid_in
-  fg_out  => up%f_grid_out
-  zone_im => fg_out%zone_im(up%iZone)
-  zp      => up%zone(up%iZone)
-  g       => up%grid
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Setting indices')
+  ! Case: Index data were given
+  if( fg_in%idx%path /= '' )then
+    call echo(code%ent, 'Case: Index data were given')
 
-  g%nij = zp%mij
-  call realloc(g%idx, g%nij, clear=.true., fill=0_8)
-  call realloc(g%idxarg, g%nij, clear=.true., fill=0_8)
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_idx )then
-    call echo(code%ent, 'Case: Intermediate data exists')
-    !-----------------------------------------------------------
-    call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-    !-----------------------------------------------------------
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Input file is not specified
-  elseif( up%f_grid_in%idx%path == '' )then
-    call echo(code%ent, 'Case: Input file is not specified')
-    !-----------------------------------------------------------
-    zp%idxmin = int8_ulim
-    zp%idxmax = int8_llim
-    do ij = 1_8, zp%mij
-      g%idx(ij) = zp%ijs + ij - 1_8 + (fg_in%idx_bgn - 1_8)
-      zp%idxmin = min(zp%idxmin, g%idx(ij))
-      zp%idxmax = max(zp%idxmax, g%idx(ij))
+    f => fg_in%idx
+    call rbin(g%idx, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1))
+
+    call argsort(g%idx, g%idxarg)
+
+    do ij = 1_8, g%nij
+      g%msk(ij) = g%idx(ij) /= ap%idx_miss
     enddo
-    !-----------------------------------------------------------
+
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Input file is specified
+  ! Case: No input
   else
-    call echo(code%ent, 'Case: Input file is specified')
-    !-----------------------------------------------------------
-    call init_grid(g_in)
-    g_in%nij = zp%mij
-    allocate(g_in%idx(g_in%nij))
+    call echo(code%ent, 'Case: No input')
 
-    f => up%f_grid_in%idx
-    call edbg('Reading '//str(fileinfo(f)))
-    call rbin(g_in%idx, f%path, f%dtype, f%endian, f%rec, &
-                     sz=fg_in%sz(1), lb=fg_in%lb(1)+zp%ijs-1_8)
+    do ij = 1_8, g%nij
+      g%idx(ij) = ij + fg_in%idx_bgn - 1_8
+      g%idxarg(ij) = ij
+      g%msk(ij) = .true.
+    enddo
 
-    if( all(g_in%idx(:) == up%idx_miss) )then
-      zp%is_valid = .false.
-      zp%mij = 0_8
-      zp%idxmin = up%idx_miss
-      zp%idxmax = up%idx_miss
-    else
-      zp%is_valid = .true.
-      zp%idxmin = int8_ulim
-      zp%idxmax = int8_llim
-      do ij = 1_8, zp%mij
-        g%idx(ij) = g_in%idx(ij)
-        if( g%idx(ij) == up%idx_miss ) cycle
-        zp%idxmin = min(zp%idxmin, g%idx(ij))
-        zp%idxmax = max(zp%idxmax, g%idx(ij))
-      enddo
-    endif
-
-    call free_grid(g_in)
-    !-----------------------------------------------------------
     call echo(code%ext)
   endif
-
-  ! Get sorting index
-  !-------------------------------------------------------------
-  call argsort(g%idx, g%idxarg)
-
-  ! Print info.
-  !-------------------------------------------------------------
-  call print_indices(g%idx, g%idxarg, up%idx_miss, zp%idxmin, zp%idxmax)
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Copy attr.
-  !-------------------------------------------------------------
-  g%idxmin = zp%idxmin
-  g%idxmax = zp%idxmax
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( up%debug )then
-    call search(up%idx_debug, g%idx, g%idxarg, loc)
+  g%idxmin = g%idx(g%idxarg(1))
+  g%idxmax = g%idx(g%idxarg(g%nij))
 
-    zp%is_valid = loc /= 0_8
-    if( zp%is_valid ) g%ij_debug = g%idxarg(loc)
-  else
-    g%ij_debug = 0_8
+  ap%idxmin = g%idxmin
+  ap%idxmax = g%idxmax
+
+  call print_indices(g%idx, g%idxarg, ap%idx_miss, g%idxmin, g%idxmax)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  g%ij_debug = 0_8
+  if( ap%debug )then
+    g%msk(:) = .false.
+    call search(ap%idx_debug, g%idx, g%idxarg, loc)
+    if( loc == 0_8 .or. ap%idx_debug == ap%idx_miss )then
+      ap%is_valid = .false.
+    else
+      g%ij_debug = g%idxarg(loc)
+      g%msk(g%ij_debug) = .true.
+    endif
   endif
+
+  ap%is_valid = any(g%msk)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdidx__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdmsk__polygon(up)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grduwa__polygon(ap)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
 
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_polygon_) , pointer :: zp
-  type(grid_)         , pointer :: g
-  !type(polygon_)      , pointer :: p
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(polygon_)     , pointer :: p
+  type(opt_earth_) :: earth
   integer(8) :: ij
 
-  call echo(code%bgn, 'make_grdmsk__polygon')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .true.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
-
-  if( up%iZone_grdmsk == up%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  up%iZone_grdmsk = up%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  zp      => up%zone(up%iZone)
-  fg_in   => up%f_grid_in
-  fg_out  => up%f_grid_out
-  zone_im => fg_out%zone_im(up%iZone)
-  g       => up%grid
-
-  if( .not. zp%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  g%nij = zp%mij
-  call realloc(g%msk, g%nij, clear=.true., fill=0_1)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_msk )then
-    call echo(code%ent, 'Case: Intermediate data exists')
-
-    call rbin(g%msk, zone_im%path, rec=rec_im_msk)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Intermediate data does not exist
-  else
-    call echo(code%ent, 'Case: Intermediate data does not exist')
-
-    if( up%iZone_grdidx == 0 )then
-      allocate(g%idx(g%nij))
-      call rbin(g%idx, zone_im%path, rec=rec_im_idx)
-    endif
-
-    do ij = 1_8, g%nij
-      if( g%idx(ij) == up%idx_miss )then
-        g%msk(ij) = 0_1
-      else
-        g%msk(ij) = 1_1
-      endif
-    enddo
-
-    call echo(code%ext)
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( up%iZone_grdidx == 0 ) call realloc(g%idx, 0)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdmsk__polygon
-!===============================================================
-!
-!===============================================================
-subroutine make_grduwa__polygon(up, earth)
-  use common_gs_zone, only: &
-        check_iZone
-  implicit none
-  type(gs_polygon_), intent(inout), target :: up
-  type(opt_earth_), intent(in) :: earth
-
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_polygon_) , pointer :: zp
-  type(grid_)         , pointer :: g
-  type(polygon_)      , pointer :: p
-  integer(8) :: ij
+  if( ap%grid%status_uwa == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grduwa__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .false.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
+  call make_grdidx__polygon(ap)
 
-  if( up%iZone_grduwa == up%iZone )then
-    call edbg('Nothing to do.')
+  fg_in => ap%f_grid_in
+  g     => ap%grid
+
+  g%status_uwa = GRID_STATUS__PREPARED
+  allocate(g%uwa(g%nij))
+
+  if( .not. ap%is_valid )then
+    g%uwa(:) = ap%uwa_miss
     call echo(code%ret)
     return
   endif
 
-  up%iZone_grduwa = up%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  zp      => up%zone(up%iZone)
-  fg_in   => up%f_grid_in
-  fg_out  => up%f_grid_out
-  zone_im => fg_out%zone_im(up%iZone)
-  g       => up%grid
+  g%uwa(:) = ap%uwa_miss
+  do ij = 1_8, g%nij
+    if( .not. g%msk(ij) ) cycle
 
-  if( .not. zp%is_valid )then
+    p => ap%polygon(ij)
+
+    g%uwa(ij) = area_sphere_polygon(p%lon, p%lat, p%arctyp) * earth%r**2
+
+    if( g%uwa(ij) <= 0.d0 )then
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  g%uwa(ij) <= 0.0'//&
+              '\n  ij: '//str(ij)//&
+              '\n  uwa: '//str(g%uwa(ij)))
+    endif
+  enddo  ! ij/
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=ap%uwa_miss))//&
+          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ap%uwa_miss))//&
+          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ap%uwa_miss),'es20.13'))
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_grduwa__polygon
+!===============================================================
+!
+!===============================================================
+subroutine make_grdara__polygon(ap)
+  use common_opt_ctrl, only: &
+        get_opt_earth
+  implicit none
+  type(gs_polygon_), intent(inout), target :: ap
+
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(file_), pointer :: f
+  type(opt_earth_) :: earth
+  integer(8) :: ij
+
+  if( ap%grid%status_ara == GRID_STATUS__PREPARED ) return
+
+  call echo(code%bgn, 'make_grdara__polygon')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call make_grdidx__polygon(ap)
+
+  fg_in => ap%f_grid_in
+  g     => ap%grid
+
+  g%status_ara = GRID_STATUS__PREPARED
+  allocate(g%ara(g%nij))
+
+  if( .not. ap%is_valid )then
+    g%ara(:) = ap%ara_miss
     call echo(code%ret)
     return
   endif
 
-  call realloc(g%uwa, g%nij, clear=.true.)
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  ! Case: Intermediate data exists
-  if( zone_im%is_saved_uwa )then
-    call echo(code%ent, 'Case: Intermediate data exists')
+  ! Case: Weighted area data were given
+  if( fg_in%ara%path /= '' )then
+    call echo(code%ent, 'Case: Weighted area data were given')
 
-    call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
+    f => fg_in%ara
+    call rbin(g%ara, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1))
+    call conv_unit(g%ara, fg_in%unit_ara, UNIT_SQUARE_METER)
+
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        if( g%ara(ij) <= 0.d0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  g%ara('//str(ij)//') <= 0.0'//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  ara: '//str(g%ara(ij)))
+        endif
+      endif
+    enddo
 
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Intermediate data does not exist
+  ! Case: Weight data were given
+  elseif( fg_in%wgt%path /= '' )then
+    call echo(code%ent, 'Case: Weight data were given')
+
+    call make_grduwa__polygon(ap)
+    call make_grdwgt__polygon(ap)
+
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        g%ara(ij) = g%uwa(ij) * g%wgt(ij)
+      else
+        g%ara(ij) = ap%ara_miss
+      endif
+    enddo
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: No input
   else
-    call echo(code%ent, 'Case: Intermediate data does not exist')
+    call echo(code%ent, 'Case: No input')
 
-    do ij = 1_8, zp%mij
-      if( up%debug .and. ij /= g%ij_debug )then
-        g%uwa(ij) = up%uwa_miss
-        cycle
-      endif
+    call make_grduwa__polygon(ap)
 
-      p => up%polygon(ij)
-      if( p%idx == up%idx_miss .or. p%n == 0_8 )then
-        g%uwa(ij) = up%uwa_miss
-        cycle
-      endif
+    call cpval(g%uwa, g%ara)
 
-      g%uwa(ij) = area_sphere_polygon(p%lon, p%lat, p%arctyp) * earth%r**2
+    call echo(code%ext)
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call edbg('min: '//str(minval(g%ara,mask=g%ara/=ap%ara_miss))//&
+          ', max: '//str(maxval(g%ara,mask=g%ara/=ap%ara_miss))//&
+          '\ntotal: '//str(sum(g%ara,mask=g%ara/=ap%ara_miss),'es20.13'))
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_grdara__polygon
+!===============================================================
+!
+!===============================================================
+subroutine make_grdwgt__polygon(ap)
+  use common_opt_ctrl, only: &
+        get_opt_earth
+  implicit none
+  type(gs_polygon_), intent(inout), target :: ap
 
-      if( g%uwa(ij) < 0.d0 )then
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(file_), pointer :: f
+  type(opt_earth_) :: earth
+  integer(8) :: ij
+
+  if( ap%grid%status_wgt == GRID_STATUS__PREPARED ) return
+
+  call echo(code%bgn, 'make_grdwgt__polygon')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call make_grdidx__polygon(ap)
+
+  fg_in => ap%f_grid_in
+  g     => ap%grid
+
+  g%status_wgt = GRID_STATUS__PREPARED
+  allocate(g%wgt(g%nij))
+
+  if( .not. ap%is_valid )then
+    g%wgt(:) = ap%wgt_miss
+    call echo(code%ret)
+    return
+  endif
+
+  earth = get_opt_earth()
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  ! Case: Weighted area data were given
+  if( fg_in%ara%path /= '' )then
+    call echo(code%ent, 'Case: Weighted area data were given')
+
+    call make_grduwa__polygon(ap)
+    call make_grdara__polygon(ap)
+
+    g%wgt(:) = ap%wgt_miss
+    do ij = 1_8, g%nij
+      if( .not. g%msk(ij) ) cycle
+      g%wgt(ij) = g%ara(ij) / g%uwa(ij)
+    enddo
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: Weight data were given
+  elseif( fg_in%wgt%path /= '' )then
+    call echo(code%ent, 'Case: Weight data were given')
+
+    f => fg_in%wgt
+    call rbin(g%wgt, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1))
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: No input
+  else
+    call echo(code%ent, 'Case: No input')
+
+    g%wgt(:) = 1.d0
+
+    call echo(code%ext)
+  endif
+  !-------------------------------------------------------------
+  ! Check values and put the missing value in
+  !-------------------------------------------------------------
+  do ij = 1_8, g%nij
+    if( g%msk(ij) )then
+      if( g%wgt(ij) < 0.d0 )then
         call eerr(str(msg_unexpected_condition())//&
-                '\n  g%uwa(ij) < 0.0'//&
+                '\n  g%wgt(ij) < 0.d0'//&
                 '\n  ij: '//str(ij)//&
-                '\n  uwa: '//str(g%uwa(ij)))
+                '\n  idx: '//str(g%idx(ij))//&
+                '\n  wgt: '//str(g%wgt(ij)))
       endif
+    else
+      g%wgt(ij) = ap%wgt_miss
+    endif
+  enddo  ! ij/
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=ap%wgt_miss))//&
+           ' max: '//str(maxval(g%wgt,mask=g%wgt/=ap%wgt_miss)))
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine make_grdwgt__polygon
+!===============================================================
+!
+!===============================================================
+subroutine make_grdxyz__polygon(ap)
+  use common_opt_ctrl, only: &
+        get_opt_earth
+  implicit none
+  type(gs_polygon_), intent(inout), target :: ap
+
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(polygon_), pointer :: p
+  type(opt_earth_) :: earth
+  integer(8) :: ij
+  real(8) :: r
+
+  if( ap%grid%status_xyz == GRID_STATUS__PREPARED ) return
+
+  call echo(code%bgn, 'make_grdxyz__polygon')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call make_grdidx__polygon(ap)
+
+  fg_in => ap%f_grid_in
+  g     => ap%grid
+
+  g%status_xyz = GRID_STATUS__PREPARED
+  allocate(g%x(g%nij))
+  allocate(g%y(g%nij))
+  allocate(g%z(g%nij))
+
+  if( .not. ap%is_valid )then
+    g%x(:) = ap%xyz_miss
+    g%y(:) = ap%xyz_miss
+    g%z(:) = ap%xyz_miss
+    call echo(code%ret)
+    return
+  endif
+
+  earth = get_opt_earth()
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  ! Case: Cartesian coord. data were given
+  if( fg_in%x%path /= '' )then
+    call echo(code%ent, 'Cartesian coordinate data were given')
+
+    call eerr('Not implemented.')
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: Spherical coord. data were given
+  elseif( fg_in%lon%path /= '' )then
+    call echo(code%ent, 'Spherical coordinate data were given')
+
+    call eerr('Not implemented.')
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: No input
+  else
+    call echo(code%ent, 'Case: No input')
+
+    g%x(:) = ap%xyz_miss
+    g%y(:) = ap%xyz_miss
+    g%z(:) = ap%xyz_miss
+    do ij = 1_8, g%nij
+      if( .not. g%msk(ij) ) cycle
+
+      p => ap%polygon(ij)
+
+      g%x(ij) = sum(p%x(:)) / p%n
+      g%y(ij) = sum(p%y(:)) / p%n
+      g%z(ij) = sum(p%z(:)) / p%n
+
+      r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
+      g%x(ij) = g%x(ij) / r * earth%r
+      g%y(ij) = g%y(ij) / r * earth%r
+      g%z(ij) = g%z(ij) / r * earth%r
     enddo  ! ij/
 
     call echo(code%ext)
@@ -3101,455 +2727,89 @@ subroutine make_grduwa__polygon(up, earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=up%uwa_miss))//&
-           ' max: '//str(maxval(g%uwa,mask=g%uwa/=up%uwa_miss)))
-  call edbg('total: '//str(sum(g%uwa,mask=g%uwa/=up%uwa_miss),'es20.13'))
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grduwa__polygon
-!===============================================================
-!
-!===============================================================
-subroutine make_grdara__polygon(up)
-  use common_gs_zone, only: &
-        check_iZone
-  use common_gs_grid_base, only: &
-        init_grid, &
-        free_grid
-  implicit none
-  type(gs_polygon_), intent(inout), target :: up
-
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(zone_polygon_) , pointer :: zp
-  type(grid_)         , pointer :: g
-
-  type(file_), pointer :: f
-  type(grid_) :: g_in
-  integer(8) :: ij
-
-  call echo(code%bgn, 'make_grdara__polygon')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .false.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
-
-  if( up%iZone_grdara == up%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  up%iZone_grdara = up%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  fg_in   => up%f_grid_in
-  fg_out  => up%f_grid_out
-  zone_im => fg_out%zone_im(up%iZone)
-  zp      => up%zone(up%iZone)
-  g       => up%grid
-
-  g%nij = zp%mij
-  call realloc(g%ara, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  ! Case: Intermediate exists
-  if( zone_im%is_saved_ara )then
-    call echo(code%ent, 'Case: Intermediate data exists')
-
-    call rbin(g%ara, zone_im%path, rec=rec_im_ara)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Weighted area is input
-  elseif( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area is input')
-
-    f => fg_in%ara
-    call rbin(g%ara, f%path, f%dtype, f%endian, f%rec, &
-                     sz=fg_in%sz(1), lb=fg_in%lb(1)+zp%ijs-1_8)
-    call conv_unit(g%ara, fg_in%unit_ara, unit_square_meter)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Weight is input
-  elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight is input')
-    !-----------------------------------------------------------
-    ! Prep. unweighted area
-    !-----------------------------------------------------------
-    if( up%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_polygon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-    !-----------------------------------------------------------
-    ! Read input
-    !-----------------------------------------------------------
-    call init_grid(g_in)
-    g_in%nij = zone_im%mij
-    allocate(g_in%wgt(g_in%nij))
-
-    f => fg_in%wgt
-    call rbin(g_in%wgt, f%path, f%dtype, f%endian, f%rec, &
-                     sz=fg_in%sz(1), lb=fg_in%lb(1)+zp%ijs-1_8)
-    !-----------------------------------------------------------
-    ! Calc. weighted area
-    !-----------------------------------------------------------
-    do ij = 1_8, zp%mij
-      if( up%debug .and. ij /= g%ij_debug )then
-        g%ara(ij) = up%ara_miss
-        cycle
-      endif
-
-      g%ara(ij) = g%uwa(ij) * g_in%wgt(ij)
-    enddo
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( up%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
-
-    call free_grid(g_in)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: No input
-  else
-    call echo(code%ent, 'Case: No input')
-
-    if( up%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_polygon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-
-    g%ara(:) = g%uwa(:)
-
-    if( up%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
-
-    call echo(code%ext)
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%ara,mask=g%ara/=up%ara_miss))//&
-           ' max: '//str(maxval(g%ara,mask=g%ara/=up%ara_miss)))
-  call edbg('total: '//str(sum(g%ara,mask=g%ara/=up%ara_miss),'es20.13'))
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdara__polygon
-!===============================================================
-!
-!===============================================================
-subroutine make_grdwgt__polygon(up)
-  use common_gs_zone, only: &
-        check_iZone
-  implicit none
-  type(gs_polygon_), intent(inout), target :: up
-
-  type(zone_polygon_) , pointer :: zp
-  type(file_grid_in_) , pointer :: fg_in
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(grid_)         , pointer :: g
-
-  type(file_)   , pointer :: f
-  type(polygon_), pointer :: p
-  integer(8) :: ij
-
-  call echo(code%bgn, 'make_grdwgt__polygon')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .false.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
-
-  if( up%iZone_grdwgt == up%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  up%iZone_grdwgt = up%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  zp      => up%zone(up%iZone)
-  fg_in   => up%f_grid_in
-  fg_out  => up%f_grid_out
-  zone_im => fg_out%zone_im(up%iZone)
-  g       => up%grid
-
-  if( .not. zp%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  call realloc(g%wgt, g%nij, clear=.true.)
-  !-------------------------------------------------------------
-  ! Case: Intermediate exists
-  if( zone_im%is_saved_wgt )then
-    call echo(code%ent, 'Case: Intermediate data exists')
-
-    call rbin(g%wgt, zone_im%path, rec=rec_im_wgt)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Weighted area is input
-  elseif( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area is input')
-    !-----------------------------------------------------------
-    ! Read im. of unweighted area
-    !-----------------------------------------------------------
-    if( up%iZone_grduwa == 0 )then
-      call verify_im_saved(zone_im%is_saved_uwa, varname_uwa, gs_type_polygon)
-      allocate(g%uwa(g%nij))
-      call rbin(g%uwa, zone_im%path, rec=rec_im_uwa)
-    endif
-    !-----------------------------------------------------------
-    ! Calc. weight
-    !-----------------------------------------------------------
-    do ij = 1_8, zp%mij
-      if( up%debug .and. ij /= g%ij_debug )then
-        g%wgt(ij) = up%wgt_miss
-        cycle
-      endif
-
-      p => up%polygon(ij)
-      if( p%idx == up%idx_miss .or. p%n == 0 )then
-        g%wgt(ij) = up%wgt_miss
-      else
-        g%wgt(ij) = g%ara(ij) / g%uwa(ij)
-      endif
-    enddo
-    !-----------------------------------------------------------
-    if( up%iZone_grduwa == 0 ) call realloc(g%uwa, 0)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Weight is input
-  elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight is input')
-
-    f => fg_in%wgt
-    call rbin(g%wgt, f%path, f%dtype, f%endian, f%rec, &
-                     sz=fg_in%sz(1), lb=fg_in%lb(1)+zp%ijs-1_8)
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: No input
-  else
-    call echo(code%ent, 'Case: No input')
-
-    do ij = 1_8, zp%mij
-      if( up%debug .and. ij /= g%ij_debug )then
-        g%wgt(ij) = up%wgt_miss
-        cycle
-      endif
-
-      p => up%polygon(ij)
-      if( p%idx == up%idx_miss .or. p%n == 0 )then
-        g%wgt(ij) = up%wgt_miss
-      else
-        g%wgt(ij) = 1.d0
-      endif
-    enddo
-
-    call echo(code%ext)
-  endif
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=up%wgt_miss))//&
-           ' max: '//str(maxval(g%wgt,mask=g%wgt/=up%wgt_miss)))
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdwgt__polygon
-!===============================================================
-!
-!===============================================================
-subroutine make_grdxyz__polygon(up, earth)
-  use common_gs_zone, only: &
-        check_iZone
-  implicit none
-  type(gs_polygon_), intent(inout), target :: up
-  type(opt_earth_) , intent(in)            :: earth
-
-  type(zone_polygon_), pointer :: zp
-  type(grid_)        , pointer :: g
-  type(polygon_)     , pointer :: p
-  integer(8) :: ij
-  real(8) :: r
-
-  call echo(code%bgn, 'make_grdxyz__polygon')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .false.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
-
-  if( up%iZone_grdxyz == up%iZone )then
-    call edbg('Nothing to do.')
-    call echo(code%ret)
-    return
-  endif
-
-  up%iZone_grdxyz = up%iZone
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  zp => up%zone(up%iZone)
-  g  => up%grid
-
-  if( .not. zp%is_valid )then
-    call echo(code%ret)
-    return
-  endif
-
-  call realloc(g%x, zp%mij, clear=.true., fill=0.d0)
-  call realloc(g%y, zp%mij, clear=.true., fill=0.d0)
-  call realloc(g%z, zp%mij, clear=.true., fill=0.d0)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  do ij = 1_8, zp%mij
-    p => up%polygon(ij)
-    if( p%idx == up%idx_miss .or. p%n == 0 )then
-      g%x(ij) = up%xyz_miss
-      g%y(ij) = up%xyz_miss
-      g%z(ij) = up%xyz_miss
-      cycle
-    endif
-
-    g%x(ij) = sum(p%x(:)) / p%n
-    g%y(ij) = sum(p%y(:)) / p%n
-    g%z(ij) = sum(p%z(:)) / p%n
-
-    r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
-    g%x(ij) = g%x(ij) / r * earth%r
-    g%y(ij) = g%y(ij) / r * earth%r
-    g%z(ij) = g%z(ij) / r * earth%r
-  enddo  ! ij/
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call edbg('x min: '//str(minval(g%x,mask=g%x/=up%xyz_miss))//&
-            ', max: '//str(maxval(g%x,mask=g%x/=up%xyz_miss)))
-  call edbg('y min: '//str(minval(g%y,mask=g%y/=up%xyz_miss))//&
-            ', max: '//str(maxval(g%y,mask=g%y/=up%xyz_miss)))
-  call edbg('z min: '//str(minval(g%z,mask=g%z/=up%xyz_miss))//&
-            ', max: '//str(maxval(g%z,mask=g%z/=up%xyz_miss)))
+  call edbg('x min: '//str(minval(g%x,mask=g%x/=ap%xyz_miss))//&
+            ', max: '//str(maxval(g%x,mask=g%x/=ap%xyz_miss)))
+  call edbg('y min: '//str(minval(g%y,mask=g%y/=ap%xyz_miss))//&
+            ', max: '//str(maxval(g%y,mask=g%y/=ap%xyz_miss)))
+  call edbg('z min: '//str(minval(g%z,mask=g%z/=ap%xyz_miss))//&
+            ', max: '//str(maxval(g%z,mask=g%z/=ap%xyz_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdxyz__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat__polygon(up)
-  use common_gs_zone, only: &
-        check_iZone
+subroutine make_grdlonlat__polygon(ap)
+  use common_opt_ctrl, only: &
+        get_opt_earth
   implicit none
-  type(gs_polygon_), intent(inout), target :: up
+  type(gs_polygon_), intent(inout), target :: ap
 
-  type(zone_polygon_) , pointer :: zp
-  type(file_grid_out_), pointer :: fg_out
-  type(zone_grid_im_) , pointer :: zone_im
-  type(grid_)         , pointer :: g
+  type(file_grid_in_), pointer :: fg_in
+  type(grid_)        , pointer :: g
+  type(opt_earth_) :: earth
+
+  if( ap%grid%status_lonlat == GRID_STATUS__PREPARED ) return
 
   call echo(code%bgn, 'make_grdlonlat__polygon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_iZone(varname_grdidx   , up%iZone_grdidx   , up%iZone, .false.)
-  call check_iZone(varname_grduwa   , up%iZone_grduwa   , up%iZone, .true.)
-  call check_iZone(varname_grdara   , up%iZone_grdara   , up%iZone, .true.)
-  call check_iZone(varname_grdwgt   , up%iZone_grdwgt   , up%iZone, .true.)
-  call check_iZone(varname_grdxyz   , up%iZone_grdxyz   , up%iZone, .true.)
-  call check_iZone(varname_grdlonlat, up%iZone_grdlonlat, up%iZone, .true.)
+  call make_grdidx__polygon(ap)
 
-  if( up%iZone_grdlonlat == up%iZone )then
-    call edbg('Nothing to do.')
+  fg_in => ap%f_grid_in
+  g     => ap%grid
+
+  g%status_lonlat = GRID_STATUS__PREPARED
+  allocate(g%lon(g%nij))
+  allocate(g%lat(g%nij))
+
+  if( .not. ap%is_valid )then
+    g%lon(:) = ap%lonlat_miss
+    g%lat(:) = ap%lonlat_miss
     call echo(code%ret)
     return
   endif
 
-  up%iZone_grdlonlat = up%iZone
+  earth = get_opt_earth()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  zp      => up%zone(up%iZone)
-  fg_out  => up%f_grid_out
-  zone_im => fg_out%zone_im(up%iZone)
-  g       => up%grid
+  ! Case: Spherical coord. data were given
+  if( fg_in%lon%path /= '' )then
+    call echo(code%ent, 'Case: Spherical coord. data were given')
 
-  if( .not. zp%is_valid )then
-    call echo(code%ret)
-    return
-  endif
+    call eerr('No implemented.')
 
-  call realloc(g%lon, zp%mij, clear=.true., fill=0.d0)
-  call realloc(g%lat, zp%mij, clear=.true., fill=0.d0)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ! Case: xyz has been calculated
-  if( up%iZone_grdxyz == up%iZone )then
-    call echo(code%ent, 'Case: xyz has been calculated')
-    !-----------------------------------------------------------
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, &
-           up%xyz_miss, up%lonlat_miss)
-    !-----------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: xyz has been saved
-  elseif( zone_im%is_saved_xyz )then
-    call echo(code%ent, 'Case: xyz has been saved')
-    !-----------------------------------------------------------
-    call realloc(g%x, g%nij)
-    call realloc(g%y, g%nij)
-    call realloc(g%z, g%nij)
+  ! Case: Cartesian coord. data were given
+  elseif( fg_in%x%path /= '' )then
+    call echo(code%ent, 'Case: Cartesian coord. data were given')
 
-    call rbin(g%x, zone_im%path, rec=rec_im_x)
-    call rbin(g%y, zone_im%path, rec=rec_im_y)
-    call rbin(g%z, zone_im%path, rec=rec_im_z)
+    call eerr('No implemented.')
 
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, &
-           up%xyz_miss, up%lonlat_miss)
-
-    call realloc(g%x, 0)
-    call realloc(g%y, 0)
-    call realloc(g%z, 0)
-    !-----------------------------------------------------------
     call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: ERROR
+  ! Case: No input
   else
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  Not matched any case')
+    call echo(code%ent, 'Case: No input')
+
+    call make_grdxyz__polygon(ap)
+
+    call conv_cartesian_to_spherical_rad(&
+           g%x, g%y, g%z, g%lon, g%lat, &
+           ap%xyz_miss, ap%lonlat_miss)
+
+    call echo(code%ext)
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=up%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=up%lonlat_miss)))
-  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=up%lonlat_miss))//&
-              ', max: '//str(maxval(g%lat,mask=g%lat/=up%lonlat_miss)))
+  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ap%lonlat_miss))//&
+              ', max: '//str(maxval(g%lon,mask=g%lon/=ap%lonlat_miss)))
+  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=ap%lonlat_miss))//&
+              ', max: '//str(maxval(g%lat,mask=g%lat/=ap%lonlat_miss)))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_grdlonlat__polygon
@@ -3563,96 +2823,84 @@ end subroutine make_grdlonlat__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_index_list_raster(&
-    idxmap, idx_miss, idxmin, idxmax, &
-    mij, grdidx, grdidxarg)
+integer(8) function find_index(&
+    idx, idx_prev, ij_prev, grdidx, grdidxarg, &
+    allow_not_found) result(ij)
   implicit none
-  integer(8), intent(in)  :: idxmap(:,:)
-  integer(8), intent(in)  :: idx_miss
-  integer(8), intent(in)  :: idxmin, idxmax
-  integer(8), intent(out) :: mij
-  integer(8), pointer     :: grdidx(:)  ! out
-  integer(8), pointer     :: grdidxarg(:)  ! out
+  integer(8), intent(in) :: idx
+  integer(8), intent(inout) :: idx_prev
+  integer(8), intent(inout) :: ij_prev
+  integer(8), intent(in) :: grdidx(:), grdidxarg(:)
+  logical   , intent(in) :: allow_not_found
 
-  logical, allocatable :: is_valid(:)
-  integer(8) :: mh, mv, ih, iv
-  integer(8) :: idx
+  integer(8) :: loc
 
-  call echo(code%bgn, 'make_index_list_raster', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  mh = size(idxmap,1)
-  mv = size(idxmap,2)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  allocate(is_valid(idxmin:idxmax))
-  is_valid(:) = .false.
-
-  do iv = 1_8, mv
-    do ih = 1_8, mh
-      if( idxmap(ih,iv) /= idx_miss ) is_valid(idxmap(ih,iv)) = .true.
-    enddo
-  enddo
-
-  mij = 0_8
-  do idx = idxmin, idxmax
-    if( is_valid(idx) ) call add(mij)
-  enddo
-
-  allocate(grdidx(mij))
-  allocate(grdidxarg(mij))
-
-  mij = 0_8
-  do idx = idxmin, idxmax
-    if( is_valid(idx) )then
-      call add(mij)
-      grdidx(mij) = idx
-      grdidxarg(mij) = mij
+  if( idx == idx_prev )then
+    ij = ij_prev
+  else
+    call search(idx, grdidx, grdidxarg, loc)
+    if( loc == 0_8 )then
+      if( allow_not_found )then
+        ij = 0_8
+      else
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  Index '//str(idx)//' is not found')
+      endif
+    else
+      ij = grdidxarg(loc)
     endif
-  enddo
-
-  deallocate(is_valid)
-  !--------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_index_list_raster
+    ij_prev = ij
+    idx_prev = idx
+  endif
+end function find_index
 !===============================================================
 !
 !===============================================================
-subroutine verify_im_saved(is_saved, varname, gs_type)
+subroutine read_lattice_data__int8(dat, f, s2n, xi, yi)
   implicit none
-  logical, intent(in) :: is_saved
-  character(*), intent(in) :: varname
-  character(*), intent(in) :: gs_type
+  integer(8) , intent(out) :: dat(:,:)
+  type(file_), intent(in)  :: f
+  logical    , intent(in)  :: s2n
+  integer(8) , intent(in), optional :: xi, yi
 
-  character(clen_var) :: varname_long
+  integer(8) :: lb(2)
 
-  call echo(code%bgn, 'verify_im_saved', '-p -x2')
+  call echo(code%bgn, 'read_lattice_data__int8', '-p -x2')
   !-------------------------------------------------------------
-  if( .not. is_saved )then
-    selectcase( varname )
-    case( varname_idx )
-      varname_long = 'index'
-    case( varname_uwa )
-      varname_long = 'unweighted area'
-    case( varname_ara )
-      varname_long = 'weighted area'
-    case( varname_wgt )
-      varname_long = 'weight'
-    case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  varname: '//str(varname))
-    endselect
+  lb(:) = f%lb(:2)
+  if( present(xi) ) lb(1) = xi
+  if( present(yi) ) lb(2) = yi
 
-    call eerr(str(msg_unexpected_condition())//&
-            '\nIntermediate data of '//str(varname_long)//&
-             ' of '//str(gs_type)//' is not saved.'//&
-            '\nCall subroutine make_grd'//str(varname)//'_'//str(gs_type)//' ahead.')
-  endif
+  call rbin(dat, f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=lb)
+
+  if( .not. s2n ) call reverse(dat, 2)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine verify_im_saved
+end subroutine read_lattice_data__int8
+!===============================================================
+!
+!===============================================================
+subroutine read_lattice_data__dble(dat, f, s2n, xi, yi)
+  implicit none
+  real(8)    , intent(out) :: dat(:,:)
+  type(file_), intent(in)  :: f
+  logical    , intent(in)  :: s2n
+  integer(8) , intent(in), optional :: xi, yi
+
+  integer(8) :: lb(2)
+
+  call echo(code%bgn, 'read_lattice_data__dble', '-p -x2')
+  !-------------------------------------------------------------
+  lb(:) = f%lb(:2)
+  if( present(xi) ) lb(1) = xi
+  if( present(yi) ) lb(2) = yi
+
+  call rbin(dat, f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=lb)
+
+  if( .not. s2n ) call reverse(dat, 2)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine read_lattice_data__dble
 !===============================================================
 !
 !===============================================================

@@ -22,7 +22,6 @@ PY = $(BINDIR)/remap_mkfig.py
 
 OBJ_F = \
 def_type.o\
-mod_file.o\
 mod_set.o\
 mod_remap.o\
 mod_finalize.o\

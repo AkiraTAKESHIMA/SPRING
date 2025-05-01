@@ -5,9 +5,13 @@ module mod_set
   use lib_util
   use lib_math
   use lib_io
+  ! common1
   use common_const
   use common_type_opt
   use common_type_gs
+  ! common3
+  use common_type_rst
+  ! this
   use def_type
   implicit none
   private
@@ -20,7 +24,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine read_settings(src, tgt, dout, opt)
+subroutine read_settings(s, t, dout)
   use common_set, only: &
         open_setting_file      , &
         close_setting_file     , &
@@ -34,6 +38,10 @@ subroutine read_settings(src, tgt, dout, opt)
         msg_invalid_input
   use common_file, only: &
         open_report_file
+  use common_opt_ctrl, only: &
+        set_opt_sys  , &
+        set_opt_log  , &
+        set_opt_earth
   use common_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
@@ -44,29 +52,29 @@ subroutine read_settings(src, tgt, dout, opt)
         set_miss_file_grid_out, &
         set_save_file_grid_out
   implicit none
-  type(gs_)    , intent(out), target :: src
-  type(gs_)    , intent(out), target :: tgt
+  type(gs_)    , intent(out), target :: s
+  type(gs_)    , intent(out), target :: t
   type(output_), intent(out), target :: dout
-  type(opt_)   , intent(out)         :: opt
 
   type counter_
-    integer :: src
-    integer :: tgt
+    integer :: s
+    integer :: t
     integer :: dout
     integer :: opt
   end type
   type(counter_) :: counter
 
-  character(clen_var) :: block_name
+  character(CLEN_VAR) :: block_name
   !-------------------------------------------------------------
-  character(clen_var), parameter :: block_name_gs_latlon  = 'grid_system_latlon'
-  character(clen_var), parameter :: block_name_gs_raster  = 'grid_system_raster'
-  character(clen_var), parameter :: block_name_gs_polygon = 'grid_system_polygon'
-  character(clen_var), parameter :: block_name_raster     = 'raster'
-  character(clen_var), parameter :: block_name_output     = 'output'
-  character(clen_var), parameter :: block_name_opt        = 'options'
+  character(CLEN_VAR), parameter :: block_name_gs_latlon  = 'grid_system_latlon'
+  character(CLEN_VAR), parameter :: block_name_gs_raster  = 'grid_system_raster'
+  character(CLEN_VAR), parameter :: block_name_gs_polygon = 'grid_system_polygon'
+  character(CLEN_VAR), parameter :: block_name_raster     = 'raster'
+  character(CLEN_VAR), parameter :: block_name_output     = 'output'
+  character(CLEN_VAR), parameter :: block_name_opt        = 'options'
 
   type(gs_common_), pointer :: sc, tc
+  type(opt_) :: opt
 
   call echo(code%bgn, 'read_settings')
   !-------------------------------------------------------------
@@ -74,16 +82,16 @@ subroutine read_settings(src, tgt, dout, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Initilizing')
 
-  call init_gs(src)
-  call init_gs(tgt)
+  call init_gs(s)
+  call init_gs(t)
 
-  src%id = 'src'
-  src%nam = GRID_SOURCE
-  src%is_source = .true.
+  s%id = 's'
+  s%nam = GRID_SOURCE
+  s%is_source = .true.
 
-  tgt%id = 'tgt'
-  tgt%nam = GRID_TARGET
-  tgt%is_source = .false.
+  t%id = 't'
+  t%nam = 'raster'
+  t%is_source = .false.
 
   call set_default_values_opt_sys(opt%sys)
   call set_default_values_opt_log(opt%log)
@@ -116,33 +124,33 @@ subroutine read_settings(src, tgt, dout, opt)
       exit
     !-----------------------------------------------------------
     ! Case: gs_latlon
-    case( block_name_gs_latlon )
-      call update_counter(counter%src)
-      call read_settings_gs_latlon(src)
+    case( BLOCK_NAME_GS_LATLON )
+      call update_counter(counter%s)
+      call read_settings_gs_latlon(s)
     !-----------------------------------------------------------
     ! Case: gs_polygon
-    case( block_name_gs_polygon )
-      call update_counter(counter%src)
-      call read_settings_gs_polygon(src)
+    case( BLOCK_NAME_GS_POLYGON )
+      call update_counter(counter%s)
+      call read_settings_gs_polygon(s)
     !-----------------------------------------------------------
     ! Case: gs_raster
-    case( block_name_gs_raster )
+    case( BLOCK_NAME_GS_RASTER )
       call eerr(str(msg_invalid_value())//&
               '\n  block_name: '//str(block_name)//&
               '\nNot implemented yet.')
     !-----------------------------------------------------------
     ! Case: raster
-    case( block_name_raster )
-      call update_counter(counter%tgt)
-      call read_settings_raster(tgt)
+    case( BLOCK_NAME_RASTER )
+      call update_counter(counter%t)
+      call read_settings_raster(t)
     !-----------------------------------------------------------
     ! Case: output
-    case( block_name_output )
+    case( BLOCK_NAME_OUTPUT )
       call update_counter(counter%dout)
       call read_settings_output(dout)
     !-----------------------------------------------------------
     ! Case: opt
-    case( block_name_opt )
+    case( BLOCK_NAME_OPT )
       call update_counter(counter%opt)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
@@ -165,11 +173,11 @@ subroutine read_settings(src, tgt, dout, opt)
   call echo(code%ent, 'Detecting conflictions')
 
   if( opt%earth%shp == earth_shape_ellips )then
-    if( src%cmn%gs_type == gs_type_polygon )then
+    if( s%gs_type == GS_TYPE_POLYGON )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  opt%earth%shp == earth_shape_ellips .and. src%cmn%gs_type == gs_type_polygon'//&
+              '\n  opt%earth%shp == earth_shape_ellips .and. s%cmn%gs_type == gs_type_polygon'//&
               '\n  opt%earth%shp: '//str(opt%earth%shp)//&
-              '\n  src%cmn%gs_type: '//str(src%cmn%gs_type))
+              '\n  s%cmn%gs_type: '//str(s%cmn%gs_type))
     endif
   endif
 
@@ -185,11 +193,8 @@ subroutine read_settings(src, tgt, dout, opt)
             '\nAutomatically set to "'//str(opt%sys%dir_im)//'".')
   endif
 
-  sc => src%cmn
-  tc => tgt%cmn
-print*, 'associated', associated(src%cmn)
-print*, 'associated', associated(sc)
-print*, src%cmn%idx_miss
+  sc => s%cmn
+  tc => t%cmn
 
   ! Missing values of grid data
   !-------------------------------------------------------------
@@ -217,27 +222,29 @@ print*, src%cmn%idx_miss
 
   call set_save_file_grid_out(tc%f_grid_out)
 
-  ! Path of intermediates
+  ! Options
   !-------------------------------------------------------------
-  sc%f_grid_out%path_im_base = joined(opt%sys%dir_im, 'spring.grid_src.im')
+  call set_opt_sys(opt%sys)
+  call set_opt_log(opt%log)
+  call set_opt_earth(opt%earth)
 
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
-  selectcase( src%gs_type )
+  selectcase( s%gs_type )
   case( gs_type_latlon )
-    call echo_settings_gs_latlon(src%latlon)
+    call echo_settings_gs_latlon(s%latlon)
   case( gs_type_raster )
-    call echo_settings_gs_raster(src%raster)
+    call echo_settings_gs_raster(s%raster)
   case( gs_type_polygon )
-    call echo_settings_gs_polygon(src%polygon)
+    call echo_settings_gs_polygon(s%polygon)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  src%gs_type: '//str(src%gs_type))
+            '\n  s%gs_type: '//str(s%gs_type))
   endselect
 
-  call echo_settings_raster(tgt%raster)
+  call echo_settings_raster(t%raster)
 
   call echo_settings_output(dout)
 
@@ -247,7 +254,7 @@ print*, src%cmn%idx_miss
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_paths(src, tgt, dout, opt%sys)
+  call check_paths(s, t, dout, opt%sys)
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
@@ -256,8 +263,8 @@ contains
 subroutine init_counter()
   implicit none
 
-  counter%src  = 0
-  counter%tgt  = 0
+  counter%s  = 0
+  counter%t  = 0
   counter%dout = 0
   counter%opt  = 0
 end subroutine init_counter
@@ -270,7 +277,7 @@ subroutine update_counter(n)
   !-------------------------------------------------------------
   n = n + 1
 
-  if( counter%src > 1 )then
+  if( counter%s > 1 )then
     call eerr(str(msg_invalid_input())//&
             '\n@ line '//str(line_number())//&
             '\nBlocks of grid system (gs) appeared more than once:'//&
@@ -279,7 +286,7 @@ subroutine update_counter(n)
               '", "'//str(block_name_gs_polygon)//'"')
   endif
 
-  call check_num_of_key(counter%tgt, block_name_raster, 0, 1)
+  call check_num_of_key(counter%t, block_name_raster, 0, 1)
 
   call check_num_of_key(counter%dout, block_name_output, 0, 1)
 
@@ -293,7 +300,7 @@ subroutine check_number_of_blocks()
 
   call echo(code%bgn, '__IP__check_number_of_blocks', '-p -x2')
   !-------------------------------------------------------------
-  if( counter%src /= 1 )then
+  if( counter%s /= 1 )then
     call eerr(str(msg_syntax_error())//&
             '\nThe number of blocks of grid system is incorrect:'//&
             '\n  "'//str(block_name_gs_latlon)//&
@@ -301,7 +308,7 @@ subroutine check_number_of_blocks()
              '", "'//str(block_name_gs_polygon)//'"')
   endif
 
-  if( counter%tgt /= 1 )then
+  if( counter%t /= 1 )then
     call eerr(str(msg_syntax_error())//&
             '\nThe number of blocks of raster is incorrect:'//&
             '\n  "'//str(block_name_raster)//'"')
@@ -353,15 +360,17 @@ subroutine read_settings_gs_latlon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
+        set_gs_common               , &
         set_default_values_gs_latlon, &
         alloc_file_grid_in_val      , &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out    , &
-        set_gs_common
+        set_bounds_file_grid_out
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
+  use common_gs_util, only: &
+        set_gs_debug
   implicit none
   type(gs_), intent(out), target :: u
 
@@ -378,7 +387,7 @@ subroutine read_settings_gs_latlon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(25)
+  call alloc_keynum(26)
   call set_keynum('name', 0, 1)
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
@@ -404,6 +413,7 @@ subroutine read_settings_gs_latlon(u)
   call set_keynum('ara_miss', 0, 1)
   call set_keynum('wgt_miss', 0, 1)
   call set_keynum('val_miss', 0, 1)
+  call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -413,6 +423,7 @@ subroutine read_settings_gs_latlon(u)
 
   call alloc_gs_components(u, GS_TYPE_LATLON)
   call set_default_values_gs_latlon(u%latlon)
+  call set_gs_common(u)
 
   ul => u%latlon
   fl     => ul%f_latlon_in
@@ -548,6 +559,10 @@ subroutine read_settings_gs_latlon(u)
     case( 'val_miss' )
       call read_value(ul%val_miss)
     !-----------------------------------------------------------
+    ! For debugging
+    case( 'idx_debug' )
+      call read_value(ul%idx_debug)
+    !-----------------------------------------------------------
     ! ERROR
     case default
       call raise_error_invalid_key()
@@ -578,7 +593,9 @@ subroutine read_settings_gs_latlon(u)
   call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
   call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
 
-  call set_gs_common(u)
+  ! For debugging
+  !-------------------------------------------------------------
+  call set_gs_debug(ul%debug, ul%idx_debug, ul%idx_miss, keynum('idx_debug')==1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -697,12 +714,14 @@ subroutine read_settings_gs_polygon(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components          , &
+        set_gs_common                , &
         set_default_values_gs_polygon, &
         alloc_file_grid_in_val       , &
         set_bounds_file_polygon_in   , &
         set_bounds_file_grid_in      , &
-        set_bounds_file_grid_out     , &
-        set_gs_common
+        set_bounds_file_grid_out
+  use common_gs_util, only: &
+        set_gs_debug
   implicit none
   type(gs_), intent(out), target :: u
 
@@ -761,6 +780,7 @@ subroutine read_settings_gs_polygon(u)
 
   call alloc_gs_components(u, gs_type_polygon)
   call set_default_values_gs_polygon(u%polygon)
+  call set_gs_common(u)
 
   up => u%polygon
   fp     => up%f_polygon_in
@@ -896,6 +916,10 @@ subroutine read_settings_gs_polygon(u)
     case( 'val_miss' )
       call read_value(up%val_miss)
     !-----------------------------------------------------------
+    ! For debugging
+    case( 'idx_debug' )
+      call read_value(up%idx_debug)
+    !-----------------------------------------------------------
     ! ERROR
     case default
       call raise_error_invalid_key()
@@ -914,8 +938,6 @@ subroutine read_settings_gs_polygon(u)
   call set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij)
   call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
   call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
-
-  call set_gs_common(u)
 
   ! Coordinate system
   !-------------------------------------------------------------
@@ -948,6 +970,10 @@ subroutine read_settings_gs_polygon(u)
 
     if( keynum('coord_miss') == 1 ) up%coord_miss_c = coord_miss
   endif
+
+  ! For debugging
+  !-------------------------------------------------------------
+  call set_gs_debug(up%debug, up%idx_debug, up%idx_miss, keynum('idx_debug')==1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1083,11 +1109,11 @@ subroutine read_settings_raster(u)
         msg_undesirable_input
   use common_gs_base, only: &
         alloc_gs_components         , &
+        set_gs_common               , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
-        set_bounds_file_grid_out    , &
-        set_gs_common
+        set_bounds_file_grid_out
   use common_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
@@ -1124,6 +1150,7 @@ subroutine read_settings_raster(u)
 
   call alloc_gs_components(u, gs_type_raster)
   call set_default_values_gs_raster(u%raster)
+  call set_gs_common(u)
 
   ur => u%raster
   fr     => ur%f_raster_in
@@ -1198,8 +1225,6 @@ subroutine read_settings_raster(u)
          ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) ! out
   call set_bounds_file_grid_in(fg_in)
   call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
-
-  call set_gs_common(u)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1289,7 +1314,6 @@ subroutine read_settings_output(dout)
 
   do
     call read_input()
-print*, trim(key())
     call update_keynum()
 
     selectcase( key() )
@@ -1376,7 +1400,7 @@ print*, trim(key())
 
   call check_values_iratio_minmax(&
          dout%ineq_iratio_min, dout%ineq_iratio_max, &
-         dout%iratio_min, dout%iratio_max)
+         dout%iratio_min     , dout%iratio_max)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1419,6 +1443,8 @@ end subroutine read_settings_output
 !
 !===============================================================
 subroutine read_settings_opt(opt)
+  use common_const_util, only: &
+        checkval_opt_old_files
   use common_set, only: &
         line_number            , &
         back_to_block_head     , &
@@ -1517,15 +1543,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  selectcase( opt%sys%old_files )
-  case( OPT_OLD_FILES_STOP, &
-        OPT_OLD_FILES_REMOVE, &
-        OPT_OLD_FILES_OVERWRITE )
-    continue
-  case default
-    call eerr('Invalid value in opt%sys%old_files: '//str(opt%sys%old_files)//&
-            '\nCheck the value of "old_files".')
-  endselect
+  call checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1554,13 +1572,13 @@ end subroutine read_settings_opt
 !===============================================================
 !
 !===============================================================
-subroutine check_paths(src, tgt, dout, opt_sys)
+subroutine check_paths(s, t, dout, opt_sys)
   use common_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none
-  type(gs_)     , intent(in), target :: src
-  type(gs_)     , intent(in), target :: tgt
+  type(gs_)     , intent(in), target :: s
+  type(gs_)     , intent(in), target :: t
   type(output_) , intent(in), target :: dout
   type(opt_sys_), intent(in)         :: opt_sys
 
@@ -1577,12 +1595,12 @@ subroutine check_paths(src, tgt, dout, opt_sys)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking input files')
 
-  selectcase( src%gs_type )
+  selectcase( s%gs_type )
   !-------------------------------------------------------------
   ! Case: Lattice
   case( gs_type_latlon )
-    sfl => src%latlon%f_latlon_in
-    sfg_in => src%latlon%f_grid_in
+    sfl => s%latlon%f_latlon_in
+    sfg_in => s%latlon%f_grid_in
 
     call check_permission(sfl%lon, allow_empty=.true.)
     call check_permission(sfl%lat, allow_empty=.true.)
@@ -1593,17 +1611,17 @@ subroutine check_paths(src, tgt, dout, opt_sys)
   !-------------------------------------------------------------
   ! Case: Raster
   case( gs_type_raster )
-    sfr => src%raster%f_raster_in
-    sfg_in => src%raster%f_grid_in
+    sfr => s%raster%f_raster_in
+    sfg_in => s%raster%f_grid_in
 
     call eerr(str(msg_invalid_value())//&
-            '\n  src%gs_type: '//str(src%gs_type)//&
+            '\n  s%gs_type: '//str(s%gs_type)//&
             '\nNot implemented yet.')
   !-------------------------------------------------------------
   ! Case: Polygon
   case( gs_type_polygon )
-    sfp => src%polygon%f_polygon_in
-    sfg_in => src%polygon%f_grid_in
+    sfp => s%polygon%f_polygon_in
+    sfg_in => s%polygon%f_grid_in
 
     call check_permission(sfp%lon   , allow_empty=.true.)
     call check_permission(sfp%lat   , allow_empty=.true.)
@@ -1619,7 +1637,7 @@ subroutine check_paths(src, tgt, dout, opt_sys)
   ! Case: ERROR
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  src%gs_type: '//str(src%gs_type))
+            '\n  s%gs_type: '//str(s%gs_type))
   endselect
 
   call echo(code%ext)

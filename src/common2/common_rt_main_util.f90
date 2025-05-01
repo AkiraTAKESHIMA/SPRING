@@ -13,8 +13,6 @@ module common_rt_main_util
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: make_list_index_area_of_grid_coef
-
   public :: merge_elems_same_index
 
   public :: modify_rt_area
@@ -24,148 +22,10 @@ module common_rt_main_util
   public :: remove_zero
 
   public :: sort_rt
+
+  public :: trap_rt_empty
   !-------------------------------------------------------------
 contains
-!===============================================================
-!
-!===============================================================
-subroutine make_list_index_area_of_grid_coef(&
-    g, fg_out, coefidx, list_grdidx, list_grdara)
-  use common_gs_grid_base, only: &
-    init_grid, &
-    free_grid, &
-    realloc_grid
-  implicit none
-  type(grid_)         , intent(in) :: g
-  type(file_grid_out_), intent(in) :: fg_out
-  integer(8)          , intent(in) :: coefidx(:)
-  integer(8)          , pointer    :: list_grdidx(:)  ! out
-  real(8)             , pointer    :: list_grdara(:)  ! out
-
-  type(zone_grid_im_), pointer :: zone_im
-  type(grid_) :: g_im
-  integer(8), allocatable :: arg(:)
-  integer(8) :: idxmin, idxmax
-  integer(8) :: nij, ijs, ije
-  integer(8) :: nij_list
-  integer(8) :: ij_im
-  integer(8) :: ij
-  integer(8) :: loc
-  integer :: iZone
-
-  logical :: calc_msk, calc_uwa, calc_ara, calc_wgt, &
-             calc_xyz, calc_lonlat
-
-  call echo(code%bgn, 'make_list_index_area_of_grid_coef', '-p -x2')
-  !-------------------------------------------------------------
-  ! Make $list_grdidx
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Making a list of indices', '-p -x2')
-
-  nij = size(coefidx)
-
-  allocate(arg(nij))
-
-  call argsort(coefidx, arg)
-
-  nij_list = 0_8
-  ije = 0_8
-  do while( ije < nij )
-    ijs = ije + 1_8
-    ije = ijs
-    do while( ije < nij )
-      if( coefidx(arg(ije+1_8)) /= coefidx(arg(ije)) ) exit
-      call add(ije)
-    enddo  ! ije/
-    call add(nij_list)
-  enddo  ! ije/
-
-  allocate(list_grdidx(nij_list))
-  allocate(list_grdara(nij_list))
-
-  nij_list = 0_8
-  ije = 0_8
-  do while( ije < nij )
-    ijs = ije + 1_8
-    ije = ijs
-    do while( ije < nij )
-      if( coefidx(arg(ije+1_8)) /= coefidx(arg(ije)) ) exit
-      call add(ije)
-    enddo  ! ije/
-    call add(nij_list)
-    list_grdidx(nij_list) = coefidx(arg(ijs))
-  enddo  ! ije/
-
-  idxmin = list_grdidx(1)
-  idxmax = list_grdidx(nij_list)
-
-  call edbg('grdidx length: '//str(nij_list)//&
-            ' min: '//str(idxmin)//' max: '//str(idxmax))
-
-  deallocate(arg)
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating area', '-p -x2')
-
-  calc_msk = .false.
-  calc_uwa = .false.
-  calc_ara = .true.
-  calc_wgt = .false.
-  calc_xyz = .false.
-  calc_lonlat=.false.
-
-  list_grdara(:) = 0.d0
-  !-------------------------------------------------------------
-  ! Case: Intermediates of grid data do not exist
-  if( fg_out%nZones == 1 )then
-    do ij = 1_8, g%nij
-      call search(g%idx(ij), list_grdidx, loc)
-      if( loc == 0_8 ) cycle
-      call add(list_grdara(loc), g%ara(ij))
-    enddo  ! ij/
-  !-------------------------------------------------------------
-  ! Case: Intermediates of grid data exist
-  else
-    call init_grid(g_im)
-    g_im%nij = fg_out%mij_im_max
-    call realloc_grid(&
-           g_im, &
-           .true., calc_msk, calc_uwa, calc_ara, calc_wgt, calc_xyz, calc_lonlat, &
-           clear=.true.)
-
-    do iZone = 1, fg_out%nZones
-      zone_im => fg_out%zone_im(iZone)
-
-      call edbg('Zone '//str(iZone)//' mij: '//str(zone_im%mij)//&
-                ' idx min: '//str(zone_im%idxmin)//' max: '//str(zone_im%idxmax))
-      if( .not. zone_im%is_saved_idx ) cycle
-
-      if( zone_im%idxmax < idxmin .or. idxmax < zone_im%idxmin ) cycle
-
-      call rbin(g_im%idx(:zone_im%mij), zone_im%path, rec=rec_im_idx)
-      call rbin(g_im%ara(:zone_im%mij), zone_im%path, rec=rec_im_ara)
-
-      do ij_im = 1_8, zone_im%mij
-        if( g_im%idx(ij_im) < idxmin .or. idxmax < g_im%idx(ij_im) ) cycle
-        call search(g_im%idx(ij_im), list_grdidx, loc)
-        if( loc == 0_8 ) cycle
-        call add(list_grdara(loc), g_im%ara(ij_im))
-      enddo  ! ij_im/
-    enddo  ! iZone/
-
-    call free_grid(g_im)
-  endif
-
-  call edbg('grdara min: '//str(minval(list_grdara))//&
-                 ', max: '//str(maxval(list_grdara)))
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_list_index_area_of_grid_coef
 !===============================================================
 !
 !===============================================================
@@ -184,7 +44,7 @@ subroutine merge_elems_same_index(&
   integer(8), allocatable :: arg(:)
   integer(8) :: nij_new, ijs, ije, ijs2, ije2
 
-  call echo(code%bgn, 'merge_elems_same_index', '-p -x2')
+  call echo(code%bgn, 'merge_elems_same_index')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -269,26 +129,27 @@ end subroutine merge_elems_same_index
 !===============================================================
 !
 !===============================================================
-subroutine modify_rt_area(rtm, list_grdidx, list_grdara)
+subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
   implicit none
   type(rt_main_), intent(inout), target :: rtm
-  integer(8)    , intent(in) :: list_grdidx(:)
-  real(8)       , intent(in) :: list_grdara(:)
+  integer(8)    , intent(in) :: grdidx(:)
+  integer(8)    , intent(in) :: grdidxarg(:)
+  real(8)       , intent(in) :: grdara(:)
 
   integer(8), pointer :: coefidx(:)
   integer(8) :: ij
-  integer(8) :: loc
+  integer(8) :: loc, gij
   real(8) :: ratio
   character(1024) :: msg
 
-  call echo(code%bgn, 'modify_rt_area', '-p -x2')
+  call echo(code%bgn, 'modify_rt_area')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( rtm%grid_coef )
-  case( grid_source )
+  case( GRID_SOURCE )
     coefidx => rtm%sidx
-  case( grid_target )
+  case( GRID_TARGET )
     coefidx => rtm%tidx
   case default
     call eerr(str(msg_invalid_value())//&
@@ -300,27 +161,33 @@ subroutine modify_rt_area(rtm, list_grdidx, list_grdara)
   do ij = 1_8, rtm%nij
     if( rtm%area(ij) >= 0.d0 ) cycle
 
-    call search(coefidx(ij), list_grdidx, loc)
+    call search(coefidx(ij), grdidx, grdidxarg, loc)
 
     if( loc == 0_8 )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  loc == 0')
-    endif
-    if( list_grdara(loc) <= 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  list_grdara(loc) <= 0.0')
+              '\nIndex '//str(coefidx(ij))//' was not found '//&
+                'in the set of grid indices.')
     endif
 
-    ratio = rtm%area(ij) / list_grdara(loc)
+    gij = grdidxarg(loc)
+
+    if( grdara(gij) <= 0.d0 )then
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  grdara <= 0.0'//&
+              '\n  Index: '//str(grdidx(gij))//&
+              '\n  Area : '//str(grdara(gij)))
+    endif
+
+    ratio = rtm%area(ij) / grdara(gij)
 
     if( ratio < 0.d0 .and. rtm%opt_area%is_ratio_zero_negative_enabled )then
       if( ratio <= rtm%opt_area%ratio_zero_negative )then
         msg = 'Ratio of area in the remapping table to the area of grid '//&
               'exceeded the threshold.'//&
              '\n  ij: '//str(ij)//&
-             '\n  Index of the grid: '//str(list_grdidx(loc))//&
+             '\n  Index of the grid: '//str(grdidx(gij))//&
              '\n  Area in the table: '//str(rtm%area(ij))//&
-             '\n  Area of the grid : '//str(list_grdara(loc))//&
+             '\n  Area of the grid : '//str(grdara(gij))//&
              '\n  Ratio            : '//str(ratio)
 
         if( rtm%opt_area%allow_le_ratio_zero_negative )then
@@ -342,7 +209,7 @@ end subroutine modify_rt_area
 subroutine check_coef_after_modification(coef, opt_coef)
   implicit none
   real(8), intent(in) :: coef(:)
-  type(rt_opt_coef_), intent(in) :: opt_coef
+  type(opt_rt_coef_), intent(in) :: opt_coef
 
   integer(8) :: nij, ij
 
@@ -399,7 +266,7 @@ subroutine remove_zero(rtm)
   implicit none
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'remove_zero', '-p -x2')
+  call echo(code%bgn, 'remove_zero')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -440,7 +307,7 @@ subroutine remove_zero_area(ijsize, nij, sidx, tidx, area)
   real(8)   , allocatable :: area_tmp(:)
   integer(8) :: nij_new, ij
 
-  call echo(code%bgn, 'remove_zero_area', '-p -x2')
+  call echo(code%bgn, 'remove_zero_area')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -494,7 +361,7 @@ subroutine remove_zero_coef(ijsize, nij, sidx, tidx, area, coef)
   real(8)   , allocatable :: area_tmp(:), coef_tmp(:)
   integer(8) :: nij_new, ij
 
-  call echo(code%bgn, 'remove_zero_coef', '-p -x2')
+  call echo(code%bgn, 'remove_zero_coef')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -553,7 +420,7 @@ subroutine sort_rt(rtm, grid_sort)
   integer(8) :: ijs, ije
   logical :: is_area_valid, is_coef_valid
 
-  call echo(code%bgn, 'sort_rt', '-p -x2')
+  call echo(code%bgn, 'sort_rt')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -627,6 +494,23 @@ subroutine sort_rt(rtm, grid_sort)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine sort_rt
+!===============================================================
+!
+!===============================================================
+subroutine trap_rt_empty(rtm)
+  implicit none
+  type(rt_main_), intent(in) :: rtm
+
+  call echo(code%bgn, 'trap_rt_empty', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( rtm%nij == 0_8 .and. .not. rtm%allow_empty )then
+    call eerr('The remapping table is empty.')
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine trap_rt_empty
 !===============================================================
 !
 !===============================================================

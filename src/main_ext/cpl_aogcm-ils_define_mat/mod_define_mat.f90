@@ -17,7 +17,7 @@ module mod_define_mat
   use common_rt_stats, only: &
         get_rt_main_stats     , &
         report_rt_main_summary
-  use common_rt_io, only: &
+  use common_rt_main_io, only: &
         read_rt_main , &
         write_rt_main
   use common_rt_main_coef, only: &
@@ -84,6 +84,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !
   !-------------------------------------------------------------
   allocate(agcm%grdidx(agcm%nij))
+  allocate(agcm%grdidxarg(1))
 
   allocate(agcm%grdara(agcm%nij))
   allocate(agcm%lndara_ogcm(agcm%nij))
@@ -108,10 +109,13 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   if( f%path /= '' )then
     call edbg('Reading grdidx')
     call rbin(agcm%grdidx, f%path, f%dtype, f%endian, f%rec)
+    call realloc(agcm%grdidxarg, agcm%nij)
+    call argsort(agcm%grdidx, agcm%grdidxarg)
   else
     do aij = 1_8, agcm%nij
       agcm%grdidx(aij) = aij
     enddo
+    agcm%grdidxarg(1) = 0_8
   endif
 
   f => agcm%fin_grdara
@@ -327,7 +331,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
          rtmi_rn_a, & ! in
          rtmo_lnv_a, & ! in
          rtmo_ln_a, & ! out
-         agcm%grdidx, agcm%grdara) ! in
+         agcm%grdidx, agcm%grdidxarg, agcm%grdara) ! in
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -338,7 +342,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   call make_rt_lsm_ocean_to_agcm(&
          rtmi_ro_a, & ! in
          rtmo_lo_a, & ! out
-         agcm%grdidx, agcm%grdara, agcm%lndara_ogcm, agcm%lndara_noriv_virt, & ! in
+         agcm%grdidx, agcm%grdidxarg, agcm%grdara, & ! in
+         agcm%lndara_ogcm, agcm%lndara_noriv_virt, & ! in
          agcm%opt_thresh_lndfrc_zero)
 
   call echo(code%ext)
@@ -1615,12 +1620,13 @@ end subroutine make_rt_lsm_noriv_virt_to_agcm
 !===============================================================
 subroutine make_rt_lsm_noriv_to_agcm(&
     rtmi_rn_a, rtmo_lnv_a, rtmo_ln_a, &
-    grdidx, grdara)
+    grdidx, grdidxarg, grdara)
   implicit none
   type(rt_main_), intent(inout), target :: rtmi_rn_a
   type(rt_main_), intent(inout), target :: rtmo_lnv_a
   type(rt_main_), intent(inout), target :: rtmo_ln_a
-  integer(8)    , intent(in)            :: grdidx(:)
+  integer(8)    , intent(in)            :: grdidx(:)  ! not sorted
+  integer(8)    , intent(in)            :: grdidxarg(:)
   real(8)       , intent(in)            :: grdara(:)
 
   type(file_), pointer :: f
@@ -1655,7 +1661,8 @@ subroutine make_rt_lsm_noriv_to_agcm(&
   if( rtmo_ln_a%opt_coef%is_sum_modify_enabled )then
     call calc_rt_coef_sum_modify_enabled(rtmo_ln_a)
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtmo_ln_a, grdidx, grdara)
+    call calc_rt_coef_sum_modify_not_enabled(&
+           rtmo_ln_a, grdidx, grdidxarg, grdara)
   endif
 
   call get_rt_main_stats(rtmo_ln_a)
@@ -1667,12 +1674,13 @@ end subroutine make_rt_lsm_noriv_to_agcm
 !===============================================================
 subroutine make_rt_lsm_ocean_to_agcm(&
     rtmi_ro_a, rtmo_lo_a, &
-    grdidx, grdara, lndara_ogcm, lndara_noriv_virt, &
+    grdidx, grdidxarg, grdara, lndara_ogcm, lndara_noriv_virt, &
     opt_thresh_lndfrc_zero)
   implicit none
   type(rt_main_), intent(inout), target :: rtmi_ro_a  ! rt_in%rm_ocean_to_agcm
   type(rt_main_), intent(inout)         :: rtmo_lo_a  ! rt_out%lsm_ocean_to_agcm
   integer(8)    , intent(in) :: grdidx(:)
+  integer(8)    , intent(in) :: grdidxarg(:)
   real(8)       , intent(in) :: grdara(:)
   real(8)       , intent(in) :: lndara_ogcm(:)
   real(8)       , intent(in) :: lndara_noriv_virt(:)
@@ -1788,7 +1796,8 @@ subroutine make_rt_lsm_ocean_to_agcm(&
   if( rtmo_lo_a%opt_coef%is_sum_modify_enabled )then
     call calc_rt_coef_sum_modify_enabled(rtmo_lo_a)
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtmo_lo_a, grdidx, grdara)
+    call calc_rt_coef_sum_modify_not_enabled(&
+           rtmo_lo_a, grdidx, grdidxarg, grdara)
   endif
 
   call get_rt_main_stats(rtmo_lo_a)
@@ -1949,7 +1958,8 @@ subroutine make_rt_lsm_river_to_agcm(&
   if( rtm_lr_a%opt_coef%is_sum_modify_enabled )then
     call calc_rt_coef_sum_modify_enabled(rtm_lr_a)
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtm_lr_a, agcm%grdidx, agcm%grdara)
+    call calc_rt_coef_sum_modify_not_enabled(&
+           rtm_lr_a, agcm%grdidx, agcm%grdidxarg, agcm%grdara)
   endif
 
   call echo(code%ext)
@@ -1988,7 +1998,7 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
   if( rtm_a_l%opt_coef%is_sum_modify_enabled )then
     call calc_rt_coef_sum_modify_enabled(rtm_a_l)
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, grdara)
+    call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, (/1_8/), grdara)
   endif
 
   call get_rt_main_stats(rtm_a_l)

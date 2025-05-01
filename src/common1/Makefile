@@ -15,22 +15,23 @@ TARGET = common1.a
 
 OBJ_F = \
 common_const.o\
+common_const_util.o\
 common_type_opt.o\
 common_type_gs.o\
 common_file.o\
 common_set.o\
+common_opt_ctrl.o\
 common_opt_set.o\
+common_regions_base.o\
 common_gs_util.o\
-common_gs_zone.o\
 common_gs_grid_base.o\
 common_gs_base.o\
-common_gs_grid_std.o\
 common_gs_grid_util.o\
-common_gs_grid_io.o\
 common_gs_grid_core.o\
 common_gs_define_polygon.o\
 common_gs_define.o\
-common_gs_grid_driv.o
+common_gs_driv.o\
+common_gs_grid_io.o
 
 OBJ_CMN = $(OBJ_F)
 

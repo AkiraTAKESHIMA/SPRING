@@ -187,10 +187,10 @@ module lib_const
   integer, parameter :: sign_counterclockwise =  1
   integer, parameter :: sign_clockwise        = -1
 
-  integer(1), parameter :: zone_type_undef    = 0
-  integer(1), parameter :: zone_type_global   = 1
-  integer(1), parameter :: zone_type_cyclic   = 2
-  integer(1), parameter :: zone_type_regional = 3
+  integer(1), parameter :: region_type_undef    = 0
+  integer(1), parameter :: region_type_global   = 1
+  integer(1), parameter :: region_type_cyclic   = 2
+  integer(1), parameter :: region_type_regional = 3
 
   integer(1), parameter :: arc_type_undef    = 0_1
   integer(1), parameter :: arc_type_normal   = 1_1
@@ -231,10 +231,10 @@ module lib_const
   integer(1), parameter :: arc_rel_lat_norm_norm_intersection_upward   = 43
   integer(1), parameter :: arc_rel_lat_norm_norm_intersection_downward = 44
 
-  integer(1), parameter :: arc_convex_undef    = 9
-  integer(1), parameter :: arc_convex_monotone = 0
-  integer(1), parameter :: arc_convex_upward   = 1
-  integer(1), parameter :: arc_convex_downward = 2
+  integer(1), parameter :: convex_undef    = 9
+  integer(1), parameter :: convex_monotone = 0
+  integer(1), parameter :: convex_upward   = 1
+  integer(1), parameter :: convex_downward = 2
 
   integer(1), parameter :: polygon_position_undef  = 9_1
   integer(1), parameter :: polygon_position_normal = 0_1

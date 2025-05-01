@@ -14,7 +14,6 @@ include $(TOPSRCDIR)/Mkinclude
 TARGET = common3.a
 
 OBJ_F = \
-common_gs_driv.o\
 common_rt_llbnds.o\
 common_rt_latlon_latlon.o\
 common_rt_latlon_raster.o\
@@ -23,7 +22,9 @@ common_rt_raster_raster.o\
 common_rt_raster_polygon.o\
 common_rt_polygon_polygon_regions.o\
 common_rt_polygon_polygon.o\
-common_rt_driv.o
+common_rt_driv.o\
+common_type_rst.o\
+common_rst_run.o
 
 OBJ_CMN = $(OBJ_F)
 

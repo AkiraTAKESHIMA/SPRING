@@ -2,17 +2,22 @@ TOPSRCDIR = ..
 include $(TOPSRCDIR)/Mkinclude
 
 
-OBJS = \
-main.o
+OBJ1 = test_remap_latlon_latlon.o
+OBJ2 = test_remap_raster_raster.o
 
-TARGET = main
+TARGET1 = test_remap_latlon_latlon
+TARGET2 = test_remap_raster_raster
 
 LIBSPRINGDIR=$(TOPSRCDIR)/libspring
 
 all:
-	$(MAKE) $(TARGET)
+	$(MAKE) $(TARGET1)
+	$(MAKE) $(TARGET2)
 
-$(TARGET): $(OBJS) $(LIBSPRINGDIR)/libspring.a
+$(TARGET1): $(OBJ1) $(LIBSPRINGDIR)/libspring.a
+	$(FC) $(FCFLAGS) -o $@ $^
+
+$(TARGET2): $(OBJ2) $(LIBSPRINGDIR)/libspring.a
 	$(FC) $(FCFLAGS) -o $@ $^
 
 clean:

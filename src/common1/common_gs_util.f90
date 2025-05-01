@@ -4,12 +4,15 @@ module common_gs_util
   use lib_log
   use lib_util
   use lib_array
+  use common_const
   use common_type_gs
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
+  public :: set_gs_debug
+
   public :: mass_to_dens
   public :: dens_to_mass
 
@@ -18,9 +21,39 @@ module common_gs_util
   public :: print_gs_polygon
   public :: print_latlon
   public :: print_polygon
-  public :: print_grid_stats
   !-------------------------------------------------------------
 contains
+!===============================================================
+!
+!===============================================================
+subroutine set_gs_debug(debug, idx_debug, idx_miss, do_debug)
+  implicit none
+  logical   , intent(out)   :: debug
+  integer(8), intent(inout) :: idx_debug
+  integer(8), intent(in)    :: idx_miss
+  logical   , intent(in)    :: do_debug
+
+  call echo(code%bgn, 'set_gs_debug', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( do_debug )then
+    debug = idx_debug /= idx_miss
+  else
+    debug = .false.
+    idx_debug = idx_miss
+  endif
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine set_gs_debug
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
 !===============================================================
 !
 !===============================================================
@@ -84,25 +117,21 @@ end subroutine dens_to_mass
 !===============================================================
 subroutine print_gs_latlon(&
     str_source_target, nam, &
-    zone_type, &
-    zhi, zhf, zvi, zvf, &
+    region_type, &
     hi, hf, vi, vf, &
     west, east, south, north)
   implicit none
   character(*), intent(in) :: str_source_target
   character(*), intent(in) :: nam
-  integer(1)  , intent(in) :: zone_type
-  integer(8)  , intent(in) :: zhi, zhf, zvi, zvf
+  integer(1)  , intent(in) :: region_type
   integer(8)  , intent(in) :: hi, hf, vi, vf
   real(8)     , intent(in) :: west, east, south, north
 
   call edbg(str_source_target//' grid (latlon) '//&
           '\n  name: '//str(nam))
-  call edbg('  zone_type: '//str(str_zone_type_long(zone_type)))
-  call edbg('  (h,v): ('//str((/zhi,zhf/),dgt(hf),':')//&
-                    ', '//str((/zvi,zvf/),dgt(vf),':')//&
-            ') in ('//str((/hi,hf/),dgt(hf),':')//&
-                ', '//str((/vi,vf/),dgt(vf),':')//')')
+  call edbg('  region_type: '//str(str_region_type_long(region_type)))
+  call edbg('  (h,v): ('//str((/hi,hf/),dgt(hf),':')//&
+                    ', '//str((/vi,vf/),dgt(vf),':')//')')
   call edbg('  lon: '//str((/west,east/)*r2d,'f12.7',' ~ ')//&
           '\n  lat: '//str((/south,north/)*r2d,'f12.7',' ~ '))
 end subroutine print_gs_latlon
@@ -111,25 +140,21 @@ end subroutine print_gs_latlon
 !===============================================================
 subroutine print_gs_raster(&
     str_source_target, nam, &
-    zone_type, &
-    zhi, zhf, zvi, zvf, &
+    region_type, &
     hi, hf, vi, vf, &
     west, east, south, north)
   implicit none
   character(*), intent(in) :: str_source_target
   character(*), intent(in) :: nam
-  integer(1)  , intent(in) :: zone_type
-  integer(8)  , intent(in) :: zhi, zhf, zvi, zvf
+  integer(1)  , intent(in) :: region_type
   integer(8)  , intent(in) :: hi, hf, vi, vf
   real(8)     , intent(in) :: west, east, south, north
 
   call edbg(str_source_target//' grid (raster) '//&
           '\n  name: '//str(nam))
-  call edbg('  zone_type: '//str(str_zone_type_long(zone_type)))
-  call edbg('  (h,v): ('//str((/zhi,zhf/),dgt(hf),':')//&
-                    ', '//str((/zvi,zvf/),dgt(vf),':')//&
-            ') in ('//str((/hi,hf/),dgt(hf),':')//&
-                ', '//str((/vi,vf/),dgt(vf),':')//')')
+  call edbg('  region_type: '//str(str_region_type_long(region_type)))
+  call edbg('  (h,v): ('//str((/hi,hf/),dgt(hf),':')//&
+                    ', '//str((/vi,vf/),dgt(vf),':')//')')
   call edbg('  lon: '//str((/west,east/)*r2d,'f12.7',' ~ ')//&
           '\n  lat: '//str((/south,north/)*r2d,'f12.7',' ~ '))
 end subroutine print_gs_raster
@@ -138,17 +163,15 @@ end subroutine print_gs_raster
 !===============================================================
 subroutine print_gs_polygon(&
     str_source_target, nam, &
-    zijs, zije, ijs, ije)
+    ijs, ije)
   implicit none
   character(*), intent(in) :: str_source_target
   character(*), intent(in) :: nam
-  integer(8)  , intent(in) :: zijs, zije
   integer(8)  , intent(in) :: ijs, ije
 
   call edbg(str_source_target//' grid (polygon) '//&
           '\n  name: '//str(nam)//&
-          '\n  ij: ('//str((/zijs,zije/),dgt(ije),':')//&
-            ') in ('//str((/ijs,ije/),dgt(ije),':')//')')
+          '\n  ij: ('//str((/ijs,ije/),dgt(ije),':')//')')
 end subroutine print_gs_polygon
 !===============================================================
 !
@@ -186,116 +209,39 @@ end subroutine print_latlon
 !===============================================================
 !
 !===============================================================
-subroutine print_polygon(nam, ugp, ij)
+subroutine print_polygon(p, lonlat_miss)
   implicit none
-  character(*)     , intent(in) :: nam
-  type(gs_polygon_), intent(in) :: ugp
-  integer(8)       , intent(in) :: ij
+  type(polygon_), intent(in) :: p
+  real(8), intent(in) :: lonlat_miss
 
-  type(polygon_), pointer :: p
+  character(8), parameter :: WFMT_LONLAT = 'f12.7'
+  character(8), parameter :: WFMT_FLOAT = 'es12.5'
 
   call echo(code%bgn, 'print_polygon', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  p => ugp%polygon(ij)
-
-  call edbg(str(nam)//' polygon('//str(ij)//') idx: '//str(p%idx))
-  call edbg('  position: '//str(str_polygon_pos_long(p%pos)))
-  call edbg('  west : '//str(p%west *r2d,'f12.7')//', east : '//str(p%east *r2d,'f12.7'))
-  call edbg('  south: '//str(p%south*r2d,'f12.7')//', north: '//str(p%north*r2d,'f12.7'))
-  call edbg('  lon   : '//str(str_coords(p%lon,r2d,ugp%coord_miss_s,'f12.7')))
-  call edbg('  lat   : '//str(str_coords(p%lat,r2d,ugp%coord_miss_s,'f12.7')))
-  call edbg('  a     : '//str(p%a,'es12.5'))
-  call edbg('  b     : '//str(p%b,'es12.5'))
-  call edbg('  c     : '//str(p%c,'es12.5'))
-  call edbg('  typ   : '//str(str_arctyp_long(p%arctyp),-12,','))
-  call edbg('  pos   : '//str(str_arcpos_long(p%arcpos),-12,','))
-  call edbg('  convex: '//str(str_convex_long(p%convex),-12,','))
-  call edbg('  lontop: '//str(p%lontop*r2d,'f12.7',','))
-  call edbg('  lattop: '//str(p%lattop*r2d,'f12.7',','))
-  call edbg('  area  : '//str(ugp%grid%ara(ij),'es20.13'))
+  call edbg('polygon '//str(p%idx))
+  call edbg('  n: '//str(p%n))
+  call edbg('  pos: '//str(str_polygon_pos_long(p%pos)))
+  call edbg('  bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,WFMT_LONLAT,','))
+  call edbg('  n_west: '//str(p%n_west)//', n_east: '//str(p%n_east)//&
+            ', n_pole: '//str(p%n_pole))
+  call edbg('  lon   : '//str_coords(p%lon, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call edbg('  lat   : '//str_coords(p%lat, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call edbg('  lontop: '//str_coords(p%lontop, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call edbg('  lattop: '//str_coords(p%lattop, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call edbg('  convex: '//str(str_convex_long(p%convex),-cl(WFMT_LONLAT),','))
+  call edbg('  arctyp: '//str(str_arctyp_long(p%arctyp),-cl(WFMT_LONLAT),','))
+  call edbg('  arcpos: '//str(str_arcpos_long(p%arcpos),-cl(WFMT_LONLAT),','))
+  if( associated(p%a) )then
+    call edbg('  a     : '//str(p%a,WFMT_FLOAT))
+    call edbg('  b     : '//str(p%b,WFMT_FLOAT))
+    call edbg('  c     : '//str(p%c,WFMT_FLOAT))
+  endif
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine print_polygon
-!===============================================================
-!
-!===============================================================
-subroutine print_grid_stats(&
-    g, idx_miss, &
-    uwa, ara, wgt, xyz, lonlat)
-  implicit none
-  type(grid_), intent(in) :: g
-  integer(8) , intent(in) :: idx_miss
-  logical    , intent(in), optional :: uwa, ara, wgt, xyz, lonlat
-
-  logical :: print_uwa_, &
-             print_ara_, &
-             print_wgt_, &
-             print_xyz_, &
-             print_lonlat_
-  logical(1), allocatable :: mask(:)
-  character(clen_wfmt), parameter :: wfmt = 'es20.13'
-
-  call echo(code%bgn, 'print_grid_stats', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  print_uwa_    = associated(g%uwa)
-  print_ara_    = associated(g%ara)
-  print_wgt_    = associated(g%wgt)
-  print_xyz_    = associated(g%x)
-  print_lonlat_ = associated(g%lon)
-
-  if( present(uwa)    ) print_uwa_    = uwa
-  if( present(ara)    ) print_uwa_    = ara
-  if( present(wgt)    ) print_uwa_    = wgt
-  if( present(xyz)    ) print_xyz_    = xyz
-  if( present(lonlat) ) print_lonlat_ = lonlat
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  allocate(mask(g%nij))
-  mask = g%idx /= idx_miss
-
-  if( .not. any(mask) )then
-    call edbg('No valid grid exists')
-    deallocate(mask)
-    call echo(code%ret)
-    return  ![2024/11/19 bug fix]
-  endif
-
-  if( print_uwa_ )then
-    call edbg('uwa min: '//str(minval(g%uwa,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%uwa,mask=mask),wfmt))
-  endif
-  if( print_ara_ )then
-    call edbg('ara min: '//str(minval(g%ara,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%ara,mask=mask),wfmt))
-  endif
-  if( print_wgt_ )then
-    call edbg('wgt min: '//str(minval(g%wgt,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%wgt,mask=mask),wfmt))
-  endif
-  if( print_xyz_ )then
-    call edbg('x   min: '//str(minval(g%x,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%x,mask=mask),wfmt))
-    call edbg('y   min: '//str(minval(g%y,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%y,mask=mask),wfmt))
-    call edbg('z   min: '//str(minval(g%z,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%z,mask=mask),wfmt))
-  endif
-  if( print_lonlat_ )then
-    call edbg('lon min: '//str(minval(g%lon,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%lon,mask=mask),wfmt))
-    call edbg('lat min: '//str(minval(g%lat,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%lat,mask=mask),wfmt))
-  endif
-
-  deallocate(mask)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine print_grid_stats
 !===============================================================
 !
 !===============================================================

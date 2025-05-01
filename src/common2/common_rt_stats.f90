@@ -448,24 +448,14 @@ end subroutine report_rt_main_summary
 subroutine report_rt_vrf_summary(&
     output_grdara_true, output_grdara_rt, output_rerr_grdara, output_grdnum, &
     idx_miss, &
-    grdara_true_min, grdara_true_max, idx_grdara_true_min, idx_grdara_true_max, &
-    grdara_rt_min  , grdara_rt_max  , idx_grdara_rt_min  , idx_grdara_rt_max  , &
-    rerr_grdara_min, rerr_grdara_max, idx_rerr_grdara_min, idx_rerr_grdara_max, &
-    grdnum_min     , grdnum_max     , idx_grdnum_min     , idx_grdnum_max)
+    rtv)
   implicit none
-  logical, intent(in) :: output_grdara_true, &
-                         output_grdara_rt  , &
-                         output_rerr_grdara, &
-                         output_grdnum
-  integer(8), intent(in) :: idx_miss
-  real(8)   , intent(in) :: grdara_true_min, grdara_true_max
-  real(8)   , intent(in) :: grdara_rt_min  , grdara_rt_max
-  real(8)   , intent(in) :: rerr_grdara_min, rerr_grdara_max
-  integer(8), intent(in) :: grdnum_min, grdnum_max
-  integer(8), intent(in) :: idx_grdara_true_min, idx_grdara_true_max, &
-                            idx_grdara_rt_min  , idx_grdara_rt_max  , &
-                            idx_rerr_grdara_min, idx_rerr_grdara_max, &
-                            idx_grdnum_min     , idx_grdnum_max
+  logical      , intent(in) :: output_grdara_true, &
+                               output_grdara_rt  , &
+                               output_rerr_grdara, &
+                               output_grdnum
+  integer(8)   , intent(in) :: idx_miss
+  type(rt_vrf_), intent(in) :: rtv
 
   integer :: dgt_idx
   integer :: cl_varname
@@ -478,79 +468,79 @@ subroutine report_rt_vrf_summary(&
   !-------------------------------------------------------------
   dgt_idx = 0
   if( output_grdara_true )then
-    dgt_idx = max(dgt_idx,dgt((/idx_grdara_true_min,idx_grdara_true_max/),dgt_opt_max))
+    dgt_idx = max(dgt_idx,dgt((/rtv%idx_grdara_true_min,rtv%idx_grdara_true_max/),DGT_OPT_MAX))
   endif
   if( output_grdara_rt )then
-    dgt_idx = max(dgt_idx,dgt((/idx_grdara_rt_min,idx_grdara_rt_max/),dgt_opt_max))
+    dgt_idx = max(dgt_idx,dgt((/rtv%idx_grdara_rt_min,rtv%idx_grdara_rt_max/),DGT_OPT_MAX))
   endif
   if( output_rerr_grdara )then
-    dgt_idx = max(dgt_idx,dgt((/idx_rerr_grdara_min,idx_rerr_grdara_max/),dgt_opt_max))
+    dgt_idx = max(dgt_idx,dgt((/rtv%idx_rerr_grdara_min,rtv%idx_rerr_grdara_max/),DGT_OPT_MAX))
   endif
   if( output_grdnum )then
-    dgt_idx = max(dgt_idx,dgt((/idx_grdnum_min,idx_grdnum_max/),dgt_opt_max))
+    dgt_idx = max(dgt_idx,dgt((/rtv%idx_grdnum_min,rtv%idx_grdnum_max/),DGT_OPT_MAX))
   endif
 
   cl_varname = 0
-  if( output_grdara_true ) cl_varname = max(cl_varname, len_trim(varname_grdara_true))
-  if( output_grdara_rt   ) cl_varname = max(cl_varname, len_trim(varname_grdara_rt  ))
-  if( output_rerr_grdara ) cl_varname = max(cl_varname, len_trim(varname_rerr_grdara))
-  if( output_grdnum      ) cl_varname = max(cl_varname, len_trim(varname_grdnum     ))
+  if( output_grdara_true ) cl_varname = max(cl_varname, len_trim(VARNAME_GRDARA_TRUE))
+  if( output_grdara_rt   ) cl_varname = max(cl_varname, len_trim(VARNAME_GRDARA_RT  ))
+  if( output_rerr_grdara ) cl_varname = max(cl_varname, len_trim(VARNAME_RERR_GRDARA))
+  if( output_grdnum      ) cl_varname = max(cl_varname, len_trim(VARNAME_GRDNUM     ))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( output_grdara_true )then
-    if( idx_grdara_true_min == idx_miss )then
-      call edbg(str(varname_grdara_true,cl_varname)//&
+    if( rtv%idx_grdara_true_min == idx_miss )then
+      call edbg(str(VARNAME_GRDARA_TRUE,cl_varname)//&
                 ' (no valid value)')
     else
-      call edbg(str(varname_grdara_true,cl_varname)//&
-                ' min: '//str(grdara_true_min,wfmt_dble)//&
-                ' (idx: '//str(idx_grdara_true_min,dgt_idx)//')'//&
+      call edbg(str(VARNAME_GRDARA_TRUE,cl_varname)//&
+                ' min: '//str(rtv%grdara_true_min,wfmt_dble)//&
+                ' (idx: '//str(rtv%idx_grdara_true_min,dgt_idx)//')'//&
               '\n'//str('',cl_varname)//&
-                ' max: '//str(grdara_true_max,wfmt_dble)//&
-                ' (idx: '//str(idx_grdara_true_max,dgt_idx)//')')
+                ' max: '//str(rtv%grdara_true_max,wfmt_dble)//&
+                ' (idx: '//str(rtv%idx_grdara_true_max,dgt_idx)//')')
     endif
   endif
 
   if( output_grdara_rt )then
-    if( idx_grdara_rt_min == idx_miss )then
-      call edbg(str(varname_grdara_rt,cl_varname)//&
+    if( rtv%idx_grdara_rt_min == idx_miss )then
+      call edbg(str(VARNAME_GRDARA_RT,cl_varname)//&
                 ' (no valid value)')
     else
-      call edbg(str(varname_grdara_rt,cl_varname)//&
-                ' min: '//str(grdara_rt_min,wfmt_dble)//&
-                ' (idx: '//str(idx_grdara_rt_min,dgt_idx)//')'//&
+      call edbg(str(VARNAME_GRDARA_RT,cl_varname)//&
+                ' min: '//str(rtv%grdara_rt_min,wfmt_dble)//&
+                ' (idx: '//str(rtv%idx_grdara_rt_min,dgt_idx)//')'//&
               '\n'//str('',cl_varname)//&
-                ' max: '//str(grdara_rt_max,wfmt_dble)//&
-                ' (idx: '//str(idx_grdara_rt_max,dgt_idx)//')')
+                ' max: '//str(rtv%grdara_rt_max,wfmt_dble)//&
+                ' (idx: '//str(rtv%idx_grdara_rt_max,dgt_idx)//')')
     endif
   endif
 
   if( output_rerr_grdara )then
-    if( idx_rerr_grdara_min == idx_miss )then
-      call edbg(str(varname_rerr_grdara,cl_varname)//&
+    if( rtv%idx_rerr_grdara_min == idx_miss )then
+      call edbg(str(VARNAME_RERR_GRDARA,cl_varname)//&
                 ' (no valid value)')
     else
-      call edbg(str(varname_rerr_grdara,cl_varname)//&
-                ' min: '//str(rerr_grdara_min,wfmt_dble)//&
-                ' (idx: '//str(idx_rerr_grdara_min,dgt_idx)//')'//&
+      call edbg(str(VARNAME_RERR_GRDARA,cl_varname)//&
+                ' min: '//str(rtv%rerr_grdara_min,wfmt_dble)//&
+                ' (idx: '//str(rtv%idx_rerr_grdara_min,dgt_idx)//')'//&
               '\n'//str('',cl_varname)//&
-                ' max: '//str(rerr_grdara_max,wfmt_dble)//&
-                ' (idx: '//str(idx_rerr_grdara_max,dgt_idx)//')')
+                ' max: '//str(rtv%rerr_grdara_max,wfmt_dble)//&
+                ' (idx: '//str(rtv%idx_rerr_grdara_max,dgt_idx)//')')
     endif
   endif
 
   if( output_grdnum )then
-    if( idx_grdnum_min == idx_miss )then
-      call edbg(str(varname_grdnum,cl_varname)//&
+    if( rtv%idx_grdnum_min == idx_miss )then
+      call edbg(str(VARNAME_GRDNUM,cl_varname)//&
                 ' (no valid value)')
     else
-      call edbg(str(varname_grdnum,cl_varname)//&
-                ' min: '//str(grdnum_min,dgt_int)//&
-                ' (idx: '//str(idx_grdnum_min,dgt_idx)//')'//&
+      call edbg(str(VARNAME_GRDNUM,cl_varname)//&
+                ' min: '//str(rtv%grdnum_min,dgt_int)//&
+                ' (idx: '//str(rtv%idx_grdnum_min,dgt_idx)//')'//&
               '\n'//str('',cl_varname)//&
-                ' max: '//str(grdnum_max,dgt_int)//&
-                ' (idx: '//str(idx_grdnum_max,dgt_idx)//')')
+                ' max: '//str(rtv%grdnum_max,dgt_int)//&
+                ' (idx: '//str(rtv%idx_grdnum_max,dgt_idx)//')')
     endif
   endif
   !-------------------------------------------------------------

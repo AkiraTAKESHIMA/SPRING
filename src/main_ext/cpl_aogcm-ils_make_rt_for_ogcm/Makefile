@@ -3,7 +3,9 @@ include $(TOPSRCDIR)/Mkinclude
 
 
 OBJS = \
+def_const.o\
 def_type.o\
+mod_const_util.o\
 mod_set.o\
 mod_main.o\
 mod_finalize.o\

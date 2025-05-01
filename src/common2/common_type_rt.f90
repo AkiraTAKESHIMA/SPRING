@@ -18,8 +18,8 @@ module common_type_rt
   !         |--- (file_rt_vrf_) f_vrf_source
   !         |--- (file_rt_vrf_) f_vrf_target
   !-------------------------------------------------------------
-  public :: rt_opt_coef_
-  public :: rt_opt_area_
+  public :: opt_rt_coef_
+  public :: opt_rt_area_
 
   public :: file_rt_main_
 
@@ -28,15 +28,11 @@ module common_type_rt
   public :: file_rt_vrf_
   public :: rt_vrf_
 
-  public :: rt_im_group_
-  public :: rt_im_zone_
-  public :: rt_im_
-
   public :: rt_
 
   public :: rt1d_
   !-------------------------------------------------------------
-  type rt_opt_coef_
+  type opt_rt_coef_
     logical :: is_sum_modify_enabled
     real(8) :: sum_modify
 
@@ -55,7 +51,7 @@ module common_type_rt
     real(8) :: sum_error_excess
   end type
 
-  type rt_opt_area_
+  type opt_rt_area_
     logical :: is_ratio_zero_negative_enabled
     real(8) :: ratio_zero_negative  ! ($self,0) is modified to zero
     logical :: allow_le_ratio_zero_negative
@@ -66,10 +62,6 @@ module common_type_rt
                    tidx, &
                    area, &
                    coef
-    type(file_) :: sidx_tmp, &
-                   tidx_tmp, &
-                   area_tmp, &
-                   coef_tmp
   end type
 
   type rt_main_
@@ -83,10 +75,7 @@ module common_type_rt
 
     logical :: is_sorted_by_sidx
     logical :: is_sorted_by_tidx
-
     integer(8) :: ijsize
-    integer(8) :: nij
-
     integer(8), pointer :: sidx(:), & !(ijsize)
                            tidx(:)
     real(8)   , pointer :: area(:), & !(ijsize)
@@ -96,10 +85,12 @@ module common_type_rt
     integer(8) :: sidx_imin, sidx_imax, tidx_imin, tidx_imax, &
                   area_imin, area_imax, coef_imin, coef_imax
 
+    integer(8) :: nij
+
     type(file_rt_main_) :: f
 
-    type(rt_opt_coef_) :: opt_coef
-    type(rt_opt_area_) :: opt_area
+    type(opt_rt_coef_) :: opt_coef
+    type(opt_rt_area_) :: opt_area
   end type
 
   type file_rt_vrf_
@@ -107,18 +98,13 @@ module common_type_rt
 
     character(CLEN_KEY) :: form
 
-    type(file_) :: out_grdidx
-    type(file_) :: out_grdara_true, &
+    type(file_) :: out_grdidx     , &
+                   out_grdara_true, &
                    out_grdara_rt  , &
                    out_rerr_grdara, &
-                   out_grdnum
-    type(file_) :: out_iarea_sum, &  ! intersection of raster
+                   out_grdnum     , &
+                   out_iarea_sum  , &  ! raster
                    out_iratio_sum
-    type(file_) :: out_tmp_grdidx, &
-                   out_tmp_grdara_true, &
-                   out_tmp_grdara_rt, &
-                   out_tmp_rerr_grdara, &
-                   out_tmp_grdnum
   end type
 
   type rt_vrf_
@@ -130,32 +116,22 @@ module common_type_rt
 
     integer :: nFiles
     type(file_rt_vrf_), pointer :: f(:) !(nFiles)
-  end type
 
-  type rt_im_group_
-    integer(8) :: nij, ijs, ije
-    integer(8) :: sortidxmin, sortidxmax
-    integer(8) :: sidx_min, sidx_max, &
-                  tidx_min, tidx_max
-  end type
-
-  type rt_im_zone_
-    integer(8) :: nij
-    integer(8) :: sortidxmin, sortidxmax
-    integer(8) :: sidx_min, sidx_max, &
-                  tidx_min, tidx_max
-    integer                     :: nGroups
-    type(rt_im_group_), pointer :: group(:) !(nGroups)
-  end type
-
-  type rt_im_
-    integer :: un
-    character(CLEN_PATH) :: path
-    integer :: nZones, iZone
-    type(rt_im_zone_), pointer :: zone(:)  !(nZones)
-    integer(8) :: nij_ulim
-    integer(8) :: nij_max
-    integer(8) :: mij_group_max
+    integer(8), pointer :: grdidx(:)
+    real(8)   , pointer :: grdara_true(:)
+    real(8)   , pointer :: grdara_rt(:)
+    real(8)   , pointer :: rerr_grdara(:)
+    integer(8), pointer :: grdnum(:)
+    real(8)   , pointer :: iarea_sum(:,:)
+    real(8)   , pointer :: iratio_sum(:,:)
+    real(8)    :: grdara_true_min, grdara_true_max, &
+                  grdara_rt_min  , grdara_rt_max  , &
+                  rerr_grdara_min, rerr_grdara_max
+    integer(8) :: grdnum_min     , grdnum_max
+    integer(8) :: idx_grdara_true_min, idx_grdara_true_max, &
+                  idx_grdara_rt_min  , idx_grdara_rt_max  , &
+                  idx_rerr_grdara_min, idx_rerr_grdara_max, &
+                  idx_grdnum_min     , idx_grdnum_max
   end type
 
   type rt_
@@ -165,7 +141,6 @@ module common_type_rt
     type(rt_main_) :: main
     type(rt_vrf_)  :: vrf_source
     type(rt_vrf_)  :: vrf_target
-    type(rt_im_)   :: im
   end type
 
   type rt1d_

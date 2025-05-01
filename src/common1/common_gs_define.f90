@@ -10,30 +10,30 @@ module common_gs_define
   use common_const
   use common_type_gs
   use common_gs_define_polygon, only: &
-        set_grids__polygon
+        set_gs__polygon
   implicit none
   private
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: set_grids
+  public :: set_gs
 
   public :: check_bounds_lon
   public :: check_bounds_lat
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
-  interface set_grids
-    module procedure set_grids__latlon
-    module procedure set_grids__raster
-    module procedure set_grids__polygon
+  interface set_gs
+    module procedure set_gs__latlon
+    module procedure set_gs__raster
+    module procedure set_gs__polygon
   end interface
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine set_grids__latlon(ul, lon, lat)
+subroutine set_gs__latlon(ul, lon, lat)
   implicit none
   type(gs_latlon_), intent(inout), target :: ul
   real(8), intent(in), optional :: lon(:), lat(:)
@@ -43,7 +43,7 @@ subroutine set_grids__latlon(ul, lon, lat)
   integer(8) :: ih
   real(8) :: coef
 
-  call echo(code%bgn, 'set_grids__latlon')
+  call echo(code%bgn, 'set_gs__latlon')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -182,6 +182,16 @@ subroutine set_grids__latlon(ul, lon, lat)
   !-------------------------------------------------------------
   ul%is_cyclic = abs(ul%lon(0)-ul%lon(ul%nh)) < 1d-10 .or. &
                  abs(abs(ul%lon(0)-ul%lon(ul%nh))-3.6d2) < 1d-10
+
+  if( ul%is_cyclic )then
+    if( ul%lat(0) == -rad_90deg .and. ul%lat(ul%nv) == rad_90deg )then
+      ul%region_type = REGION_TYPE_GLOBAL
+    else
+      ul%region_type = REGION_TYPE_CYCLIC
+    endif
+  else
+    ul%region_type = REGION_TYPE_REGIONAL
+  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -192,77 +202,169 @@ subroutine set_grids__latlon(ul, lon, lat)
   call print_grids_latlon(ul%is_cyclic, ul%lon, ul%lat)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_grids__latlon
+end subroutine set_gs__latlon
 !===============================================================
 !
 !===============================================================
-subroutine set_grids__raster(ur)
+subroutine set_gs__raster(ar)
+  use common_gs_base, only: &
+        init_gs_raster_zone
   implicit none
-  type(gs_raster_), intent(inout), target :: ur
+  type(gs_raster_), intent(inout), target :: ar
 
+  type(raster_zone_), pointer :: arz
   integer(8) :: ih
+  integer    :: iz
 
-  call echo(code%bgn, 'set_grids__raster')
+  call echo(code%bgn, 'set_gs__raster')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(ur%lon(ur%hi-1_8:ur%hf))
-  allocate(ur%lat(ur%vi-1_8:ur%vf))
+  allocate(ar%lon(ar%hi-1_8:ar%hf))
+  allocate(ar%lat(ar%vi-1_8:ar%vf))
 
-  allocate(ur%lonwidth(ur%hi:ur%hf))
-  allocate(ur%latwidth(ur%vi:ur%vf))
+  allocate(ar%lonwidth(ar%hi:ar%hf))
+  allocate(ar%latwidth(ar%vi:ar%vf))
 
-  allocate(ur%lon0(ur%hi:ur%hf))
+  allocate(ar%lon0(ar%hi:ar%hf))
   !-------------------------------------------------------------
   ! Calc. coords. of the boundaries
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating coords. of the boundaries')
 
-  call modify_lon_deg(ur%west, 'ur%west')
-  call modify_lon_deg(ur%east, 'ur%east')
+  call modify_lon_deg(ar%west, 'ar%west')
+  call modify_lon_deg(ar%east, 'ar%east')
 
-  if( is_int(ur%west) .and. is_int(ur%east) )then
-    call calc_latlon_bounds_int(ur%lon, ur%lonwidth, ur%west, ur%east, ur%nh)
+  if( is_int(ar%west) .and. is_int(ar%east) )then
+    call calc_latlon_bounds_int(ar%lon, ar%lonwidth, ar%west, ar%east, ar%nh)
   else
-    call calc_latlon_bounds_float(ur%lon, ur%lonwidth, ur%west, ur%east)
+    call calc_latlon_bounds_float(ar%lon, ar%lonwidth, ar%west, ar%east)
   endif
 
-  if( is_int(ur%south) .and. is_int(ur%north) )then
-    call calc_latlon_bounds_int(ur%lat, ur%latwidth, ur%south, ur%north, ur%nv)
+  if( is_int(ar%south) .and. is_int(ar%north) )then
+    call calc_latlon_bounds_int(ar%lat, ar%latwidth, ar%south, ar%north, ar%nv)
   else
-    call calc_latlon_bounds_float(ur%lat, ur%latwidth, ur%south, ur%north)
+    call calc_latlon_bounds_float(ar%lat, ar%latwidth, ar%south, ar%north)
   endif
 
-  do ih = ur%hi, ur%hf
-    call modify_lon_deg(ur%lon(ih), 'ur%lon('//str(ih)//')')
+  do ih = ar%hi, ar%hf
+    call modify_lon_deg(ar%lon(ih), 'ar%lon('//str(ih)//')')
   enddo
 
-  ur%west = ur%west * d2r
-  ur%east = ur%east * d2r
-  ur%south = ur%south * d2r
-  ur%north = ur%north * d2r
-  ur%lon(:) = ur%lon(:) * d2r
-  ur%lat(:) = ur%lat(:) * d2r
-  ur%lonwidth(:) = ur%lonwidth(:) * d2r
-  ur%latwidth(:) = ur%latwidth(:) * d2r
+  ar%west  = ar%west * d2r
+  ar%east  = ar%east * d2r
+  ar%south = ar%south * d2r
+  ar%north = ar%north * d2r
+  ar%lon(:) = ar%lon(:) * d2r
+  ar%lat(:) = ar%lat(:) * d2r
+  ar%lonwidth(:) = ar%lonwidth(:) * d2r
+  ar%latwidth(:) = ar%latwidth(:) * d2r
 
   call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  ur%is_cyclic = abs(ur%lon(ur%hi-1_8)-ur%lon(ur%hf)) < 1d-10 .or. &
-                 abs(abs(ur%lon(ur%hi-1_8)-ur%lon(ur%hf))-3.6d2) < 1d-10
+  ar%is_cyclic = abs(ar%lon(ar%hi-1_8)-ar%lon(ar%hf)) < 1d-10 .or. &
+                 abs(abs(ar%lon(ar%hi-1_8)-ar%lon(ar%hf))-3.6d2) < 1d-10
+
+  if( ar%is_cyclic )then
+    if( ar%lat(0) == -rad_90deg .and. ar%lat(ar%nv) == rad_90deg )then
+      ar%region_type = REGION_TYPE_GLOBAL
+    else
+      ar%region_type = REGION_TYPE_CYCLIC
+    endif
+  else
+    ar%region_type = REGION_TYPE_REGIONAL
+  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  ur%lon0(:) = .false.
+  ar%lon0(:) = .false.
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call print_grids_latlon(ur%is_cyclic, ur%lon, ur%lat)
+  call print_grids_latlon(ar%is_cyclic, ar%lon, ar%lat)
+  !-------------------------------------------------------------
+  ! Divide the grid system by the zero-longit. line
+  !-------------------------------------------------------------
+  if( .not. any(ar%lon(ar%hi:ar%hf-1_8) == rad_0deg) )then
+    ar%nZone = 1
+    allocate(ar%zone(1))
+    arz => ar%zone(1)
+    call init_gs_raster_zone(arz)
+
+    arz%is_valid = .true.  ! not necessary
+
+    arz%region_type = ar%region_type
+
+    arz%nh = ar%nh
+    arz%hi = ar%hi
+    arz%hf = ar%hf
+    arz%nv = ar%nv
+    arz%vi = ar%vi
+    arz%vf = ar%vf
+
+    arz%nx = ar%nx
+    arz%xi = ar%xi
+    arz%xf = ar%xf
+    arz%ny = ar%ny
+    arz%yi = ar%yi
+    arz%yf = ar%yf
+
+    arz%west  = ar%lon(ar%hi-1_8)
+    arz%east  = ar%lon(ar%hf)
+    arz%south = ar%lat(ar%vi-1_8)
+    arz%north = ar%lat(ar%vf)
+  else
+    call edbg('Raster grid is divided by the zero-longit. line.')
+
+    ar%nZone = 2
+    allocate(ar%zone(ar%nZone))
+
+    do iz = 1, ar%nZone
+      arz => ar%zone(iz)
+
+      call init_gs_raster_zone(arz)
+
+      arz%is_valid = .true.  ! not necessary
+
+      arz%region_type = REGION_TYPE_REGIONAL
+
+      arz%ny = ar%ny
+      arz%yi = ar%yi
+      arz%yf = ar%yf
+      arz%nv = ar%nv
+      arz%vi = ar%vi
+      arz%vf = ar%vf
+      arz%south = ar%lat(ar%vi-1_8)
+      arz%north = ar%lat(ar%vf)
+    enddo
+
+    do ih = ar%hi, ar%hf-1_8
+      if( ar%lon(ih) == rad_0deg ) exit
+    enddo
+
+    arz => ar%zone(1)
+    arz%hi = ar%hi
+    arz%hf = ih
+    arz%nh = ar%hf - ar%hi + 1_8
+    arz%west = ar%lon(ar%hi-1_8)
+    arz%east = rad_360deg
+
+    arz => ar%zone(2)
+    arz%hi = ih + 1_8
+    arz%hf = ar%hf
+    arz%nh = ar%hf - ar%hi + 1_8
+    arz%west = rad_0deg
+    arz%east = ar%lon(ar%hf)
+
+    ar%zone(:)%nx = ar%zone(:)%nh
+    ar%zone(:)%xi = ar%zone(:)%hi
+    ar%zone(:)%xf = ar%zone(:)%hf
+  endif
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_grids__raster
+end subroutine set_gs__raster
 !===============================================================
 !
 !===============================================================
@@ -300,7 +402,7 @@ subroutine calc_latlon_bounds_float(bnd, width, vmin, vmax)
   real(8) :: vrange
   integer(8) :: n, i
 
-  call echo(code%bgn, 'calc_latlon_bounds_floar', '-p -x2')
+  call echo(code%bgn, 'calc_latlon_bounds_float', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

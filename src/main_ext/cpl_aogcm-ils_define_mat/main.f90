@@ -15,13 +15,12 @@ program main
   type(agcm_)   :: agcm
   type(rm_)     :: rm
   type(lsm_)    :: lsm
-  type(opt_)    :: opt
 
   call echo(code%bgn, 'program cpl_aogcm-ils_define_mat')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call read_settings(rt_in, rt_out, agcm, rm, lsm, opt)
+  call read_settings(rt_in, rt_out, agcm, rm, lsm)
 
   call check_relations_input(rt_in, rm)
 

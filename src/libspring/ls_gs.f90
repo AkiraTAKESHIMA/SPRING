@@ -7,32 +7,6 @@ module ls_gs
   use common_const
   use common_type_opt
   use common_type_gs
-  use common_opt_set, only: &
-        set_default_values_opt_sys, &
-        set_default_values_opt_earth
-  use common_gs_base, only: &
-        alloc_gs_components          , &
-        set_default_values_gs_latlon , &
-        set_default_values_gs_raster , &
-        set_default_values_gs_polygon, &
-        set_bounds_file_latlon_in    , &
-        set_bounds_file_raster_in    , &
-        set_bounds_file_polygon_in   , &
-        set_bounds_file_grid_in      , &
-        set_bounds_file_grid_out     , &
-        set_gs_common
-  use common_gs_define, only: &
-        set_grids
-  use common_gs_zone, only: &
-        determine_zones, &
-        clear_iZone
-  ! common3
-  use common_gs_driv, only: &
-        prep_grid
-  ! this
-  use ls_base, only: &
-        logopt, &
-        assert_initialized
   implicit none
   private
   !-------------------------------------------------------------
@@ -63,20 +37,50 @@ contains
 !
 !===============================================================
 subroutine initialize(size_lst_gs)
+  ! common1
+  use common_opt_ctrl, only: &
+        set_opt_sys, &
+        set_opt_log, &
+        set_opt_earth
+  use common_opt_set, only: &
+        set_default_values_opt_sys, &
+        set_default_values_opt_log, &
+        set_default_values_opt_earth
+  ! this
+  use ls_base, only: &
+        logopt, &
+        assert_initialized
   implicit none
   integer, intent(in) :: size_lst_gs
 
+  type(opt_sys_)   :: opt_sys
+  type(opt_log_)   :: opt_log
+  type(opt_earth_) :: opt_earth
   integer :: i
 
   call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE initialize', logopt())
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   call assert_initialized(is_initialized, .false.)
   is_initialized = .true.
-
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   allocate(lst_gs(size_lst_gs))
   do i = 1, size(lst_gs)
     lst_gs(i)%nam = ''
   enddo
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call set_default_values_opt_sys(opt_sys)
+  call set_default_values_opt_log(opt_log)
+  call set_default_values_opt_earth(opt_earth)
+
+  call set_opt_sys(opt_sys)
+  call set_opt_log(opt_log)
+  call set_opt_earth(opt_earth)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine initialize
@@ -84,8 +88,13 @@ end subroutine initialize
 !
 !===============================================================
 subroutine finalize()
+  ! common1
   use common_gs_base, only: &
         free_gs
+  ! this
+  use ls_base, only: &
+        logopt, &
+        assert_initialized
   implicit none
 
   integer :: i
@@ -115,6 +124,10 @@ end subroutine finalize
 !
 !===============================================================
 subroutine point_grdsys(name, a)
+  ! this
+  use ls_base, only: &
+        logopt, &
+        assert_initialized
   implicit none
   character(*), intent(in) :: name
   type(gs_)   , pointer    :: a    ! out
@@ -152,6 +165,23 @@ end subroutine point_grdsys
 !===============================================================
 subroutine spring_define_grdsys_latlon(&
     name, nx, ny, lon, lat, is_south_to_north)
+  ! common1
+  use common_gs_base, only: &
+        alloc_gs_components         , &
+        set_gs_common               , &
+        set_default_values_gs_latlon, &
+        set_bounds_file_latlon_in   , &
+        set_bounds_file_grid_in     , &
+        set_bounds_file_grid_out
+  use common_gs_define, only: &
+        set_gs
+  use common_gs_grid_core, only: &
+        make_idxmap, &
+        make_grdidx
+  ! this
+  use ls_base, only: &
+        logopt, &
+        assert_initialized
   implicit none
   character(*), intent(in) :: name
   integer, intent(in) :: nx, ny
@@ -160,8 +190,6 @@ subroutine spring_define_grdsys_latlon(&
 
   type(gs_)       , pointer :: a
   type(gs_latlon_), pointer :: al
-  type(opt_sys_)   :: opt_sys
-  type(opt_earth_) :: opt_earth
   integer :: i_gs
 
   call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_define_grdsys_latlon', logopt())
@@ -197,17 +225,14 @@ subroutine spring_define_grdsys_latlon(&
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call set_default_values_opt_sys(opt_sys)
-  call set_default_values_opt_earth(opt_earth)
-
   a%id = 'gs'//str(i_gs)
   a%nam = trim(name)
 
   call alloc_gs_components(a, GS_TYPE_LATLON)
   call set_default_values_gs_latlon(a%latlon)
+  call set_gs_common(a)
 
   al => a%latlon
-  al%f_grid_out%path_im_base = 'spring.grid_'//str(i_gs)//'.im'
   !-------------------------------------------------------------
   ! Input fundamental given values
   !-------------------------------------------------------------
@@ -222,26 +247,15 @@ subroutine spring_define_grdsys_latlon(&
          al%nh, al%hi, al%hf, al%nv, al%vi, al%vf)
   call set_bounds_file_grid_in(al%f_grid_in, al%nx, al%ny)
   call set_bounds_file_grid_out(al%f_grid_out, al%nx, al%ny)
-
-  call set_gs_common(a)
   !-------------------------------------------------------------
   ! Set the grid system
   !-------------------------------------------------------------
-  call set_grids(al, lon, lat)
-  !-------------------------------------------------------------
-  ! Divide into zones
-  !-------------------------------------------------------------
-  call determine_zones(al, opt_sys%memory_ulim)
-
-  call clear_iZone(al)
-  !-------------------------------------------------------------
-  ! Store index map
-  !-------------------------------------------------------------
-
+  call set_gs(al, lon, lat)
   !-------------------------------------------------------------
   ! Make grid data
   !-------------------------------------------------------------
-  call prep_grid(a, opt_earth)
+  call make_idxmap(al)
+  call make_grdidx(al)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -257,6 +271,23 @@ subroutine spring_define_grdsys_raster(&
     name, nx, ny, west, east, south, north, &
     idx, idx_miss, idx1, idx1_miss, idx2, idx2_miss, idx8, idx8_miss, &
     origin)
+  ! common1
+  use common_gs_base, only: &
+        alloc_gs_components         , &
+        set_gs_common               , &
+        set_default_values_gs_raster, &
+        set_bounds_file_raster_in   , &
+        set_bounds_file_grid_in     , &
+        set_bounds_file_grid_out
+  use common_gs_define, only: &
+        set_gs
+  use common_gs_grid_core, only: &
+        make_idxmap, &
+        make_grdidx
+  ! this
+  use ls_base, only: &
+        logopt, &
+        assert_initialized
   implicit none
   character(*), intent(in) :: name
   integer, intent(in) :: nx, ny
@@ -273,12 +304,9 @@ subroutine spring_define_grdsys_raster(&
 
   type(gs_)           , pointer :: a
   type(gs_raster_)    , pointer :: ar
-  type(opt_sys_)   :: opt_sys
-  type(opt_earth_) :: opt_earth
-  integer(8) :: idxmin, idxmax
   integer :: i_gs
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_define_grdsys_raster')
+  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_define_grdsys_raster', logopt())
   !-------------------------------------------------------------
   ! Find an empty sloat for a grid system
   !-------------------------------------------------------------
@@ -333,18 +361,14 @@ subroutine spring_define_grdsys_raster(&
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call set_default_values_opt_sys(opt_sys)
-  call set_default_values_opt_earth(opt_earth)
-
   a%id = 'gs'//str(i_gs)
   a%nam = trim(name)
 
   call alloc_gs_components(a, GS_TYPE_RASTER)
   call set_default_values_gs_raster(a%raster)
+  call set_gs_common(a)
 
   ar => a%raster
-
-  ar%f_grid_out%path_im_base = 'spring.grid_'//str(i_gs)//'.im'
   !-------------------------------------------------------------
   ! Input the fundamental given values
   !-------------------------------------------------------------
@@ -386,141 +410,21 @@ subroutine spring_define_grdsys_raster(&
          ar%nh, ar%hi, ar%hf, ar%nv, ar%vi, ar%vf) ! out
   call set_bounds_file_grid_in(ar%f_grid_in)
   call set_bounds_file_grid_out(ar%f_grid_out, ar%nx, ar%ny)
-
-  call set_gs_common(a)
   !-------------------------------------------------------------
   ! Set the pixel lines
   !-------------------------------------------------------------
-  call set_grids(ar)
+  call set_gs(ar)
   !-------------------------------------------------------------
-  ! Determine zones
+  !
   !-------------------------------------------------------------
-  call determine_zones(ar, opt_sys%memory_ulim)
-
-  call clear_iZone(ar)
-  !-------------------------------------------------------------
-  ! Store index map
-  !-------------------------------------------------------------
-  allocate(ar%idxmap(ar%nx, ar%ny))
-
-  if( ar%nZones == 1 )then
-    ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_GIVEN
-    if( present(idx1) )then
-      call cpval(idx1, ar%idxmap)
-    elseif( present(idx2) )then
-      call cpval(idx2, ar%idxmap)
-    elseif( present(idx) )then
-      call cpval(idx, ar%idxmap)
-    elseif( present(idx8) )then
-      call cpval(idx8, ar%idxmap)
-    else
-      call eerr('No raster index map was given.')
-    endif
-  else
-    !-----------------------------------------------------------
-    ! Case: int1 map is input
-    if( present(idx1) )then
-      ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT1
-      allocate(ar%idxmapall1(ar%nh,ar%nv))
-      call cpval(idx1, ar%idxmapall1)
-    !-----------------------------------------------------------
-    ! Case: int2 map is input
-    elseif( present(idx2) )then
-      idxmin = minval(idx2)
-      idxmax = maxval(idx2)
-      !---------------------------------------------------------
-      ! int2 -> int1
-      if( idxmin >= INT1_LLIM .and. idxmax <= INT1_ULIM )then
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT1
-        allocate(ar%idxmapall1(ar%nh,ar%nv))
-        call cpval(idx2, ar%idxmapall1)
-      !---------------------------------------------------------
-      ! int2 as it is
-      else
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT2
-        allocate(ar%idxmapall2(ar%nh,ar%nv))
-        call cpval(idx2, ar%idxmapall2)
-      endif
-    !-----------------------------------------------------------
-    ! Case: int4 map is input
-    elseif( present(idx) )then
-      idxmin = minval(idx)
-      idxmax = maxval(idx)
-      !---------------------------------------------------------
-      ! int4 -> int1
-      if( idxmin >= INT1_LLIM .and. idxmax <= INT1_ULIM )then
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT1
-        allocate(ar%idxmapall1(ar%nh,ar%nv))
-        call cpval(idx, ar%idxmapall1)
-      !---------------------------------------------------------
-      ! int4 -> int2
-      elseif( idxmin >= INT2_LLIM .and. idxmax <= INT2_ULIM )then
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT2
-        allocate(ar%idxmapall2(ar%nh,ar%nv))
-        call cpval(idx, ar%idxmapall2)
-      !---------------------------------------------------------
-      ! int4 as it is
-      else
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT4
-        allocate(ar%idxmapall4(ar%nh,ar%nv))
-        call cpval(idx, ar%idxmapall4)
-      endif
-    !-----------------------------------------------------------
-    ! Case: int8 map is input
-    elseif( present(idx8) )then
-      idxmin = minval(idx8)
-      idxmax = maxval(idx8)
-      !---------------------------------------------------------
-      ! int8 -> int1
-      if( idxmin >= INT1_LLIM .and. idxmax <= INT1_ULIM )then
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT1
-        allocate(ar%idxmapall1(ar%nh,ar%nv))
-        call cpval(idx8, ar%idxmapall1)
-      !---------------------------------------------------------
-      ! int8 -> int2
-      elseif( idxmax >= INT2_LLIM .and. idxmax <= INT2_ULIM )then
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT2
-        allocate(ar%idxmapall2(ar%nh,ar%nv))
-        call cpval(idx8, ar%idxmapall2)
-      !---------------------------------------------------------
-      ! int8 -> int4
-      elseif( idxmax >= INT4_LLIM .and. idxmax <= INT4_ULIM )then
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT4
-        allocate(ar%idxmapall4(ar%nh,ar%nv))
-        call cpval(idx8, ar%idxmapall4)
-      !---------------------------------------------------------
-      ! int8 as it is
-      else
-        ar%tag_in_idxmap = TAG_IN_RASTER_IDXMAP_INT8
-        allocate(ar%idxmapall8(ar%nh,ar%nv))
-        call cpval(idx8, ar%idxmapall8)
-      endif
-    !-----------------------------------------------------------
-    ! Case: no input
-    else
-      call eerr('No raster index map was given.')
-    endif
+  if    ( present(idx1) )then; call make_idxmap(ar, mi1=idx1)
+  elseif( present(idx2) )then; call make_idxmap(ar, mi2=idx2)
+  elseif( present(idx ) )then; call make_idxmap(ar, mi4=idx )
+  elseif( present(idx8) )then; call make_idxmap(ar, mi8=idx8)
+  else                       ; call make_idxmap(ar)
   endif
 
-  if( .not. ar%is_south_to_north )then
-    selectcase( ar%tag_in_idxmap )
-    case( TAG_IN_RASTER_IDXMAP_INT1 )
-      call reverse(ar%idxmapall1, 2)
-    case( TAG_IN_RASTER_IDXMAP_INT2 )
-      call reverse(ar%idxmapall2, 2)
-    case( TAG_IN_RASTER_IDXMAP_INT4 )
-      call reverse(ar%idxmapall4, 2)
-    case( TAG_IN_RASTER_IDXMAP_INT8 )
-      call reverse(ar%idxmapall8, 2)
-    case default
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  ar%tag_in_idxmap == '//str(ar%tag_in_idxmap))
-    endselect
-  endif
-  !-------------------------------------------------------------
-  ! Make grid data
-  !-------------------------------------------------------------
-  call prep_grid(a, opt_earth)
+  call make_grdidx(ar)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -533,8 +437,12 @@ end subroutine spring_define_grdsys_raster
 !
 !===============================================================
 subroutine spring_clear_grdsys(name)
+  ! common1
   use common_gs_base, only: &
-        free_gs
+        clear_gs
+  ! this
+  use ls_base, only: &
+        logopt
   implicit none
   character(*), intent(in) :: name
 
@@ -546,8 +454,7 @@ subroutine spring_clear_grdsys(name)
   !-------------------------------------------------------------
   call point_grdsys(name, a)
 
-  call free_gs(a)
-  a%nam = ''
+  call clear_gs(a)
 
   nullify(a)
   !-------------------------------------------------------------
@@ -565,6 +472,9 @@ end subroutine spring_clear_grdsys
 !
 !===============================================================
 subroutine spring_print_grdsys_name()
+  ! this
+  use ls_base, only: &
+        logopt
   implicit none
 
   integer :: i
@@ -585,6 +495,9 @@ end subroutine spring_print_grdsys_name
 !
 !===============================================================
 subroutine spring_print_grdsys(name)
+  ! this
+  use ls_base, only: &
+        logopt
   implicit none
   character(*), intent(in) :: name
 

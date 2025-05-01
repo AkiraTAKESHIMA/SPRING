@@ -4,11 +4,14 @@ module def_type
   use common_type_opt
   implicit none
   private
-
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   public :: agcm_
   public :: lsm_
   public :: opt_
-
+  public :: opt_ext_
+  !-------------------------------------------------------------
   type agcm_
     character(CLEN_VAR) :: id
     character(CLEN_VAR) :: nam
@@ -40,6 +43,7 @@ module def_type
 
     integer(8) :: nij
     integer(8), pointer :: idx(:)
+    integer(8), pointer :: idxarg(:)
     real(8)   , pointer :: ara(:)
     real(8)   , pointer :: lon(:)
     real(8)   , pointer :: lat(:)
@@ -47,14 +51,13 @@ module def_type
     integer(8) :: idx_miss
   end type
 
-  type opt_method_
-    logical :: use_weighted_dist
+  type opt_ext_
+    character(CLEN_KEY) :: method_rivwat
   end type
 
   type opt_
     type(opt_sys_) :: sys
     type(opt_log_) :: log
     type(opt_earth_) :: earth
-    type(opt_method_) :: method
   end type
 end module def_type

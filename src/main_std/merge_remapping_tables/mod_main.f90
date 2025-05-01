@@ -62,6 +62,7 @@ subroutine merge_rt(input, output, opt)
   type(rt_)     , pointer :: rt
   type(rt_main_), pointer :: rtm
   integer(8), allocatable :: grdidx(:)
+  integer(8), allocatable :: grdidxarg(:)
   real(8)   , allocatable :: grdara(:)
 
   integer    :: iFile_rt
@@ -197,6 +198,7 @@ subroutine merge_rt(input, output, opt)
         call echo(code%ent, 'Reading grid data')
 
         allocate(grdidx(output%f_grid%nmax))
+        allocate(grdidxarg(output%f_grid%nmax))
         allocate(grdara(output%f_grid%nmax))
 
         if( output%f_grid%f_idx%path /= '' )then
@@ -221,15 +223,18 @@ subroutine merge_rt(input, output, opt)
           call close_file_grid_im()
         endif
 
+        call argsort(grdidx, grdidxarg)
+
         call echo(code%ext)
         !-------------------------------------------------------
         ! Calc. coef.
         !-------------------------------------------------------
         call echo(code%ent, 'Calculating coef.')
 
-        call calc_rt_coef_sum_modify_not_enabled(rtm, grdidx, grdara)
+        call calc_rt_coef_sum_modify_not_enabled(rtm, grdidx, grdidxarg, grdara)
 
         deallocate(grdidx)
+        deallocate(grdidxarg)
         deallocate(grdara)
 
         call echo(code%ext)
