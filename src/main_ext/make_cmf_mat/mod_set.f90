@@ -1484,48 +1484,28 @@ subroutine set_default_values_cmf(cmf)
   cmf%opt_invalid_grdidx_catmxy = opt_invalid_grdidx_catmxy_default
 
 
-  cmf%f_basin  = file('', dtype_int4, 1, endian_default, &
-                      action=action_read, id='cmf%f_basin')
-  cmf%f_nextxy = file('', dtype_int4, 1, endian_default, &
-                      action=action_read, id='cmf%f_nextxy')
-  cmf%f_catmxy = file('', dtype_int4, rec_undef, endian_default, &
-                      action=action_read, id='cmf%f_catmxy')
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
+  cmf%f_basin  = file(id='cmf%f_basin')
+  cmf%f_nextxy = file(id='cmf%f_nextxy')
+  cmf%f_catmxy = file(id='cmf%f_catmxy')
+  call reset_file_default()
 
-  cmf%f_grdidx_river        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='cmf%f_grdidx_river')
-  cmf%f_grdidx_river_end    = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='cmf%f_grdidx_river_end')
-  cmf%f_grdidx_river_mouth  = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='cmf%f_grdidx_river_mouth')
-  cmf%f_grdidx_river_inland = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='cmf%f_grdidx_river_inland')
-  cmf%f_grdidx_noriv        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='cmf%f_grdidx_noriv')
-  cmf%f_grdidx_ocean        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='cmf%f_grdidx_ocean')
-  
-  cmf%f_rstidx_river &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstidx_river')
-  cmf%f_rstidx_river_end &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstidx_river_end')
-  cmf%f_rstidx_river_mouth &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstidx_river_mouth')
-  cmf%f_rstidx_river_inland &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstidx_river_inland')
-  cmf%f_rstidx_noriv &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstidx_noriv')
-  cmf%f_rstidx_ocean &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstidx_ocean')
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_WRITE)
+  cmf%f_grdidx_river        = file(id='cmf%f_grdidx_river')
+  cmf%f_grdidx_river_end    = file(id='cmf%f_grdidx_river_end')
+  cmf%f_grdidx_river_mouth  = file(id='cmf%f_grdidx_river_mouth')
+  cmf%f_grdidx_river_inland = file(id='cmf%f_grdidx_river_inland')
+  cmf%f_grdidx_noriv        = file(id='cmf%f_grdidx_noriv')
+  cmf%f_grdidx_ocean        = file(id='cmf%f_grdidx_ocean')
 
-  cmf%f_rstbsn &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='cmf%f_rstbsn')
+  cmf%f_rstidx_river        = file(id='cmf%f_rstidx_river')
+  cmf%f_rstidx_river_end    = file(id='cmf%f_rstidx_river_end')
+  cmf%f_rstidx_river_mouth  = file(id='cmf%f_rstidx_river_mouth')
+  cmf%f_rstidx_river_inland = file(id='cmf%f_rstidx_river_inland')
+  cmf%f_rstidx_noriv        = file(id='cmf%f_rstidx_noriv')
+  cmf%f_rstidx_ocean        = file(id='cmf%f_rstidx_ocean')
+  cmf%f_rstbsn = file(id='cmf%f_rstbsn')
+  call reset_file_default()
 
   cmf%path_list_catmxy = ''
   nullify(cmf%list_path_catmxy)
@@ -1598,90 +1578,46 @@ subroutine set_default_values_mat(mat)
 
   mat%idx_miss = mat_idx_miss_default
 
-
-  mat%f_grdmsk_river        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdmsk_river')
-  mat%f_grdmsk_river_end    = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdmsk_river_end')
-  mat%f_grdmsk_river_mouth  = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdmsk_river_mouth')
-  mat%f_grdmsk_river_inland = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdmsk_river_inland')
-  mat%f_grdmsk_noriv        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdmsk_noriv')
-  mat%f_grdmsk_ocean        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdmsk_ocean')
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_WRITE)
+  mat%f_grdmsk_river        = file(id='mat%f_grdmsk_river')
+  mat%f_grdmsk_river_end    = file(id='mat%f_grdmsk_river_end')
+  mat%f_grdmsk_river_mouth  = file(id='mat%f_grdmsk_river_mouth')
+  mat%f_grdmsk_river_inland = file(id='mat%f_grdmsk_river_inland')
+  mat%f_grdmsk_noriv        = file(id='mat%f_grdmsk_noriv')
+  mat%f_grdmsk_ocean        = file(id='mat%f_grdmsk_ocean')
   
-  mat%f_grdidx_river        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdidx_river')
-  mat%f_grdidx_river_end    = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdidx_river_end')
-  mat%f_grdidx_river_mouth  = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdidx_river_mouth')
-  mat%f_grdidx_river_inland = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdidx_river_inland')
-  mat%f_grdidx_noriv        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdidx_noriv')
-  mat%f_grdidx_ocean        = file('', dtype_int4, 1, endian_default, &
-                                   action=action_write, id='mat%f_grdidx_ocean')
+  mat%f_grdidx_river        = file(id='mat%f_grdidx_river')
+  mat%f_grdidx_river_end    = file(id='mat%f_grdidx_river_end')
+  mat%f_grdidx_river_mouth  = file(id='mat%f_grdidx_river_mouth')
+  mat%f_grdidx_river_inland = file(id='mat%f_grdidx_river_inland')
+  mat%f_grdidx_noriv        = file(id='mat%f_grdidx_noriv')
+  mat%f_grdidx_ocean        = file(id='mat%f_grdidx_ocean')
   
-  mat%f_grdidx_bnd_river        = file('', dtype_int4, 1, endian_default, &
-                                       action=action_write, id='mat%f_grdidx_bnd_river')
-  mat%f_grdidx_bnd_river_end    = file('', dtype_int4, 1, endian_default, &
-                                       action=action_write, id='mat%f_grdidx_bnd_river_end')
-  mat%f_grdidx_bnd_river_mouth  = file('', dtype_int4, 1, endian_default, &
-                                       action=action_write, id='mat%f_grdidx_bnd_river_mouth')
-  mat%f_grdidx_bnd_river_inland = file('', dtype_int4, 1, endian_default, &
-                                       action=action_write, id='mat%f_grdidx_bnd_river_inland')
-  mat%f_grdidx_bnd_noriv        = file('', dtype_int4, 1, endian_default, &
-                                       action=action_write, id='mat%f_grdidx_bnd_noriv')
+  mat%f_grdidx_bnd_river        = file(id='mat%f_grdidx_bnd_river')
+  mat%f_grdidx_bnd_river_end    = file(id='mat%f_grdidx_bnd_river_end')
+  mat%f_grdidx_bnd_river_mouth  = file(id='mat%f_grdidx_bnd_river_mouth')
+  mat%f_grdidx_bnd_river_inland = file(id='mat%f_grdidx_bnd_river_inland')
+  mat%f_grdidx_bnd_noriv        = file(id='mat%f_grdidx_bnd_noriv')
   
-  mat%f_grdidx_mkbnd_river = file('', dtype_int4, 1, endian_default, &
-                                  action=action_write, id='mat%f_grdidx_mkbnd_river')
-  mat%f_grdidx_mkbnd_noriv = file('', dtype_int4, 1, endian_default, &
-                                  action=action_write, id='mat%f_grdidx_mkbnd_noriv')
+  mat%f_grdidx_mkbnd_river = file(id='mat%f_grdidx_mkbnd_river')
+  mat%f_grdidx_mkbnd_noriv = file(id='mat%f_grdidx_mkbnd_noriv')
 
-  mat%f_rstidx_river &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_river')
-  mat%f_rstidx_river_end &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_river_end')
-  mat%f_rstidx_river_mouth &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_river_mouth')
-  mat%f_rstidx_river_inland &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_river_inland')
-  mat%f_rstidx_noriv &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_noriv')
-  mat%f_rstidx_ocean &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_ocean')
+  mat%f_rstidx_river        = file(id='mat%f_rstidx_river')
+  mat%f_rstidx_river_end    = file(id='mat%f_rstidx_river_end')
+  mat%f_rstidx_river_mouth  = file(id='mat%f_rstidx_river_mouth')
+  mat%f_rstidx_river_inland = file(id='mat%f_rstidx_river_inland')
+  mat%f_rstidx_noriv        = file(id='mat%f_rstidx_noriv')
+  mat%f_rstidx_ocean        = file(id='mat%f_rstidx_ocean')
 
-  mat%f_rstidx_bnd_river &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_bnd_river')
-  mat%f_rstidx_bnd_river_end &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_bnd_river_end')
-  mat%f_rstidx_bnd_river_mouth &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_bnd_river_mouth')
-  mat%f_rstidx_bnd_river_inland &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_bnd_river_inland')
-  mat%f_rstidx_bnd_noriv &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_bnd_noriv')
+  mat%f_rstidx_bnd_river        = file(id='mat%f_rstidx_bnd_river')
+  mat%f_rstidx_bnd_river_end    = file(id='mat%f_rstidx_bnd_river_end')
+  mat%f_rstidx_bnd_river_mouth  = file(id='mat%f_rstidx_bnd_river_mouth')
+  mat%f_rstidx_bnd_river_inland = file(id='mat%f_rstidx_bnd_river_inland')
+  mat%f_rstidx_bnd_noriv        = file(id='mat%f_rstidx_bnd_noriv')
 
-  mat%f_rstidx_mkbnd_river &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_mkbnd_river')
-  mat%f_rstidx_mkbnd_noriv &
-    = file('', dtype_int4, 1, endian_default, &
-           action=action_write, id='mat%f_rstidx_mkbnd_noriv')
+  mat%f_rstidx_mkbnd_river = file(id='mat%f_rstidx_mkbnd_river')
+  mat%f_rstidx_mkbnd_noriv = file(id='mat%f_rstidx_mkbnd_noriv')
+  call reset_file_default()
 
   nullify(mat%list_path_rstidx_river)
   nullify(mat%list_path_rstidx_river_end)

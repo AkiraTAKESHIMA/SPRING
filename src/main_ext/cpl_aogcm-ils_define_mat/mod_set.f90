@@ -22,14 +22,6 @@ module mod_set
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(clen_var), parameter :: block_name_log_input_rt    = 'Input of Regridding Tables'
-  character(clen_var), parameter :: block_name_log_input_agcm  = 'Input of AGCM'
-  character(clen_var), parameter :: block_name_log_input_ogcm  = 'Input of OGCM'
-  character(clen_var), parameter :: block_name_log_input_rm    = 'Input of LSM'
-  character(clen_var), parameter :: block_name_log_output_rt   = 'Output of Regridding Tables'
-  character(clen_var), parameter :: block_name_log_output_agcm = 'Output of AGCM'
-  character(clen_var), parameter :: block_name_log_output_lsm  = 'Output of LSM'
-  character(clen_var), parameter :: block_name_log_opt         = 'Options'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -694,10 +686,10 @@ subroutine read_settings_input_agcm(agcm)
   call echo(code%ent, 'Setting the default values')
 
   agcm%nij = 0_8
-  agcm%fin_grdidx = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                         id='agcm%fin_grdidx')
-  agcm%fin_grdara = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                         id='agcm%fin_grdara')
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
+  agcm%fin_grdidx = file(id='agcm%fin_grdidx')
+  agcm%fin_grdara = file(id='agcm%fin_grdara')
+  call reset_file_default()
 
   agcm%idx_miss = IDX_MISS_DEFAULT
 
@@ -835,26 +827,19 @@ subroutine read_settings_input_rm(rm)
   rm%nkx = 0_8
   rm%nky = 0_8
 
-  rm%fin_grdidx_river = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_grdidx_river')
-  rm%fin_grdidx_noriv = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_grdidx_noriv')
-  rm%fin_grdidx_ocean = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_grdidx_ocean')
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
+  rm%fin_grdidx_river = file(id='rm%fin_grdidx_river')
+  rm%fin_grdidx_noriv = file(id='rm%fin_grdidx_noriv')
+  rm%fin_grdidx_ocean = file(id='rm%fin_grdidx_ocean')
 
-  rm%fin_grdara_river = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_grdara_river')
-  rm%fin_grdara_noriv = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_grdara_noriv')
-  rm%fin_grdara_ocean = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_grdara_ocean')
+  rm%fin_grdara_river = file(id='rm%fin_grdara_river')
+  rm%fin_grdara_noriv = file(id='rm%fin_grdara_noriv')
+  rm%fin_grdara_ocean = file(id='rm%fin_grdara_ocean')
 
-  rm%fin_rstidx_river = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_rstidx_river')
-  rm%fin_rstidx_noriv = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_rstidx_noriv')
-  rm%fin_rstidx_ocean = file('', DTYPE_INT4, 1, ENDIAN_DEFAULT, action=ACTION_READ, &
-                             id='rm%fin_rstidx_ocean')
+  rm%fin_rstidx_river = file(id='rm%fin_rstidx_river')
+  rm%fin_rstidx_noriv = file(id='rm%fin_rstidx_noriv')
+  rm%fin_rstidx_ocean = file(id='rm%fin_rstidx_ocean')
+  call reset_file_default()
 
   rm%idx_miss = IDX_MISS_DEFAULT
   rm%ara_miss = ARA_MISS_DEFAULT
@@ -1214,16 +1199,13 @@ subroutine read_settings_output_agcm(agcm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  agcm%fout_lndara_ogcm       = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
-                                     id='agcm%fout_lndara_ogcm')
-  agcm%fout_lndara_river      = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
-                                     id='agcm%fout_lndara_river')
-  agcm%fout_lndara_noriv_real = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
-                                     id='agcm%fout_lndara_noriv_real')
-  agcm%fout_lndara_noriv_virt = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
-                                     id='agcm%fout_lndara_noriv_virt')
-  agcm%fout_lndara_noriv      = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, action=ACTION_WRITE, &
-                                     id='agcm%fout_lndara_noriv')
+  call set_file_default(dtype=DTYPE_DBLE, action=ACTION_WRITE)
+  agcm%fout_lndara_ogcm       = file(id='agcm%fout_lndara_ogcm')
+  agcm%fout_lndara_river      = file(id='agcm%fout_lndara_river')
+  agcm%fout_lndara_noriv_real = file(id='agcm%fout_lndara_noriv_real')
+  agcm%fout_lndara_noriv_virt = file(id='agcm%fout_lndara_noriv_virt')
+  agcm%fout_lndara_noriv      = file(id='agcm%fout_lndara_noriv')
+  call reset_file_default()
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1352,47 +1334,49 @@ subroutine read_settings_output_lsm(lsm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting default values')
 
-  call set_file_default(rec=1, action=ACTION_WRITE)
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_WRITE)
+  lsm%fout_grdmsk_river      = file(id='lsm%fout_grdmsk_river')
+  lsm%fout_grdmsk_noriv      = file(id='lsm%fout_grdmsk_noriv')
+  lsm%fout_grdmsk_noriv_real = file(id='lsm%fout_grdmsk_noriv_real')
+  lsm%fout_grdmsk_noriv_virt = file(id='lsm%fout_grdmsk_noriv_virt')
+  lsm%fout_grdmsk_ocean      = file(id='lsm%fout_grdmsk_ocean')
 
-  lsm%fout_grdmsk_river      = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_river')
-  lsm%fout_grdmsk_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_noriv')
-  lsm%fout_grdmsk_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_noriv_real')
-  lsm%fout_grdmsk_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_noriv_virt')
-  lsm%fout_grdmsk_ocean      = file(dtype=DTYPE_INT4, id='lsm%fout_grdmsk_ocean')
+  lsm%fout_grdidx_river      = file(id='lsm%fout_grdidx_river')
+  lsm%fout_grdidx_noriv      = file(id='lsm%fout_grdidx_noriv')
+  lsm%fout_grdidx_noriv_real = file(id='lsm%fout_grdidx_noriv_real')
+  lsm%fout_grdidx_noriv_virt = file(id='lsm%fout_grdidx_noriv_virt')
+  lsm%fout_grdidx_ocean      = file(id='lsm%fout_grdidx_ocean')
 
-  lsm%fout_grdidx_river      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_river')
-  lsm%fout_grdidx_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv')
-  lsm%fout_grdidx_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_real')
-  lsm%fout_grdidx_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_virt')
-  lsm%fout_grdidx_ocean      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_ocean')
+  lsm%fout_grdidx_bnd_river      = file(id='lsm%fout_grdidx_river')
+  lsm%fout_grdidx_bnd_noriv      = file(id='lsm%fout_grdidx_noriv')
+  lsm%fout_grdidx_bnd_noriv_real = file(id='lsm%fout_grdidx_noriv_real')
+  lsm%fout_grdidx_bnd_noriv_virt = file(id='lsm%fout_grdidx_noriv_virt')
 
-  lsm%fout_grdidx_bnd_river      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_river')
-  lsm%fout_grdidx_bnd_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv')
-  lsm%fout_grdidx_bnd_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_real')
-  lsm%fout_grdidx_bnd_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_grdidx_noriv_virt')
+  call set_file_default(dtype=DTYPE_DBLE, action=ACTION_WRITE)
+  lsm%fout_grdara_river      = file(id='lsm%fout_grdara_river')
+  lsm%fout_grdara_noriv      = file(id='lsm%fout_grdara_noriv')
+  lsm%fout_grdara_noriv_real = file(id='lsm%fout_grdara_noriv_real')
+  lsm%fout_grdara_noriv_virt = file(id='lsm%fout_grdara_noriv_virt')
+  lsm%fout_grdara_ocean      = file(id='lsm%fout_grdara_ocean')
 
-  lsm%fout_grdara_river      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_river')
-  lsm%fout_grdara_noriv      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_noriv')
-  lsm%fout_grdara_noriv_real = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_noriv_real')
-  lsm%fout_grdara_noriv_virt = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_noriv_virt')
-  lsm%fout_grdara_ocean      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdara_ocean')
+  lsm%fout_grdwgt_river      = file(id='lsm%fout_grdwgt_river')
+  lsm%fout_grdwgt_noriv      = file(id='lsm%fout_grdwgt_noriv')
+  lsm%fout_grdwgt_noriv_real = file(id='lsm%fout_grdwgt_noriv_real')
+  lsm%fout_grdwgt_noriv_virt = file(id='lsm%fout_grdwgt_noriv_virt')
+  lsm%fout_grdwgt_ocean      = file(id='lsm%fout_grdwgt_ocean')
 
-  lsm%fout_grdwgt_river      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_river')
-  lsm%fout_grdwgt_noriv      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_noriv')
-  lsm%fout_grdwgt_noriv_real = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_noriv_real')
-  lsm%fout_grdwgt_noriv_virt = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_noriv_virt')
-  lsm%fout_grdwgt_ocean      = file(dtype=DTYPE_DBLE, id='lsm%fout_grdwgt_ocean')
+  call set_file_default(dtype=DTYPE_INT4, action=ACTION_WRITE)
+  lsm%fout_rstidx_river      = file(id='lsm%fout_rstidx_river')
+  lsm%fout_rstidx_noriv      = file(id='lsm%fout_rstidx_noriv')
+  lsm%fout_rstidx_noriv_real = file(id='lsm%fout_rstidx_noriv_real')
+  lsm%fout_rstidx_noriv_virt = file(id='lsm%fout_rstidx_noriv_virt')
+  lsm%fout_rstidx_ocean      = file(id='lsm%fout_rstidx_ocean')
 
-  lsm%fout_rstidx_river      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_river')
-  lsm%fout_rstidx_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_noriv')
-  lsm%fout_rstidx_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_noriv_real')
-  lsm%fout_rstidx_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_noriv_virt')
-  lsm%fout_rstidx_ocean      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_ocean')
-
-  lsm%fout_rstidx_bnd_river      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_river')
-  lsm%fout_rstidx_bnd_noriv      = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_noriv')
-  lsm%fout_rstidx_bnd_noriv_real = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_noriv_real')
-  lsm%fout_rstidx_bnd_noriv_virt = file(dtype=DTYPE_INT4, id='lsm%fout_rstidx_bnd_noriv_virt')
+  lsm%fout_rstidx_bnd_river      = file(id='lsm%fout_rstidx_bnd_river')
+  lsm%fout_rstidx_bnd_noriv      = file(id='lsm%fout_rstidx_bnd_noriv')
+  lsm%fout_rstidx_bnd_noriv_real = file(id='lsm%fout_rstidx_bnd_noriv_real')
+  lsm%fout_rstidx_bnd_noriv_virt = file(id='lsm%fout_rstidx_bnd_noriv_virt')
+  call reset_file_default()
 
   lsm%idx_miss = IDX_MISS_DEFAULT
   lsm%ara_miss = ARA_MISS_DEFAULT
@@ -1664,7 +1648,7 @@ subroutine echo_settings_input_rt(rt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_input_rt)))
+  call edbg(str(bar('Input of remapping tables')))
   !-------------------------------------------------------------
   rtm => rt%main
 
@@ -1689,7 +1673,7 @@ subroutine echo_settings_input_agcm(agcm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_input_agcm)))
+  call edbg(str(bar('Input of AGCM')))
   !-------------------------------------------------------------
   call edbg('Grid system')
   call edbg('  nij: '//str(agcm%nij))
@@ -1725,7 +1709,7 @@ subroutine echo_settings_input_rm(rm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_input_rm)))
+  call edbg(str(bar('Input of river model')))
   !-------------------------------------------------------------
   call edbg('Grid system')
   call edbg('  nx_grid: '//str(rm%ncx))
@@ -1768,7 +1752,7 @@ subroutine echo_settings_output_rt(rt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_output_rt)))
+  call edbg(str(bar('Output of remapping tables')))
   !-------------------------------------------------------------
   rtm => rt%main
 
@@ -1796,7 +1780,7 @@ subroutine echo_settings_output_agcm(agcm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_output_agcm)))
+  call edbg(str(bar('Output of AGCM')))
   !-------------------------------------------------------------
   call edbg('Land area')
   call edbg('  ogcm      : '//str(fileinfo(agcm%fout_lndara_ogcm)))
@@ -1820,7 +1804,7 @@ subroutine echo_settings_output_lsm(lsm)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(str(bar(block_name_log_output_lsm)))
+  call edbg(str(bar('Output of LSM')))
   !-------------------------------------------------------------
   call edbg('Grid data')
 
