@@ -25,8 +25,8 @@ module common_const
   real(8), parameter :: coord_miss_c_default = -1d20
   real(8), parameter :: coord_miss_s_default = -1d20
 
-  character(CLEN_KEY), parameter :: origin_lower = 'lower'
-  character(CLEN_KEY), parameter :: origin_upper = 'upper'
+  character(CLEN_KEY), parameter :: origin_south = 'south'
+  character(CLEN_KEY), parameter :: origin_north = 'north'
 
   character(CLEN_KEY), parameter :: grid_status__undef          = 'undef'
   character(CLEN_KEY), parameter :: grid_status__prepared       = 'prepared'
@@ -39,16 +39,25 @@ module common_const
   character(CLEN_KEY), parameter :: grdidx_condition__rst_in_grd = 'raster_in_grid'
   character(CLEN_KEY), parameter :: grdidx_condition__none       = 'none'
 
-  integer, parameter :: rec_im_idx = 1
-  integer, parameter :: rec_im_msk = 2
-  integer, parameter :: rec_im_uwa = 3
-  integer, parameter :: rec_im_ara = 4
-  integer, parameter :: rec_im_wgt = 5
-  integer, parameter :: rec_im_x   = 6
-  integer, parameter :: rec_im_y   = 7
-  integer, parameter :: rec_im_z   = 8
-  integer, parameter :: rec_im_lon = 9
-  integer, parameter :: rec_im_lat = 10
+  integer(4), parameter :: INPUTFORM__NOT_GIVEN = -9
+  integer(4), parameter :: INPUTFORM__FILE_BIN = 0
+  integer(4), parameter :: INPUTFORM__INT1 = 1
+  integer(4), parameter :: INPUTFORM__INT2 = 2
+  integer(4), parameter :: INPUTFORM__INT4 = 4
+  integer(4), parameter :: INPUTFORM__INT8 = 8
+  integer(4), parameter :: INPUTFORM__REAL = 8
+  integer(4), parameter :: INPUTFORM__DBLE = 8
+
+!  integer, parameter :: rec_im_idx = 1
+!  integer, parameter :: rec_im_msk = 2
+!  integer, parameter :: rec_im_uwa = 3
+!  integer, parameter :: rec_im_ara = 4
+!  integer, parameter :: rec_im_wgt = 5
+!  integer, parameter :: rec_im_x   = 6
+!  integer, parameter :: rec_im_y   = 7
+!  integer, parameter :: rec_im_z   = 8
+!  integer, parameter :: rec_im_lon = 9
+!  integer, parameter :: rec_im_lat = 10
 
   character(clen_var), parameter :: varname_idx = 'idx'
   character(clen_var), parameter :: varname_msk = 'msk'

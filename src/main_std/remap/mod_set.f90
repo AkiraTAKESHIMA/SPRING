@@ -1004,7 +1004,8 @@ subroutine read_settings_gs_raster(a)
   call check_bounds_lon(ar%west , ar%east )
   call check_bounds_lat(ar%south, ar%north)
 
-  call checkval_grdidx_condition(ar%grdidx_condition, 'ar%grdidx_condition')
+  call checkval_grdidx_condition(&
+         ar%grdidx_condition, 'ar%grdidx_condition')
 
   call echo(code%ext)
   !-------------------------------------------------------------

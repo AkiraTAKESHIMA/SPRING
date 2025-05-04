@@ -156,8 +156,8 @@ module lib_io_file
     character(clen_path) :: id         = 'file'
     character(clen_path) :: path       = ''
     character(clen_key)  :: dtype      = DTYPE_REAL
-    integer              :: rec        = 1
     character(clen_key)  :: endian     = ENDIAN_DEFAULT
+    integer              :: rec        = 1
     integer(8)           :: length     = 0_8
     character(clen_key)  :: status     = STATUS_UNKNOWN
     character(clen_key)  :: action     = ACTION_READWRITE
@@ -378,14 +378,14 @@ end function path_ins
 !
 !===============================================================
 type(file_) function file(&
-    path, dtype, rec, endian, &
+    path, dtype, endian, rec, &
     length, status, action, permission, id, &
     sz1, sz2, sz3, lb1, lb2, lb3, ub1, ub2, ub3) result(f)
   implicit none
   character(*), intent(in), optional :: path
   character(*), intent(in), optional :: dtype
-  integer     , intent(in), optional :: rec
   character(*), intent(in), optional :: endian
+  integer(4)  , intent(in), optional :: rec
   integer(8)  , intent(in), optional :: length
   character(*), intent(in), optional :: status
   character(*), intent(in), optional :: action
@@ -399,8 +399,8 @@ type(file_) function file(&
 
   if( present(path)       ) f%path       = path
   if( present(dtype)      ) f%dtype      = dtype
-  if( present(rec)        ) f%rec        = rec
   if( present(endian)     ) f%endian     = endian
+  if( present(rec)        ) f%rec        = rec
   if( present(length)     ) f%length     = length
   if( present(status)     ) f%status     = status
   if( present(action)     ) f%action     = action
@@ -420,14 +420,14 @@ end function file
 !
 !===============================================================
 subroutine set_file_default(&
-    id, path, dtype, rec, endian, length, &
+    id, path, dtype, endian, rec, length, &
     status, action, permission, sz, lb, ub)
   implicit none
   character(*), intent(in), optional :: id
   character(*), intent(in), optional :: path
   character(*), intent(in), optional :: dtype
-  integer     , intent(in), optional :: rec
   character(*), intent(in), optional :: endian
+  integer     , intent(in), optional :: rec
   integer     , intent(in), optional :: length
   character(*), intent(in), optional :: status
   character(*), intent(in), optional :: action
@@ -440,11 +440,11 @@ subroutine set_file_default(&
 
   f => file_default
 
-  if( present(id)    ) f%id = id
-  if( present(path)  ) f%path = path
-  if( present(dtype) ) f%dtype = dtype
-  if( present(rec)   ) f%rec = rec
+  if( present(id)     ) f%id = id
+  if( present(path)   ) f%path = path
+  if( present(dtype)  ) f%dtype = dtype
   if( present(endian) ) f%endian = endian
+  if( present(rec)    ) f%rec = rec
   if( present(length) ) f%length = length
   if( present(status) ) f%status = status
   if( present(action) ) f%action = action
@@ -468,8 +468,8 @@ subroutine reset_file_default()
   f%id         = ID_UNDEF
   f%path       = ''
   f%dtype      = DTYPE_REAL
-  f%rec        = 1
   f%endian     = ENDIAN_DEFAULT
+  f%rec        = 1
   f%length     = 0_8
   f%status     = STATUS_UNKNOWN
   f%action     = ACTION_READWRITE
@@ -490,8 +490,8 @@ subroutine init_file(f)
   f%id         = ID_UNDEF
   f%path       = ''
   f%dtype      = DTYPE_UNDEF
-  f%rec        = REC_UNDEF
   f%endian     = ENDIAN_UNDEF
+  f%rec        = REC_UNDEF
   f%length     = -9999_8
   f%status     = STATUS_UNDEF
   f%action     = ACTION_UNDEF
@@ -505,15 +505,15 @@ end subroutine init_file
 !===============================================================
 subroutine update_file(&
     f, &
-    id, path, dtype, rec, endian, &
+    id, path, dtype, endian, rec, &
     length, status, action, permission, sz, lb, ub)
   implicit none
   type(file_), intent(inout) :: f
   character(*), intent(in), optional :: id
   character(*), intent(in), optional :: path 
   character(*), intent(in), optional :: dtype
-  integer     , intent(in), optional :: rec
   character(*), intent(in), optional :: endian
+  integer     , intent(in), optional :: rec
   integer(8)  , intent(in), optional :: length
   character(*), intent(in), optional :: status
   character(*), intent(in), optional :: action
@@ -527,8 +527,8 @@ subroutine update_file(&
   if( present(id) ) f%id = id
   if( present(path) ) f%path = path
   if( present(dtype) ) f%dtype = dtype
-  if( present(rec) ) f%rec = rec
   if( present(endian) ) f%endian = endian
+  if( present(rec) ) f%rec = rec
   if( present(length) ) f%length = length
   if( present(status) ) f%status = status
   if( present(action) ) f%action = action

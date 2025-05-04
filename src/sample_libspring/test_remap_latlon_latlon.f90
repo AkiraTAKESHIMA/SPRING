@@ -19,8 +19,7 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  !call remap_latlon_latlon()
-  call remap_raster_raster()
+  call remap_latlon_latlon()
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -79,21 +78,26 @@ subroutine remap_latlon_latlon()
   allocate(sdat(nsx,nsy))
   allocate(tdat(ntx,nty))
 
-  allocate(tmpr4(nsx,nsy))
-  open(11, file='test/dat/latlon_05deg_elevtn.bin', form='unformatted', &
-       access='direct', recl=4*size(sdat), status='old')
-  read(11, rec=1) tmpr4
-  close(11)
-  sdat = real(tmpr4,8)
-  deallocate(tmpr4)
+!  allocate(tmpr4(nsx,nsy))
+!  open(11, file='../../dat/grid/test/latlon_05deg_elevtn.bin', form='unformatted', &
+!       access='direct', recl=4*size(sdat), status='old')
+!  read(11, rec=1) tmpr4
+!  close(11)
+!  sdat = real(tmpr4,8)
+!  deallocate(tmpr4)
+  sdat(:,:) = 1.d0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call spring_initialize(logopt='')
+  !call spring_initialize()
 
   ! Define grid systems
-  call spring_define_grdsys_latlon('05deg', nsx, nsy, slon, slat, s_is_south_to_north)
-  call spring_define_grdsys_latlon('288x192', ntx, nty, tlon, tlat, t_is_south_to_north)
+  call spring_define_grdsys_latlon(&
+         '05deg', nsx, nsy, &
+         lon=slon, lat=slat, origin='north')
+  call spring_define_grdsys_latlon(&
+         '288x192', ntx, nty, 0.d0, 360.d0, -90.d0, 90.d0)
 
   ! Make remapping table
   call spring_make_rmptbl('rt1', '05deg', '288x192')
@@ -118,97 +122,12 @@ subroutine remap_latlon_latlon()
   print*, 'sdat', minval(sdat), maxval(sdat)
   print*, 'tdat', minval(tdat), maxval(tdat)
 
-  open(11, file='test/out/latlon_288x192_elevtn.bin', form='unformatted', &
-       access='direct', recl=8*size(tdat), status='replace')
-  write(11, rec=1) tdat
-  close(11)
-
-  call spring_make_rmptbl('rt1', '05deg', '288x192')
+!  open(11, file='test/out/latlon_288x192_elevtn.bin', form='unformatted', &
+!       access='direct', recl=8*size(tdat), status='replace')
+!  write(11, rec=1) tdat
+!  close(11)
   !-------------------------------------------------------------
 end subroutine remap_latlon_latlon
-!===============================================================
-!
-!===============================================================
-subroutine remap_raster_raster()
-  implicit none
-  integer :: nadx, nady
-  real(8) :: awest, aeast, asouth, anorth
-  integer, allocatable :: aidxmap(:,:)
-  integer :: aidx_miss
-
-  integer :: nbdx, nbdy
-  integer, allocatable :: bidxmap(:,:)
-  integer :: bidx_miss
-
-  character(1) :: c_
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call spring_initialize(logopt='')
-  !-------------------------------------------------------------
-  ! Grid system "a" (NLI mesh5 watersystem code)
-  !-------------------------------------------------------------
-  open(11, file='dat/grid_system/NLI/wsCode/mesh5/5340.txt', status='old')
-  read(11,*)
-  read(11,*) c_, awest, asouth, aeast, anorth
-  read(11,*) c_, nadx, nady
-  close(11)
-  aidx_miss = -9999
-
-  allocate(aidxmap(nadx,nady))
-  open(11, file='dat/grid_system/NLI/wsCode/mesh5/5340.bin', &
-       form='unformatted', access='direct', recl=nadx*nady*4, &
-       convert='little_endian', status='old')
-  read(11, rec=1) aidxmap
-  close(11)
-
-  call spring_define_grdsys_raster(&
-         'NLI', nadx, nady, awest, aeast, asouth, anorth, &
-         aidxmap, aidx_miss)
-  !-------------------------------------------------------------
-  ! Grid system "b" (CMF 1min)
-  !-------------------------------------------------------------
-  nbdx = 21600
-  nbdy = 10800
-  bidx_miss = -9999
-
-  allocate(bidxmap(nbdx,nbdy))
-  open(11, file='dat/grid_system/CaMa-Flood/CaMa_v407/glb_06min/matsiro/1min/raster/index_river.bin', &
-       form='unformatted', access='direct', recl=nbdx*nbdy*4, &
-       convert='little_endian', status='old')
-  read(11, rec=1) bidxmap
-  close(11)
-
-  call spring_define_grdsys_raster(&
-         'CMF', nbdx, nbdy, idx=bidxmap, idx_miss=bidx_miss)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call spring_make_rmptbl('rt1', 'NLI', 'CMF')
-  !-------------------------------------------------------------
-  ! Test "clear_grdsys"
-  !-------------------------------------------------------------
-  call spring_print_grdsys_name()
-
-  call spring_clear_grdsys('CMF')
-
-  call spring_print_grdsys_name()
-  !-------------------------------------------------------------
-  ! Test "clear_rt"
-  !-------------------------------------------------------------
-  call spring_print_rmptbl_name()
-
-  call spring_print_rmptbl('rt1')
-
-  call spring_clear_rmptbl('rt1')
-
-  call spring_print_rmptbl_name()
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call spring_finalize()
-  !-------------------------------------------------------------
-end subroutine remap_raster_raster
 !===============================================================
 !
 !===============================================================

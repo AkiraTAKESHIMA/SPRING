@@ -42,6 +42,7 @@ subroutine set_gs__latlon(ul, lon, lat)
   type(file_), pointer :: f
   integer(8) :: ih
   real(8) :: coef
+  logical :: lon_is_given, lat_is_given
 
   call echo(code%bgn, 'set_gs__latlon')
   !-------------------------------------------------------------
@@ -67,13 +68,18 @@ subroutine set_gs__latlon(ul, lon, lat)
   case default
     call eerr(str(msg_invalid_value()))
   endselect
+
+  lon_is_given = .false.
+  lat_is_given = .false.
+  if( present(lon) ) lon_is_given = size(lon) > 1
+  if( present(lat) ) lat_is_given = size(lat) > 1
   !-------------------------------------------------------------
   ! Lon
   !-------------------------------------------------------------
   f => fl%lon
   !-------------------------------------------------------------
-  ! Case: Argument
-  if( present(lon) )then
+  ! Case: Given as an argument
+  if( lon_is_given )then
     ul%lon(:) = lon(:)
 
     do ih = 0_8, ul%nh
@@ -89,31 +95,8 @@ subroutine set_gs__latlon(ul, lon, lat)
     ul%west = ul%lon(0_8)
     ul%east = ul%lon(ul%nh)
   !-------------------------------------------------------------
-  ! Case: Auto
-  elseif( f%path == '' )then
-    call modify_lon_deg(ul%west, 'ul%west')
-    call modify_lon_deg(ul%east, 'ul%east')
-    !-----------------------------------------------------------
-    !
-    if( is_int(ul%west) .and. is_int(ul%east) )then
-      call calc_latlon_bounds_int(ul%lon, ul%lonwidth, ul%west, ul%east, ul%nh)
-    !-----------------------------------------------------------
-    !
-    else
-      call calc_latlon_bounds_float(ul%lon, ul%lonwidth, ul%west, ul%east)
-    endif
-
-    do ih = 0, ul%nh
-      call modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')')
-    enddo
-
-    ul%west = ul%west * d2r
-    ul%east = ul%east * d2r
-    ul%lon(:) = ul%lon(:) * d2r
-    ul%lonwidth(:) = ul%lonwidth(:) * d2r
-  !-------------------------------------------------------------
-  ! Case: Read from file
-  else
+  ! Case: Given via a file
+  elseif( f%path /= '' )then
     call edbg('Reading lon '//str(fileinfo(f)))
     call rbin(ul%lon, f%path, f%dtype, f%endian, f%rec)
 
@@ -129,14 +112,36 @@ subroutine set_gs__latlon(ul, lon, lat)
 
     ul%west = ul%lon(0_8)
     ul%east = ul%lon(ul%nh)
+  !-------------------------------------------------------------
+  ! Case: Not given
+  else
+    call modify_lon_deg(ul%west, 'ul%west')
+    call modify_lon_deg(ul%east, 'ul%east')
+
+    if( is_int(ul%west) .and. is_int(ul%east) )then
+      call calc_latlon_bounds_int(&
+             ul%lon, ul%lonwidth, ul%west, ul%east, ul%nh)
+    else
+      call calc_latlon_bounds_float(&
+             ul%lon, ul%lonwidth, ul%west, ul%east)
+    endif
+
+    do ih = 0, ul%nh
+      call modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')')
+    enddo
+
+    ul%west = ul%west * d2r
+    ul%east = ul%east * d2r
+    ul%lon(:) = ul%lon(:) * d2r
+    ul%lonwidth(:) = ul%lonwidth(:) * d2r
   endif
   !-------------------------------------------------------------
   ! Lat
   !-------------------------------------------------------------
   f => fl%lat
   !-------------------------------------------------------------
-  ! Case: Argument
-  if( present(lat) )then
+  ! Case: Given as an argument
+  if( lat_is_given )then
     ul%lat(:) = lat(:)
 
     if( ul%lat(0) > ul%lat(ul%nv) ) call reverse(ul%lat)
@@ -147,25 +152,8 @@ subroutine set_gs__latlon(ul, lon, lat)
     ul%north = ul%lat(ul%nv)
     ul%latwidth(:) = ul%lat(1:) - ul%lat(:ul%nv-1_8)
   !-------------------------------------------------------------
-  !
-  elseif( f%path == '' )then
-    !-----------------------------------------------------------
-    ! Case: South and north are integer
-    if( is_int(ul%south) .and. is_int(ul%north) )then
-      call calc_latlon_bounds_int(ul%lat, ul%latwidth, ul%south, ul%north, ul%nv)
-    !-----------------------------------------------------------
-    !
-    else
-      call calc_latlon_bounds_float(ul%lat, ul%latwidth, ul%south, ul%north)
-    endif
-
-    ul%south = ul%south * d2r
-    ul%north = ul%north * d2r
-    ul%lat(:) = ul%lat(:) * d2r
-    ul%latwidth(:) = ul%latwidth(:) * d2r
-  !-------------------------------------------------------------
-  !
-  else
+  ! Case: Given via a file
+  elseif( f%path /= '' )then
     call edbg('Reading lat '//str(fileinfo(f)))
     call rbin(ul%lat, f%path, f%dtype, f%endian, f%rec)
 
@@ -176,6 +164,21 @@ subroutine set_gs__latlon(ul, lon, lat)
     ul%south = ul%lat(0)
     ul%north = ul%lat(ul%nv)
     ul%latwidth(:) = ul%lat(1:) - ul%lat(:ul%nv-1_8)
+  !-------------------------------------------------------------
+  ! Case: Not given
+  else
+    if( is_int(ul%south) .and. is_int(ul%north) )then
+      call calc_latlon_bounds_int(&
+             ul%lat, ul%latwidth, ul%south, ul%north, ul%nv)
+    else
+      call calc_latlon_bounds_float(&
+             ul%lat, ul%latwidth, ul%south, ul%north)
+    endif
+
+    ul%south = ul%south * d2r
+    ul%north = ul%north * d2r
+    ul%lat(:) = ul%lat(:) * d2r
+    ul%latwidth(:) = ul%latwidth(:) * d2r
   endif
   !-------------------------------------------------------------
   !

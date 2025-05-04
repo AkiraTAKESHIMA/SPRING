@@ -181,13 +181,21 @@ end subroutine make_grdara_gs
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap__latlon(al)
+subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   implicit none
   type(gs_latlon_), intent(inout), target :: al
+  integer(1), intent(in), optional :: mi1(:,:)
+  integer(2), intent(in), optional :: mi2(:,:)
+  integer(4), intent(in), optional :: mi4(:,:)
+  integer(8), intent(in), optional :: mi8(:,:)
+  real(4)   , intent(in), optional :: mr4(:,:)
+  real(8)   , intent(in), optional :: mr8(:,:)
 
   type(file_latlon_in_) , pointer :: fl
   type(file_grid_in_)   , pointer :: fg_in
   integer(8) :: ih, iv
+  integer(8) :: h0, v0
+  integer    :: vsgn
   integer :: stat
 
   if( al%status_idxmap == GRID_STATUS__PREPARED ) return
@@ -205,8 +213,64 @@ subroutine make_idxmap__latlon(al)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  ! Case: Index data were given as an argument (libspring)
+  if( present(mi1) .or. present(mi2) .or. &
+      present(mi4) .or. present(mi8) .or. &
+      present(mr4) .or. present(mr8) )then
+    call echo(code%ent, 'Case: Index data were given as an argument')
+
+    if( al%is_south_to_north )then
+      v0 = al%vi - 1_8
+      vsgn = 1
+    else
+      v0 = al%vf + 1_8
+      vsgn = -1
+    endif
+    h0 = al%hi - 1_8
+
+    if( present(mi1) )then
+      do iv = al%vi, al%vf
+        do ih = al%hi, al%hf
+          al%idxmap(ih,iv) = int(mi1(ih-h0,vsgn*(iv-v0)),8)
+        enddo
+      enddo
+    elseif( present(mi2) )then
+      do iv = al%vi, al%vf
+        do ih = al%hi, al%hf
+          al%idxmap(ih,iv) = int(mi2(ih-h0,vsgn*(iv-v0)),8)
+        enddo
+      enddo
+    elseif( present(mi4) )then
+      do iv = al%vi, al%vf
+        do ih = al%hi, al%hf
+          al%idxmap(ih,iv) = int(mi4(ih-h0,vsgn*(iv-v0)),8)
+        enddo
+      enddo
+    elseif( present(mi8) )then
+      do iv = al%vi, al%vf
+        do ih = al%hi, al%hf
+          al%idxmap(ih,iv) = int(mi8(ih-h0,vsgn*(iv-v0)),8)
+        enddo
+      enddo
+    elseif( present(mr4) )then
+
+    elseif( present(mr8) )then
+
+    endif
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
+  ! Case: Index data were given via a file
+  elseif( fg_in%idx%path /= '' )then
+    call echo(code%ent, 'Case: Index data were given via a file')
+
+    call read_lattice_data(&
+           al%idxmap, fg_in%idx, al%is_south_to_north)
+
+    call echo(code%ext)
+  !-------------------------------------------------------------
   ! Case: Index data were not given
-  if( fg_in%idx%path == '' )then
+  else
     call echo(code%ent, 'Case: Index data were not given')
 
     if( al%is_south_to_north )then
@@ -226,14 +290,6 @@ subroutine make_idxmap__latlon(al)
       al%idxmin = al%idxmap(al%hi,al%vf)
       al%idxmax = al%idxmap(al%hf,al%vi)
     endif
-
-    call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Case: Index data were given
-  else
-    call echo(code%ent, 'Case: Index data were given')
-
-    call read_lattice_data(al%idxmap, fg_in%idx, al%is_south_to_north)
 
     call echo(code%ext)
   endif
@@ -1062,12 +1118,14 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
     allocate(arz%mskmap(arz%hi:arz%hf,arz%vi:arz%vf))
   enddo
   !-------------------------------------------------------------
-  !
+  ! Set the index map
   !-------------------------------------------------------------
-  ! Case: Index map was given as an argument (libspring)
+  ! Case: Index data were given as an argument (libspring)
   if( present(mi1) .or. present(mi2) .or. &
       present(mi4) .or. present(mi8) .or. &
       present(mr4) .or. present(mr8) )then
+    call echo(code%ent, 'Case: Index data were given as an argument')
+
     if( ar%is_south_to_north )then
       v0 = ar%vi - 1_8
       vsgn = 1
@@ -1086,7 +1144,13 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
         enddo
       enddo
     elseif( present(mi2) )then
-  
+      do iz = 1, ar%nZone
+        do iv = arz%vi, arz%vf
+          do ih = arz%hi, arz%hf
+            arz%idxmap(ih,iv) = int(mi2(ih-h0,vsgn*(iv-v0)),8)
+          enddo
+        enddo
+      enddo
     elseif( present(mi4) )then
       do iz = 1, ar%nZone
         do iv = arz%vi, arz%vf
@@ -1108,19 +1172,29 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
     elseif( present(mr8) )then
 
     endif
+
+    call echo(code%ext)
   !-------------------------------------------------------------
-  ! Case: Index map was given via a file
+  ! Case: Index data were given via a file
   else
+    call echo(code%ent, 'Case: Index data were given via a file')
+
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
-      call read_lattice_data(arz%idxmap, fr%idx, ar%is_south_to_north, arz%xi, arz%yi)
+      call read_lattice_data(&
+             arz%idxmap, fr%idx, ar%is_south_to_north, &
+             arz%xi, arz%yi)
     enddo
+
+    call echo(code%ext)
   endif
 
   do iz = 1, ar%nZone
     call print_idxmap(ar%zone(iz)%idxmap)
   enddo
-
+  !-------------------------------------------------------------
+  ! Get stats.
+  !-------------------------------------------------------------
   n_valid = 0_8
   do iz = 1, ar%nZone
     arz => ar%zone(iz)
@@ -1165,7 +1239,9 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
     call echo(code%ret)
     return
   endif
-
+  !-------------------------------------------------------------
+  ! Update the mask and the status (debugging mode)
+  !-------------------------------------------------------------
   if( ar%debug )then
     do iz = 1, ar%nZone
       arz => ar%zone(iz)

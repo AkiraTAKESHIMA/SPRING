@@ -51,6 +51,8 @@ subroutine init_gs(u)
 
   call echo(code%bgn, 'init_gs', '-p -x2')
   !-------------------------------------------------------------
+  allocate(character(1) :: u%id)
+  allocate(character(1) :: u%nam)
   u%id = ''
   u%nam = ''
   u%gs_type = ''
@@ -91,17 +93,23 @@ subroutine alloc_gs_components(a, gs_type)
   type(gs_raster_) , pointer :: ar
   type(gs_polygon_), pointer :: ap
 
+  ! Used for avoiding maybe-uninitialized-error
+  character(:), allocatable :: s
+
   call echo(code%bgn, 'alloc_gs_components', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   a%gs_type = gs_type
 
+  allocate(character(1) :: s)
+  s = a%id
+
   selectcase( gs_type )
   case( GS_TYPE_LATLON )
     allocate(a%latlon)
     al => a%latlon
-    al%id = trim(a%id)//'%latlon'
+    al%id = s//'%latlon'
     al%nam       => a%nam
     al%is_valid  => a%is_valid
     al%is_source => a%is_source
@@ -120,7 +128,7 @@ subroutine alloc_gs_components(a, gs_type)
   case( GS_TYPE_RASTER )
     allocate(a%raster)
     ar => a%raster
-    ar%id = trim(a%id)//'%raster'
+    ar%id = s//'%raster'
     ar%nam       => a%nam
     ar%is_valid  => a%is_valid
     ar%is_source => a%is_source
@@ -139,7 +147,7 @@ subroutine alloc_gs_components(a, gs_type)
   case( GS_TYPE_POLYGON )
     allocate(a%polygon)
     ap => a%polygon
-    ap%id = trim(a%id)//'%polygon'
+    ap%id = s//'%polygon'
     ap%nam       => a%nam
     ap%is_valid  => a%is_valid
     ap%is_source => a%is_source
@@ -156,7 +164,7 @@ subroutine alloc_gs_components(a, gs_type)
 
   allocate(a%cmn)
   ac => a%cmn
-  ac%id = trim(a%id)//'%cmn'
+  ac%id = s//'%cmn'
   ac%nam       => a%nam
   ac%is_valid  => a%is_valid
   ac%gs_type   => a%gs_type
@@ -257,6 +265,9 @@ subroutine set_default_values_gs_latlon(ul)
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
 
+  ! Used for avoiding maybe-uninitialized-error
+  character(:), allocatable :: s
+
   call echo(code%bgn, 'set_default_values_gs_latlon', '-p -x2')
   !-------------------------------------------------------------
   ul%is_valid = .true.
@@ -269,10 +280,12 @@ subroutine set_default_values_gs_latlon(ul)
   fg_in  => ul%f_grid_in
   fg_out => ul%f_grid_out
 
-  ul%grid%id = trim(ul%id)//'%grid'
-  fl%id      = trim(ul%id)//'%f_latlon_in'
-  fg_in%id   = trim(ul%id)//'%f_grid_in'
-  fg_out%id  = trim(ul%id)//'%f_grid_out'
+  allocate(character(1) :: s)
+  s = ul%id
+  ul%grid%id = s//'%grid'
+  fl%id      = s//'%f_latlon_in'
+  fg_in%id   = s//'%f_grid_in'
+  fg_out%id  = s//'%f_grid_out'
 
   call set_default_values_file_latlon_in(fl)
   call set_default_values_file_grid_in(fg_in)
@@ -344,6 +357,9 @@ subroutine set_default_values_gs_raster(ur)
   type(file_grid_in_)  , pointer :: fg_in
   type(file_grid_out_) , pointer :: fg_out
 
+  ! Used for avoiding maybe-uninitialized-error
+  character(:), allocatable :: s
+
   call echo(code%bgn, 'set_default_values_gs_raster', '-p -x2')
   !-------------------------------------------------------------
   ur%is_valid = .true.
@@ -356,10 +372,12 @@ subroutine set_default_values_gs_raster(ur)
   fg_in  => ur%f_grid_in
   fg_out => ur%f_grid_out
 
-  ur%grid%id = trim(ur%id)//'%grid'
-  fr%id      = trim(ur%id)//'%f_raster_in'
-  fg_in%id   = trim(ur%id)//'%f_grid_in'
-  fg_out%id  = trim(ur%id)//'%f_grid_out'
+  allocate(character(1) :: s)
+  s = ur%id
+  ur%grid%id = s//'%grid'
+  fr%id      = s//'%f_raster_in'
+  fg_in%id   = s//'%f_grid_in'
+  fg_out%id  = s//'%f_grid_out'
 
   call set_default_values_file_raster_in(fr)
   call set_default_values_file_grid_in(fg_in)
@@ -435,6 +453,9 @@ subroutine set_default_values_gs_polygon(up)
   type(file_grid_in_)   , pointer :: fg_in
   type(file_grid_out_)  , pointer :: fg_out
 
+  ! Used for avoiding maybe-uninitialized-error
+  character(:), allocatable :: s
+
   call echo(code%bgn, 'set_default_values_gs_polygon', '-p -x2')
   !-------------------------------------------------------------
   up%is_valid = .true.
@@ -447,10 +468,12 @@ subroutine set_default_values_gs_polygon(up)
   fg_in  => up%f_grid_in
   fg_out => up%f_grid_out
 
-  up%grid%id = trim(up%id)//'%grid'
-  fp%id      = trim(up%id)//'%f_polygon_in'
-  fg_in%id   = trim(up%id)//'%f_grid_in'
-  fg_out%id  = trim(up%id)//'%f_grid_out'
+  allocate(character(1) :: s)
+  s = up%id
+  up%grid%id = s//'%grid'
+  fp%id      = s//'%f_polygon_in'
+  fg_in%id   = s//'%f_grid_in'
+  fg_out%id  = s//'%f_grid_out'
 
   call set_default_values_file_polygon_in(fp)
   call set_default_values_file_grid_in(fg_in)
@@ -700,7 +723,7 @@ subroutine alloc_file_grid_in_val(fg)
 
   do iFile = 1, fg%nFiles_val
     f => fg%val(iFile)
-    f = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, &
+    f = file('', DTYPE_DBLE, ENDIAN_DEFAULT, 1, &
              id=trim(fg%id)//'%val('//str(iFile)//')', &
              action=ACTION_READ)
 
@@ -727,7 +750,7 @@ subroutine alloc_file_grid_out_val(fg)
 
   do iFile = 1, fg%nFiles_val
     f => fg%val(iFile)
-    f = file('', DTYPE_DBLE, 1, ENDIAN_DEFAULT, &
+    f = file('', DTYPE_DBLE, ENDIAN_DEFAULT, 1, &
              id=trim(fg%id)//'%val('//str(iFile)//')', &
              action=ACTION_WRITE)
 

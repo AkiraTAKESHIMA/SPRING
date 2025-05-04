@@ -37,7 +37,7 @@ module common_type_gs
   ! Grid
   !-------------------------------------------------------------
   type file_grid_in_
-    character(CLEN_VAR) :: id
+    character(:), allocatable :: id
 
     type(file_) :: idx
     type(file_) :: ara
@@ -66,7 +66,7 @@ module common_type_gs
   end type
 
   type file_grid_out_
-    character(CLEN_VAR) :: id
+    character(:), allocatable :: id
     character(CLEN_KEY) :: form
 
     logical :: save_idx
@@ -107,7 +107,7 @@ module common_type_gs
   end type
 
   type grid_
-    character(CLEN_VAR) :: id
+    character(:), allocatable :: id
     integer(8) :: nij
     integer(8) :: idxmin, idxmax
     integer(8), pointer :: idx(:)
@@ -127,14 +127,14 @@ module common_type_gs
   ! File of gs
   !-------------------------------------------------------------
   type file_latlon_in_
-    character(CLEN_VAR) :: id
+    character(:), allocatable :: id
     type(file_) :: lon
     type(file_) :: lat
     integer(8), pointer :: sz(:), lb(:), ub(:)
   end type
 
   type file_raster_in_
-    character(CLEN_VAR) :: id
+    character(:), allocatable :: id
     type(file_) :: idx
     type(file_) :: ara
     type(file_) :: wgt
@@ -143,7 +143,7 @@ module common_type_gs
   end type
 
   type file_polygon_in_
-    character(CLEN_VAR) :: id
+    character(:), allocatable :: id
     type(file_) :: x, y, z
     type(file_) :: lon, lat
     type(file_) :: arctyp
@@ -221,9 +221,9 @@ module common_type_gs
   ! Grid system
   !-------------------------------------------------------------
   type gs_latlon_
-    character(CLEN_VAR)          :: id
-    character(CLEN_VAR), pointer :: nam ! => gs_%nam
-    logical(4)         , pointer :: is_valid  !=> gs_%is_valid
+    character(:), allocatable :: id
+    character(:), pointer :: nam ! => gs_%nam
+    logical(4)  , pointer :: is_valid  !=> gs_%is_valid
 
     type(file_latlon_in_), pointer :: f_latlon_in
 
@@ -274,9 +274,9 @@ module common_type_gs
   end type
 
   type gs_raster_
-    character(CLEN_VAR)          :: id
-    character(CLEN_VAR), pointer :: nam ! => gs_%nam
-    logical(4)         , pointer :: is_valid  !=> gs_%is_valid
+    character(:), allocatable :: id
+    character(:), pointer :: nam ! => gs_%nam
+    logical(4)  , pointer :: is_valid  !=> gs_%is_valid
 
     type(file_raster_in_), pointer :: f_raster_in
 
@@ -326,9 +326,9 @@ module common_type_gs
   end type
 
   type gs_polygon_
-    character(CLEN_VAR)          :: id
-    character(CLEN_VAR), pointer :: nam ! => gs_%nam
-    logical(4)         , pointer :: is_valid  !=> gs_%is_valid
+    character(:), allocatable :: id
+    character(:), pointer :: nam ! => gs_%nam
+    logical(4)  , pointer :: is_valid  !=> gs_%is_valid
 
     type(file_polygon_in_), pointer :: f_polygon_in
 
@@ -372,10 +372,10 @@ module common_type_gs
   end type
 
   type gs_common_
-    character(CLEN_VAR) :: id
-    character(CLEN_VAR), pointer :: nam
+    character(:), allocatable :: id
+    character(:)       , pointer :: nam
     logical(4)         , pointer :: is_valid
-    character(CLEN_VAR), pointer :: gs_type
+    character(CLEN_KEY), pointer :: gs_type
     logical(4)         , pointer :: is_source
     type(file_grid_in_) , pointer :: f_grid_in
     type(file_grid_out_), pointer :: f_grid_out
@@ -391,10 +391,10 @@ module common_type_gs
   end type
 
   type gs_
-    character(CLEN_VAR) :: id
-    character(CLEN_VAR) :: nam
+    character(:), allocatable :: id
+    character(:), allocatable :: nam
     logical(4)          :: is_valid
-    character(CLEN_VAR) :: gs_type
+    character(CLEN_KEY) :: gs_type
     logical(4)          :: is_source
     type(gs_latlon_) , pointer :: latlon
     type(gs_raster_) , pointer :: raster
