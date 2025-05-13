@@ -96,7 +96,7 @@ subroutine rasterize_polygon(a, b, output)
 
     brz => br%zone(ibz)
     if( .not. brz%is_valid )then
-      call echo(code%ext)
+      if( br%nZone>1 ) call echo(code%ext)
       cycle
     endif
     !-----------------------------------------------------------
@@ -162,7 +162,7 @@ subroutine rasterize_polygon(a, b, output)
     !-----------------------------------------------------------
     fill_miss = .false.
     !-----------------------------------------------------------
-    call echo(code%ext)
+    if( br%nZone>1 ) call echo(code%ext)
   enddo  ! ibz/
   !-------------------------------------------------------------
   ! Postprocess

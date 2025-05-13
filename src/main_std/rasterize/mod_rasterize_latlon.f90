@@ -276,7 +276,7 @@ subroutine rasterize_latlon(a, b, output)
     !-----------------------------------------------------------
     fill_miss = .false.
     !-----------------------------------------------------------
-    call echo(code%ext)
+    if( br%nZone>1 ) call echo(code%ext)
   enddo  ! ibz/
 
   call echo(code%ext)
