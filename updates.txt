@@ -6,9 +6,32 @@
 [2025/05/13]
 #---------------------------------------------------------------
 cmn1/cmn1_type_gs.f90
+cmn1/cmn1_gs_base.f90
+cmn1/cmn1_gs_define_polygon.f90
+cmn2/cmn2_area_raster_polygon.f90
+
+Removed the component "n_prev" and "n_next" from type "gs_polygon_".
+They require large memory when the number of vertices of one polygon
+is very large and results in bad performance.
+Replaced them with the functions "prev_cyclic" and "next_cyclic",
+respectively.
+#---------------------------------------------------------------
+[2025/05/13]
+#---------------------------------------------------------------
+cmn3/cmn3_rst_run.f90
+main_std/rasterize/mod_rasterize_*.f90
+
+Added function to reverse 2d-maps corresponding to the directions 
+of their vertical axis.
+#---------------------------------------------------------------
+[2025/05/13]
+#---------------------------------------------------------------
+cmn1/cmn1_type_gs.f90
 Changed the components "id" and "name" from length-fixed character to 
 length-changable character.
-
+#---------------------------------------------------------------
+[2025/05/13]
+#---------------------------------------------------------------
 main_std/rasterize/mod_set.f90
   read_settings_latlon, read_settings_polygon, read_settings_raster
 Changed the intent of the argument from "out" to "inout",

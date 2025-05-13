@@ -54,10 +54,6 @@ module cmn2_area_raster_polygon
   real(8), allocatable :: dara_1rad(:) !(ndv)
   real(8), allocatable :: dara(:)
 
-  ! Util. for polygons
-  integer(8), pointer :: n_prev(:,:)
-  integer(8), pointer :: n_next(:,:)
-
   ! Missing values
   integer(8) :: sidx_miss
   integer(8) :: tidx_miss
@@ -181,13 +177,6 @@ subroutine initialize(sr, tp, rt_vrf_val_miss)
   dara_1rad(:) = area_sphere_rect(dlats_all(sr%vi-1:sr%vf-1), dlats_all(sr%vi:sr%vf))
   dara(:) = dara_1rad(:) * dlon
 
-  ! Utils. for polygons
-  if( tp%is_valid )then
-    nullify(n_prev, n_next)
-    call cparr(tp%n_prev, n_prev)
-    call cparr(tp%n_next, n_next)
-  endif
-
   ! For updating a remapping table
   if( present(rt_vrf_val_miss) )then
     allocate(sidx_prev(tp%nij))
@@ -242,9 +231,6 @@ subroutine finalize()
 
   deallocate(dara_1rad)
   deallocate(dara)
-
-  deallocate(n_prev)
-  deallocate(n_next)
 
   if( allocated(sidx_prev) ) deallocate(sidx_prev)
   if( allocated(ij_prev) ) deallocate(ij_prev)
@@ -528,7 +514,7 @@ subroutine calc_iarea_core(iarea, tp)
   real(8)       , pointer    :: iarea(:,:)  ! out
   type(polygon_), intent(in) :: tp
 
-  integer(8) :: n, nn
+  integer(4) :: n, nn
 
   call echo(code%bgn, trim(MODNAME)//' calc_iarea_core', '-p -x2')
   !-------------------------------------------------------------
@@ -536,8 +522,9 @@ subroutine calc_iarea_core(iarea, tp)
   !-------------------------------------------------------------
   iarea(tdhi_buf:tdhf_buf,tdvi_buf:tdvf_buf) = 0.d0
 
-  do n = 1_8, tp%n
-    nn = n_next(n,tp%n)
+  do n = 1, tp%n
+    !nn = n_next(n,tp%n)
+    nn = next_cyclic(n,tp%n)
 
     if( debug )then
       call edbg('('//str(n)//') '//str(str_arctyp_long(tp%arctyp(n)))//&
@@ -584,7 +571,7 @@ subroutine calc_iarea_core(iarea, tp)
       call update_area_parallel(&
              iarea, &
              rad_0deg, rad_360deg, -rad_90deg, &
-             arc_position_normal)
+             ARC_POSITION_NORMAL)
     case( polygon_position_normal )
       if( tp%n_pole == 0 )then
         call eerr(str(msg_unexpected_condition())//&
@@ -594,8 +581,11 @@ subroutine calc_iarea_core(iarea, tp)
 
       call update_area_parallel(&
              iarea, &
-             tp%lon(n_prev(tp%n_pole,tp%n)), tp%lon(n_next(tp%n_pole,tp%n)), -rad_90deg, &
-             arc_position_normal)
+             !tp%lon(n_prev(tp%n_pole,tp%n)), tp%lon(n_next(tp%n_pole,tp%n)), -rad_90deg, &
+             tp%lon(prev_cyclic(tp%n_pole,tp%n)), &
+             tp%lon(next_cyclic(tp%n_pole,tp%n)), &
+             -rad_90deg, &
+             ARC_POSITION_NORMAL)
     case( polygon_position_lon0 )
       if( tp%n_pole == 0 )then
         call eerr(str(msg_unexpected_condition())//&
@@ -606,7 +596,7 @@ subroutine calc_iarea_core(iarea, tp)
       call update_area_parallel(&
              iarea, &
              tp%lon(tp%n_pole-1), tp%lon(tp%n_pole+1), -rad_90deg, &
-             arc_position_lon0)
+             ARC_POSITION_LON0)
     case default
        call eerr(str(msg_invalid_value())//&
                '\n  tp%pos: '//str(tp%pos))
@@ -1847,7 +1837,7 @@ subroutine calc_arc_sign_range(&
   selectcase( arcpos )
   !-------------------------------------------------------------
   ! Case: Normal
-  case( arc_position_normal )
+  case( ARC_POSITION_NORMAL )
     if( abs(lon1 - lon2) > rad_180deg )then
       if( (lon1 == rad_0deg   .and. lon2 == rad_360deg) .or. &
           (lon1 == rad_360deg .and. lon2 == rad_0deg  ) )then
@@ -1918,7 +1908,7 @@ subroutine calc_arc_sign_range(&
     ttdhf_zone(nZones) = dh_gt_west_le_east(elon, tdhi_buf, tdhf_buf)
   !-------------------------------------------------------------
   ! Case: Lon0
-  case( arc_position_lon0 )
+  case( ARC_POSITION_LON0 )
     if( lon1 > lon2 )then
       sgn_lon = 1
       wlon = lon1

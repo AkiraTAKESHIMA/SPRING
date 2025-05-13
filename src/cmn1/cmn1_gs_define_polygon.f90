@@ -101,8 +101,6 @@ subroutine set_gs__polygon(ap)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_n_list_polygon(ap)
-
   call edbg('Reading grid system data')
   call read_data_plainbinary(ap, ijs, ije)
 
@@ -163,41 +161,6 @@ subroutine set_gs__polygon(ap)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_gs__polygon
-!===============================================================
-!
-!===============================================================
-subroutine make_n_list_polygon(ap)
-  implicit none
-  type(gs_polygon_), intent(inout) :: ap
-
-  integer :: nmax, n
-
-  call echo(code%bgn, 'make_n_list_polygon', '-p -x2')
-  !-------------------------------------------------------------
-  allocate(ap%n_next(ap%np,ap%np), &
-           ap%n_prev(ap%np,ap%np))
-
-  ap%n_next(:,:) = 0
-  ap%n_prev(:,:) = 0
-
-  do nmax = 3, int(ap%np,4)
-    do n = 1, nmax-1
-      ap%n_next(n,nmax) = n + 1
-    enddo
-    ap%n_next(nmax,nmax) = 1
-
-    ap%n_prev(1,nmax) = nmax
-    do n = 2, nmax
-      ap%n_prev(n,nmax) = n - 1
-    enddo
-
-    call edbg('nmax '//str(nmax)//&
-            '\n  n_prev '//str(ap%n_prev(:nmax,nmax))//&
-            '\n  n_next '//str(ap%n_next(:nmax,nmax)))
-  enddo  ! nmax/
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_n_list_polygon
 !===============================================================
 !
 !===============================================================
@@ -411,7 +374,7 @@ subroutine modify_coords(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n
+  integer(4) :: n
   logical :: found_0deg, found_lt180deg
 
   call echo(code%bgn, 'modify_coords', '-p -x2')
@@ -575,7 +538,7 @@ subroutine count_vertices(ap, ijs, ije)
   type(polygon_), pointer :: p
   type(polygon_) :: p_
   integer(8) :: ij
-  integer(8) :: n
+  integer(4) :: n
   real(8) :: lon1, lat1, lon2, lat2
   logical :: is_same
 
@@ -596,11 +559,13 @@ subroutine count_vertices(ap, ijs, ije)
     p => ap%polygon(ij)
 
     p%n = 0
-    do n = 1, ap%np
+    do n = 1, int(ap%np,4)
       lon1 = p%lon(n)
       lat1 = p%lat(n)
-      lon2 = p%lon(ap%n_next(n,ap%np))
-      lat2 = p%lat(ap%n_next(n,ap%np))
+      !lon2 = p%lon(ap%n_next(n,ap%np))
+      !lat2 = p%lat(ap%n_next(n,ap%np))
+      lon2 = p%lon(next_cyclic(n,int(ap%np,4)))
+      lat2 = p%lat(next_cyclic(n,int(ap%np,4)))
 
       is_same = .false.
       if( lat1 == ap%coord_miss_s )then
@@ -624,7 +589,8 @@ subroutine count_vertices(ap, ijs, ije)
           call eerr(str(msg_unexpected_condition())//&
                   '\n  Duplicated vertices were found.'//&
                   '\npolygon('//str(ij,dgt(ije))//') '//&
-                    '('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
+                    !'('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
+                    '('//str(n,dgt(ap%np))//') == ('//str(next_cyclic(n,int(ap%np,4)))//') '//&
                     '('//str(str_coords_lonlat((/lon1,lat1/),ap%coord_miss_s))//')')
         endif
         cycle
@@ -660,11 +626,13 @@ subroutine count_vertices(ap, ijs, ije)
     p_%arctyp(:) = p%arctyp(:)
 
     p%n = 0
-    do n = 1, ap%np
+    do n = 1, int(ap%np,4)
       lon1 = p_%lon(n)
       lat1 = p_%lat(n)
-      lon2 = p_%lon(ap%n_next(n,ap%np))
-      lat2 = p_%lat(ap%n_next(n,ap%np))
+      !lon2 = p_%lon(ap%n_next(n,ap%np))
+      !lat2 = p_%lat(ap%n_next(n,ap%np))
+      lon2 = p_%lon(next_cyclic(n,int(ap%np,4)))
+      lat2 = p_%lat(next_cyclic(n,int(ap%np,4)))
 
       if( lat1 == ap%coord_miss_s )then
         cycle
@@ -712,7 +680,7 @@ subroutine modify_arctyp(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n, nn
+  integer(4) :: n, nn
 
   call echo(code%bgn, 'modify_arctyp', '-p -x2')
   !-------------------------------------------------------------
@@ -720,7 +688,8 @@ subroutine modify_arctyp(ap, ijs, ije)
     p => ap%polygon(ij)
 
     do n = 1, p%n
-      nn = ap%n_next(n,p%n)
+      !nn = ap%n_next(n,p%n)
+      nn = next_cyclic(n,p%n)
 
       if( p%lon(n) == p%lon(nn) )then
         p%arctyp(n) = ARC_TYPE_MERIDIAN
@@ -742,7 +711,7 @@ subroutine find_polar_vertices(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n
+  integer(4) :: n
   logical :: is_ok
   character(16) :: opt
 
@@ -788,7 +757,7 @@ subroutine judge_status_of_arcs(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n, n_next
+  integer(4) :: n, n_next
 
   call echo(code%bgn, 'judge_status_of_arcs', '-p -x2')
   !-------------------------------------------------------------
@@ -800,7 +769,8 @@ subroutine judge_status_of_arcs(ap, ijs, ije)
     p%arcpos(:) = arc_position_normal
 
     do n = 1, p%n
-      n_next = ap%n_next(n,p%n)
+      !n_next = ap%n_next(n,p%n)
+      n_next = next_cyclic(n,p%n)
 
       if( n == p%n_pole .or. n_next == p%n_pole )then
         p%arctyp(n) = arc_type_meridian
@@ -831,7 +801,7 @@ subroutine judge_type_of_grids(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n
+  integer(4) :: n
   integer :: counter_lon0
 
   call echo(code%bgn, 'judge_type_of_grids', '-p -x2')
@@ -883,7 +853,7 @@ subroutine calc_coefs_of_arcs(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n, n_next
+  integer(4) :: n, n_next
 
   call echo(code%bgn, 'calc_coefs_of_arcs', '-p -x2')
   !-------------------------------------------------------------
@@ -898,7 +868,8 @@ subroutine calc_coefs_of_arcs(ap, ijs, ije)
     allocate(p%c(p%n))
 
     do n = 1, p%n
-      n_next = ap%n_next(n,p%n)
+      !n_next = ap%n_next(n,p%n)
+      n_next = next_cyclic(n,p%n)
 
       selectcase( p%arctyp(n) )
       case( ARC_TYPE_MERIDIAN )
@@ -935,7 +906,7 @@ subroutine calc_range_of_longit(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n
+  integer(4) :: n
 
   call echo(code%bgn, 'calc_range_of_longit', '-p -x2')
   !-------------------------------------------------------------
@@ -1035,7 +1006,7 @@ subroutine calc_range_of_latit(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n, n_next
+  integer(4) :: n, n_next
   real(8) :: south, north
 
   call echo(code%bgn, 'calc_range_of_latit', '-p -x2')
@@ -1070,7 +1041,8 @@ subroutine calc_range_of_latit(ap, ijs, ije)
       do n = 1, p%n
         selectcase( p%arctyp(n) )
         case( ARC_TYPE_NORMAL )
-          n_next = ap%n_next(n,p%n)
+          !n_next = ap%n_next(n,p%n)
+          n_next = next_cyclic(n,p%n)
 
           call calc_lat_range_large_arc(&
                  p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
@@ -1101,7 +1073,8 @@ subroutine calc_range_of_latit(ap, ijs, ije)
       do n = 1, p%n
         selectcase( p%arctyp(n) )
         case( ARC_TYPE_NORMAL )
-          n_next = ap%n_next(n,p%n)
+          !n_next = ap%n_next(n,p%n)
+          n_next = next_cyclic(n,p%n)
 
           call calc_lat_range_large_arc(&
                  p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
@@ -1144,7 +1117,7 @@ subroutine modify_loop_directions(ap, ijs, ije)
 
   type(polygon_), pointer :: p
   integer(8) :: ij
-  integer(8) :: n, n_prev, n_next
+  integer(4) :: n, n_prev, n_next
   logical :: is_anticlockwise
   logical :: is_north
 
@@ -1161,8 +1134,10 @@ subroutine modify_loop_directions(ap, ijs, ije)
     ! Case: Normal
     case( POLYGON_POSITION_NORMAL )
       n = p%n_west
-      n_prev = ap%n_prev(n,p%n)
-      n_next = ap%n_next(n,p%n)
+      !n_prev = ap%n_prev(n,p%n)
+      !n_next = ap%n_next(n,p%n)
+      n_prev = prev_cyclic(n,p%n)
+      n_next = next_cyclic(n,p%n)
 
       if( p%lat(n_prev) == p%lat(n_next) )then
         is_anticlockwise = p%lon(n_prev) < p%lon(n_next)
@@ -1173,8 +1148,10 @@ subroutine modify_loop_directions(ap, ijs, ije)
     ! Case: Lon0
     case( POLYGON_POSITION_LON0 )
       n = p%n_west
-      n_prev = ap%n_prev(n,p%n)
-      n_next = ap%n_next(n,p%n)
+      !n_prev = ap%n_prev(n,p%n)
+      !n_next = ap%n_next(n,p%n)
+      n_prev = prev_cyclic(n,p%n)
+      n_next = next_cyclic(n,p%n)
 
       if( p%lat(n_prev) == p%lat(n_next) )then
         is_anticlockwise = p%lon(n_prev) > p%lon(n_next)
@@ -1192,8 +1169,9 @@ subroutine modify_loop_directions(ap, ijs, ije)
         is_north = .false.
       endif
 
-      call get_n_next_lon_is_unequal(ap, ij, n, p%n, p%n_pole, p%lon, n_next)
-      n = ap%n_prev(n_next,p%n)
+      call get_n_next_lon_is_unequal(ij, n, p%n, p%n_pole, p%lon, n_next)
+      !n = ap%n_prev(n_next,p%n)
+      n = prev_cyclic(n_next,p%n)
 
       if( p%arcpos(n) == ARC_POSITION_LON0 )then
         is_anticlockwise = p%lon(n) > p%lon(n_next) .eqv. is_north
@@ -1266,20 +1244,21 @@ end subroutine update_grdmsk
 !===============================================================
 !
 !===============================================================
-subroutine get_n_next_lon_is_unequal(ap, ij, n, nmax, n_pole, lon, n_next)
+subroutine get_n_next_lon_is_unequal(ij, n, nmax, n_pole, lon, n_next)
   implicit none
-  type(gs_polygon_), intent(in) :: ap
   integer(8), intent(in) :: ij
-  integer(8), intent(in) :: n
+  integer(4), intent(in) :: n
   integer(4), intent(in) :: nmax, n_pole
   real(8)   , intent(in) :: lon(:)  !(nmax)
-  integer(8), intent(out) :: n_next
+  integer(4), intent(out) :: n_next
 
   !call echo(code%bgn, 'get_n_next_lon_is_unequal', '-p -x2')
   !-------------------------------------------------------------
-  n_next = ap%n_next(n,nmax)
+  !n_next = ap%n_next(n,nmax)
+  n_next = next_cyclic(n,nmax)
   do while( lon(n_next) == lon(n) .or. n_next == n_pole )
-    n_next = ap%n_next(n_next,nmax)
+    !n_next = ap%n_next(n_next,nmax)
+    n_next = next_cyclic(n_next,nmax)
     if( n_next == n )then
       call echo(code%bgn, 'get_n_next_lon_is_unequal', '-p -x2')
       call eerr(str(msg_unexpected_condition())//&

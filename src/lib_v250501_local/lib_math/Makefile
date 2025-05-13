@@ -15,7 +15,7 @@ OBJ_F = \
   lib_math_operation.o\
   lib_math_stats.o\
   lib_math_unit.o\
-  lib_math_gcd.o\
+  lib_math_int.o\
   lib_math_array.o\
   lib_math_linalg_operator.o\
   lib_math_linalg_util.o\

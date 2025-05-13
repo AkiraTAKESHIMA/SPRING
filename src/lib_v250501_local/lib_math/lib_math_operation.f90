@@ -5,6 +5,9 @@ module lib_math_operation
   ! Public procedures
   !-------------------------------------------------------------
   public :: add
+  public :: add_cyclic
+  public :: next_cyclic
+  public :: prev_cyclic
   public :: mul
   public :: div
   !-------------------------------------------------------------
@@ -29,6 +32,29 @@ module lib_math_operation
     module procedure add__int8_int8
     module procedure add__real_real
     module procedure add__dble_dble
+  end interface
+
+  interface add_cyclic
+    module procedure add_cyclic__int1_int1
+    module procedure add_cyclic__int2_int2
+    module procedure add_cyclic__int4_int4
+    module procedure add_cyclic__int4_int8
+    module procedure add_cyclic__int8_int4
+    module procedure add_cyclic__int8_int8
+  end interface
+
+  interface next_cyclic
+    module procedure next_cyclic__int1
+    module procedure next_cyclic__int2
+    module procedure next_cyclic__int4
+    module procedure next_cyclic__int8
+  end interface
+
+  interface prev_cyclic
+    module procedure prev_cyclic__int1
+    module procedure prev_cyclic__int2
+    module procedure prev_cyclic__int4
+    module procedure prev_cyclic__int8
   end interface
 
   interface mul
@@ -224,6 +250,174 @@ subroutine add__dble_dble(x, y)
 
   x = x + y
 end subroutine add__dble_dble
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine add_cyclic__int1_int1(x, inc, xmax)
+  implicit none
+  integer(1), intent(inout) :: x
+  integer(1), intent(in)    :: inc
+  integer(1), intent(in)    :: xmax
+
+  x = x+inc - (x+inc-1_1)/xmax*xmax
+  if( x <= 0_1 ) x = x + xmax
+end subroutine add_cyclic__int1_int1
+!===============================================================
+!
+!===============================================================
+subroutine add_cyclic__int2_int2(x, inc, xmax)
+  implicit none
+  integer(2), intent(inout) :: x
+  integer(2), intent(in)    :: inc
+  integer(2), intent(in)    :: xmax
+
+  x = x+inc - (x+inc-1_2)/xmax*xmax
+  if( x <= 0_2 ) x = x + xmax
+end subroutine add_cyclic__int2_int2
+!===============================================================
+!
+!===============================================================
+subroutine add_cyclic__int4_int4(x, inc, xmax)
+  implicit none
+  integer(4), intent(inout) :: x
+  integer(4), intent(in)    :: inc
+  integer(4), intent(in)    :: xmax
+
+  x = x+inc - (x+inc-1)/xmax*xmax
+  if( x <= 0 ) x = x + xmax
+end subroutine add_cyclic__int4_int4
+!===============================================================
+!
+!===============================================================
+subroutine add_cyclic__int4_int8(x, inc, xmax)
+  implicit none
+  integer(4), intent(inout) :: x
+  integer(8), intent(in)    :: inc
+  integer(4), intent(in)    :: xmax
+
+  x = x+int(inc,4) - (x+int(inc,4)-1)/xmax*xmax
+  if( x <= 0 ) x = x + xmax
+end subroutine add_cyclic__int4_int8
+!===============================================================
+!
+!===============================================================
+subroutine add_cyclic__int8_int4(x, inc, xmax)
+  implicit none
+  integer(8), intent(inout) :: x
+  integer(4), intent(in)    :: inc
+  integer(8), intent(in)    :: xmax
+
+  x = x+inc - (x+inc-1)/xmax*xmax
+  if( x <= 0_8 ) x = x + xmax
+end subroutine add_cyclic__int8_int4
+!===============================================================
+!
+!===============================================================
+subroutine add_cyclic__int8_int8(x, inc, xmax)
+  implicit none
+  integer(8), intent(inout) :: x
+  integer(8), intent(in)    :: inc
+  integer(8), intent(in)    :: xmax
+
+  x = x+inc - (x+inc-1)/xmax*xmax
+  if( x <= 0_8 ) x = x + xmax
+end subroutine add_cyclic__int8_int8
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+integer(1) function next_cyclic__int1(n, nmax) result(res)
+  implicit none
+  integer(1), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int1_int1(res, 1_1, nmax)
+end function next_cyclic__int1
+!===============================================================
+!
+!===============================================================
+integer(2) function next_cyclic__int2(n, nmax) result(res)
+  implicit none
+  integer(2), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int2_int2(res, 1_2, nmax)
+end function next_cyclic__int2
+!===============================================================
+!
+!===============================================================
+integer(4) function next_cyclic__int4(n, nmax) result(res)
+  implicit none
+  integer(4), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int4_int4(res, 1_4, nmax)
+end function next_cyclic__int4
+!===============================================================
+!
+!===============================================================
+integer(8) function next_cyclic__int8(n, nmax) result(res)
+  implicit none
+  integer(8), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int8_int8(res, 1_8, nmax)
+end function next_cyclic__int8
+!===============================================================
+!
+!===============================================================
+integer(1) function prev_cyclic__int1(n, nmax) result(res)
+  implicit none
+  integer(1), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int1_int1(res, -1_1, nmax)
+end function prev_cyclic__int1
+!===============================================================
+!
+!===============================================================
+integer(2) function prev_cyclic__int2(n, nmax) result(res)
+  implicit none
+  integer(2), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int2_int2(res, -1_2, nmax)
+end function prev_cyclic__int2
+!===============================================================
+!
+!===============================================================
+integer(4) function prev_cyclic__int4(n, nmax) result(res)
+  implicit none
+  integer(4), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int4_int4(res, -1_4, nmax)
+end function prev_cyclic__int4
+!===============================================================
+!
+!===============================================================
+integer(8) function prev_cyclic__int8(n, nmax) result(res)
+  implicit none
+  integer(8), intent(in) :: n, nmax
+
+  res = n
+  call add_cyclic__int8_int8(res, -1_8, nmax)
+end function prev_cyclic__int8
 !===============================================================
 !
 !===============================================================

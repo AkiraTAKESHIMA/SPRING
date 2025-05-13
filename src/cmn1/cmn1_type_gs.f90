@@ -352,9 +352,6 @@ module cmn1_type_gs
 
     integer(8) :: idxmin, idxmax
 
-    integer(8), pointer :: n_next(:,:)
-    integer(8), pointer :: n_prev(:,:)
-
     integer(8) :: idx_miss
     real(8)    :: uwa_miss
     real(8)    :: ara_miss

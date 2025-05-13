@@ -155,7 +155,6 @@ subroutine alloc_gs_components(a, gs_type)
     nullify(ap%f_grid_in)
     nullify(ap%f_grid_out)
     nullify(ap%polygon)
-    nullify(ap%n_next, ap%n_prev)
     nullify(ap)
   case default
     call eerr(str(msg_invalid_value())//&
@@ -498,9 +497,6 @@ subroutine set_default_values_gs_polygon(up)
 
   up%idxmin = 0_8
   up%idxmax = 0_8
-
-  nullify(up%n_next)
-  nullify(up%n_prev)
 
   up%idx_miss    = IDX_MISS_DEFAULT
   up%uwa_miss    = UWA_MISS_DEFAULT
@@ -1269,8 +1265,6 @@ subroutine free_gs(a)
     call free_grid(ap%grid)
 
     if( associated(ap%polygon) ) deallocate(ap%polygon)
-
-    if( associated(ap%n_next) ) deallocate(ap%n_next, ap%n_prev)
 
     nullify(ap)
     nullify(a%polygon)
