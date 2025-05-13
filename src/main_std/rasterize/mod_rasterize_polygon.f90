@@ -5,12 +5,10 @@ module mod_rasterize_polygon
   use lib_array
   use lib_math
   use lib_io
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common3
-  use common_type_rst
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn3_type_rst
   implicit none
   private
   !-------------------------------------------------------------
@@ -23,22 +21,20 @@ module mod_rasterize_polygon
 !
 !===============================================================
 subroutine rasterize_polygon(a, b, output)
-  ! common2
-  use common_area_raster_polygon, only: &
+  use cmn2_area_raster_polygon, only: &
         initialize_area_rp      => initialize     , &
         finalize_area_rp        => finalize       , &
         initialize_zone_area_rp => initialize_zone, &
         finalize_zone_area_rp   => finalize_zone  , &
         calc_iarea                                , &
         get_dhv_polygon
-  ! common3
-  use common_rst_run, only: &
-        get_tasks                                , &
-        initialize_common      => initialize     , &
-        finalize_common        => finalize       , &
-        initialize_zone_common => initialize_zone, &
-        alloc_map                                , &
-        update_iarea_sum                         , &
+  use cmn3_rst_run, only: &
+        get_tasks                             , &
+        initialize_cmn      => initialize     , &
+        finalize_cmn        => finalize       , &
+        initialize_zone_cmn => initialize_zone, &
+        alloc_map                             , &
+        update_iarea_sum                      , &
         update_iarea_max
   ! this
   use mod_data, only: &
@@ -88,7 +84,7 @@ subroutine rasterize_polygon(a, b, output)
 
   fill_miss = .true.
 
-  info = initialize_common(a, b, output)
+  info = initialize_cmn(a, b, output)
 
   call initialize_area_rp(br, ap)
   !-------------------------------------------------------------
@@ -107,7 +103,7 @@ subroutine rasterize_polygon(a, b, output)
     !
     !-----------------------------------------------------------
     call initialize_zone_area_rp(brz)
-    call initialize_zone_common(&
+    call initialize_zone_cmn(&
            brz%hi, brz%hf, brz%vi, brz%vf, &
            brz%xi, brz%xf, brz%yi, brz%yf, &
            fill_miss)
@@ -171,7 +167,7 @@ subroutine rasterize_polygon(a, b, output)
   !-------------------------------------------------------------
   ! Postprocess
   !-------------------------------------------------------------
-  info = finalize_common()
+  info = finalize_cmn()
 
   call finalize_area_rp()
 

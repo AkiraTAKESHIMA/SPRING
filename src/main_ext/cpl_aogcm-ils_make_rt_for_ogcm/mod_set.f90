@@ -5,12 +5,9 @@ module mod_set
   use lib_io
   use lib_array
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn2_type_rt
   use def_const
   use def_type
   implicit none
@@ -26,8 +23,7 @@ contains
 !===============================================================
 subroutine read_settings(&
     rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -38,18 +34,17 @@ subroutine read_settings(&
         bar                    , &
         raise_error_invalid_key, &
         msg_invalid_input
-  use common_file, only: &
+  use cmn1_file, only: &
         open_report_file
-  use common_opt_ctrl, only: &
+  use cmn1_opt_ctrl, only: &
         set_opt_sys, &
         set_opt_log, &
         set_opt_earth
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
         set_default_values_opt_earth
-  ! common2
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         init_rt
   implicit none
   type(rt_)  , intent(out), target :: rt_in_agcm_to_ogcm
@@ -265,7 +260,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_input_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -278,7 +273,7 @@ subroutine read_settings_input_rt(rt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         set_default_values_rt
   implicit none
   type(rt_), intent(inout), target :: rt
@@ -378,7 +373,7 @@ end subroutine read_settings_input_rt
 !
 !===============================================================
 subroutine read_settings_input_agcm(agcm)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -500,7 +495,7 @@ end subroutine read_settings_input_agcm
 !
 !===============================================================
 subroutine read_settings_input_lsm(lsm)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -624,7 +619,7 @@ end subroutine read_settings_input_lsm
 !
 !===============================================================
 subroutine read_settings_output_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -640,9 +635,9 @@ subroutine read_settings_output_rt(rt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         set_default_values_rt
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         KEY_OPT_COEF_SUM_MODIFY      , &
         KEY_OPT_COEF_SUM_MODIFY_ULIM , &
         KEY_OPT_COEF_ZERO_POSITIVE   , &
@@ -916,10 +911,9 @@ end subroutine read_settings_output_rt
 !
 !===============================================================
 subroutine read_settings_opt(opt, opt_ext)
-  ! common1
-  use common_const_util, only: &
+  use cmn1_const_util, only: &
         checkval_opt_old_files
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -933,7 +927,7 @@ subroutine read_settings_opt(opt, opt_ext)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
@@ -941,9 +935,8 @@ subroutine read_settings_opt(opt, opt_ext)
         KEY_EARTH_SHAPE         , &
         KEY_EARTH_R             , &
         KEY_EARTH_E2
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_values_opt_earth
-  ! this
   use mod_const_util, only: &
         checkval_method_rivwat
   implicit none
@@ -1052,7 +1045,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine echo_settings_input_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(rt_), intent(in), target :: rt
@@ -1076,7 +1069,7 @@ end subroutine echo_settings_input_rt
 !
 !===============================================================
 subroutine echo_settings_input_agcm(agcm)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(agcm_), intent(in) :: agcm
@@ -1099,7 +1092,7 @@ end subroutine echo_settings_input_agcm
 !
 !===============================================================
 subroutine echo_settings_input_lsm(lsm)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(lsm_), intent(in) :: lsm
@@ -1122,9 +1115,9 @@ end subroutine echo_settings_input_lsm
 !
 !===============================================================
 subroutine echo_settings_output_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         echo_settings_opt_rt_coef
   implicit none
   type(rt_), intent(in), target :: rt
@@ -1154,9 +1147,9 @@ end subroutine echo_settings_output_rt
 !
 !===============================================================
 subroutine echo_settings_opt(opt, opt_ext)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         echo_settings_opt_sys, &
         echo_settings_opt_log, &
         echo_settings_opt_earth
@@ -1188,7 +1181,7 @@ end subroutine echo_settings_opt
 subroutine check_paths(&
     rt_in_agcm_to_ogcm, agcm, lsm, &
     rt_out_lsm_to_agcm, opt)
-  use common_file, only: &
+  use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none

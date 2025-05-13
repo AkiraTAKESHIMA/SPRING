@@ -1,7 +1,7 @@
 module mod_finalize
   use lib_log
-  use common_type_gs
-  use common_type_rt
+  use cmn1_type_gs
+  use cmn2_type_rt
   implicit none
   !-------------------------------------------------------------
   ! Public procedures
@@ -15,12 +15,11 @@ contains
 !
 !===============================================================
 subroutine finalize(s, t, rt)
-  use common_file, only: &
+  use cmn1_file, only: &
         close_report_file
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         clear_gs
-  ! common2
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         clear_rt
   implicit none
   type(gs_), intent(inout) :: s, t

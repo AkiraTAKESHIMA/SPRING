@@ -5,13 +5,10 @@ module mod_set
   use lib_util
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn2_type_rt
   use def_type
   implicit none
   private
@@ -29,7 +26,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(gs_source, gs_target, rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -40,22 +37,22 @@ subroutine read_settings(gs_source, gs_target, rt)
         bar                    , &
         raise_error_invalid_key, &
         msg_invalid_input
-  use common_file, only: &
+  use cmn1_file, only: &
         open_report_file
-  use common_opt_ctrl, only: &
+  use cmn1_opt_ctrl, only: &
         set_opt_sys, &
         set_opt_log, &
         set_opt_earth
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
         set_default_values_opt_earth
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         init_gs               , &
         set_miss_file_grid_in , &
         set_miss_file_grid_out, &
         set_save_file_grid_out
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         init_rt
   implicit none
   type(gs_) , intent(out), target :: gs_source, gs_target
@@ -411,7 +408,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_gs_latlon(a)
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -424,17 +421,17 @@ subroutine read_settings_gs_latlon(a)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_latlon, &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
-  use common_gs_util, only: &
+  use cmn1_gs_util, only: &
         set_gs_debug
   implicit none
   type(gs_), intent(inout), target :: a
@@ -777,9 +774,9 @@ end subroutine read_settings_gs_latlon
 !
 !===============================================================
 subroutine read_settings_gs_raster(a)
-  use common_const_util, only: &
+  use cmn1_const_util, only: &
         checkval_grdidx_condition
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -792,17 +789,17 @@ subroutine read_settings_gs_raster(a)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
-  use common_gs_util, only: &
+  use cmn1_gs_util, only: &
         set_gs_debug
   implicit none
   type(gs_), intent(inout), target :: a
@@ -1123,7 +1120,7 @@ end subroutine read_settings_gs_raster
 !
 !===============================================================
 subroutine read_settings_gs_polygon(a)
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -1136,14 +1133,14 @@ subroutine read_settings_gs_polygon(a)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components          , &
         set_gs_common                , &
         set_default_values_gs_polygon, &
         set_bounds_file_polygon_in   , &
         set_bounds_file_grid_in      , &
         set_bounds_file_grid_out
-  use common_gs_util, only: &
+  use cmn1_gs_util, only: &
         set_gs_debug
   implicit none
   type(gs_), intent(inout), target :: a
@@ -1496,7 +1493,7 @@ end subroutine read_settings_gs_polygon
 !
 !===============================================================
 subroutine read_settings_remapping(rt, s, t)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1512,19 +1509,19 @@ subroutine read_settings_remapping(rt, s, t)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_file_grid_in_val, &
         alloc_file_grid_out_val
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         set_default_values_rt
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         KEY_OPT_COEF_SUM_MODIFY      , &
         KEY_OPT_COEF_SUM_MODIFY_ULIM , &
         KEY_OPT_COEF_ZERO_POSITIVE   , &
         KEY_OPT_COEF_ZERO_NEGATIVE   , &
         KEY_OPT_COEF_ERROR_EXCESS    , &
         KEY_OPT_COEF_SUM_ERROR_EXCESS
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         check_values_opt_rt_coef
   implicit none
   type(rt_), intent(inout), target :: rt
@@ -1998,9 +1995,9 @@ end subroutine read_settings_remapping
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_const_util, only: &
+  use cmn1_const_util, only: &
         checkval_opt_old_files
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -2013,7 +2010,7 @@ subroutine read_settings_opt(opt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
@@ -2021,7 +2018,7 @@ subroutine read_settings_opt(opt)
         KEY_EARTH_SHAPE         , &
         KEY_EARTH_R             , &
         KEY_EARTH_E2
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_values_opt_earth
   implicit none
   type(opt_), intent(inout) :: opt
@@ -2114,7 +2111,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine skip_unused_block()
-  use common_set, only: &
+  use cmn1_set, only: &
         key       , &
         read_input
   implicit none
@@ -2146,7 +2143,7 @@ end subroutine skip_unused_block
 !
 !===============================================================
 subroutine check_paths(gs_source, gs_target, rt, opt_sys)
-  use common_file, only: &
+  use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none
@@ -2382,7 +2379,7 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_gs_latlon(al)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_latlon_), intent(in), target :: al
@@ -2467,7 +2464,7 @@ end subroutine echo_settings_gs_latlon
 !
 !===============================================================
 subroutine echo_settings_gs_raster(ar)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_raster_), intent(in), target :: ar
@@ -2548,7 +2545,7 @@ end subroutine echo_settings_gs_raster
 !
 !===============================================================
 subroutine echo_settings_gs_polygon(ap)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_polygon_), intent(in), target :: ap
@@ -2646,16 +2643,16 @@ end subroutine echo_settings_gs_polygon
 !
 !===============================================================
 subroutine echo_settings_remapping(rt, s, t)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         KEY_OPT_COEF_SUM_MODIFY      , &
         KEY_OPT_COEF_SUM_MODIFY_ULIM , &
         KEY_OPT_COEF_ZERO_POSITIVE   , &
         KEY_OPT_COEF_ZERO_NEGATIVE   , &
         KEY_OPT_COEF_ERROR_EXCESS    , &
         KEY_OPT_COEF_SUM_ERROR_EXCESS
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         echo_settings_opt_rt_coef
   implicit none
   type(rt_), intent(in), target :: rt
@@ -2797,9 +2794,9 @@ end subroutine echo_settings_remapping
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         echo_settings_opt_sys, &
         echo_settings_opt_log, &
         echo_settings_opt_earth

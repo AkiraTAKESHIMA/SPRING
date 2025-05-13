@@ -1,37 +1,33 @@
 module mod_main
-  ! lib
   use lib_const
   use lib_base
   use lib_log
   use lib_io
   use lib_array
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_file, only: &
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_file, only: &
         report
-  ! common2
-  use common_type_rt
-  use common_rt_main_util, only: &
+  use cmn2_type_rt
+  use cmn2_rt_main_util, only: &
         merge_elems_same_index, &
         sort_rt
-  use common_rt_main_coef, only: &
+  use cmn2_rt_main_coef, only: &
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
-  use common_rt_stats, only: &
+  use cmn2_rt_stats, only: &
         get_rt_main_stats     , &
         report_rt_main_summary
-  use common_rt_error, only: &
+  use cmn2_rt_error, only: &
         raise_error_coef_negative        , &
         raise_error_coef_small           , &
         raise_error_coef_above_thresh    , &
         raise_error_coef_sum_above_thresh, &
         raise_error_val_sum_non_positive
-  ! this
   use def_type
   use mod_utils, only: &
-        open_file_grid_im, &
+        open_file_grid_im , &
         close_file_grid_im
   implicit none
   private

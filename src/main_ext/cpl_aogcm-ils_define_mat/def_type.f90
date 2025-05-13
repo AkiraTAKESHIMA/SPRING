@@ -5,9 +5,9 @@ module def_type
   use lib_io
   use lib_array
   use lib_math
-  use common_const
-  use common_type_opt
-  use common_type_rt
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn2_type_rt
   implicit none
 
   type rt_in_

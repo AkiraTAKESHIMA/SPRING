@@ -4,23 +4,21 @@ module mod_define_mat
   use lib_log
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  use common_type_rt
-  use common_file, only: &
+  use cmn1_const
+  use cmn1_file, only: &
         set_opt_old_files
-  ! common2
-  use common_rt_base, only: &
+  use cmn2_type_rt
+  use cmn2_rt_base, only: &
         init_rt_main_data    , &
         set_default_values_rt, &
         free_rt_main
-  use common_rt_stats, only: &
+  use cmn2_rt_stats, only: &
         get_rt_main_stats     , &
         report_rt_main_summary
-  use common_rt_main_io, only: &
+  use cmn2_rt_main_io, only: &
         read_rt_main , &
         write_rt_main
-  use common_rt_main_coef, only: &
+  use cmn2_rt_main_coef, only: &
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
   ! this

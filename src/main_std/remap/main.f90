@@ -1,17 +1,13 @@
 program main
   use lib_const
   use lib_log
-  ! common1
-  use common_type_opt
-  use common_type_gs
-  ! common2
-  use common_type_rt
-  ! common3
-  use common_gs_driv, only: &
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn1_gs_driv, only: &
         set_gs_all
-  use common_rt_driv, only: &
+  use cmn2_type_rt
+  use cmn3_rt_driv, only: &
         make_rt
-  ! this
   use def_type
   use mod_set, only: &
         read_settings

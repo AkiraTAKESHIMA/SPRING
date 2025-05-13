@@ -5,8 +5,8 @@ module mod_grid
   use lib_io
   use lib_array
   use lib_math
-  use common_const
-  use common_type_opt
+  use cmn1_const
+  use cmn1_type_opt
   use mod_utils, only: &
         open_file_grid_im, &
         close_file_grid_im
@@ -628,17 +628,18 @@ end subroutine count_valid_grids
 !===============================================================
 !
 !===============================================================
-subroutine read_all_data(input, grdidx, grdara)
+subroutine read_all_data(input, grdidx_all, grdara_all)
   implicit none
   type(input_), intent(in)  :: input
-  integer(8)  , intent(out) :: grdidx(:)
-  real(8)     , intent(out) :: grdara(:)
+  integer(8)  , intent(out) :: grdidx_all(:)
+  real(8)     , intent(out) :: grdara_all(:)
 
   type(f_grid_), pointer :: f_grid
   type(file_)  , pointer :: f
 
-  integer(8), allocatable :: grdidx_this(:)
-  real(8)   , allocatable :: grdara_this(:)
+  integer(8), pointer :: grdidx(:)
+  real(8)   , pointer :: grdara(:)
+  logical(1), pointer :: mask(:)
 
   integer(8) :: nmax, n
   integer    :: iFile_grid
@@ -647,46 +648,60 @@ subroutine read_all_data(input, grdidx, grdara)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(grdidx_this(maxval(input%list_f_grid(:)%nmax)))
-  allocate(grdara_this(maxval(input%list_f_grid(:)%nmax)))
+  nullify(grdidx, grdara)
 
   nmax = 0_8
 
   do iFile_grid = 1, input%nFiles_grid
     f_grid => input%list_f_grid(iFile_grid)
 
+    call realloc(grdidx, f_grid%nmax)
+    call realloc(grdara, f_grid%nmax)
+    call realloc(mask  , f_grid%nmax)
+
     f => f_grid%f_idx
     call edbg('Read '//str(fileinfo(f)))
-    call rbin(grdidx_this, f%path, f%dtype, f%endian, f%rec)
+    call rbin(grdidx, f%path, f%dtype, f%endian, f%rec)
 
     f => f_grid%f_ara
     call edbg('Read '//str(fileinfo(f)))
-    call rbin(grdara_this, f%path, f%dtype, f%endian, f%rec)
+    call rbin(grdara, f%path, f%dtype, f%endian, f%rec)
 
     if( f_grid%nmax_valid == f_grid%nmax )then
-      grdidx(nmax+1_8:nmax+f_grid%nmax) = grdidx_this(:)
-      grdara(nmax+1_8:nmax+f_grid%nmax) = grdara_this(:)
+      grdidx_all(nmax+1_8:nmax+f_grid%nmax) = grdidx(:)
+      grdara_all(nmax+1_8:nmax+f_grid%nmax) = grdara(:)
       call add(nmax, f_grid%nmax)
+      mask(:) = .true.
     else
+      mask(:) = .false.
       do n = 1_8, f_grid%nmax
-        if( grdidx_this(n) /= input%idx_miss )then
-          call add(nmax)
-          grdidx(nmax) = grdidx_this(n)
-          grdara(nmax) = grdara_this(n)
-        endif
+        if( grdidx(n) == input%idx_miss ) cycle
+        call add(nmax)
+        grdidx_all(nmax) = grdidx(n)
+        grdara_all(nmax) = grdara(n)
+        mask(n) = .true.
       enddo  ! n/
+    endif
+
+    if( .not. any(mask) )then
+      call edbg('No valid grid exists.')
+    else
+      call edbg('idx min: '//str(minval(grdidx,mask=mask))//&
+                  ', max: '//str(maxval(grdidx,mask=mask))//&
+              '\nara min: '//str(minval(grdara,mask=mask))//&
+                  ', max: '//str(maxval(grdara,mask=mask)))
     endif
   enddo  ! iFile_grid/
 
-  deallocate(grdidx_this)
-  deallocate(grdara_this)
+  deallocate(grdidx, grdara, mask)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine read_all_data
 !===============================================================
 !
 !===============================================================
-subroutine count_target_elements(input, idxmin, idxmax, nmax, stat_target)
+subroutine count_target_elements(&
+    input, idxmin, idxmax, nmax, stat_target)
   implicit none
   type(input_), intent(in)  :: input
   integer(8)  , intent(in)  :: idxmin, idxmax

@@ -3,16 +3,19 @@ module ls_base
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: spring_set_logopt
   public :: logopt
 
   public :: assert_initialized
   !-------------------------------------------------------------
-  !
+  ! Public module variables
   !-------------------------------------------------------------
   character(8), parameter, public :: LOGOPT_DEFAULT = '-pr -cr'
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
   character(:), allocatable :: lopt
   !-------------------------------------------------------------
 contains

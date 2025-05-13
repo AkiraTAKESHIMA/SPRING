@@ -4,13 +4,10 @@ module mod_set
   use lib_log
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn2_type_rt
   use def_const
   use def_type
   implicit none
@@ -28,7 +25,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
-  use common_set, only: &
+  use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -39,12 +36,12 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
         bar                    , &
         raise_error_invalid_key, &
         msg_invalid_input
-  use common_file, only: &
+  use cmn1_file, only: &
         open_report_file
-  use common_opt_ctrl, only: &
+  use cmn1_opt_ctrl, only: &
         set_opt_sys, &
         set_opt_log
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log
   implicit none
@@ -527,7 +524,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_input_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -543,7 +540,7 @@ subroutine read_settings_input_rt(rt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         set_default_values_rt_main
   implicit none
   type(rt_), intent(inout), target :: rt
@@ -641,7 +638,7 @@ end subroutine read_settings_input_rt
 !
 !===============================================================
 subroutine read_settings_input_agcm(agcm)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -771,7 +768,7 @@ end subroutine read_settings_input_agcm
 !
 !===============================================================
 subroutine read_settings_input_rm(rm)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -954,7 +951,7 @@ end subroutine read_settings_input_rm
 !
 !===============================================================
 subroutine read_settings_rt_coef_options(opt_coef)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -970,7 +967,7 @@ subroutine read_settings_rt_coef_options(opt_coef)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         init_opt_rt_coef
   implicit none
   type(opt_rt_coef_), intent(inout) :: opt_coef
@@ -1058,7 +1055,7 @@ end subroutine read_settings_rt_coef_options
 !
 !===============================================================
 subroutine read_settings_output_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1074,7 +1071,7 @@ subroutine read_settings_output_rt(rt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         set_default_values_rt_main
   implicit none
   type(rt_), intent(inout), target :: rt
@@ -1158,7 +1155,7 @@ end subroutine read_settings_output_rt
 !
 !===============================================================
 subroutine read_settings_output_agcm(agcm)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1261,7 +1258,7 @@ end subroutine read_settings_output_agcm
 !
 !===============================================================
 subroutine read_settings_output_lsm(lsm)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1527,7 +1524,7 @@ end subroutine read_settings_output_lsm
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1543,7 +1540,7 @@ subroutine read_settings_opt(opt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
@@ -1637,7 +1634,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine echo_settings_input_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(rt_), intent(in), target :: rt
@@ -1664,7 +1661,7 @@ end subroutine echo_settings_input_rt
 !
 !===============================================================
 subroutine echo_settings_input_agcm(agcm)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(agcm_), intent(in) :: agcm
@@ -1700,7 +1697,7 @@ end subroutine echo_settings_input_agcm
 !
 !===============================================================
 subroutine echo_settings_input_rm(rm)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(rm_), intent(in) :: rm
@@ -1739,9 +1736,9 @@ end subroutine echo_settings_input_rm
 !
 !===============================================================
 subroutine echo_settings_output_rt(rt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         echo_settings_opt_rt_coef
   implicit none
   type(rt_), intent(in), target :: rt
@@ -1771,7 +1768,7 @@ end subroutine echo_settings_output_rt
 !
 !===============================================================
 subroutine echo_settings_output_agcm(agcm)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(agcm_), intent(in) :: agcm
@@ -1795,7 +1792,7 @@ end subroutine echo_settings_output_agcm
 !
 !===============================================================
 subroutine echo_settings_output_lsm(lsm)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(lsm_), intent(in) :: lsm
@@ -1934,7 +1931,7 @@ end subroutine echo_settings_output_lsm
 !
 !===============================================================
 subroutine check_paths(rt_in, rt_out, agcm, rm, lsm, opt)
-  use common_file, only: &
+  use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none

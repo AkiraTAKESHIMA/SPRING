@@ -1,11 +1,8 @@
 program main
   use lib_const
   use lib_log
-  ! common1
-  use common_type_opt
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_type_opt
+  use cmn2_type_rt
   use def_type
   use mod_set, only: &
         read_settings

@@ -5,11 +5,8 @@ module mod_main
   use lib_io
   use lib_array
   use lib_math
-  ! common1
-  use common_const
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn2_type_rt
   use def_const
   use def_type
   implicit none
@@ -42,22 +39,20 @@ contains
 !
 !===============================================================
 subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
-  ! common1
-  use common_opt_ctrl, only: &
+  use cmn1_opt_ctrl, only: &
         get_opt_sys, &
         get_opt_log, &
         get_opt_earth
-  ! common2
-  use common_rt_main_util, only: &
+  use cmn2_rt_main_util, only: &
         merge_elems_same_index, &
         sort_rt
-  use common_rt_main_coef, only: &
+  use cmn2_rt_main_coef, only: &
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
-  use common_rt_stats, only: &
+  use cmn2_rt_stats, only: &
         get_rt_main_stats     , &
         report_rt_main_summary
-  use common_rt_main_io, only: &
+  use cmn2_rt_main_io, only: &
         read_rt_main , &
         write_rt_main
   implicit none

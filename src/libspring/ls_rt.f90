@@ -3,13 +3,10 @@ module ls_rt
   use lib_log
   use lib_array
   use lib_io
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn2_type_rt
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -34,7 +31,7 @@ module ls_rt
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(32), parameter :: PROCMOD = 'MODULE ls_rt'
+  character(CLEN_VAR), parameter :: MODNAME = 'ls_rt'
 
   type(rt_), pointer :: lst_rt(:)
   integer, save :: nmax_rt = 0
@@ -51,7 +48,7 @@ subroutine initialize(size_lst_rt)
 
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE initialize', logopt())
+  call echo(code%bgn, trim(MODNAME)//' initialize', logopt())
   !-------------------------------------------------------------
   call assert_initialized(is_initialized, .false.)
   is_initialized = .true.
@@ -67,13 +64,13 @@ end subroutine initialize
 !
 !===============================================================
 subroutine finalize()
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         free_rt
   implicit none
 
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE finalize', logopt())
+  call echo(code%bgn, trim(MODNAME)//' finalize', logopt())
   !-------------------------------------------------------------
   call assert_initialized(is_initialized, .true.)
   is_initialized = .false.
@@ -104,7 +101,7 @@ subroutine point_rt(name, rt)
 
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE point_rt', logopt())
+  call echo(code%bgn, trim(MODNAME)//' point_rt', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -134,14 +131,11 @@ end subroutine point_rt
 !
 !===============================================================
 subroutine spring_make_rmptbl(name, sname, tname)
-  ! common2
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         init_rt, &
         set_default_values_rt
-  ! common3
-  use common_rt_driv, only: &
+  use cmn3_rt_driv, only: &
         make_rt
-  ! this
   use ls_gs, only: &
         point_grdsys
   implicit none
@@ -158,7 +152,7 @@ subroutine spring_make_rmptbl(name, sname, tname)
   logical, parameter :: calc_coef = .true.
   logical, parameter :: make_vrf  = .false.
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_make_rmptbl', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_make_rmptbl', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -215,14 +209,14 @@ end subroutine spring_make_rmptbl
 !
 !===============================================================
 subroutine spring_clear_rmptbl(name)
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         free_rt
   implicit none
   character(*), intent(in) :: name
 
   type(rt_), pointer :: rt
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_clear_rmptbl', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_clear_rmptbl', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -252,7 +246,7 @@ subroutine spring_get_rmptbl_length(name, nij)
 
   type(rt_), pointer :: rt
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_get_rmptbl_length', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_get_rmptbl_length', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -278,7 +272,7 @@ subroutine spring_get_rmptbl_data(&
   type(rt_), pointer :: rt
   type(rt_main_), pointer :: rtm
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_get_rmptbl_data', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_get_rmptbl_data', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -348,7 +342,7 @@ subroutine spring_print_rmptbl_name()
 
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_print_rmptbl_name', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_print_rmptbl_name', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -370,7 +364,7 @@ subroutine spring_print_rmptbl(name)
   type(rt_)     , pointer :: rt
   type(rt_main_), pointer :: rtm
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_print_rmptbl', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_print_rmptbl', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

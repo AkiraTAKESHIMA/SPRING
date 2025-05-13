@@ -68,9 +68,9 @@ LIBDIR_IO     = $(TOPLIBDIR)/lib_io
 LIBDIR_PNG    = $(TOPLIBDIR)/lib_png
 MODDIR = $(TOPLIBDIR)/mod
 
-CMNDIR1 = $(TOPSRCDIR)/common1
-CMNDIR2 = $(TOPSRCDIR)/common2
-CMNDIR3 = $(TOPSRCDIR)/common3
+CMNDIR1 = $(TOPSRCDIR)/cmn1
+CMNDIR2 = $(TOPSRCDIR)/cmn2
+CMNDIR3 = $(TOPSRCDIR)/cmn3
 
 ifeq ($(ILS),T)
   include $(TOPSRCDIR)/../../../Mkinclude

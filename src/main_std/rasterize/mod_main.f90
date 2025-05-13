@@ -4,12 +4,10 @@ module mod_main
   use lib_log
   use lib_array
   use lib_io
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common3
-  use common_type_rst
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn3_type_rst
   implicit none
   private
   !-------------------------------------------------------------
@@ -22,19 +20,17 @@ contains
 !
 !===============================================================
 subroutine run(s, t, output)
-  ! common1
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         free_gs
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         set_gs
-  use common_gs_grid_core, only: &
+  use cmn1_gs_grid_core, only: &
         make_idxmap, &
         make_wgtmap, &
         make_grdidx, &
         make_grduwa, &
         make_grdara, &
         make_grdwgt
-  ! this
   use mod_rasterize_latlon, only: &
         rasterize_latlon
   use mod_rasterize_polygon, only: &

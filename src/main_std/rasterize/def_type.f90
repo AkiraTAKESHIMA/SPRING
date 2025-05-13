@@ -1,7 +1,7 @@
 module def_type
   use lib_const
   use lib_io
-  use common_type_opt
+  use cmn1_type_opt
   implicit none
   private
   !-------------------------------------------------------------

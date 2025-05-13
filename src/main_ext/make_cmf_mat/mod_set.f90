@@ -4,10 +4,8 @@ module mod_set
   use lib_log
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  use common_type_gs
-  ! this
+  use cmn1_const
+  use cmn1_type_gs
   use def_const
   use def_type
   implicit none
@@ -34,7 +32,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(cmn, cmf, mat, opt)
-  use common_set, only: &
+  use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -45,9 +43,9 @@ subroutine read_settings(cmn, cmf, mat, opt)
         bar                    , &
         raise_error_invalid_key, &
         msg_invalid_input
-  use common_file, only: &
+  use cmn1_file, only: &
         open_report_file
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
         set_default_values_opt_earth
@@ -171,7 +169,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_cmn(cmn)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -339,7 +337,7 @@ end subroutine read_settings_cmn
 !
 !===============================================================
 subroutine read_settings_cmf(cmn, cmf)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -835,7 +833,7 @@ end subroutine read_settings_cmf
 !
 !===============================================================
 subroutine read_settings_mat(cmn, mat)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1345,7 +1343,7 @@ end subroutine read_settings_mat
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1361,7 +1359,7 @@ subroutine read_settings_opt(opt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
@@ -1369,7 +1367,7 @@ subroutine read_settings_opt(opt)
         KEY_EARTH_SHAPE         , &
         KEY_EARTH_R             , &
         KEY_EARTH_E2
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_values_opt_earth
   implicit none
   type(opt_), intent(out) :: opt
@@ -1671,7 +1669,7 @@ end subroutine set_default_values_mat
 !
 !===============================================================
 subroutine echo_settings_cmn(cmn)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(cmn_), intent(in) :: cmn
@@ -1714,7 +1712,7 @@ end subroutine echo_settings_cmn
 !
 !===============================================================
 subroutine echo_settings_cmf(cmn, cmf)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(cmn_), intent(in) :: cmn
@@ -1802,7 +1800,7 @@ end subroutine echo_settings_cmf
 !
 !===============================================================
 subroutine echo_settings_mat(cmn, mat)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(cmn_), intent(in) :: cmn
@@ -1892,9 +1890,9 @@ end subroutine echo_settings_mat
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         echo_settings_opt_sys, &
         echo_settings_opt_log, &
         echo_settings_opt_earth
@@ -1931,7 +1929,7 @@ end subroutine echo_settings_opt
 !
 !===============================================================
 subroutine check_paths(cmn, cmf, mat, opt)
-  use common_file, only: &
+  use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none

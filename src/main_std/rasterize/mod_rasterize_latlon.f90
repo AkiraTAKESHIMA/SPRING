@@ -3,12 +3,10 @@ module mod_rasterize_latlon
   use lib_base
   use lib_log
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common3
-  use common_type_rst
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn3_type_rst
   implicit none
   private
   !-------------------------------------------------------------
@@ -21,10 +19,9 @@ contains
 !
 !===============================================================
 subroutine rasterize_latlon(a, b, output)
-  use common_rt_llbnds, only: &
+  use cmn3_rt_llbnds, only: &
         calc_relations_llbnds
-  ! common3
-  use common_rst_run, only: &
+  use cmn3_rst_run, only: &
         get_tasks, &
         initialize, &
         finalize, &
@@ -32,7 +29,6 @@ subroutine rasterize_latlon(a, b, output)
         alloc_map, &
         update_iarea_sum, &
         update_iarea_max
-  ! this
   use mod_data, only: &
         make_data
   implicit none

@@ -1,9 +1,7 @@
 program main
   use lib_log
-  ! common1
-  use common_type_opt
-  use common_type_gs
-  ! this
+  use cmn1_type_opt
+  use cmn1_type_gs
   use def_type
   use mod_set, only: &
         read_settings

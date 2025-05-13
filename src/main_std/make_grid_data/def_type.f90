@@ -1,5 +1,5 @@
 module def_type
-  use common_type_opt
+  use cmn1_type_opt
   implicit none
   private
 

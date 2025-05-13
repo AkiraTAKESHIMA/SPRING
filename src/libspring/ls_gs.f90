@@ -5,10 +5,9 @@ module ls_gs
   use lib_array
   use lib_math
   use lib_io
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
   implicit none
   private
   !-------------------------------------------------------------
@@ -28,7 +27,7 @@ module ls_gs
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: PROCMOD = 'ls_gs'
+  character(CLEN_VAR), parameter :: MODNAME = 'ls_gs'
 
   type(gs_), allocatable, target :: lst_gs(:)
   integer :: nmax_gs = 0
@@ -46,16 +45,14 @@ contains
 !
 !===============================================================
 subroutine initialize(size_lst_gs)
-  ! common1
-  use common_opt_ctrl, only: &
+  use cmn1_opt_ctrl, only: &
         set_opt_sys, &
         set_opt_log, &
         set_opt_earth
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
         set_default_values_opt_earth
-  ! this
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -67,7 +64,7 @@ subroutine initialize(size_lst_gs)
   type(opt_earth_) :: opt_earth
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' initialize', logopt())
+  call echo(code%bgn, trim(MODNAME)//' initialize', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -97,10 +94,8 @@ end subroutine initialize
 !
 !===============================================================
 subroutine finalize()
-  ! common1
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         free_gs
-  ! this
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -108,7 +103,7 @@ subroutine finalize()
 
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' finalize', logopt())
+  call echo(code%bgn, trim(MODNAME)//' finalize', logopt())
   !-------------------------------------------------------------
   call assert_initialized(is_initialized, .true.)
   is_initialized = .false.
@@ -143,7 +138,7 @@ subroutine point_grdsys(name, a)
 
   integer :: i_gs
 
-  call echo(code%bgn, trim(PROCMOD)//' point_grdsys', logopt())
+  call echo(code%bgn, trim(MODNAME)//' point_grdsys', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -178,7 +173,7 @@ subroutine check_shape_2d(varname, shp, nx, ny)
   integer     , intent(in) :: shp(:)
   integer     , intent(in) :: nx, ny
 
-  call echo(code%bgn, trim(PROCMOD)//' check_shape_2d', '-p')
+  call echo(code%bgn, trim(MODNAME)//' check_shape_2d', '-p')
   !-------------------------------------------------------------
   if( shp(1) /= nx .or. shp(2) /= ny )then
     call eerr(str(msg_unexpected_condition())//&
@@ -262,7 +257,7 @@ subroutine spring_define_grdsys_latlon(&
   integer(4) :: form_idx
   integer    :: n_idx_miss
 
-  call echo(code%bgn, trim(PROCMOD)//' spring_define_grdsys_latlon', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_define_grdsys_latlon', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -512,20 +507,18 @@ subroutine define_grdsys_latlon_core(&
     path_idx, dtype_idx, endian_idx, rec_idx, &
     idx_miss, &
     origin)
-  ! common1
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_latlon, &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         set_gs
-  use common_gs_grid_core, only: &
+  use cmn1_gs_grid_core, only: &
         make_idxmap, &
         make_grdidx
-  ! this
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -561,7 +554,7 @@ subroutine define_grdsys_latlon_core(&
   type(file_grid_in_)  , pointer :: fg_in
   integer :: i_gs
 
-  call echo(code%bgn, trim(PROCMOD)//' define_grdsys_latlon_core', logopt())
+  call echo(code%bgn, trim(MODNAME)//' define_grdsys_latlon_core', logopt())
   !-------------------------------------------------------------
   ! Find an empty sloat for a grid system
   !-------------------------------------------------------------
@@ -799,7 +792,7 @@ subroutine spring_define_grdsys_raster(&
   integer(4) :: form_idx
   integer    :: n_idx_miss
 
-  call echo(code%bgn, trim(PROCMOD)//' spring_define_grdsys_raster', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_define_grdsys_raster', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -987,20 +980,18 @@ subroutine define_grdsys_raster_core(&
     path_idx, dtype_idx, endian_idx, rec_idx, &
     idx_miss, &
     origin)
-  ! common1
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         set_gs
-  use common_gs_grid_core, only: &
+  use cmn1_gs_grid_core, only: &
         make_idxmap, &
         make_grdidx
-  ! this
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -1025,7 +1016,7 @@ subroutine define_grdsys_raster_core(&
   type(file_raster_in_), pointer :: fr
   integer :: i_gs
 
-  call echo(code%bgn, trim(PROCMOD)//' define_grdsys_raster_core', logopt())
+  call echo(code%bgn, trim(MODNAME)//' define_grdsys_raster_core', logopt())
   !-------------------------------------------------------------
   ! Find an empty sloat for a grid system
   !-------------------------------------------------------------
@@ -1160,10 +1151,8 @@ end subroutine define_grdsys_raster_core
 !
 !===============================================================
 subroutine spring_clear_grdsys(name)
-  ! common1
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         clear_gs
-  ! this
   use ls_base, only: &
         logopt
   implicit none
@@ -1171,7 +1160,7 @@ subroutine spring_clear_grdsys(name)
 
   type(gs_), pointer :: a
 
-  call echo(code%bgn, trim(PROCMOD)//' spring_clear_grdsys', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_clear_grdsys', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1202,7 +1191,7 @@ subroutine spring_print_grdsys_name()
 
   integer :: i
 
-  call echo(code%bgn, trim(PROCMOD)//' print_grdsys_name', logopt())
+  call echo(code%bgn, trim(MODNAME)//' print_grdsys_name', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1229,7 +1218,7 @@ subroutine spring_print_grdsys(name)
   type(gs_raster_) , pointer :: ar
   type(gs_polygon_), pointer :: ap
 
-  call echo(code%bgn, trim(PROCMOD)//' print_grdsys', logopt())
+  call echo(code%bgn, trim(MODNAME)//' print_grdsys', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

@@ -1,6 +1,6 @@
 module ls_manage
+  use lib_const
   use lib_log
-  ! this
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -14,7 +14,7 @@ module ls_manage
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(32), parameter :: PROCMOD = 'MODULE ls_manage'
+  character(CLEN_VAR), parameter :: MODNAME = 'ls_manage'
 
   logical :: is_initialized = .false.
   !-------------------------------------------------------------
@@ -47,7 +47,7 @@ subroutine spring_initialize(num_grdsys, num_rmptbl, logopt)
   logopt_ = LOGOPT_DEFAULT
   if( present(logopt) ) logopt_ = logopt
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_initialize', logopt_)
+  call echo(code%bgn, trim(MODNAME)//' spring_initialize', logopt_)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -83,7 +83,7 @@ subroutine spring_finalize()
         finalize_rt => finalize
   implicit none
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_finalize', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_finalize', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

@@ -3,13 +3,10 @@ module ls_remap
   use lib_log
   use lib_array
   use lib_io
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn2_type_rt
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -22,7 +19,7 @@ module ls_remap
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(32), parameter :: PROCMOD = 'MODULE ls_remap'
+  character(CLEN_VAR), parameter :: MODNAME = 'ls_remap'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -57,7 +54,7 @@ subroutine spring_remap(&
   integer(8) :: ij
   integer(8) :: loc
 
-  call echo(code%bgn, trim(PROCMOD)//' SUBROUTINE spring_remap', logopt())
+  call echo(code%bgn, trim(MODNAME)//' spring_remap', logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

@@ -5,10 +5,9 @@ module mod_set
   use lib_log
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_opt_set, only: &
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_opt_set, only: &
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
@@ -16,9 +15,8 @@ module mod_set
         KEY_EARTH_SHAPE         , &
         KEY_EARTH_R             , &
         KEY_EARTH_E2
-  ! common2
-  use common_type_rt
-  use common_rt_set, only: &
+  use cmn2_type_rt
+  use cmn2_rt_set, only: &
         KEY_OPT_COEF_SUM_MODIFY      , &
         KEY_OPT_COEF_SUM_MODIFY_ULIM , &
         KEY_OPT_COEF_ZERO_POSITIVE   , &
@@ -39,8 +37,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(input, output, opt)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -51,13 +48,12 @@ subroutine read_settings(input, output, opt)
         bar                    , &
         raise_error_invalid_key, &
         msg_invalid_input
-  use common_file, only: &
+  use cmn1_file, only: &
         open_report_file
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log
-  ! common2
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         init_rt
   implicit none
   type(input_) , intent(out) :: input
@@ -248,8 +244,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_input(input)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -581,8 +576,7 @@ end subroutine read_settings_input
 !
 !===============================================================
 subroutine read_settings_output(output)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -596,10 +590,9 @@ subroutine read_settings_output(output)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  ! common3
-  use common_rt_base, only: &
+  use cmn2_rt_base, only: &
         set_default_values_rt
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         check_values_opt_rt_coef
   implicit none
   type(output_), intent(inout), target :: output
@@ -802,10 +795,9 @@ end subroutine read_settings_output
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  ! common1
-  use common_const_util, only: &
+  use cmn1_const_util, only: &
         checkval_opt_old_files
-  use common_set, only: &
+  use cmn1_set, only: &
         key                    , &
         keynum                 , &
         alloc_keynum           , &
@@ -915,8 +907,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine check_paths(input, output, opt_sys)
-  ! common1
-  use common_file, only: &
+  use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none
@@ -1023,8 +1014,7 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_input(input)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(input_), intent(in) :: input
@@ -1084,11 +1074,9 @@ end subroutine echo_settings_input
 !
 !===============================================================
 subroutine echo_settings_output(output)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  ! common2
-  use common_rt_set, only: &
+  use cmn2_rt_set, only: &
         echo_settings_opt_rt_coef
   implicit none
   type(output_), intent(in), target :: output
@@ -1129,11 +1117,9 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  ! common1
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  ! common2
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         echo_settings_opt_sys, &
         echo_settings_opt_log
   implicit none

@@ -5,11 +5,9 @@ module mod_main
   use lib_array
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
   use def_type
   implicit none
   private
@@ -23,11 +21,11 @@ contains
 !
 !===============================================================
 subroutine make_grid_data(a)
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         clear_gs
-  use common_gs_driv, only: &
+  use cmn1_gs_driv, only: &
         set_gs_all
-  use common_gs_grid_io, only: &
+  use cmn1_gs_grid_io, only: &
         write_grid_data
   implicit none
   type(gs_), intent(inout) :: a

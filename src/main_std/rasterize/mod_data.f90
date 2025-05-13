@@ -5,12 +5,10 @@ module mod_data
   use lib_io
   use lib_array
   use lib_math
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common3
-  use common_type_rst
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn3_type_rst
   implicit none
   private
   !-------------------------------------------------------------
@@ -29,11 +27,9 @@ contains
 subroutine make_data(&
     iarea_max, iarea_sum, msk, &
     output)
-  ! common2
-  use common_area_raster_polygon, only: &
+  use cmn2_area_raster_polygon, only: &
         calc_iratio_sum
-  ! common3
-  use common_rst_run, only: &
+  use cmn3_rst_run, only: &
         get_tasks      , &
         alloc_map      , &
         writedata      , &

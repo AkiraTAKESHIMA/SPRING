@@ -5,10 +5,10 @@ module mod_remap
   use lib_io
   use lib_array
   use lib_math
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  use common_type_rt
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn2_type_rt
   implicit none
   private
   !-------------------------------------------------------------

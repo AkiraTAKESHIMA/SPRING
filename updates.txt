@@ -3,6 +3,25 @@
 
 - Shapefile input
 #---------------------------------------------------------------
+[2025/05/13]
+#---------------------------------------------------------------
+cmn1/cmn1_type_gs.f90
+Changed the components "id" and "name" from length-fixed character to 
+length-changable character.
+
+main_std/rasterize/mod_set.f90
+  read_settings_latlon, read_settings_polygon, read_settings_raster
+Changed the intent of the argument from "out" to "inout",
+otherwise it causes segmentation fault due to an unallocated
+length-changable character.
+#---------------------------------------------------------------
+[2025/05/13]
+#---------------------------------------------------------------
+main_std/merge_remapping_tables/mod_grid.f90
+read_all_data
+
+Fixed a bug.
+#---------------------------------------------------------------
 [2025/04/24]
 #---------------------------------------------------------------
 common2/common_area_raster_polygon.f90 update_area_normal_convex_downward

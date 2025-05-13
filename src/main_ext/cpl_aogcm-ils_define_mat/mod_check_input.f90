@@ -5,8 +5,8 @@ module mod_check_input
   use lib_array
   use lib_io
   use lib_math
-  use common_const
-  use common_type_rt
+  use cmn1_const
+  use cmn2_type_rt
   use def_type
   implicit none
   private

@@ -5,13 +5,10 @@ module mod_set
   use lib_util
   use lib_math
   use lib_io
-  ! common1
-  use common_const
-  use common_type_opt
-  use common_type_gs
-  ! common3
-  use common_type_rst
-  ! this
+  use cmn1_const
+  use cmn1_type_opt
+  use cmn1_type_gs
+  use cmn3_type_rst
   use def_type
   implicit none
   private
@@ -25,7 +22,7 @@ contains
 !
 !===============================================================
 subroutine read_settings(s, t, dout)
-  use common_set, only: &
+  use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
         line_number            , &
@@ -36,17 +33,17 @@ subroutine read_settings(s, t, dout)
         bar                    , &
         raise_error_invalid_key, &
         msg_invalid_input
-  use common_file, only: &
+  use cmn1_file, only: &
         open_report_file
-  use common_opt_ctrl, only: &
+  use cmn1_opt_ctrl, only: &
         set_opt_sys  , &
         set_opt_log  , &
         set_opt_earth
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
         set_default_values_opt_earth
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         init_gs               , &
         set_miss_file_grid_in , &
         set_miss_file_grid_out, &
@@ -342,7 +339,7 @@ end subroutine read_settings
 !
 !===============================================================
 subroutine read_settings_gs_latlon(u)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -358,7 +355,7 @@ subroutine read_settings_gs_latlon(u)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_latlon, &
@@ -366,13 +363,13 @@ subroutine read_settings_gs_latlon(u)
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
-  use common_gs_util, only: &
+  use cmn1_gs_util, only: &
         set_gs_debug
   implicit none
-  type(gs_), intent(out), target :: u
+  type(gs_), intent(inout), target :: u
 
   type(gs_latlon_)     , pointer :: ul
   type(file_latlon_in_), pointer :: fl
@@ -696,7 +693,7 @@ end subroutine read_settings_gs_latlon
 !
 !===============================================================
 subroutine read_settings_gs_polygon(u)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -712,7 +709,7 @@ subroutine read_settings_gs_polygon(u)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components          , &
         set_gs_common                , &
         set_default_values_gs_polygon, &
@@ -720,10 +717,10 @@ subroutine read_settings_gs_polygon(u)
         set_bounds_file_polygon_in   , &
         set_bounds_file_grid_in      , &
         set_bounds_file_grid_out
-  use common_gs_util, only: &
+  use cmn1_gs_util, only: &
         set_gs_debug
   implicit none
-  type(gs_), intent(out), target :: u
+  type(gs_), intent(inout), target :: u
 
   type(gs_polygon_)     , pointer :: up
   type(file_polygon_in_), pointer :: fp
@@ -1091,7 +1088,7 @@ end subroutine read_settings_gs_polygon
 !
 !===============================================================
 subroutine read_settings_raster(u)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1107,18 +1104,18 @@ subroutine read_settings_raster(u)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_gs_base, only: &
+  use cmn1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use common_gs_define, only: &
+  use cmn1_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
   implicit none
-  type(gs_), intent(out), target :: u
+  type(gs_), intent(inout), target :: u
 
   type(gs_raster_)     , pointer :: ur
   type(file_raster_in_), pointer :: fr
@@ -1238,7 +1235,7 @@ end subroutine read_settings_raster
 !
 !===============================================================
 subroutine read_settings_output(dout)
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1443,9 +1440,9 @@ end subroutine read_settings_output
 !
 !===============================================================
 subroutine read_settings_opt(opt)
-  use common_const_util, only: &
+  use cmn1_const_util, only: &
         checkval_opt_old_files
-  use common_set, only: &
+  use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
         key                    , &
@@ -1461,7 +1458,7 @@ subroutine read_settings_opt(opt)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
@@ -1469,7 +1466,7 @@ subroutine read_settings_opt(opt)
         KEY_EARTH_SHAPE         , &
         KEY_EARTH_R             , &
         KEY_EARTH_E2
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         set_values_opt_earth
   implicit none
   type(opt_), intent(inout) :: opt
@@ -1573,7 +1570,7 @@ end subroutine read_settings_opt
 !
 !===============================================================
 subroutine check_paths(s, t, dout, opt_sys)
-  use common_file, only: &
+  use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none
@@ -1687,7 +1684,7 @@ end subroutine check_paths
 !
 !===============================================================
 subroutine echo_settings_gs_latlon(ul)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_latlon_), intent(in), target :: ul
@@ -1761,7 +1758,7 @@ end subroutine echo_settings_gs_latlon
 !
 !===============================================================
 subroutine echo_settings_gs_raster(ur)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
@@ -1789,7 +1786,7 @@ end subroutine echo_settings_gs_raster
 !
 !===============================================================
 subroutine echo_settings_gs_polygon(up)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_polygon_), target :: up
@@ -1876,7 +1873,7 @@ end subroutine echo_settings_gs_polygon
 !
 !===============================================================
 subroutine echo_settings_raster(ur)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(gs_raster_), intent(in), target :: ur
@@ -1910,7 +1907,7 @@ end subroutine echo_settings_raster
 !
 !===============================================================
 subroutine echo_settings_output(dout)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
   implicit none
   type(output_), intent(in), target :: dout
@@ -1977,9 +1974,9 @@ end subroutine echo_settings_output
 !
 !===============================================================
 subroutine echo_settings_opt(opt)
-  use common_set, only: &
+  use cmn1_set, only: &
         bar
-  use common_opt_set, only: &
+  use cmn1_opt_set, only: &
         echo_settings_opt_sys, &
         echo_settings_opt_log, &
         echo_settings_opt_earth

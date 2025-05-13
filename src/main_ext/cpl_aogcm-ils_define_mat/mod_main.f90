@@ -5,11 +5,8 @@ module mod_main
   use lib_array
   use lib_io
   use lib_math
-  ! common1
-  use common_const
-  ! common2
-  use common_type_rt
-  ! this
+  use cmn1_const
+  use cmn2_type_rt
   use def_type
   use mod_check_input
   use mod_define_mat

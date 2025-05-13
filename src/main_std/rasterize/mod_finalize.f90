@@ -13,7 +13,7 @@ contains
 !
 !===============================================================
 subroutine finalize()
-  use common_file, only: &
+  use cmn1_file, only: &
         close_report_file
   implicit none
 
