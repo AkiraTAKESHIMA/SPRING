@@ -25,7 +25,7 @@ contains
 !
 !===============================================================
 subroutine make_data(&
-    iarea_max, iarea_sum, msk, &
+    iarea_max, iarea_sum, msk, is_south_to_north, &
     output)
   use cmn2_area_raster_polygon, only: &
         calc_iratio_sum
@@ -39,6 +39,7 @@ subroutine make_data(&
   type(iarea_max_), pointer    :: iarea_max(:,:)  ! inout
   real(8)         , pointer    :: iarea_sum(:,:)  ! inout
   logical(1)      , pointer    :: msk(:,:)        ! in
+  logical         , intent(in) :: is_south_to_north
   type(output_)   , intent(in) :: output
 
   real(8)   , pointer :: iratio_sum(:,:)
@@ -67,7 +68,7 @@ subroutine make_data(&
          do_make_mask)
 
   if( output%f_iarea_sum%path /= '' )&
-    call writedata(output%f_iarea_sum, iarea_sum, VARNAME_IAREA_SUM)
+    call writedata(output%f_iarea_sum, iarea_sum, VARNAME_IAREA_SUM, is_south_to_north)
 
   if( do_make_iratio_sum )then
     call calc_iratio_sum(iarea_sum, msk)
@@ -75,7 +76,7 @@ subroutine make_data(&
   endif
 
   if( output%f_iratio_sum%path /= '' )&
-    call writedata(output%f_iratio_sum, iratio_sum, VARNAME_IRATIO_SUM)
+    call writedata(output%f_iratio_sum, iratio_sum, VARNAME_IRATIO_SUM, is_south_to_north)
 
   if( do_make_idx )then
     call alloc_map(idx)
@@ -85,7 +86,7 @@ subroutine make_data(&
   endif
 
   if( output%f_idx%path /= '' )&
-    call writedata(output%f_idx, idx, VARNAME_IDX)
+    call writedata(output%f_idx, idx, VARNAME_IDX, is_south_to_north)
 
   if( associated(iarea_max)  ) deallocate(iarea_max)
   if( associated(idx)        ) deallocate(idx)
@@ -98,7 +99,7 @@ subroutine make_data(&
   endif
 
   if( output%f_mask%path /= '' )then
-    call writedata(output%f_mask, mask, VARNAME_MASK)
+    call writedata(output%f_mask, mask, VARNAME_MASK, is_south_to_north)
   endif
 
   if( associated(iratio_sum) ) nullify(iratio_sum)

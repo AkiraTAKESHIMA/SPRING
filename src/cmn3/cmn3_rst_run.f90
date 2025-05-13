@@ -325,11 +325,12 @@ end subroutine alloc_map__iarea_max
 !===============================================================
 !
 !===============================================================
-subroutine writedata__int1(f, dat, varname)
+subroutine writedata__int1(f, dat, varname, is_south_to_north)
   implicit none
   type(file_) , intent(in) :: f
-  integer(1)  , pointer    :: dat(:,:)  ! in
+  integer(1)  , pointer    :: dat(:,:)  ! actually in
   character(*), intent(in) :: varname
+  logical     , intent(in) :: is_south_to_north
 
   call echo(code%bgn, trim(MODNAME)//' writedata__int1', '-p -x2')
   !-------------------------------------------------------------
@@ -340,6 +341,8 @@ subroutine writedata__int1(f, dat, varname)
     return
   endif
 
+  if( .not. is_south_to_north )  call reverse(dat,2)
+
   call edbg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
   if( fill_miss )then
     call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
@@ -348,17 +351,20 @@ subroutine writedata__int1(f, dat, varname)
     call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
               sz=(/nbx,nby/), lb=(/bzxi,bzyi/))
   endif
+
+  if( .not. is_south_to_north )  call reverse(dat,2)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine writedata__int1
 !===============================================================
 !
 !===============================================================
-subroutine writedata__int8(f, dat, varname)
+subroutine writedata__int8(f, dat, varname, is_south_to_north)
   implicit none
   type(file_) , intent(in) :: f
-  integer(8)  , pointer    :: dat(:,:)  ! in
+  integer(8)  , pointer    :: dat(:,:)  ! actually in
   character(*), intent(in) :: varname
+  logical     , intent(in) :: is_south_to_north
 
   call echo(code%bgn, trim(MODNAME)//' writedata__int8', '-p -x2')
   !-------------------------------------------------------------
@@ -369,6 +375,8 @@ subroutine writedata__int8(f, dat, varname)
     return
   endif
 
+  if( .not. is_south_to_north )  call reverse(dat,2)
+
   call edbg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
   if( fill_miss )then
     call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
@@ -377,17 +385,20 @@ subroutine writedata__int8(f, dat, varname)
     call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
               sz=(/nbx,nby/), lb=(/bzxi,bzyi/))
   endif
+
+  if( .not. is_south_to_north )  call reverse(dat,2)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine writedata__int8
 !===============================================================
 !
 !===============================================================
-subroutine writedata__dble(f, dat, varname)
+subroutine writedata__dble(f, dat, varname, is_south_to_north)
   implicit none
   type(file_) , intent(in) :: f
-  real(8)     , pointer    :: dat(:,:)  ! in
+  real(8)     , pointer    :: dat(:,:)  ! actually in
   character(*), intent(in) :: varname
+  logical     , intent(in) :: is_south_to_north
 
   call echo(code%bgn, trim(MODNAME)//' writedata__dble', '-p -x2')
   !-------------------------------------------------------------
@@ -398,6 +409,8 @@ subroutine writedata__dble(f, dat, varname)
     return
   endif
 
+  if( .not. is_south_to_north )  call reverse(dat,2)
+
   call edbg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
   if( fill_miss )then
     call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
@@ -406,6 +419,8 @@ subroutine writedata__dble(f, dat, varname)
     call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
               sz=(/nbx,nby/), lb=(/bzxi,bzyi/))
   endif
+
+  if( .not. is_south_to_north )  call reverse(dat,2)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine writedata__dble

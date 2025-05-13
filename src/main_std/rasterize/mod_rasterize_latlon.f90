@@ -268,9 +268,9 @@ subroutine rasterize_latlon(a, b, output)
     ! $iarea_max and $iarea_sum are freed.
     !-----------------------------------------------------------
     call make_data(&
-           iarea_max, iarea_sum, & ! inout
-           brz%mskmap,           & ! in
-           output)                 ! in
+           iarea_max, iarea_sum,             & ! inout
+           brz%mskmap, br%is_south_to_north, & ! in
+           output)                             ! in
     !-----------------------------------------------------------
     ! Kill the flag
     !-----------------------------------------------------------
