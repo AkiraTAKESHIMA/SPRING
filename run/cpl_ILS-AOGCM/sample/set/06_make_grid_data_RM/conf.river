@@ -1,0 +1,39 @@
+#
+path_report: "../tmp/06_make_grid_data_RM/report.river"
+
+[grid_system_raster]
+  name: CaMa-Flood
+  nx: 21600
+  ny: 10800
+  west: -180
+  east: 180
+  south: -90
+  north: 90
+  is_south_to_north: False
+
+  dir: "../tmp/05_make_idxmap_RM"
+  fin_rstidx: "rstidx_river.bin"
+  fin_grdidx: "grdidx_river.bin"
+  in_grid_sz: 720, 360
+
+  out_form: index
+  dir: "../tmp/06_make_grid_data_RM"
+  fout_grdidx: "grdidx_river.bin"
+  fout_grdara: "grdara_river.bin"
+  fout_grdx  : "grdxyz_river.bin", rec=1
+  fout_grdy  : "grdxyz_river.bin", rec=2
+  fout_grdz  : "grdxyz_river.bin", rec=3
+  fout_grdlon: "grdlonlat_river.bin", rec=1
+  fout_grdlat: "grdlonlat_river.bin", rec=2
+
+  idx_miss: -9999
+  ara_miss: -1d20
+  xyz_miss: -1d20
+  lonlat_miss: -1d20
+[end]
+
+[options]
+  old_files: remove
+  earth_shape: sphere
+  earth_r    : 6371000.0
+[end]

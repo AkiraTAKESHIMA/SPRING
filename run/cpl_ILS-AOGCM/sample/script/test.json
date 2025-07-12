@@ -1,0 +1,81 @@
+{
+	"landType": ["river", "noriv"],
+	"OGCM": {
+		"name": "COCO-1deg",
+    "type": "polygon",
+		"np": 4,
+		"nij": 92160,
+		"directory": "../../../../dat/grid_system/COCO/1deg",
+		"f_lon_vertex": {
+			"path": "COCO_lon.bin",
+			"dtype": "dble"
+    },
+		"f_lat_vertex": {
+			"path": "COCO_lat.bin",
+			"dtype": "dble"
+		},
+		"f_arctyp": {
+			"path": "COCO_arctyp.bin",
+			"dtype": "int1"
+		},
+		"coord_unit": "degree",
+		"coord_miss": -999.0,
+		"fin_grdidx": {
+			"path": "COCO_idx.bin",
+			"dtype": "int4"
+		},
+		"idx_miss": 0
+	},
+	"AGCM": {
+		"name": "T85",
+		"type": "latlon",
+		"nx": 256,
+		"ny": 128,
+		"directory": "../../../../dat/grid_system/T85",
+		"f_lon_bound": {
+			"path": "T85_lon_bound.bin"
+		},
+		"f_lat_bound": {
+			"path": "T85_lat_bound.bin"
+		},
+		"is_south_to_north": false
+	},
+	"RM": {
+		"name": "CaMa-Flood",
+    "type": "raster",
+		"nx": 21600,
+		"ny": 10800,
+		"west": -180,
+		"east":  180,
+		"south": -90,
+		"north":  90,
+		"ncx": 720,
+		"ncy": 360,
+		"idx_miss": -9999,
+		"is_south_to_north": false
+	},
+	"LSM": {
+		"name": "MATSIRO",
+		"type": "raster",
+		"nx": 21600,
+		"ny": 10800,
+		"west": -180,
+		"east":  180,
+		"south": -90,
+		"north":  90,
+		"ncx": 720,
+		"ncy": 360,
+		"idx_miss": -9999,
+		"is_south_to_north": false
+	},
+	"remapping": {
+		"dtype_idx": "int4"
+  }, 
+  "options": {
+    "make_verification_data": true,
+    "earth": {
+      "shape": "sphere",
+      "r": 6371e+3
+    }
+	}
+}

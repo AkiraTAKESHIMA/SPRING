@@ -1,0 +1,41 @@
+#
+path_report: "../tmp/05_make_idxmap_RM/report"
+
+[common]
+  nx_grid: 720
+  ny_grid: 360
+  nx_raster: 21600
+  ny_raster: 10800
+[end]
+
+[cama-flood]
+  dir: "../tmp/04_run_FLOW/map"
+  fin_catmxy: "1min/catmxy.bin"
+  fin_nextxy: "nextxy.bin"
+  fin_basin: "basin.bin"
+
+  dir: "../tmp/05_make_idxmap_RM"
+  fout_grdidx_river    : "grdidx_river.bin"
+  fout_grdidx_river_end: "grdidx_river-end.bin"
+  fout_grdidx_noriv    : "grdidx_noriv.bin"
+  fout_grdidx_ocean    : "grdidx_ocean.bin"
+  fout_rstidx_river    : "rstidx_river.bin"
+  fout_rstidx_river_end: "rstidx_river-end.bin"
+  fout_rstidx_noriv    : "rstidx_noriv.bin"
+  fout_rstidx_ocean    : "rstidx_ocean.bin"
+  fout_rstbsn          : "rstbsn.bin"
+
+  catmxy_noriv_coastal: 0
+  catmxy_noriv_inland : -1
+  catmxy_ocean        : -9999
+  nextxy_river_mouth  : -9
+  nextxy_river_inland : -10
+  nextxy_ocean        : -9999
+  idx_miss: -9999
+[end]
+
+[options]
+  old_files: remove
+  earth_shape: sphere
+  earth_r    : 6371000.0
+[end]
