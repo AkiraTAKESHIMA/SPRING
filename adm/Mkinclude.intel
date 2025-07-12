@@ -17,19 +17,20 @@ ifdef TERMINAL_WIDTH
   FOPT_TERMINAL_WIDTH = -DTERMINAL_WIDTH=$(TERMINAL_WIDTH)
 endif
 
-FC = gfortran
-CC = gcc
+FC = ifort
+CC = icc
+
 ifeq ($(DEBUG), true)
-  FCFLAGS = -O0 -Wall -g\
-            -fopenmp\
-            -fcheck=bounds,do,mem,pointer,recursion\
-            -frecord-marker=4\
-            -fmax-errors=5\
-            -ffpe-trap=invalid,zero,overflow,underflow
-  CCFLAGS = -O0 -Wall -g
+  FCFLAGS = -O0 -check all -check noarg_temp_created -warn all -CB\
+            -gen_interfaces -traceback -g\
+            -assume byterecl -convert big_endian\
+            -assume realloc_lhs -fstack-protector\
+            -assume protect_parens\
+            -fpe0 -ftrapuv
+  CCFLAGS = -O0 -g -debug all -std=c99 -no-multibyte-chars
 else
-  FCFLAGS = -O2 -g
-  CCFLAGS = -O2
+  FCFLAGS = -O2 -g -assume byterecl -convert big_endian
+  CCFLAGS = -O2 -std=c99 -no-multibyte-chars
 endif
 #==============================================================
 #
