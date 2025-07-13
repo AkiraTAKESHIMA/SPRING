@@ -3,15 +3,18 @@ import sys
 import subprocess
 import json
 
-import s00_util as util
-import s00_conf as conf
+sys.path.append('../../../common')
+import const, util
+
+import s00_const as lconst
+import s00_util as lutil
 
 
 def run():
-    cnf = json.load(open('test.json','r'))
-    util.adjust_settings(cnf)
+    cnf = json.load(open('conf.json','r'))
+    lutil.adjust_settings(cnf)
 
-    f_conf = os.path.join(cnf['directory']['set']['01'],'define_mat.conf')
+    f_conf = f'{lconst.dir_tmp[1]}/a.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
 
     print(f_conf)
@@ -29,44 +32,39 @@ def run():
   south: {south}\n\
   north: {north}\n\
 [end]\n\
-'.format(**cnf['cmf']))
+'.format(**cnf['CaMa-Flood']))
 
-    fp.write('\
+    fp.write(f'\
 \n\
 [cama-flood]\n\
-  fin_nextxy: "{path}", {dtype}, 1, {endian}\n\
-'.format(**cnf['cmf']['nextxy'])\
-+'\
-  fin_catmxy: "{path}", {dtype}, 1, {endian}\n\
-'.format(**cnf['cmf']['catmxy'])\
-+'\
+  dir: "{cnf["CaMa-Flood"]["dir"]}"\n\
+  fin_nextxy: {util.str_file_bin(cnf["CaMa-Flood"]["f_nextxy"])}\n\
+  fin_catmxy: {util.str_file_bin(cnf["CaMa-Flood"]["f_catmxy"])}\n\
+'+'\
   nextxy_river_mouth  : {river_mouth}\n\
   nextxy_river_inland : {river_inland}\n\
   nextxy_ocean        : {ocean}\n\
-'.format(**cnf['cmf']['nextxy']['index'])\
+'.format(**cnf['CaMa-Flood']['nextxy_index'])\
 +'\
   catmxy_noriv_coastal: {noriv_coastal}\n\
   catmxy_noriv_inland : {noriv_inland}\n\
   catmxy_ocean        : {ocean}\n\
-'.format(**cnf['cmf']['catmxy']['index'])\
-+'\
+'.format(**cnf['CaMa-Flood']['catmxy_index'])\
++ f'\
 \n\
-  dir: "{dir_out}/cmf"\n\
+  dir: "{lconst.dir_tmp[1]}/CaMa-Flood"\n\
   fout_grdidx_river: "grid/index_river.bin"\n\
   fout_grdidx_noriv: "grid/index_noriv.bin"\n\
   fout_rstidx_river: "raster/index_river.bin"\n\
   fout_rstidx_noriv: "raster/index_noriv.bin"\n\
-'.format(dir_out=cnf['directory']['tmp']['01'])\
-+'\
-\n\
   idx_miss: -9999\n\
 [end]\n\
 ')
 
-    fp.write('\
+    fp.write(f'\
 \n\
 [matsiro]\n\
-  dir: "{dir_out}/matsiro"\n\
+  dir: "{lconst.dir_tmp[1]}/MATSIRO"\n\
   fout_grdmsk_river: "grid/land_mask_river.bin", real, endian=big\n\
   fout_grdmsk_noriv: "grid/land_mask_noriv.bin", real, endian=big\n\
 \n\
@@ -85,12 +83,19 @@ def run():
 \n\
   idx_miss: -9999\n\
 [end]\n\
-'.format(dir_out=cnf['directory']['tmp']['01']))
+')
 
-    fp.write(conf.block_options(cnf['options']['earth']))
+    fp.write(lutil.block_options(cnf['options']['earth']))
 
     fp.close()
 
+    pc = subprocess.run([const.prog_make_cmf_mat, f_conf], 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        encoding='utf-8')
+    print('stdout:')
+    print(pc.stdout.strip())
+    print('stderr:')
+    print(pc.stderr.strip())
 
 
 if __name__ == '__main__':

@@ -1,0 +1,110 @@
+{
+  "dir_top": "/data7/akira/SPRING/SPRING",
+  "landType": ["river", "noriv"],
+  "MATSIRO": {
+    "type": "raster",
+    "ncx": 720,
+    "ncy": 360,
+    "ndx": 21600,
+    "ndy": 10800,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false",
+    "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/matsiro",
+    "f_rstidx_river": {"path": "raster/index_river.bin"},
+    "f_rstidx_noriv": {"path": "raster/index_noriv.bin"},
+    "f_grdidx_river": {"path": "grid/index_river.bin"},
+    "f_grdidx_noriv": {"path": "grid/index_noriv.bin"}
+  },
+  "CaMa-Flood": {
+    "type": "raster",
+    "ncx": 720,
+    "ncy": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false",
+    "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+    "f_rstidx_river": {"path": "raster/index_river.bin"},
+    "f_rstidx_noriv": {"path": "raster/index_noriv.bin"},
+    "f_grdidx_river": {"path": "grid/index_river.bin"},
+    "f_grdidx_noriv": {"path": "grid/index_noriv.bin"}
+  },
+  "in_MATSIRO_bnd": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false"
+  },
+  "in_met": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false"
+  },
+  "in_metnc": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "true"
+  },
+  "out_MATSIRO_row": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false"
+  },
+  "out_MATSIRO_latlon": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false"
+  },
+  "out_CaMa-Flood_row": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false"
+  },
+  "out_CaMa-Flood_latlon": {
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": "false"
+  },
+  "Earth": {
+    "shape": "sphere",
+    "diameter": 6713000.0
+  }
+}
