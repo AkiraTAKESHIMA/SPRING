@@ -44,6 +44,9 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   use cmn1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log
+  use cmn2_rt_base, only: &
+        init_rt, &
+        set_default_values_rt
   implicit none
   type(rt_in_) , intent(out) :: rt_in
   type(rt_out_), intent(out) :: rt_out
@@ -119,6 +122,46 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
 
   call set_default_values_opt_sys(opt%sys)
   call set_default_values_opt_log(opt%log)
+
+  call init_rt(rt_in%ogcm_ocean_to_agcm)
+  call init_rt(rt_in%ogcm_land_to_agcm)
+  call init_rt(rt_in%rm_river_to_agcm)
+  call init_rt(rt_in%rm_noriv_to_agcm)
+  call init_rt(rt_in%rm_ocean_to_agcm)
+
+  call init_rt(rt_out%lsm_river_to_agcm)
+  call init_rt(rt_out%lsm_noriv_to_agcm)
+  call init_rt(rt_out%lsm_noriv_virt_to_agcm)
+  call init_rt(rt_out%lsm_ocean_to_agcm)
+  call init_rt(rt_out%agcm_to_lsm_river)
+  call init_rt(rt_out%agcm_to_lsm_noriv)
+  call init_rt(rt_out%agcm_to_lsm_ocean)
+
+  rt_in%ogcm_ocean_to_agcm%id = 'rt_in%ogcm_ocean_to_agcm'
+  rt_in%ogcm_land_to_agcm%id  = 'rt_in%ogcm_land_to_agcm'
+  rt_in%rm_river_to_agcm%id   = 'rt_in%rm_river_to_agcm'
+  rt_in%rm_noriv_to_agcm%id   = 'rt_in%rm_noriv_to_agcm'
+  rt_in%rm_ocean_to_agcm%id   = 'rt_in%rm_ocean_to_agcm'
+  call set_default_values_rt(rt_in%ogcm_ocean_to_agcm)
+  call set_default_values_rt(rt_in%ogcm_land_to_agcm )
+  call set_default_values_rt(rt_in%rm_river_to_agcm  )
+  call set_default_values_rt(rt_in%rm_noriv_to_agcm  )
+  call set_default_values_rt(rt_in%rm_ocean_to_agcm  )
+
+  rt_out%lsm_river_to_agcm%id      = 'rt_out%lsm_river_to_agcm'
+  rt_out%lsm_noriv_to_agcm%id      = 'rt_out%lsm_noriv_to_agcm'
+  rt_out%lsm_noriv_virt_to_agcm%id = 'rt_out%lsm_noriv_virt_to_agcm'
+  rt_out%lsm_ocean_to_agcm%id      = 'rt_out%lsm_ocean_to_agcm'
+  rt_out%agcm_to_lsm_river%id      = 'rt_out%agcm_to_lsm_river'
+  rt_out%agcm_to_lsm_noriv%id      = 'rt_out%agcm_to_lsm_noriv'
+  rt_out%agcm_to_lsm_ocean%id      = 'rt_out%agcm_to_lsm_ocean'
+  call set_default_values_rt(rt_out%lsm_river_to_agcm)
+  call set_default_values_rt(rt_out%lsm_noriv_to_agcm)
+  call set_default_values_rt(rt_out%lsm_noriv_virt_to_agcm)
+  call set_default_values_rt(rt_out%lsm_ocean_to_agcm)
+  call set_default_values_rt(rt_out%agcm_to_lsm_river)
+  call set_default_values_rt(rt_out%agcm_to_lsm_noriv)
+  call set_default_values_rt(rt_out%agcm_to_lsm_ocean)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -454,7 +497,7 @@ subroutine check_number_of_blocks()
 
   call check_num_of_key(&
          counter%input_rt_ogcm_land_to_agcm, &
-         BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM, 1, 1)
+         BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_river_to_agcm, &
@@ -558,9 +601,9 @@ subroutine read_settings_input_rt(rt)
   call alloc_keynum(5)
   call set_keynum('dir', 0, -1)
   call set_keynum('length', 1, 1)
-  call set_keynum('sidx', 1, 1)
-  call set_keynum('tidx', 1, 1)
-  call set_keynum('area', 1, 1)
+  call set_keynum('f_sidx', 1, 1)
+  call set_keynum('f_tidx', 1, 1)
+  call set_keynum('f_area', 1, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -598,13 +641,13 @@ subroutine read_settings_input_rt(rt)
     case( 'length' )
       call read_value(rtm%nij)
 
-    case( 'sidx' )
+    case( 'f_sidx' )
       call read_value(rtm%f%sidx%path, is_path=.true., dir=dir)
 
-    case( 'tidx' )
+    case( 'f_tidx' )
       call read_value(rtm%f%tidx%path, is_path=.true., dir=dir)
 
-    case( 'area' )
+    case( 'f_area' )
       call read_value(rtm%f%area%path, is_path=.true., dir=dir)
     !-----------------------------------------------------------
     ! ERROR
@@ -684,8 +727,8 @@ subroutine read_settings_input_agcm(agcm)
 
   agcm%nij = 0_8
   call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
-  agcm%fin_grdidx = file(id='agcm%fin_grdidx')
-  agcm%fin_grdara = file(id='agcm%fin_grdara')
+  agcm%fin_grdidx = file(id='agcm%fin_grdidx', dtype=DTYPE_INT4)
+  agcm%fin_grdara = file(id='agcm%fin_grdara', dtype=DTYPE_DBLE)
   call reset_file_default()
 
   agcm%idx_miss = IDX_MISS_DEFAULT
@@ -716,6 +759,9 @@ subroutine read_settings_input_agcm(agcm)
     !
     case( 'dir' )
       call read_value(dir, is_path=.true.)
+
+    case( 'nij' )
+      call read_value(agcm%nij)
 
     case( 'f_grdidx' )
       call read_value(agcm%fin_grdidx, dir)
@@ -807,9 +853,9 @@ subroutine read_settings_input_rm(rm)
   call set_keynum('f_grdara_river', 1, 1)
   call set_keynum('f_grdara_noriv', 1, 1)
   call set_keynum('f_grdara_ocean', 1, 1)
-  call set_keynum('f_grdidx_river', 1, 1)
-  call set_keynum('f_grdidx_noriv', 1, 1)
-  call set_keynum('f_grdidx_ocean', 1, 1)
+  call set_keynum('f_rstidx_river', 1, 1)
+  call set_keynum('f_rstidx_noriv', 1, 1)
+  call set_keynum('f_rstidx_ocean', 1, 1)
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('ara_miss', 0, 1)
 
@@ -825,17 +871,17 @@ subroutine read_settings_input_rm(rm)
   rm%nky = 0_8
 
   call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
-  rm%fin_grdidx_river = file(id='rm%fin_grdidx_river')
-  rm%fin_grdidx_noriv = file(id='rm%fin_grdidx_noriv')
-  rm%fin_grdidx_ocean = file(id='rm%fin_grdidx_ocean')
+  rm%fin_grdidx_river = file(id='rm%fin_grdidx_river', dtype=DTYPE_INT4)
+  rm%fin_grdidx_noriv = file(id='rm%fin_grdidx_noriv', dtype=DTYPE_INT4)
+  rm%fin_grdidx_ocean = file(id='rm%fin_grdidx_ocean', dtype=DTYPE_INT4)
 
-  rm%fin_grdara_river = file(id='rm%fin_grdara_river')
-  rm%fin_grdara_noriv = file(id='rm%fin_grdara_noriv')
-  rm%fin_grdara_ocean = file(id='rm%fin_grdara_ocean')
+  rm%fin_grdara_river = file(id='rm%fin_grdara_river', dtype=DTYPE_DBLE)
+  rm%fin_grdara_noriv = file(id='rm%fin_grdara_noriv', dtype=DTYPE_DBLE)
+  rm%fin_grdara_ocean = file(id='rm%fin_grdara_ocean', dtype=DTYPE_DBLE)
 
-  rm%fin_rstidx_river = file(id='rm%fin_rstidx_river')
-  rm%fin_rstidx_noriv = file(id='rm%fin_rstidx_noriv')
-  rm%fin_rstidx_ocean = file(id='rm%fin_rstidx_ocean')
+  rm%fin_rstidx_river = file(id='rm%fin_rstidx_river', dtype=DTYPE_INT4)
+  rm%fin_rstidx_noriv = file(id='rm%fin_rstidx_noriv', dtype=DTYPE_INT4)
+  rm%fin_rstidx_ocean = file(id='rm%fin_rstidx_ocean', dtype=DTYPE_INT4)
   call reset_file_default()
 
   rm%idx_miss = IDX_MISS_DEFAULT
@@ -1088,10 +1134,10 @@ subroutine read_settings_output_rt(rt)
 
   call alloc_keynum(5)
   call set_keynum('dir', 0, -1)
-  call set_keynum('sidx', 1, 1)
-  call set_keynum('tidx', 1, 1)
-  call set_keynum('area', 1, 1)
-  call set_keynum('coef', 1, 1)
+  call set_keynum('f_sidx', 1, 1)
+  call set_keynum('f_tidx', 1, 1)
+  call set_keynum('f_area', 1, 1)
+  call set_keynum('f_coef', 1, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1983,9 +2029,9 @@ subroutine check_paths(rt_in, rt_out, agcm, rm, lsm, opt)
   call check_permission(rtmi_oo_a%f%tidx)
   call check_permission(rtmi_oo_a%f%area)
 
-  call check_permission(rtmi_ol_a%f%sidx)
-  call check_permission(rtmi_ol_a%f%tidx)
-  call check_permission(rtmi_ol_a%f%area)
+  call check_permission(rtmi_ol_a%f%sidx, allow_empty=.true.)
+  call check_permission(rtmi_ol_a%f%tidx, allow_empty=.true.)
+  call check_permission(rtmi_ol_a%f%area, allow_empty=.true.)
 
   call check_permission(rtmi_rr_a%f%sidx)
   call check_permission(rtmi_rr_a%f%tidx)
@@ -2028,9 +2074,9 @@ subroutine check_paths(rt_in, rt_out, agcm, rm, lsm, opt)
   call check_file_size(rtmi_oo_a%f%tidx)
   call check_file_size(rtmi_oo_a%f%area)
 
-  call check_file_size(rtmi_ol_a%f%sidx)
-  call check_file_size(rtmi_ol_a%f%tidx)
-  call check_file_size(rtmi_ol_a%f%area)
+  call check_file_size(rtmi_ol_a%f%sidx, allow_empty=.true.)
+  call check_file_size(rtmi_ol_a%f%tidx, allow_empty=.true.)
+  call check_file_size(rtmi_ol_a%f%area, allow_empty=.true.)
 
   call check_file_size(rtmi_rr_a%f%sidx)
   call check_file_size(rtmi_rr_a%f%tidx)

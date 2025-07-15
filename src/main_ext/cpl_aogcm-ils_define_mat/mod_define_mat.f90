@@ -119,6 +119,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   f => agcm%fin_grdara
   call edbg('Reading grdara')
   call rbin(agcm%grdara, f%path, f%dtype, f%endian, f%rec)
+  call edbg('  min: '//str(minval(agcm%grdara,mask=agcm%grdidx/=agcm%idx_miss))//&
+             ' max: '//str(maxval(agcm%grdara,mask=agcm%grdidx/=agcm%idx_miss)))
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -176,38 +178,45 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   call echo(code%ent, 'ogcm')
 
-!  call calc_grdara_from_rt(&
-!         agcm%lndara_ogcm, & ! out
-!         rtmi_ol_a, grid_target, & ! in
-!         agcm%grdidx, agcm%grdara) ! in
-
-!if( .false. )then
   allocate(lndara(agcm%nij))
   allocate(ocnara(agcm%nij))
 
-  call calc_grdara_from_rt(&
-         lndara, & ! out
-         rtmi_ol_a, grid_target, & ! in
-         agcm%grdidx, agcm%grdara) ! in
+  if( rtmi_ol_a%nij == 0_8 )then
+    call calc_grdara_from_rt(&
+           ocnara, & ! out
+           rtmi_oo_a, grid_target, & ! in
+           agcm%grdidx, agcm%grdara) ! in
 
-  call calc_grdara_from_rt(&
-         ocnara, & ! out
-         rtmi_oo_a, grid_target, & ! in
-         agcm%grdidx, agcm%grdara) ! in
+    do aij = 1_8, agcm%nij
+      agcm%lndara_ogcm(aij) = agcm%grdara(aij) - ocnara(aij)
+      if( abs(agcm%lndara_ogcm(aij)) / agcm%grdara(aij) < THRESH_AGCM_LNDFRC_OGCM )then
+        agcm%lndara_ogcm(aij) = 0.d0
+      endif
+    enddo
+  else
+    call calc_grdara_from_rt(&
+           lndara, & ! out
+           rtmi_ol_a, grid_target, & ! in
+           agcm%grdidx, agcm%grdara) ! in
 
-  do aij = 1_8, agcm%nij
-    if( lndara(aij) == 0.d0 )then
-      agcm%lndara_ogcm(aij) = 0.d0
-    elseif( ocnara(aij) == 0.d0 )then
-      agcm%lndara_ogcm(aij) = agcm%grdara(aij)
-    else
-      agcm%lndara_ogcm(aij) = (lndara(aij) + (agcm%grdara(aij) - ocnara(aij)))*0.5d0
-    endif
-  enddo
+    call calc_grdara_from_rt(&
+           ocnara, & ! out
+           rtmi_oo_a, grid_target, & ! in
+           agcm%grdidx, agcm%grdara) ! in
+
+    do aij = 1_8, agcm%nij
+      if( lndara(aij) == 0.d0 )then
+        agcm%lndara_ogcm(aij) = 0.d0
+      elseif( ocnara(aij) == 0.d0 )then
+        agcm%lndara_ogcm(aij) = agcm%grdara(aij)
+      else
+        agcm%lndara_ogcm(aij) = (lndara(aij) + (agcm%grdara(aij) - ocnara(aij)))*0.5d0
+      endif
+    enddo
+  endif
 
   deallocate(lndara)
   deallocate(ocnara)
-!endif
 
   call echo(code%ext)
 
@@ -919,7 +928,10 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Making rt_agcm_to_lsm_river')
 
-  call make_rt_agcm_to_lsm(rtmo_lr_a, rtmo_a_lr, lsm%grdidx_river, lsm%grdara_river)
+  call make_rt_agcm_to_lsm(&
+         rtmo_lr_a, &  ! in
+         rtmo_a_lr, &  ! inout
+         lsm%grdidx_river, lsm%grdara_river)  ! in
 
   call write_rt_main(rtmo_a_lr)
 
@@ -1945,6 +1957,11 @@ subroutine make_rt_lsm_river_to_agcm(&
   !-------------------------------------------------------------
   call echo(code%ent, 'Modifying index')
 
+!  do ij = 1_8, rtm_rr_a%nij
+!    call search(rtm_rr_a%sidx(ij), rm%grdidx_river, rm%grdidxarg_river, gij)
+!    rtm_lr_a%sidx(ij) = lsm%grdidx_river(gij)
+!  enddo
+
   call modify_idx_lsm_rt(rtm_lr_a%sidx, lsm%grdidx_river, lsm%idx_miss)
 
   call echo(code%ext)
@@ -1978,6 +1995,8 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
   integer(8)    , intent(in)    :: grdidx(:)
   real(8)       , intent(in)    :: grdara(:)
 
+  integer(8), allocatable :: arg(:)
+
   call echo(code%bgn, 'make_rt_agcm_to_lsm')
   !-------------------------------------------------------------
   !
@@ -1996,7 +2015,10 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
   if( rtm_a_l%opt_coef%is_sum_modify_enabled )then
     call calc_rt_coef_sum_modify_enabled(rtm_a_l)
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, (/1_8/), grdara)
+    allocate(arg(size(grdidx)))
+    call argsort(grdidx, arg)
+    call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, arg, grdara)
+    deallocate(arg)
   endif
 
   call get_rt_main_stats(rtm_a_l)
@@ -2018,8 +2040,6 @@ subroutine modify_idx_lsm_rt(rt_grid, grdidx, idx_miss)
   call echo(code%bgn, 'modify_idx_lsm_rt')
   !-------------------------------------------------------------
   rt_nij = size(rt_grid)
-call edbg('nij: '//str(rt_nij))
-call edbg('size(rt_grid): '//str(size(rt_grid)))
 
   do ij = 1_8, rt_nij
     lij = rt_grid(ij)
