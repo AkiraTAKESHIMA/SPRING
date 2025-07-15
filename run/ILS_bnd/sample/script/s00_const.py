@@ -7,8 +7,10 @@ job = {
   2: '02_make_rt',
 }
 
-dir_set, dir_tmp = {}, {}
+dir_set, dir_tmp, dir_log, dir_out = {}, {}, {}, {}
 for key in job.keys():
-    dir_tmp[key] = os.path.join(const.dir_tmp, job[key])
     dir_set[key] = os.path.join(const.dir_set, job[key])
+    dir_tmp[key] = os.path.join(const.dir_tmp, job[key])
+    dir_log[key] = os.path.join(const.dir_log, job[key])
+    dir_out[key] = os.path.join(const.dir_out, job[key])
 

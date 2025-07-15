@@ -49,7 +49,7 @@
     "is_south_to_north": false,
     "dir": "/data34/nitta/Data/GTOPO30/tiles/dem",
     "f_list_tiles": "all_tiles.txt",
-    "format_filename_data": "gtopo30_dem_{tilename}.bin",
+    "f_data": "gtopo30_dem_{tilename}.bin",
     "dtype": "real",
     "endian": "big_endian",
     "miss": -9999.0
@@ -60,7 +60,7 @@
     "is_south_to_north": false,
     "dir": "/data26/nitta/Data/HWSD/tiles/clay",
     "f_list_tiles": "all_tiles.txt",
-    "format_filename_data": "HWSD_clay_{tilename}.bin",
+    "f_data": "HWSD_clay_{tilename}.bin",
     "dtype": "real",
     "endian": "big_endian",
     "miss": -999.0
@@ -82,13 +82,27 @@
     "is_south_to_north": false,
     "dir": "/data26/nitta/Data/JRA55/tiles",
     "f_list_tiles": "all_tiles.txt",
-    "format_filename_data": "jra55_tmp2m_max_{tilename}.bin",
+    "f_data": "jra55_tmp2m_max_{tilename}.bin",
     "dtype": "real",
     "endian": "big_endian",
     "miss": null
   },
   "MODIS": {
-    "dir_coords": "/home/nitta/work2022/MIROC-ILS/matsiro/modis_latlon"
+    "nij": 1440000,
+    "np": 4,
+    "dir": "/data20/nitta/MIROC-ILS/matsiro/modis_latlon",
+    "f_list_tiles": "tiles.txt",
+    "f_coord_lon": {
+      "path"  : "lon_{tilename}.bin",
+      "dtype" : "dble",
+      "endian": "little_endian"
+    },
+    "f_coord_lat": {
+      "path"  : "lat_{tilename}.bin",
+      "dtype" : "dble",
+      "endian": "little_endian"
+    },
+    "coord_miss": -999.0
   },
   "options": {
     "make_verification_data": true,

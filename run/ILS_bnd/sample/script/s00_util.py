@@ -3,6 +3,9 @@ import sys
 import copy
 import numpy as np
 
+sys.path.append('../../../common')
+import const, util
+
 import s00_const as lconst
 
 
@@ -76,9 +79,9 @@ def block_gs_modis(modis, f_lon, f_lat):
     return f'\
 \n\
 [grid_system_polygon]\n\
-  np: 4\n\
-  nij: 1440000\n\
-  dir: "{{dir_coord}}"\n\
+  np: {{np}}\n\
+  nij: {{nij}}\n\
+  dir: "{{dir}}"\n\
   f_lon_vertex: "{f_lon}"\n\
   f_lat_vertex: "{f_lat}"\n\
   coord_unit: degree\n\
@@ -200,13 +203,30 @@ def conf_remap_latlon(tileName, landType, dataName, data_in, matsiro, options):
 
 
 def conf_remap_modis(tileName, landType, dataName, data_in, matsiro, options):
-    f_lon = os.path.join(data_in['dir_coords'], f'lon_{tileName}.bin')
-    f_lat = os.path.join(data_in['dir_coords'], f'lat_{tileName}.bin')
+    fnam_lon = data_in['f_coord_lon']['path'].format(tilename=tileName)
+    fnam_lat = data_in['f_coord_lat']['path'].format(tilename=tileName)
 
-    lon = np.ma.masked_equal(np.fromfile(f_lon),-999)
-    lat = np.ma.masked_equal(np.fromfile(f_lat),-999)
+    f_lon = os.path.join(data_in['dir'], fnam_lon)
+    f_lat = os.path.join(data_in['dir'], fnam_lat)
 
+    lon = np.fromfile(f_lon, dtype=util.dtype_str_to_np(data_in['f_coord_lon'], np.float64))
+    lat = np.fromfile(f_lat, dtype=util.dtype_str_to_np(data_in['f_coord_lat'], np.float64))
+
+    if util.get_endian(data_in['f_coord_lon']) == 'big_endian':
+        lon = lon.byteswap()
+    if util.get_endian(data_in['f_coord_lat']) == 'big_endian':
+        lat = lat.byteswap()
+
+    lon = np.ma.masked_equal(lon, data_in['coord_miss'])
+    lat = np.ma.masked_equal(lat, data_in['coord_miss'])
+
+    #print(f'lon {lon.min()} {lon.max()}')
+    #print(f'lat {lat.min()} {lat.max()}')
     dxi, dxf, dyi, dyf = get_raster_bounds(lon.min(), lon.max(), lat.min(), lat.max(), matsiro)
+
+    #print('{west} {east} {south} {north}'.format(**matsiro))
+    #print(dxi, dxf, dyi, dyf)
+    #quit()
 
     del(lon, lat)
 
@@ -214,7 +234,7 @@ def conf_remap_modis(tileName, landType, dataName, data_in, matsiro, options):
 
     s = head(landType, tileName, dir_out_this)
 
-    s += block_gs_modis(modis, f_lon, f_lat)
+    s += block_gs_modis(data_in, fnam_lon, fnam_lat)
 
     s += block_gs_raster(landType, lconst.dir_tmp[1], matsiro, dxi, dxf, dyi, dyf)
 

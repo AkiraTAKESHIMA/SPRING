@@ -28,7 +28,7 @@ def block_gs_model_latlon(gs, name, landType):
   north: {gs["north"]}\n\
   is_south_to_north: {gs["is_south_to_north"]}\n\
   dir: "{gs["dir"]}"\n\
-  fin_grdidx: "{fin_grdidx}"\n\
+  fin_grdidx: {fin_grdidx}\n\
 [end]\n\
 '
 
@@ -51,8 +51,8 @@ def block_gs_model_raster(gs, name, landType):
   north: {gs["north"]}\n\
   is_south_to_north: {gs["is_south_to_north"]}\n\
   dir: "{gs["dir"]}"\n\
-  fin_rstidx: "{fin_rstidx}"\n\
-  fin_grdidx: "{fin_grdidx}"\n\
+  fin_rstidx: {fin_rstidx}\n\
+  fin_grdidx: {fin_grdidx}\n\
   in_grid_sz: {gs["ncx"]}, {gs["ncy"]}\n\
 [end]\n\
 '
@@ -300,7 +300,8 @@ def run():
     for meshName in [
       'MATSIRO', 'CaMa-Flood', 
       'in_MATSIRO_bnd', 'in_met', 'in_metnc',
-      'out_MATSIRO_row', 'out_MATSIRO_latlon', 'out_CaMa-Flood_row', 'out_CaMa-Flood_latlon']:
+      'out_MATSIRO_row', 'out_MATSIRO_latlon', 
+      'out_CaMa-Flood_row', 'out_CaMa-Flood_latlon']:
         util.set_gs(cnf[meshName], cnf['dir_top'])
 
     dir_set_this = f'{const.dir_set}/01_make_rt'

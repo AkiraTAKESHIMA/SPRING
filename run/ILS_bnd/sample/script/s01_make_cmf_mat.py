@@ -14,8 +14,12 @@ def run():
     cnf = json.load(open('conf.json','r'))
     lutil.adjust_settings(cnf)
 
-    f_conf = f'{lconst.dir_tmp[1]}/a.conf'
-    os.makedirs(os.path.dirname(f_conf), exist_ok=True)
+    f_conf = f'{lconst.dir_set[1]}/a.conf'
+
+    os.makedirs(lconst.dir_set[1], exist_ok=True)
+    os.makedirs(lconst.dir_tmp[1], exist_ok=True)
+    os.makedirs(lconst.dir_log[1], exist_ok=True)
+    os.makedirs(lconst.dir_out[1], exist_ok=True)
 
     print(f_conf)
     fp = open(f_conf, 'w')
@@ -92,10 +96,14 @@ def run():
     pc = subprocess.run([const.prog_make_cmf_mat, f_conf], 
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         encoding='utf-8')
-    print('stdout:')
-    print(pc.stdout.strip())
-    print('stderr:')
-    print(pc.stderr.strip())
+    f_log = f'{lconst.dir_log[1]}/a.out'
+    f_err = f'{lconst.dir_log[1]}/a.err'
+    print(f_log)
+    print(f_err)
+    with open(f_log, 'w') as fp:
+        fp.write(pc.stdout)
+    with open(f_err, 'w') as fp:
+        fp.write(pc.stderr)
 
 
 if __name__ == '__main__':
