@@ -46,6 +46,8 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
         write_rt_main
   use cmn2_rt_vrf_io, only: &
         write_rt_vrf
+  use cmn1_file, only: &
+        report
   implicit none
   type(gs_), intent(inout) :: s
   type(gs_), intent(inout) :: t
@@ -125,6 +127,17 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
     call write_rt_main(rt%main)
     call write_rt_vrf(rt, s)
     call write_rt_vrf(rt, t)
+  endif
+
+  call report('------ Remapping table ------')
+  call report('length: '//str(rt%main%nij))
+  if( rt%main%nij > 0_8 )then
+    call report('source_index min: '//str(rt%main%sidx_vmin)//' max: '//str(rt%main%sidx_vmax))
+    call report('target_index min: '//str(rt%main%tidx_vmin)//' max: '//str(rt%main%tidx_vmax))
+    call report('intersection_area total: '//str(sum(rt%main%area),'es12.5'))
+    call report('interpolation_coefficient'//&
+                ' min: '//str(rt%main%coef_vmin,'es12.5')//&
+                ' max: '//str(rt%main%coef_vmax,'es12.5'))
   endif
   !-------------------------------------------------------------
   call echo(code%ret)

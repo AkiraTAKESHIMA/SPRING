@@ -1502,6 +1502,7 @@ subroutine check_file_size(f, allow_empty, allow_not_multiple)
     else
       call eerr(str(msg_unexpected_condition())//&
               '\n  File does not exist.'//&
+              '\n  id: '//str(f%id)//&
               '\n  path: '//str(f%path))
     endif
   endif
@@ -1516,10 +1517,13 @@ subroutine check_file_size(f, allow_empty, allow_not_multiple)
     continue
   case( dtype_undef )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  f%dtype == dtype_undef')
+              '\n  dtype is undefined.'//&
+              '\nid: '//str(f%id)//&
+              '\npath: '//str(f%path))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  f%dtype: '//str(f%dtype))
+    call eerr('Invalid value in `f%dtype`: '//str(f%dtype)//&
+            '\n  id: '//str(f%id)//&
+            '\n  path: '//str(f%path))
   endselect
 
   selectcase( f%rec )
@@ -1528,13 +1532,15 @@ subroutine check_file_size(f, allow_empty, allow_not_multiple)
   case( rec_undef )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  f%rec: '//str(f%rec))
+    call eerr('Invalid value in `f%rec`: '//str(f%rec)//&
+            '\n  id: '//str(f%id)//&
+            '\n  path: '//str(f%path))
   endselect
 
   if( f%length <= 0_8 )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  f%length: '//str(f%length))
+    call eerr('Invalid value in `f%length`: '//str(f%length)//&
+            '\n  id: '//str(f%id)//&
+            '\n  path: '//str(f%path))
   endif
   !-------------------------------------------------------------
   !
@@ -1551,6 +1557,7 @@ subroutine check_file_size(f, allow_empty, allow_not_multiple)
               '\n  recl * rec > fs'//&
               '\n  Expected file size exceeds actual file size.'//&
               '\n  id      : '//str(f%id)//&
+              '\n  path    : '//str(f%path)//&
               '\n  recl    : '//str(recl,d)//' (recl = byte * length)'//&
               '\n    dtype : '//str(f%dtype)//' (byte: '//str(byte_of_dtype(f%dtype))//')'//&
               '\n    length: '//str(f%length,d)//&
@@ -1567,6 +1574,7 @@ subroutine check_file_size(f, allow_empty, allow_not_multiple)
               '\n  mod(fs, recl) /= 0'//&
               '\n  File size (fs) is not a multiple of record length (recl).'//&
               '\n  id      : '//str(f%id)//&
+              '\n  path    : '//str(f%path)//&
               '\n  fs      : '//str(fs,d)//&
               '\n  recl    : '//str(recl,d)//' (recl = byte * length)'//&
               '\n    dtype : '//str(f%dtype)//' (byte: '//str(byte_of_dtype(f%dtype))//')'//&

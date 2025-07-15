@@ -150,7 +150,7 @@ subroutine print_idxmap(idxmap)
   else
     call edbg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*int(hf-hi+1,4)-6)//'(E)')
 
-    allocate(arr(mh))
+    allocate(arr(hi:hf))
     do ih = hi, hf
       arr(ih) = ih
     enddo

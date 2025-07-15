@@ -33,7 +33,7 @@ subroutine calc_rt_coef(rtm, grdidx, grdidxarg, grdara)
   type(gs_common_), pointer :: uc
   integer(8), pointer :: coefidx(:)
 
-  call echo(code%bgn, 'calc_rt_coef', '-p -x2')
+  call echo(code%bgn, 'calc_rt_coef')
   !-------------------------------------------------------------
   ! Sort by grid_coef
   !-------------------------------------------------------------

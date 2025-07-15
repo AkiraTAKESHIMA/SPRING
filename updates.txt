@@ -3,6 +3,40 @@
 
 - Shapefile input
 #---------------------------------------------------------------
+[2025/07/15]
+#---------------------------------------------------------------
+main_ext/cpl_aogcm-ils_define_mat/mod_set.f90
+
+Set the default data types for some data.
+#---------------------------------------------------------------
+[2025/07/15]
+#---------------------------------------------------------------
+main_ext/cpl_aogcm-ils_define_mat/mod_define_mat.f90 make_rt_agcm_to_lsm
+
+Modified as below because `grdidx` is generally not sorted.
+
+(old)
+call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, (/1_8/), grdara)
+
+(new)
+allocate(arg(size(grdidx)))
+call argsort(grdidx, arg)
+call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, arg, grdara)
+deallocate(arg)
+#---------------------------------------------------------------
+[2025/07/15]
+#---------------------------------------------------------------
+cmn1/cmn1_gs_grid_util.f90 print_indices
+
+Modified lbound and ubound of allocatable array `arr`
+from (1,mh) to (hi,hf).
+#---------------------------------------------------------------
+[2025/07/15]
+#---------------------------------------------------------------
+cmn3/cmn3_rt_driv.f90
+
+Added a branch for the case of an empty remapping table.
+#---------------------------------------------------------------
 [2025/05/13]
 #---------------------------------------------------------------
 cmn1/cmn1_type_gs.f90
