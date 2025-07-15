@@ -16,7 +16,10 @@
     "f_rstidx_river": {"path": "raster/index_river.bin"},
     "f_rstidx_noriv": {"path": "raster/index_noriv.bin"},
     "f_grdidx_river": {"path": "grid/index_river.bin"},
-    "f_grdidx_noriv": {"path": "grid/index_noriv.bin"}
+    "f_grdidx_noriv": {"path": "grid/index_noriv.bin"},
+    "f_grdara_river": {"path": "grid/area_river.bin"},
+    "f_grdara_noriv": {"path": "grid/area_noriv.bin"},
+    "idx_miss": -9999
   },
   "CaMa-Flood": {
     "type": "raster",
@@ -63,27 +66,7 @@
     "north":  90,
     "is_south_to_north": "true"
   },
-  "out_MATSIRO_row": {
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false"
-  },
   "out_MATSIRO_latlon": {
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false"
-  },
-  "out_CaMa-Flood_row": {
     "type": "latlon",
     "nx": 720,
     "ny": 360,

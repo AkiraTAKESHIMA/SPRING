@@ -1,8 +1,11 @@
 import os
 import sys
 import subprocess
+
 sys.path.append('../../../common')
 import const, util
+
+import s00_const as lconst
 
 
 def merge_rt(srcMeshName, tgtMeshName, landType_is_for_src):
@@ -12,8 +15,8 @@ def merge_rt(srcMeshName, tgtMeshName, landType_is_for_src):
     else:
         rtName_river = f'{srcMeshName}_to_{tgtMeshName}_river'
         rtName_noriv = f'{srcMeshName}_to_{tgtMeshName}_noriv'
-    f_report_river = f'{const.dir_tmp}/01_make_rt/{rtName_river}/report.txt'
-    f_report_noriv = f'{const.dir_tmp}/01_make_rt/{rtName_noriv}/report.txt'
+    f_report_river = f'{lconst.dir_tmp[1]}/{rtName_river}/report.txt'
+    f_report_noriv = f'{lconst.dir_tmp[1]}/{rtName_noriv}/report.txt'
 
     with open(f_report_river,'r') as fp:
         for i in range(1):
@@ -25,17 +28,17 @@ def merge_rt(srcMeshName, tgtMeshName, landType_is_for_src):
             fp.readline()
         length_rt_noriv = int(fp.readline().strip().split()[1])
 
-    f_conf = f'{const.dir_set}/02_merge_rt/{srcMeshName}_to_{tgtMeshName}.conf'
+    f_conf = f'{lconst.dir_set[2]}/{srcMeshName}_to_{tgtMeshName}.conf'
 
     with open(f_conf,'w') as fp:
         fp.write(f'\
 #\n\
-path_report: "{const.dir_tmp}/02_merge_rt/{srcMeshName}_to_{tgtMeshName}/report.txt"\n\
+path_report: "{lconst.dir_tmp[2]}/{srcMeshName}_to_{tgtMeshName}/report.txt"\n\
 \n\
 [input]\n\
   # river\n\
   length_rt: {length_rt_river}\n\
-  dir: "{const.dir_tmp}/01_make_rt/{rtName_river}"\n\
+  dir: "{lconst.dir_tmp[1]}/{rtName_river}"\n\
   f_rt_sidx: "grid.bin", int4, 1, big\n\
   f_rt_tidx: "grid.bin", int4, 2, big\n\
   f_rt_area: "area.bin", dble, 1, big\n\
@@ -43,7 +46,7 @@ path_report: "{const.dir_tmp}/02_merge_rt/{srcMeshName}_to_{tgtMeshName}/report.
 \n\
   # noriv\n\
   length_rt: {length_rt_noriv}\n\
-  dir: "{const.dir_tmp}/01_make_rt/{rtName_noriv}"\n\
+  dir: "{lconst.dir_tmp[1]}/{rtName_noriv}"\n\
   f_rt_sidx: "grid.bin", int4, 1, big\n\
   f_rt_tidx: "grid.bin", int4, 2, big\n\
   f_rt_area: "area.bin", dble, 1, big\n\
@@ -57,7 +60,7 @@ path_report: "{const.dir_tmp}/02_merge_rt/{srcMeshName}_to_{tgtMeshName}/report.
   grid_sort: target\n\
   opt_coef_sum_modify: 1.d0\n\
 \n\
-  dir: "{const.dir_tmp}/02_merge_rt/{srcMeshName}_to_{tgtMeshName}"\n\
+  dir: "{lconst.dir_tmp[2]}/{srcMeshName}_to_{tgtMeshName}"\n\
   f_rt_sidx: "grid.bin", int4, 1, big\n\
   f_rt_tidx: "grid.bin", int4, 2, big\n\
   f_rt_area: "area.bin", dble, 1, big\n\
@@ -79,7 +82,7 @@ path_report: "{const.dir_tmp}/02_merge_rt/{srcMeshName}_to_{tgtMeshName}/report.
 
 
 def run():
-    os.makedirs(f'{const.dir_set}/02_merge_rt', exist_ok=True)
+    os.makedirs(f'{lconst.dir_set[2]}', exist_ok=True)
 
     merge_rt('in_MATSIRO_bnd', 'MATSIRO', False)
     merge_rt('in_met', 'MATSIRO', False)
