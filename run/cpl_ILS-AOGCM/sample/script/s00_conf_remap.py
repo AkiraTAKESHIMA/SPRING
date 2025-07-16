@@ -9,11 +9,11 @@ import const, util
 import s00_const as lconst
 
 
-def block_gs(gs, landType=None):
+def block_gs(gs):
     if gs['type'] == 'latlon':
         return block_gs_latlon(gs)
     elif gs['type'] == 'raster':
-        return block_gs_raster(gs, landType)
+        return block_gs_raster(gs)
     elif gs['type'] == 'polygon':
         return block_gs_polygon(gs)
 
@@ -25,7 +25,10 @@ def block_gs_latlon(gs):
 [grid_system_latlon]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx"]}\n\
-  ny: {gs["ny"]}\n\
+  ny: {gs["ny"]}\n'
+
+    if 'dir' in gs.keys():
+        s += f'\
   dir: "{gs["dir"]}"\n'
 
     if 'west' in gs.keys():
@@ -54,13 +57,19 @@ def block_gs_latlon(gs):
 '
 
     s += f'\
-  is_south_to_north: {gs["is_south_to_north"]}\n\
+  is_south_to_north: {gs["is_south_to_north"]}\n'
+
+    if 'idx_bgn' in gs.keys():
+        s += f'\
+  idx_bgn: {gs["idx_bgn"]}\n'
+
+    s += '\
 [end]\n'
 
     return s
 
 
-def block_gs_raster(gs, landType):
+def block_gs_raster(gs):
     s = f'\
 \n\
 [grid_system_raster]\n\
@@ -74,8 +83,8 @@ def block_gs_raster(gs, landType):
   is_south_to_north: {gs["is_south_to_north"]}\n\
 \n\
   dir: "{gs["dir"]}"\n\
-  fin_rstidx: "rstidx_{landType}.bin"\n\
-  fin_grdidx: "grdidx_{landType}.bin"\n\
+  fin_rstidx: {util.str_file_bin(gs["fin_rstidx"])}\n\
+  fin_grdidx: {util.str_file_bin(gs["fin_grdidx"])}\n\
   in_grid_sz: {gs["ncx"]}, {gs["ncy"]}\n\
   idx_miss: {gs["idx_miss"]}\n\
 [end]\n'
@@ -121,10 +130,10 @@ def block_remapping(rmp, dir_tmp_this):
 \n\
 [remapping]\n\
   dir: "{dir_tmp_this}"\n\
-  fout_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, rec=1\n\
-  fout_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, rec=2\n\
-  fout_rt_area: "area.bin"\n\
-  fout_rt_coef: "coef.bin"\n\
+  fout_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
+  fout_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
+  fout_rt_area: "area.bin", endian={rmp["endian"]}\n\
+  fout_rt_coef: "coef.bin", endian={rmp["endian"]}\n\
 \n\
   vrf_source_form: auto\n\
   fout_vrf_grdidx     : "vrf/src_idx.bin"\n\

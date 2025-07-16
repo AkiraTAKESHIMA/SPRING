@@ -1,8 +1,8 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
   "landType": ["river", "noriv"],
-  "OGCM": {
-    "name": "COCO-1deg",
+  "OGCM_ocean": {
+    "name": "COCO-1deg_ocean",
     "type": "polygon",
     "np": 4,
     "nij": 92160,
@@ -27,6 +27,12 @@
     },
     "idx_miss": 0
   },
+  "OGCM_land": {
+    "fin_grdidx": {
+      "path": "COCO_idx_land.bin",
+      "dtype": "int4"
+    }
+  },
   "AGCM": {
     "name": "T85",
     "type": "latlon",
@@ -40,7 +46,7 @@
       "path": "T85_lat_bound.bin"
     },
     "is_south_to_north": false,
-    "idx_miss": null
+    "idx_miss": -9999
   },
   "RM": {
     "name": "CaMa-Flood",
@@ -70,14 +76,47 @@
     "is_south_to_north": false,
     "idx_miss": -9999
   },
+  "IO_met": {
+    "name": "IO_met",
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": false
+  },
+  "IO_metnc": {
+    "name": "IO_metnc",
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": true
+  },
+  "IO_latlon": {
+    "name": "IO_latlon",
+    "type": "latlon",
+    "nx": 720,
+    "ny": 360,
+    "west": -180,
+    "east":  180,
+    "south": -90,
+    "north":  90,
+    "is_south_to_north": false
+  },
   "FLOW": {
     "dir": "/data16/akira/GlobalFlowDir_20220420/glbdir_1min_gcm",
     "flwdir": "flwdir.bin",
     "elevtn": "elevtn.bin"
   },
-  "remapping": {
+  "remapping_table": {
     "dtype_idx": "int4",
-    "endian": "little_endian"
+    "endian": "big_endian"
   }, 
   "options": {
     "make_verification_data": true,

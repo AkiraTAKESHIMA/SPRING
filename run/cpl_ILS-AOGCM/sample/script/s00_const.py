@@ -11,69 +11,52 @@ dir_tmp = '../tmp'
 dir_out = '../out'
 
 job = {
-  1: {
-    'self': 'make_grid_data_AGCM',
-  },
-  2: {
-    'self': 'make_grid_data_OGCM',
-  },
-  3: {
-    'self': 'rasterize_OGCM',
-  },
-  4: {
-    'self': 'run_FLOW',
-  },
-  5: {
-    'self': 'make_idxmap_RM',
-  },
-  6: {
-    'self': 'make_grid_data_RM',
-  },
-  7: {
-    'self': 'make_rt_standard-1',
-    'child': {
-      'OGCM_land_to_AGCM' : 'OGCM_land_to_AGCM',
-      'OGCM_ocean_to_AGCM': 'OGCM_ocean_to_AGCM',
-      'RM_river_to_AGCM'  : 'RM_river_to_AGCM',
-      'RM_noriv_to_AGCM'  : 'RM_noriv_to_AGCM',
-      'RM_ocean_to_AGCM'  : 'RM_ocean_to_AGCM',
-    },
-  },
-  8: {
-    'self': 'define_LSM',
-    'child': {
-      'rt_LSM-river_to_AGCM': 'rt_LSM-river_to_AGCM',
-      'rt_LSM-noriv_to_AGCM': 'rt_LSM-noriv_to_AGCM',
-      'rt_AGCM_to_LSM-river': 'rt_AGCM_to_LSM-river',
-      'rt_AGCM_to_LSM-noriv': 'rt_AGCM_to_LSM-noriv',
-      'AGCM': 'AGCM',
-      'LSM' : 'LSM' ,
-    },
-  },
-  9: {
-    'self': 'make_grid_data_LSM',
-  },
-  10: {
-    'self': 'make_rt_standard-2',
-  },
-  11: {
-    'self': 'make_rt_special',
-  },
-  12: {
-    'self': 'merge_rt',
-  },
+   1: 'make_grid_data_AGCM',
+   2: 'make_grid_data_OGCM',
+   3: 'rasterize_OGCM',
+   4: 'run_FLOW',
+   5: 'make_idxmap_RM',
+   6: 'make_grid_data_RM',
+   7: 'make_rt_standard-1',
+#      'OGCM_land_to_AGCM' : 'OGCM_land_to_AGCM',
+#      'OGCM_ocean_to_AGCM': 'OGCM_ocean_to_AGCM',
+#      'RM_river_to_AGCM'  : 'RM_river_to_AGCM',
+#      'RM_noriv_to_AGCM'  : 'RM_noriv_to_AGCM',
+#      'RM_ocean_to_AGCM'  : 'RM_ocean_to_AGCM',
+   8: 'define_LSM',
+#      'rt_LSM_river_to_AGCM': 'rt_LSM_river_to_AGCM',
+#      'rt_LSM_noriv_to_AGCM': 'rt_LSM_noriv_to_AGCM',
+#      'rt_AGCM_to_LSM_river': 'rt_AGCM_to_LSM_river',
+#      'rt_AGCM_to_LSM_noriv': 'rt_AGCM_to_LSM_noriv',
+#      'AGCM': 'AGCM',
+#      'LSM' : 'LSM' ,
+   9: 'make_grid_data_LSM',
+  10: 'make_rt_standard-2',
+#      'rt_AGCM_to_RM'                       : 'rt_AGCM_to_RM', 
+#      'rt_IO_LSM_bnd_river_to_LSM_bnd_river': 'rt_IO_bnd_to_LSM_river',
+#      'rt_IO_LSM_bnd_noriv_to_LSM_bnd_noriv': 'rt_IO_bnd_to_LSM_noriv',
+#      'rt_IO_met_to_LSM_river'              : 'rt_IO_met_to_LSM_river',
+#      'rt_IO_met_to_LSM_noriv_real'         : 'rt_IO_met_to_LSM_noriv_real',
+#      'rt_IO_met_to_LSM_noriv_virt'         : 'rt_IO_met_to_LSM_noriv_virt',
+#      'rt_IO_metnc_to_LSM_river'            : 'rt_IO_metnc_to_LSM_river',
+#      'rt_LSM_river_to_RM'                  : 'rt_LSM_river_to_RM',
+#      'rt_RM_to_LSM_river'                  : 'rt_RM_to_LSM_river',
+#      'rt_LSM_river_to_IO_row'              : 'rt_LSM_river_to_IO_row',
+#      'rt_LSM_noriv_real_to_IO_row'         : 'rt_LSM_noriv_real_to_IO_row',
+#      'rt_LSM_noriv_virt_to_IO_row'         : 'rt_LSM_noriv_virt_to_IO_row',
+#      'rt_LSM_river_to_IO_rect'             : 'rt_LSM_river_to_IO_rect',
+#      'rt_LSM_noriv_real_to_IO_rect'        : 'rt_LSM_noriv_real_to_IO_rect',
+#      'rt_LSM_noriv_virt_to_IO_rect'        : 'rt_LSM_noriv_virt_to_IO_rect',
+#      'rt_RM_to_IO_row'                     : 'rt_RM_to_IO_row',
+  11: 'make_rt_special',
+  12: 'merge_rt',
 }
 
 
 def set_dir(d_top):
     d = {}
     for step in job.keys():
-        d[step] = {}
-        d[step]['self'] = os.path.join(d_top, f'{step:02d}_{job[step]["self"]}')
-        if 'child' in job[step].keys():
-            d[step]['child'] = {}
-            for key in job[step]['child'].keys():
-                d[step]['child'][key] = os.path.join(d[step]['self'], job[step]['child'][key])
+        d[step] = os.path.join(d_top, f'{step:02d}_{job[step]}')
     return d
 
 dir_set = set_dir(const.dir_set)

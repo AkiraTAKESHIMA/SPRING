@@ -9,13 +9,13 @@ import s00_util as lutil
 import s00_conf as lconf
 
 
-def block_gs(gs, step, landType=None):
+def block_gs(gs, step, landType=None, dir_in=''):
     if gs['type'] == 'latlon':
         return block_gs_latlon(gs, step)
     elif gs['type'] == 'polygon':
         return block_gs_polygon(gs, step)
     elif gs['type'] == 'raster':
-        return block_gs_raster(gs, step, landType)
+        return block_gs_raster(gs, step, landType, dir_in)
     else:
         raise Exception(f'Invalid value in gs["type"]: {gs["type"]}')
 
@@ -33,7 +33,7 @@ def block_gs_latlon(gs, step):
   is_south_to_north: {gs["is_south_to_north"]}\n\
 \n\
   out_form: auto\n\
-  dir: "{lconst.dir_tmp[step]["self"]}"\n\
+  dir: "{lconst.dir_tmp[step]}"\n\
   fout_grdidx: "grdidx.bin"\n\
   fout_grdara: "grdara.bin"\n\
   fout_grdx  : "grdxyz.bin", rec=1\n\
@@ -78,7 +78,7 @@ def block_gs_polygon(gs, step):
   idx_miss: {gs["idx_miss"]}\n\
 \n\
   out_form: index\n\
-  dir: "{lconst.dir_tmp[step]["self"]}"\n\
+  dir: "{lconst.dir_tmp[step]}"\n\
   fout_grdidx: "grdidx.bin"\n\
   fout_grdara: "grdara.bin"\n\
   fout_grdx  : "grdxyz.bin", rec=1\n\
@@ -91,7 +91,7 @@ def block_gs_polygon(gs, step):
     return s
 
 
-def block_gs_raster(gs, step, landType):
+def block_gs_raster(gs, step, landType, dir_in):
     s = f'\
 \n\
 [grid_system_raster]\n\
@@ -104,13 +104,13 @@ def block_gs_raster(gs, step, landType):
   north: {gs["north"]}\n\
   is_south_to_north: {gs["is_south_to_north"]}\n\
 \n\
-  dir: "{lconst.dir_tmp[lutil.istep("make_idxmap_RM")]["self"]}"\n\
+  dir: "{dir_in}"\n\
   fin_rstidx: "rstidx_{landType}.bin"\n\
   fin_grdidx: "grdidx_{landType}.bin"\n\
   in_grid_sz: {gs["ncx"]}, {gs["ncy"]}\n\
 \n\
   out_form: index\n\
-  dir: "{lconst.dir_tmp[step]["self"]}"\n\
+  dir: "{lconst.dir_tmp[step]}"\n\
   fout_grdidx: "grdidx_{landType}.bin"\n\
   fout_grdara: "grdara_{landType}.bin"\n\
   fout_grdx  : "grdxyz_{landType}.bin", rec=1\n\

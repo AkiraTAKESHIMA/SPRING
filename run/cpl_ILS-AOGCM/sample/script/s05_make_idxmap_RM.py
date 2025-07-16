@@ -27,12 +27,12 @@ def block_cmf():
     s = f'\
 \n\
 [cama-flood]\n\
-  dir: "{lconst.dir_tmp[lutil.istep("run_FLOW")]["self"]}"\n\
+  dir: "{lconst.dir_tmp[lutil.istep("run_FLOW")]}"\n\
   fin_catmxy: "tmp/map/1min/catmxy.bin"\n\
   fin_nextxy: "map/nextxy.bin"\n\
   fin_basin : "map/basin.bin"\n\
 \n\
-  dir: "{lconst.dir_tmp[step]["self"]}"\n\
+  dir: "{lconst.dir_tmp[step]}"\n\
   fout_grdidx_river    : "grdidx_river.bin"\n\
   fout_grdidx_river_end: "grdidx_river-end.bin"\n\
   fout_grdidx_noriv    : "grdidx_noriv.bin"\n\
@@ -56,26 +56,26 @@ def block_cmf():
 
 
 if __name__ == '__main__':
-    step = 5
+    step = int(sys.argv[0][1:3])
 
     cnf = json.load(open(lconst.f_cnf,'r'))
     lutil.adjust_config(cnf)
 
-    f_conf = f'{lconst.dir_tmp[step]["self"]}/a.conf'
+    os.makedirs(lconst.dir_set[step], exist_ok=True)
+    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
+    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    os.makedirs(lconst.dir_out[step], exist_ok=True)
 
-    os.makedirs(lconst.dir_set[step]['self'], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step]['self'], exist_ok=True)
-    os.makedirs(lconst.dir_log[step]['self'], exist_ok=True)
-    os.makedirs(lconst.dir_out[step]['self'], exist_ok=True)
+    f_conf = f'{lconst.dir_tmp[step]}/a.conf'
 
     print(f_conf)
     fp = open(f_conf, 'w')
-    fp.write(lconf.head(lconst.dir_tmp[step]['self']))
+    fp.write(lconf.head(lconst.dir_tmp[step]))
     fp.write(block_common(cnf['RM']))
     fp.write(block_cmf())
     fp.write(lconf.remap.block_options(cnf['options']))
     fp.close()
 
-    f_log = f'{lconst.dir_log[step]["self"]}/a.out'
-    f_err = f'{lconst.dir_log[step]["self"]}/a.err'
+    f_log = f'{lconst.dir_log[step]}/a.out'
+    f_err = f'{lconst.dir_log[step]}/a.err'
     util.exec_program(const.prog_make_cmf_mat, f_conf, f_log, f_err)
