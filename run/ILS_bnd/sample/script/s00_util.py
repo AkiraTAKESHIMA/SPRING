@@ -11,7 +11,6 @@ import s00_const as lconst
 
 def adjust_settings(cnf):
     cmf = cnf['CaMa-Flood']
-    #cmf['dir'] = os.path.join(cnf['dir_top'], cmf['dir'])
     cmf = dict(**cmf, **{
       'fout_grdidx_river': util.file_bin('grid/index_river.bin'),
       'fout_grdidx_noriv': util.file_bin('grid/index_noriv.bin'),
@@ -34,7 +33,7 @@ def adjust_settings(cnf):
       'is_south_to_north': cmf['is_south_to_north'],
       'mx_raster_1deg': int(cmf['nx_raster'] / (cmf['east']-cmf['west'])),  # used for MODIS
       'my_raster_1deg': int(cmf['ny_raster'] / (cmf['north']-cmf['south'])),
-      'dir': f'{lconst.dir_tmp[util.istep("make_cmf_mat", lconst.job)]}/MATSIRO',
+      'dir': f'{os.getcwd()}/{lconst.dir_tmp[util.istep("make_cmf_mat", lconst.job)]}/MATSIRO',
       'fout_grdmsk_river': util.file_bin('grid/land_mask_river.bin', 'real', 'big', None),
       'fout_grdmsk_noriv': util.file_bin('grid/land_mask_noriv.bin', 'real', 'big', None),
       'fout_grdidx_river': util.file_bin('grid/index_river.bin'),
@@ -67,8 +66,8 @@ def adjust_settings(cnf):
           'mx_raster_1deg': mat['mx_raster_1deg'],
           'my_raster_1deg': mat['my_raster_1deg'],
           'dir': mat['dir'],
-          'fin_rstidx': mat[f'fout_rstidx_{landType}'],
-          'fin_grdidx': mat[f'fout_grdidx_{landType}'],
+          'fin_rstidx': mat[f'fout_rstidx_mkbnd_{landType}'],
+          'fin_grdidx': mat[f'fout_grdidx_mkbnd_{landType}'],
           'idx_miss': mat['idx_miss'],
         }
 

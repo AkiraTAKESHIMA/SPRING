@@ -13,20 +13,24 @@ import s00_util as lutil
 
 
 def make_rt_untiled(cnf, dataName, landType):
-    dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}/{landType}'
+    tileName = 'global'
+    dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}'
 
-    f_conf = f'{lconst.dir_set[step]}/{dataName}/{landType}/all.conf'
+    f_conf = f'{lconst.dir_set[step]}/{dataName}/{tileName}_{landType}.conf'
     print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
-    fp.write(conf.remap.head(dir_tmp))
+    fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
     fp.write(conf.remap.block_gs(cnf[dataName]))
     fp.write(conf.remap.block_gs(cnf[f'MATSIRO_{landType}']))
-    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp))
+    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp,
+               fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
+               fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
+               fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
     fp.write(conf.remap.block_options(cnf['options']))
     fp.close()
 
-    f_log = f'{lconst.dir_log[step]}/{dataName}/{landType}/all.out'
-    f_err = f'{lconst.dir_log[step]}/{dataName}/{landType}/all.err'
+    f_log = f'{lconst.dir_log[step]}/{dataName}/{tileName}_{landType}.out'
+    f_err = f'{lconst.dir_log[step]}/{dataName}/{tileName}_{landType}.err'
     util.exec_program(const.prog_remap, f_conf, f_log, f_err)
 
 
@@ -34,6 +38,7 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
     mat = copy.deepcopy(cnf[f'MATSIRO_{landType}'])
     dat = copy.deepcopy(cnf[dataName])
 
+    dat['name'] = dat['name'] + '_' + tileName
     if dat['type'] == 'latlon':
         west, east, south, north = lutil.get_tile_bbox_latlon(tileName)
         dat['west']  = west
@@ -55,27 +60,30 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
     mat['dyi'] = dyi
     mat['dyf'] = dyf
 
-    dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}/{landType}'
+    dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}'
 
-    f_conf = f'{lconst.dir_set[step]}/{dataName}/{landType}/{tileName}.conf'
+    f_conf = f'{lconst.dir_set[step]}/{dataName}/{tileName}_{landType}.conf'
     print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
-    fp.write(conf.remap.head(dir_tmp))
+    fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
     fp.write(conf.remap.block_gs(dat))
     fp.write(conf.remap.block_gs(mat))
-    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp))
+    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp,
+               fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
+               fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
+               fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
     fp.write(conf.remap.block_options(cnf['options']))
     fp.close()
 
-    f_log = f'{lconst.dir_log[step]}/{dataName}/{landType}/{tileName}.out'
-    f_err = f'{lconst.dir_log[step]}/{dataName}/{landType}/{tileName}.err'
+    f_log = f'{lconst.dir_log[step]}/{dataName}/{tileName}_{landType}.out'
+    f_err = f'{lconst.dir_log[step]}/{dataName}/{tileName}_{landType}.err'
     util.exec_program(const.prog_remap, f_conf, f_log, f_err)
 
 
 def mkdir(dataName, landType):
     dir_set = f'{lconst.dir_set[step]}/{dataName}'
     dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}'
-    dir_log = f'{lconst.dir_log[step]}/{dataName}/{landType}'
+    dir_log = f'{lconst.dir_log[step]}/{dataName}'
     os.makedirs(dir_set, exist_ok=True)
     os.makedirs(dir_tmp, exist_ok=True)
     os.makedirs(dir_log, exist_ok=True)
@@ -133,7 +141,7 @@ def run(dataName_run, landType_run, tileName_run):
                 make_rt_untiled(cnf, dataName, landType)
 
         # Copy data or make symbolic links
-        util.make_slink(f'{lconst.dir_tmp[step]}/{dataName}/rt',
+        util.make_slink(f'{lconst.dir_tmp[step]}/{dataName}',
                         f'{const.dir_out}/remapping_table/{dataName}')
             
 

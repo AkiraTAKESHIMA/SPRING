@@ -12,6 +12,8 @@ import s00_util as lutil
 
 def merge_rt(srcMeshNameFmt, tgtMeshNameFmt, runname_out,
              opt_idx_duplication, grid_coef, opt_coef_sum_modify):
+    dir_tmp_make_rt = f'{lconst.dir_tmp[util.istep("make_rt", lconst.job)]}'
+
     srcMeshName = util.get_meshBaseName(srcMeshNameFmt)
     tgtMeshName = util.get_meshBaseName(tgtMeshNameFmt)
     runname = f'{srcMeshName}_to_{tgtMeshName}'
@@ -24,8 +26,8 @@ def merge_rt(srcMeshNameFmt, tgtMeshNameFmt, runname_out,
     rtName_river = f'{srcMeshName_river}_to_{tgtMeshName_river}'
     rtName_noriv = f'{srcMeshName_noriv}_to_{tgtMeshName_noriv}'
 
-    dir_rt_river = f'{lconst.dir_tmp[util.istep("make_rt", lconst.job)]}/{rtName_river}'
-    dir_rt_noriv = f'{lconst.dir_tmp[util.istep("make_rt", lconst.job)]}/{rtName_noriv}'
+    dir_rt_river = f'{dir_tmp_make_rt}/{rtName_river}'
+    dir_rt_noriv = f'{dir_tmp_make_rt}/{rtName_noriv}'
     length_rt_river = util.get_nij(f'{dir_rt_river}/grid.bin', cnf['remapping_table']['dtype_idx'])
     length_rt_noriv = util.get_nij(f'{dir_rt_noriv}/grid.bin', cnf['remapping_table']['dtype_idx'])
 
@@ -52,56 +54,6 @@ def merge_rt(srcMeshNameFmt, tgtMeshNameFmt, runname_out,
                     f'{const.dir_out}/{runname_out}')
 
     return
-
-    with open(f_conf,'w') as fp:
-        fp.write(f'\
-#\n\
-path_report: "{lconst.dir_tmp[2]}/{srcMeshName}_to_{tgtMeshName}/report.txt"\n\
-\n\
-[input]\n\
-  # river\n\
-  length_rt: {length_rt_river}\n\
-  dir: "{lconst.dir_tmp[1]}/{rtName_river}"\n\
-  f_rt_sidx: "grid.bin", int4, 1, big\n\
-  f_rt_tidx: "grid.bin", int4, 2, big\n\
-  f_rt_area: "area.bin", dble, 1, big\n\
-  f_rt_coef: "coef.bin", dble, 1, big\n\
-\n\
-  # noriv\n\
-  length_rt: {length_rt_noriv}\n\
-  dir: "{lconst.dir_tmp[1]}/{rtName_noriv}"\n\
-  f_rt_sidx: "grid.bin", int4, 1, big\n\
-  f_rt_tidx: "grid.bin", int4, 2, big\n\
-  f_rt_area: "area.bin", dble, 1, big\n\
-  f_rt_coef: "coef.bin", dble, 1, big\n\
-\n\
-  opt_idx_duplication: stop\n\
-[end]\n\
-\n\
-[output]\n\
-  grid_coef: target\n\
-  grid_sort: target\n\
-  opt_coef_sum_modify: 1.d0\n\
-\n\
-  dir: "{lconst.dir_tmp[2]}/{srcMeshName}_to_{tgtMeshName}"\n\
-  f_rt_sidx: "grid.bin", int4, 1, big\n\
-  f_rt_tidx: "grid.bin", int4, 2, big\n\
-  f_rt_area: "area.bin", dble, 1, big\n\
-  f_rt_coef: "coef.bin", dble, 1, big\n\
-[end]\n\
-\n\
-[options]\n\
-  old_files: remove\n\
-[end]\n\
-')
-
-    pc = subprocess.run([const.prog_merge_rt, f_conf],
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        encoding='utf-8')
-    print('stdout:')
-    print(pc.stdout.strip())
-    print('stderr:')
-    print(pc.stderr.strip())
 
 
 if __name__ == '__main__':

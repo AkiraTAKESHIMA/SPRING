@@ -7,10 +7,10 @@ import const, util
 from conf_make_grid_data import block_options
 
 
-def head(dir_out):
+def head(dir_out, fname_report='report'):
     s = f'\
 #\n\
-path_report: "{dir_out}/report.txt"\n'
+path_report: "{dir_out}/{fname_report}.txt"\n'
 
     return s
 
@@ -192,15 +192,16 @@ def block_gs_polygon(gs, use_grdara):
 
 
 
-def block_remapping(rmp, dir_out):
+def block_remapping(rmp, dir_out, 
+                    fname_rt_grid='grid', fname_rt_area='area', fname_rt_coef='coef'):
     s = f'\
 \n\
 [remapping]\n\
   dir: "{dir_out}"\n\
-  fout_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
-  fout_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
-  fout_rt_area: "area.bin", endian={rmp["endian"]}\n\
-  fout_rt_coef: "coef.bin", endian={rmp["endian"]}\n'
+  fout_rt_sidx: "{fname_rt_grid}.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
+  fout_rt_tidx: "{fname_rt_grid}.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
+  fout_rt_area: "{fname_rt_area}.bin", endian={rmp["endian"]}\n\
+  fout_rt_coef: "{fname_rt_coef}.bin", endian={rmp["endian"]}\n'
 
     if rmp['make_verification_data']:
         s += '\

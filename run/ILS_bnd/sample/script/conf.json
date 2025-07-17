@@ -126,7 +126,7 @@
   "remapping": {
     "dtype_idx": "int4",
     "endian": "big_endian",
-    "make_verification_data": true
+    "make_verification_data": false
   },
   "options": {
     "Earth": {

@@ -28,9 +28,9 @@ def block_input_rt(nij, dir_in, rmp):
   length_rt: {nij}\n\
   dir: "{dir_in}"\n\
   f_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
-  f_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
-  f_rt_area: "grid.bin", dble, 1, {rmp["endian"]}\n\
-  f_rt_coef: "grid.bin", dble, 1, {rmp["endian"]}\n'
+  f_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
+  f_rt_area: "area.bin", dble, 1, {rmp["endian"]}\n\
+  f_rt_coef: "coef.bin", dble, 1, {rmp["endian"]}\n'
 
     return s
 

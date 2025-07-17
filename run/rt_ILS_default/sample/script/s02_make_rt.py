@@ -32,7 +32,7 @@ def make_rt(cnf, srcMeshNameFmt, tgtMeshNameFmt, lst_landType,
 
         f_log = f'{lconst.dir_log[step]}/{runname}.out'
         f_err = f'{lconst.dir_log[step]}/{runname}.err'
-        #util.exec_program(const.prog_remap, f_conf, f_log, f_err)
+        util.exec_program(const.prog_remap, f_conf, f_log, f_err)
 
     if runname_out is not None:
         util.make_slink(f'{dir_tmp}', f'{const.dir_out}/{runname_out}')
