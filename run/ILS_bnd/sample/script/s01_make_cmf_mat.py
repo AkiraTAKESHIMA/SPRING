@@ -11,17 +11,16 @@ import s00_util as lutil
 
 
 def run():
-    cnf = json.load(open('conf.json','r'))
+    cnf = json.load(open(lconst.f_cnf, 'r'))
     lutil.adjust_settings(cnf)
 
-    f_conf = f'{lconst.dir_set[1]}/a.conf'
+    f_conf = f'{lconst.dir_set[step]}/a.conf'
 
-    os.makedirs(lconst.dir_set[1], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[1], exist_ok=True)
-    os.makedirs(lconst.dir_log[1], exist_ok=True)
-    os.makedirs(lconst.dir_out[1], exist_ok=True)
+    os.makedirs(lconst.dir_set[step], exist_ok=True)
+    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
+    os.makedirs(lconst.dir_log[step], exist_ok=True)
 
-    print(f_conf)
+    print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
 
     fp.write('\
@@ -93,18 +92,15 @@ def run():
 
     fp.close()
 
-    pc = subprocess.run([const.prog_make_cmf_mat, f_conf], 
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                        encoding='utf-8')
-    f_log = f'{lconst.dir_log[1]}/a.out'
-    f_err = f'{lconst.dir_log[1]}/a.err'
-    print(f_log)
-    print(f_err)
-    with open(f_log, 'w') as fp:
-        fp.write(pc.stdout)
-    with open(f_err, 'w') as fp:
-        fp.write(pc.stderr)
+    f_log = f'{lconst.dir_log[step]}/a.out'
+    f_err = f'{lconst.dir_log[step]}/a.err'
+    util.exec_program(const.prog_make_cmf_mat, f_conf, f_log, f_err)
+
+    util.make_slink(f'{lconst.dir_tmp[step]}/CaMa-Flood', f'{const.dir_out}/grid/CaMa-Flood')
+    util.make_slink(f'{lconst.dir_tmp[step]}/MATSIRO', f'{const.dir_out}/grid/MATSIRO')
 
 
 if __name__ == '__main__':
+    step = int(sys.argv[0][1:3])
+
     run()
