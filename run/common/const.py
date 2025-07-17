@@ -16,6 +16,9 @@ prog_make_cmf_mat   = f'{dir_bin}/main_ext/make_cmf_mat.exe'
 prog_cpl_define_mat = f'{dir_bin}/main_ext/cpl_aogcm-ils_define_mat.exe'
 prog_cpl_make_rt    = f'{dir_bin}/main_ext/cpl_aogcm-ils_make_rt_for_ogcm.exe'
 
+command_ln = 'ln'
+options_ln = '-s'
+
 str_dtype_int1 = 'int1'
 str_dtype_int2 = 'int2'
 str_dtype_int4 = 'int4'

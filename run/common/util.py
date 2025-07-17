@@ -12,15 +12,61 @@ def exec_program(prog, f_conf, f_log, f_err):
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                        encoding='utf-8')
 
-    print(f_log)
-    print(f_err)
+    print(f'stdout: {f_log}')
+    print(f'stderr: {f_err}')
     with open(f_log, 'w') as fp:
         fp.write(pc.stdout)
     with open(f_err, 'w') as fp:
         fp.write(pc.stderr)
 
     if pc.returncode != 0:
-        raise Exception(f'Program `{prog}` failed.')
+        #raise Exception(f'Program `{prog}` failed.')
+        print(f'*** Program `{prog}` failed.')
+
+
+def make_slink(org, dst):
+    if not (os.path.isfile(org) or os.path.isdir(org)):
+        raise Exception('File or directory not found: {org}')
+    if os.path.isfile(dst) or os.path.islink(dst):
+        os.remove(dst)
+    elif os.path.isdir(dst):
+        shutil.rmtree(dst)
+
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+
+    cdir = os.getcwd()
+    pc = subprocess.run([const.command_ln] + const.options_ln.strip().split() + \
+                        [os.path.join(cdir, org), os.path.join(cdir, dst)],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                        encoding='utf-8')
+    if pc.returncode != 0:
+        command = f'{const.command_ln} {const.options_ln} {org} {dst}'
+        raise Exception(f'Failed: \n{command}')
+
+
+def istep(name, job):
+    for key in job.keys():
+        if job[key] == name:
+            return key
+    raise Exception(f'Invalid value in $name: {name}')
+
+
+def get_nij(f_rt_idx, dtype):
+    if os.path.getsize(f_rt_idx) % (byte(dtype)*2) != 0:
+        raise Exception('Invalid file size.')
+    return int(os.path.getsize(f_rt_idx) / (byte(dtype)*2))
+
+
+def set_gs_dir(gs, dir_top):
+    if 'dir' in gs.keys():
+        gs['dir'] = os.path.join(dir_top, gs['dir'])
+
+
+def set_dir(d_top, job):
+    d = {}
+    for step in job.keys():
+        d[step] = os.path.join(d_top, f'{step:02d}_{job[step]}')
+    return d
 
 
 def dtype_str_to_np(dct, dtype_np_default):
