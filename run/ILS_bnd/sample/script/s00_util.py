@@ -9,19 +9,70 @@ import const, util
 import s00_const as lconst
 
 
-def set_matsiro(cmf):
-    return dict(
-      ncx = cmf['ncx'], ncy = cmf['ncy'],
-      ndx = cmf['ndx'], ndy = cmf['ndy'],
-      west = cmf['west'], east = cmf['east'], south = cmf['south'], north = cmf['north'],
-      mdx_1deg = int(cmf['ndx'] / (cmf['east']-cmf['west'])),
-      mdy_1deg = int(cmf['ndy'] / (cmf['north']-cmf['south'])),
-    )
-
-
 def adjust_settings(cnf):
-    cnf['CaMa-Flood']['dir'] = os.path.join(cnf['dir_top'], cnf['CaMa-Flood']['dir'])
-    cnf['MATSIRO'] = set_matsiro(cnf['CaMa-Flood'])
+    cmf = cnf['CaMa-Flood']
+    #cmf['dir'] = os.path.join(cnf['dir_top'], cmf['dir'])
+    cmf = dict(**cmf, **{
+      'fout_grdidx_river': util.file_bin('grid/index_river.bin'),
+      'fout_grdidx_noriv': util.file_bin('grid/index_noriv.bin'),
+      'fout_rstidx_river': util.file_bin('raster/index_river.bin'),
+      'fout_rstidx_noriv': util.file_bin('raster/index_noriv.bin'),
+    })
+    cnf['CaMa-Flood'] = cmf
+
+    mat = {
+      'name': 'MATSIRO',
+      'type': 'raster',
+      'nx_raster': cmf['nx_raster'],
+      'ny_raster': cmf['ny_raster'],
+      'nx_grid': cmf['nx_grid'],
+      'ny_grid': cmf['ny_grid'],
+      'west': cmf['west'], 
+      'east': cmf['east'], 
+      'south': cmf['south'], 
+      'north': cmf['north'], 
+      'is_south_to_north': cmf['is_south_to_north'],
+      'mx_raster_1deg': int(cmf['nx_raster'] / (cmf['east']-cmf['west'])),  # used for MODIS
+      'my_raster_1deg': int(cmf['ny_raster'] / (cmf['north']-cmf['south'])),
+      'dir': f'{lconst.dir_tmp[util.istep("make_cmf_mat", lconst.job)]}/MATSIRO',
+      'fout_grdmsk_river': util.file_bin('grid/land_mask_river.bin', 'real', 'big', None),
+      'fout_grdmsk_noriv': util.file_bin('grid/land_mask_noriv.bin', 'real', 'big', None),
+      'fout_grdidx_river': util.file_bin('grid/index_river.bin'),
+      'fout_grdidx_noriv': util.file_bin('grid/index_noriv.bin'),
+      'fout_rstidx_river': util.file_bin('raster/index_river.bin'),
+      'fout_rstidx_noriv': util.file_bin('raster/index_noriv.bin'),
+      'fout_grdidx_bnd_river': util.file_bin('grid/index_bnd_river.bin'),
+      'fout_grdidx_bnd_noriv': util.file_bin('grid/index_bnd_noriv.bin'),
+      'fout_grdidx_mkbnd_river': util.file_bin('grid/index_mkbnd_river.bin'),
+      'fout_grdidx_mkbnd_noriv': util.file_bin('grid/index_mkbnd_noriv.bin'),
+      'fout_rstidx_mkbnd_river': util.file_bin('raster/index_mkbnd_river.bin'),
+      'fout_rstidx_mkbnd_noriv': util.file_bin('raster/index_mkbnd_noriv.bin'),
+      'idx_miss': -9999,
+    }
+    cnf['MATSIRO'] = mat
+
+    for landType in ['river', 'noriv']:
+        cnf[f'MATSIRO_{landType}'] = {
+          'name': f'MATSIRO_{landType}',
+          'type': 'raster',
+          'nx_raster': mat['nx_raster'],
+          'ny_raster': mat['ny_raster'],
+          'nx_grid': mat['nx_grid'],
+          'ny_grid': mat['ny_grid'],
+          'west': mat['west'], 
+          'east': mat['east'], 
+          'south': mat['south'], 
+          'north': mat['north'], 
+          'is_south_to_north': mat['is_south_to_north'],
+          'mx_raster_1deg': mat['mx_raster_1deg'],
+          'my_raster_1deg': mat['my_raster_1deg'],
+          'dir': mat['dir'],
+          'fin_rstidx': mat[f'fout_rstidx_{landType}'],
+          'fin_grdidx': mat[f'fout_grdidx_{landType}'],
+          'idx_miss': mat['idx_miss'],
+        }
+
+    util.join_topdir(cnf)
 
 
 def get_tile_bbox_latlon(tileName):
@@ -44,204 +95,11 @@ def get_tile_bbox_latlon(tileName):
     return west, east, south, north
 
 
-def get_raster_bounds(twest, teast, tsouth, tnorth, matsiro):
-    dxi = int(np.floor((twest-matsiro['west']) * matsiro['mdx_1deg']+1))
-    dxf = int(np.ceil((teast-matsiro['west']) * matsiro['mdx_1deg']))
-    dyi = int(np.floor((matsiro['north']-tnorth) * matsiro['mdy_1deg']+1))
-    dyf = int(np.ceil((matsiro['north']-tsouth) * matsiro['mdy_1deg']))
+def get_raster_bounds(mat, twest, teast, tsouth, tnorth):
+    dxi = int(np.floor((twest-mat['west']) * mat['mx_raster_1deg']+1))
+    dxf = int(np.ceil((teast-mat['west']) * mat['mx_raster_1deg']))
+    dyi = int(np.floor((mat['north']-tnorth) * mat['my_raster_1deg']+1))
+    dyf = int(np.ceil((mat['north']-tsouth) * mat['my_raster_1deg']))
 
     return dxi, dxf, dyi, dyf
-
-
-def head(landType, tileName, dir_out):
-    return f'\
-#\n\
-path_report: "{dir_out}/report/{tileName}_{landType}.txt"\n\
-'
-
-
-def block_gs_latlon(gs, twest, teast, tsouth, tnorth):
-    return f'\
-\n\
-[grid_system_latlon]\n\
-  nx: {{nx}}\n\
-  ny: {{ny}}\n\
-  west: {twest}\n\
-  east: {teast}\n\
-  south: {tsouth}\n\
-  north: {tnorth}\n\
-  is_south_to_north: {{is_south_to_north}}\n\
-[end]\n\
-'.format(**gs)
-
-
-def block_gs_modis(modis, f_lon, f_lat):
-    return f'\
-\n\
-[grid_system_polygon]\n\
-  np: {{np}}\n\
-  nij: {{nij}}\n\
-  dir: "{{dir}}"\n\
-  f_lon_vertex: "{f_lon}"\n\
-  f_lat_vertex: "{f_lat}"\n\
-  coord_unit: degree\n\
-  coord_miss: -999.d0\n\
-  arc_parallel: True\n\
-[end]\n\
-'.format(**modis)
-
-
-def block_gs_raster(landType, dir_out, matsiro, dxi, dxf, dyi, dyf):
-    return f'\
-\n\
-[grid_system_raster]\n\
-  nx: {{ndx}}\n\
-  ny: {{ndy}}\n\
-  west: {{west}}\n\
-  east: {{east}}\n\
-  south: {{south}}\n\
-  north: {{north}}\n\
-  xi: {dxi}\n\
-  xf: {dxf}\n\
-  yi: {dyi}\n\
-  yf: {dyf}\n\
-  dir: "{dir_out}/MATSIRO"\n\
-  fin_rstidx: "raster/index_mkbnd_{landType}.bin"\n\
-  fin_grdidx: "grid/index_mkbnd_{landType}.bin"\n\
-  in_grid_sz: {{ncx}}, {{ncy}}\n\
-  grdidx_condition: raster_in_grid\n\
-  idx_miss: -9999\n\
-  is_south_to_north: False\n\
-[end]\n\
-'.format(**matsiro)
-
-
-def block_remapping(landType, tileName, dir_out, make_verification_data):
-    s = f'\
-\n\
-[remapping]\n\
-  dir: "{dir_out}/rt"\n\
-  fout_rt_sidx: "mapping_table_idx_{tileName}_{landType}.bin", int4, 1, big\n\
-  fout_rt_tidx: "mapping_table_idx_{tileName}_{landType}.bin", int4, 2, big\n\
-  fout_rt_area: "mapping_table_area_{tileName}_{landType}.bin", dble, 1, big\n\
-  fout_rt_coef: "mapping_table_coef_{tileName}_{landType}.bin", dble, 1, big\n\
-\n\
-  allow_empty: True\n\
-'
-
-    if make_verification_data:
-        s += f'\
-\n\
-  vrf_source_form: auto\n\
-  fout_vrf_grdidx     : "vrf/src_idx_{tileName}_{landType}.bin", int4, 1, little\n\
-  fout_vrf_grdara_true: "vrf/src_val_{tileName}_{landType}.bin", real, 1, little\n\
-  fout_vrf_grdara_rt  : "vrf/src_val_{tileName}_{landType}.bin", real, 2, little\n\
-  fout_vrf_rerr_grdara: "vrf/src_val_{tileName}_{landType}.bin", real, 3, little\n\
-\n\
-  vrf_target_form: auto\n\
-  fout_vrf_grdidx     : "vrf/tgt_idx_{tileName}_{landType}.bin", int4, 1, little\n\
-  fout_vrf_grdara_true: "vrf/tgt_val_{tileName}_{landType}.bin", real, 1, little\n\
-  fout_vrf_grdara_rt  : "vrf/tgt_val_{tileName}_{landType}.bin", real, 2, little\n\
-  fout_vrf_rerr_grdara: "vrf/tgt_val_{tileName}_{landType}.bin", real, 3, little\n\
-'
-
-    s += '\
-[end]\n\
-'
-
-    return s
-
-
-def block_options(earth):
-    s = '\
-\n\
-[options]\n\
-  old_files: remove\n\
-'
-
-    if earth['shape'] == 'sphere':
-        s += '\
-  earth_shape: {shape}\n\
-  earth_r: {r}\n\
-'.format(**earth)
-
-    elif earth['shape'] == 'ellips':
-        s += '\
-  earth_shape: {shape}\n\
-  earth_r: {r}\n\
-  earth_e2: {e2}\n\
-'
-
-    s += '\
-[end]\n\
-'
-    return s
-
-
-def conf_remap_latlon(tileName, landType, dataName, data_in, matsiro, options):
-    if tileName is None:
-        twest, teast, tsouth, tnorth \
-          = data_in['west'], data_in['east'], data_in['south'], data_in['north']
-    else:
-        twest, teast, tsouth, tnorth = get_tile_bbox_latlon(tileName)
-
-    dxi, dxf, dyi, dyf = get_raster_bounds(twest, teast, tsouth, tnorth, matsiro)
-
-    dir_out_this = os.path.join(lconst.dir_tmp[2], dataName)
-
-    s = head(landType, tileName, dir_out_this)
-
-    s += block_gs_latlon(data_in, twest, teast, tsouth, tnorth)
-
-    s += block_gs_raster(landType, lconst.dir_tmp[1], matsiro, dxi, dxf, dyi, dyf)
-
-    s += block_remapping(landType, tileName, dir_out_this, options['make_verification_data'])
-
-    s += block_options(options['earth'])
-
-    return s
-
-
-def conf_remap_modis(tileName, landType, dataName, data_in, matsiro, options):
-    fnam_lon = data_in['f_coord_lon']['path'].format(tilename=tileName)
-    fnam_lat = data_in['f_coord_lat']['path'].format(tilename=tileName)
-
-    f_lon = os.path.join(data_in['dir'], fnam_lon)
-    f_lat = os.path.join(data_in['dir'], fnam_lat)
-
-    lon = np.fromfile(f_lon, dtype=util.dtype_str_to_np(data_in['f_coord_lon'], np.float64))
-    lat = np.fromfile(f_lat, dtype=util.dtype_str_to_np(data_in['f_coord_lat'], np.float64))
-
-    if util.get_endian(data_in['f_coord_lon']) == 'big_endian':
-        lon = lon.byteswap()
-    if util.get_endian(data_in['f_coord_lat']) == 'big_endian':
-        lat = lat.byteswap()
-
-    lon = np.ma.masked_equal(lon, data_in['coord_miss'])
-    lat = np.ma.masked_equal(lat, data_in['coord_miss'])
-
-    #print(f'lon {lon.min()} {lon.max()}')
-    #print(f'lat {lat.min()} {lat.max()}')
-    dxi, dxf, dyi, dyf = get_raster_bounds(lon.min(), lon.max(), lat.min(), lat.max(), matsiro)
-
-    #print('{west} {east} {south} {north}'.format(**matsiro))
-    #print(dxi, dxf, dyi, dyf)
-    #quit()
-
-    del(lon, lat)
-
-    dir_out_this = os.path.join(lconst.dir_tmp[2], dataName)
-
-    s = head(landType, tileName, dir_out_this)
-
-    s += block_gs_modis(data_in, fnam_lon, fnam_lat)
-
-    s += block_gs_raster(landType, lconst.dir_tmp[1], matsiro, dxi, dxf, dyi, dyf)
-
-    s += block_remapping(landType, tileName, dir_out_this, options['make_verification_data'])
-
-    s += block_options(options['earth'])
-
-    return s
-
 

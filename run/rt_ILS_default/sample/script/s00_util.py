@@ -3,6 +3,9 @@ import sys
 import shutil
 import copy
 
+sys.path.append('../../../common')
+import const, util
+
 import s00_const as lconst
 
 
@@ -12,8 +15,8 @@ def adjust_config(cnf):
         cnf[f'MATSIRO_bnd_{landType}'] = {
           'name': f'MATSIRO_bnd_{landType}',
           'type': 'latlon',
-          'nx': cnf[m]['ncx'],
-          'ny': cnf[m]['ncy'],
+          'nx': cnf[m]['nx_grid'],
+          'ny': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -28,10 +31,10 @@ def adjust_config(cnf):
         cnf[f'MATSIRO_{landType}'] = {
           'name': f'MATSIRO_{landType}',
           'type': 'raster',
-          'nx': cnf[m]['nx'],
-          'ny': cnf[m]['ny'],
-          'ncx': cnf[m]['ncx'],
-          'ncy': cnf[m]['ncy'],
+          'nx_raster': cnf[m]['nx_raster'],
+          'ny_raster': cnf[m]['ny_raster'],
+          'nx_grid': cnf[m]['nx_grid'],
+          'ny_grid': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -48,8 +51,8 @@ def adjust_config(cnf):
         cnf[f'MATSIRO_latlon_{landType}'] = {
           'name': f'MATSIRO_latlon_{landType}',
           'type': 'latlon',
-          'nx': cnf[m]['ncx'],
-          'ny': cnf[m]['ncy'],
+          'nx': cnf[m]['nx_grid'],
+          'ny': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -64,14 +67,14 @@ def adjust_config(cnf):
         cnf[f'IO_MATSIRO_bnd_{landType}'] = {
           'name': f'IO_MATSIRO_bnd_{landType}',
           'type': 'latlon',
-          'nx': cnf[m]['ncx'],
-          'ny': cnf[m]['ncy'],
+          'nx': cnf[m]['nx_grid'],
+          'ny': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
           'north': cnf[m]['north'],
           'is_south_to_north': cnf[m]['is_south_to_north'],
-          'idx_bgn': (cnf[m]['ncx']*cnf[m]['ncy'])*i + 1,
+          'idx_bgn': (cnf[m]['nx_grid']*cnf[m]['ny_grid'])*i + 1,
           'dir': cnf[m]['dir'],
         }
 
@@ -79,8 +82,8 @@ def adjust_config(cnf):
         cnf[f'IO_MATSIRO_row_{landType}'] = {
           'name': f'IO_MATSIRO_row_{landType}',
           'type': 'latlon', 
-          'nx': cnf[m]['ncx'],
-          'ny': cnf[m]['ncy'],
+          'nx': cnf[m]['nx_grid'],
+          'ny': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -95,10 +98,10 @@ def adjust_config(cnf):
         cnf[f'CaMa-Flood_{landType}'] = {
           'name': f'CaMa-Flood_{landType}',
           'type': 'raster',
-          'ncx': cnf[m]['ncx'],
-          'ncy': cnf[m]['ncy'],
-          'nx': cnf[m]['nx'],
-          'ny': cnf[m]['ny'],
+          'nx_raster': cnf[m]['nx_raster'],
+          'ny_raster': cnf[m]['ny_raster'],
+          'nx_grid': cnf[m]['nx_grid'],
+          'ny_grid': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -114,8 +117,8 @@ def adjust_config(cnf):
         cnf[f'CaMa-Flood_latlon_{landType}'] = {
           'name': f'CaMa-Flood_latlon_{landType}',
           'type': 'latlon', 
-          'nx': cnf[m]['ncx'],
-          'ny': cnf[m]['ncy'],
+          'nx': cnf[m]['nx_grid'],
+          'ny': cnf[m]['ny_grid'],
           'west': cnf[m]['west'],
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -130,8 +133,8 @@ def adjust_config(cnf):
         cnf[f'IO_CaMa-Flood_row_{landType}'] = {
           'name': f'IO_CaMa-Flood_row_{landType}',
           'type': 'latlon',
-          'nx': cnf[m]['ncx'],
-          'ny': cnf[m]['ncy'],
+          'nx': cnf[m]['nx_grid'],
+          'ny': cnf[m]['ny_grid'],
           'west': cnf[m]['west'], 
           'east': cnf[m]['east'],
           'south': cnf[m]['south'],
@@ -141,13 +144,4 @@ def adjust_config(cnf):
           'fin_grdara': {"path": f'grdara_{landType}.bin'},
         }
 
-
-    for key in cnf.keys():
-        if type(cnf[key]) is not dict: continue
-
-        if 'dir' in cnf[key].keys():
-            cnf[key]['dir'] = os.path.join(cnf['dir_top'], cnf[key]['dir'])
-
-        elif '_dir' in cnf[key].keys():
-            cnf[key]['dir'] = os.path.join(os.getcwd(), cnf[key]['_dir'])
-
+    util.join_topdir(cnf)

@@ -1,23 +1,28 @@
 import os
 import sys
+import copy
 import subprocess
 import json
 import argparse
 
 sys.path.append('../../../common')
-import const, util
+import const, util, conf
 
 import s00_const as lconst
 import s00_util as lutil
 
 
 def make_rt_untiled(cnf, dataName, landType):
+    dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}/{landType}'
+
     f_conf = f'{lconst.dir_set[step]}/{dataName}/{landType}/all.conf'
     print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
-    fp.write(lutil.conf_remap_latlon(
-               None, landType, dataName, 
-               cnf[dataName], cnf['MATSIRO'], cnf['options']))
+    fp.write(conf.remap.head(dir_tmp))
+    fp.write(conf.remap.block_gs(cnf[dataName]))
+    fp.write(conf.remap.block_gs(cnf[f'MATSIRO_{landType}']))
+    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp))
+    fp.write(conf.remap.block_options(cnf['options']))
     fp.close()
 
     f_log = f'{lconst.dir_log[step]}/{dataName}/{landType}/all.out'
@@ -26,17 +31,40 @@ def make_rt_untiled(cnf, dataName, landType):
 
 
 def make_rt_tiled(cnf, dataName, landType, tileName):
+    mat = copy.deepcopy(cnf[f'MATSIRO_{landType}'])
+    dat = copy.deepcopy(cnf[dataName])
+
+    if dat['type'] == 'latlon':
+        west, east, south, north = lutil.get_tile_bbox_latlon(tileName)
+        dat['west']  = west
+        dat['east']  = east
+        dat['south'] = south
+        dat['north'] = north
+    elif dat['type'] == 'polygon':
+        dat['f_lon_vertex']['path'] = dat['f_lon_vertex']['path'].format(tilename=tileName)
+        dat['f_lat_vertex']['path'] = dat['f_lat_vertex']['path'].format(tilename=tileName)
+        lon = util.read_bin(dat['f_lon_vertex'], dat['dir'], dat['coord_miss'])
+        lat = util.read_bin(dat['f_lat_vertex'], dat['dir'], dat['coord_miss'])
+        west, east, south, north = lon.min(), lon.max(), lat.min(), lat.max()
+    else:
+        raise Exception(f'Invalid value in `dat["type"]`: {dat["type"]}')
+
+    dxi, dxf, dyi, dyf = lutil.get_raster_bounds(mat, west, east, south, north)
+    mat['dxi'] = dxi
+    mat['dxf'] = dxf
+    mat['dyi'] = dyi
+    mat['dyf'] = dyf
+
+    dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}/{landType}'
+
     f_conf = f'{lconst.dir_set[step]}/{dataName}/{landType}/{tileName}.conf'
     print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
-    if dataName in ['GLCNMO', 'GTOPO30', 'HWSD', 'JRA55']:
-        fp.write(lutil.conf_remap_latlon(
-          tileName, landType, dataName, 
-          cnf[dataName], cnf['MATSIRO'], cnf['options']))
-    elif dataName in ['MODIS']:
-        fp.write(lutil.conf_remap_modis(
-          tileName, landType, dataName, 
-          cnf[dataName], cnf['MATSIRO'], cnf['options']))
+    fp.write(conf.remap.head(dir_tmp))
+    fp.write(conf.remap.block_gs(dat))
+    fp.write(conf.remap.block_gs(mat))
+    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp))
+    fp.write(conf.remap.block_options(cnf['options']))
     fp.close()
 
     f_log = f'{lconst.dir_log[step]}/{dataName}/{landType}/{tileName}.out'
@@ -47,7 +75,7 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
 def mkdir(dataName, landType):
     dir_set = f'{lconst.dir_set[step]}/{dataName}'
     dir_tmp = f'{lconst.dir_tmp[step]}/{dataName}'
-    dir_log = f'{lconst.dir_log[step]}/{dataName}'
+    dir_log = f'{lconst.dir_log[step]}/{dataName}/{landType}'
     os.makedirs(dir_set, exist_ok=True)
     os.makedirs(dir_tmp, exist_ok=True)
     os.makedirs(dir_log, exist_ok=True)

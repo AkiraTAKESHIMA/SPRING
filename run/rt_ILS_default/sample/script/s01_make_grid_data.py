@@ -15,12 +15,12 @@ def make_grid_data(cnf, meshName, landType):
     f_conf = f'{lconst.dir_set[step]}/{meshName}.conf'
     print('config: '+f_conf)
     fp = open(f_conf, 'w')
-    fp.write(conf.makeGridData.head(dir_tmp))
-    fp.write(conf.makeGridData.block_gs(
+    fp.write(conf.make_grid_data.head(dir_tmp))
+    fp.write(conf.make_grid_data.block_gs(
                cnf[meshName], landType,
                ['rstidx', 'grdidx'],
                dir_tmp, ['ara']))
-    fp.write(conf.makeGridData.block_options(cnf['options']))
+    fp.write(conf.make_grid_data.block_options(cnf['options']))
     fp.close()
 
     f_log = f'{lconst.dir_log[step]}/{meshName}.out'

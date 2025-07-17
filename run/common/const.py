@@ -1,7 +1,5 @@
 import os
 
-
-
 dir_set = '../set'
 dir_tmp = '../tmp'
 dir_out = '../out'
@@ -26,5 +24,7 @@ str_dtype_int8 = 'int8'
 str_dtype_real = 'real'
 str_dtype_dble = 'dble'
 
-endian_default = 'little'
-idx_miss_default = -9999
+str_endian_little_long  = 'little_endian'
+str_endian_little_short = 'little'
+str_endian_big_long     = 'big_endian'
+str_endian_big_short    = 'big'
