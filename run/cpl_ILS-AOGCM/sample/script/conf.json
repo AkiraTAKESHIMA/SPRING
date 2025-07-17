@@ -116,13 +116,13 @@
   },
   "remapping_table": {
     "dtype_idx": "int4",
-    "endian": "big_endian"
+    "endian": "big_endian",
+    "make_verification_data": true,
   }, 
   "options": {
-    "make_verification_data": true,
-    "earth": {
-    "shape": "sphere",
-    "r": 6371e+3
+    "Earth": {
+      "shape": "sphere",
+      "r": 6371e+3
     }
   }
 }

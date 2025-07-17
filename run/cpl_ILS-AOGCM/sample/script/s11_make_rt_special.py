@@ -12,8 +12,8 @@ import s00_conf as lconf
 
 
 def blocks_body(cnf, srcMeshName, runname, dir_lsm, landType):
-    dir_rt = f'{lconst.dir_tmp[lutil.istep("make_rt_standard-1")]}/rt_AGCM_to_OGCM'
-    nij_rt = util.get_nij(f'{dir_rt}/grid.bin', cnf['remapping']['dtype_idx'])
+    dir_rt = f'{lconst.dir_tmp[lutil.istep("make_rt_standard-1")]}/rt_AGCM_to_OGCM_ocean'
+    nij_rt = util.get_nij(f'{dir_rt}/grid.bin', cnf['remapping_table']['dtype_idx'])
 
     s = f'\
 \n\
@@ -38,7 +38,7 @@ def blocks_body(cnf, srcMeshName, runname, dir_lsm, landType):
 \n\
 [input_lsm]\n\
   nij: {cnf[srcMeshName]["nij"]}\n\
-  dir: "{dir_lsm}"\n\
+  dir: "{cnf[srcMeshName]["dir"]}"\n\
   f_grdidx: {util.str_file_bin(cnf[srcMeshName]["fin_grdidx"])}\n\
   f_grdara: {util.str_file_bin(cnf[srcMeshName]["fin_grdara"])}\n\
   f_grdlon: {util.str_file_bin(cnf[srcMeshName]["fin_grdlonlat"])}, rec=1\n\
@@ -103,7 +103,7 @@ if __name__ == '__main__':
             srcMeshName = get_srcMeshName(component, landType)
             runname = get_runname(component, landType)
 
-            f_conf = f'{lconst.dir_set[step]}/{srcMeshName}.conf'
+            f_conf = f'{lconst.dir_set[step]}/{runname}.conf'
             print(f_conf)
             fp = open(f_conf, 'w')
             fp.write(lconf.head(lconst.dir_tmp[step]))

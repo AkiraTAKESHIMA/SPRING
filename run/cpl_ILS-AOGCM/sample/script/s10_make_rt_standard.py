@@ -36,49 +36,6 @@ def make_rt(srcMeshNameFmt, tgtMeshNameFmt, lst_landType):
         util.exec_program(const.prog_remap, f_conf, f_log, f_err)
 
 
-
-def make_rt_IO_bnd_to_LSM():
-    for landType in ['river', 'noriv']:
-        runname = f'rt_IO_bnd_to_LSM_{landType}'
-        dir_tmp = lconst.dir_tmp[step]['child'][runname]
-
-        f_conf = f'{lconst.dir_set[step]}/{runname}.conf'
-        print(f_conf)
-        fp = open(f_conf, 'w')
-        fp.write(lconf.head(dir_tmp))
-        fp.write(lconf.remap.block_gs(cnf[f'IO_LSM_bnd_{landType}']))
-        fp.write(lconf.remap.block_gs(cnf[f'LSM_bnd_{landType}']))
-        fp.write(lconf.remap.block_remapping(cnf['remapping_table'], dir_tmp))
-        fp.write(lconf.remap.block_options(cnf['options']))
-        fp.close()
-
-        f_log = f'{lconst.dir_log[step]}/{runname}.out'
-        f_err = f'{lconst.dir_log[step]}/{runname}.err'
-        util.exec_program(const.prog_remap, f_conf, f_log, f_err)
-
-
-def make_rt_IO_met_to_LSM():
-    for landType in ['river', 'noriv_real', 'noriv_virt']:
-        runname = f'rt_IO_met_to_LSM_{landType}'
-        dir_tmp = lconst.dir_tmp[step]['child'][runname]
-
-        f_conf = f'{lconst.dir_set[step]}/{runname}.conf'
-        print(f_conf)
-        fp = open(f_conf, 'w')
-        fp.write(lconf.head(dir_tmp))
-        fp.write(lconf.remap.block_gs(cnf['IO_met']))
-        fp.write(lconf.remap.block_gs(cnf[f'LSM_{landType}']))
-        fp.write(lconf.remap.block_remapping(cnf['remapping_table'], dir_tmp))
-        fp.write(lconf.remap.block_options(cnf['options']))
-        fp.close()
-
-        f_log = f'{lconst.dir_log[step]}/{runname}.out'
-        f_err = f'{lconst.dir_log[step]}/{runname}.err'
-        util.exec_program(const.prog_remap, f_conf, f_log, f_err)
-    
-
-
-
 if __name__ == '__main__':
     step = int(sys.argv[0][1:3])
 

@@ -3,13 +3,16 @@ import sys
 import shutil
 import copy
 
+sys.path.append('../../../common')
+import util
+
 import s00_const as lconst
 
 
 def adjust_config(cnf):
-    cnf['RM']['dir'] = lconst.dir_tmp[istep('make_idxmap_RM')]
+    cnf['RM']['dir'] = lconst.dir_tmp[util.istep('make_idxmap_RM', lconst.job)]
 
-    cnf['LSM']['dir'] = lconst.dir_tmp[istep('define_LSM')]
+    cnf['LSM']['dir'] = lconst.dir_tmp[util.istep('define_LSM', lconst.job)]
 
     for key in cnf['OGCM_ocean'].keys():
         if key not in cnf['OGCM_land'].keys():
@@ -29,7 +32,7 @@ def adjust_config(cnf):
           'south': cnf['LSM']['south'],
           'north': cnf['LSM']['north'],
           'is_south_to_north': cnf['LSM']['is_south_to_north'],
-          'dir': f'{lconst.dir_tmp[istep("define_LSM")]}/LSM',
+          'dir': f'{lconst.dir_tmp[util.istep("define_LSM", lconst.job)]}/LSM',
           'fin_grdidx': {
             'path': f'grdidx_bnd_{landType}.bin'
           },
@@ -39,12 +42,12 @@ def adjust_config(cnf):
         cnf[f'IO_LSM_bnd_{landType}'] = {
           'name': f'IO_LSM_bnd_{landType}',
           'type': 'latlon',
+          'nx': cnf['LSM']['ncx'],
+          'ny': cnf['LSM']['ncy'],
           'west' : cnf['LSM']['west'],
           'east' : cnf['LSM']['east'],
           'south': cnf['LSM']['south'],
           'north': cnf['LSM']['north'],
-          'nx': cnf['LSM']['ncx'],
-          'ny': cnf['LSM']['ncy'],
           'is_south_to_north': cnf['LSM']['is_south_to_north'],
           'idx_bgn': (cnf['LSM']['ncx']*cnf['LSM']['ncy'])*i + 1,
         }
@@ -62,7 +65,7 @@ def adjust_config(cnf):
           'south': cnf['RM']['south'],
           'north': cnf['RM']['north'],
           'is_south_to_north': cnf['RM']['is_south_to_north'],
-          'dir': f'{lconst.dir_tmp[istep("make_idxmap_RM")]}',
+          'dir': f'{lconst.dir_tmp[util.istep("make_idxmap_RM", lconst.job)]}',
           'fin_rstidx': {'path': f'rstidx_{landType}.bin'},
           'fin_grdidx': {'path': f'grdidx_{landType}.bin'},
           'idx_miss': cnf['RM']['idx_miss'],
@@ -81,7 +84,7 @@ def adjust_config(cnf):
           'south': cnf['LSM']['south'],
           'north': cnf['LSM']['north'],
           'is_south_to_north': cnf['LSM']['is_south_to_north'],
-          'dir': f'{lconst.dir_tmp[istep("define_LSM")]}/LSM',
+          'dir': f'{lconst.dir_tmp[util.istep("define_LSM", lconst.job)]}/LSM',
           'fin_rstidx'   : {'path': f'rstidx_{landType}.bin'},
           'fin_grdidx'   : {'path': f'grdidx_{landType}.bin'},
           'fin_grdara'   : {'path': f'grdara_{landType}.bin'},
@@ -100,7 +103,7 @@ def adjust_config(cnf):
           'south': cnf['LSM']['south'],
           'north': cnf['LSM']['north'],
           'is_south_to_north': cnf['LSM']['is_south_to_north'],
-          'dir': f'{lconst.dir_tmp[istep("define_LSM")]}/LSM',
+          'dir': f'{lconst.dir_tmp[util.istep("make_grid_data_LSM", lconst.job)]}',
           'fin_grdidx'   : {'path': f'grdidx_{landType}.bin'},
           'fin_grdara'   : {'path': f'grdara_{landType}.bin'},
           'fin_grdlonlat': {'path': f'grdlonlat_{landType}.bin'},
@@ -119,9 +122,10 @@ def adjust_config(cnf):
           'south': cnf['RM']['south'],
           'north': cnf['RM']['north'],
           'is_south_to_north': cnf['RM']['is_south_to_north'],
-          'fin_grdidx'   : {'path': f'{lconst.dir_tmp[istep("make_idxmap_RM")]}/grdidx_{landType}.bin'},
-          'fin_grdara'   : {'path': f'{lconst.dir_tmp[istep("make_grid_data_RM")]}/grdara_{landType}.bin'},
-          'fin_grdlonlat': {'path': f'{lconst.dir_tmp[istep("make_grid_data_RM")]}/grdlonlat_{landType}.bin'},
+          'dir': f'{lconst.dir_tmp[util.istep("make_grid_data_RM", lconst.job)]}',
+          'fin_grdidx'   : {'path': f'grdidx_{landType}.bin'},
+          'fin_grdara'   : {'path': f'grdara_{landType}.bin'},
+          'fin_grdlonlat': {'path': f'grdlonlat_{landType}.bin'},
           'idx_miss': cnf['RM']['idx_miss'],
         }
 
@@ -149,11 +153,3 @@ def adjust_config(cnf):
       'is_south_to_north': cnf['RM']['is_south_to_north'],
     }
     
-
-
-def istep(name):
-    for key in lconst.job.keys():
-        if lconst.job[key] == name:
-            return key
-    raise Exception(f'Invalid value in $name: {name}')
-
