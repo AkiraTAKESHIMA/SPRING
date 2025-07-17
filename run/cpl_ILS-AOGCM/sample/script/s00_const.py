@@ -22,7 +22,7 @@ job = {
 }
 
 
-dir_set = util.set_dir(const.dir_set)
-dir_tmp = util.set_dir(const.dir_tmp)
-dir_log = util.set_dir(const.dir_log)
-dir_out = util.set_dir(const.dir_out)
+dir_set = util.set_dir(const.dir_set, job)
+dir_tmp = util.set_dir(const.dir_tmp, job)
+dir_log = util.set_dir(const.dir_log, job)
+dir_out = util.set_dir(const.dir_out, job)

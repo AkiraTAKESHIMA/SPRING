@@ -74,14 +74,7 @@ def merge_rt(srcMeshNameFmt, tgtMeshNameFmt, lst_landType, pdir_in, grid_coef):
         if not os.path.isfile(f_rt):
             raise Exception(f'File not found: {f_rt}')
 
-    def get_meshBaseName(meshName):
-        if 'landType' in meshName:
-            loc = meshName.index('landType')
-            return meshName[:loc-2]
-        else:
-            return meshName
-
-    runname = f'rt_{get_meshBaseName(srcMeshNameFmt)}_to_{get_meshBaseName(tgtMeshNameFmt)}'
+    runname = f'rt_{util.get_meshBaseName(srcMeshNameFmt)}_to_{util.get_meshBaseName(tgtMeshNameFmt)}'
 
     dir_tmp = f'{lconst.dir_tmp[step]}/{runname}'
 
@@ -108,7 +101,6 @@ if __name__ == '__main__':
     os.makedirs(lconst.dir_set[step], exist_ok=True)
     os.makedirs(lconst.dir_tmp[step], exist_ok=True)
     os.makedirs(lconst.dir_log[step], exist_ok=True)
-    os.makedirs(lconst.dir_out[step], exist_ok=True)
 
     # IO_bnd to LSM
     merge_rt('IO_LSM_bnd_{landType}', 'LSM_bnd_{landType}', 

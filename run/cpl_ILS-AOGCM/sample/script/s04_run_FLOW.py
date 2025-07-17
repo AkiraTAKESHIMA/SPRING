@@ -21,7 +21,6 @@ if __name__ == '__main__':
     os.makedirs(lconst.dir_set[step], exist_ok=True)
     os.makedirs(lconst.dir_tmp[step], exist_ok=True)
     os.makedirs(lconst.dir_log[step], exist_ok=True)
-    os.makedirs(lconst.dir_out[step], exist_ok=True)
 
     #
     # Prepare directories and input data
@@ -36,7 +35,8 @@ if __name__ == '__main__':
         dst = os.path.join(dir_flwdir, f'{var}.bin')
         os.symlink(org, dst)
 
-    org = os.path.join(os.path.abspath(lconst.dir_tmp[lutil.istep('rasterize_OGCM')]), 'mask.bin')
+    org = os.path.join(os.path.abspath(lconst.dir_tmp[util.istep('rasterize_OGCM', lconst.job)]), 
+                       'mask.bin')
     dst = os.path.join(dir_flwdir, 'lndmsk.bin')
     os.symlink(org, dst)
 
@@ -59,8 +59,8 @@ if __name__ == '__main__':
 {cnf["RM"]["ncx"]}  ! nXX\n\
 {cnf["RM"]["ncy"]}  ! nYY\n\
 ""  ! fgcmidx\n\
-{cnf["options"]["earth"]["shape"]}  ! earth\'s shape\n\
-{cnf["options"]["earth"]["r"]}  ! earth\'s diameter [m]\n\
+{cnf["options"]["Earth"]["shape"]}  ! earth\'s shape\n\
+{cnf["options"]["Earth"]["diameter"]}  ! earth\'s diameter [m]\n\
 0.d0  ! square of the earth\'s eccentricity\n')
     fp.close()
 
@@ -68,6 +68,8 @@ if __name__ == '__main__':
     # Run FLOW
     #
     dir_FLOW_src = os.path.join(os.path.abspath(cnf['dir_top']), 'etc/FLOW_free/src')
+    dir_log = f'{os.getcwd()}/{lconst.dir_log[step]}'
+
     os.chdir(lconst.dir_tmp[step])
 
     for i, prog in enumerate([
@@ -82,6 +84,6 @@ if __name__ == '__main__':
       'calc_inpmat',
     ]):
         print(f'Executing {prog}...')
-        f_log = f'{lconst.dir_log[step]}/{i+1:02d}_{prog}.out'
-        f_err = f'{lconst.dir_log[step]}/{i+1:02d}_{prog}.err'
-        util.exec_program(prog, '', f_log, f_err)
+        f_log = f'{dir_log}/{i+1:02d}_{prog}.out'
+        f_err = f'{dir_log}/{i+1:02d}_{prog}.err'
+        util.exec_program(f'{dir_FLOW_src}/{prog}', '', f_log, f_err)

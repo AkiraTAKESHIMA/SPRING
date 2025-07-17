@@ -152,4 +152,5 @@ def adjust_config(cnf):
       'north': cnf['RM']['north'],
       'is_south_to_north': cnf['RM']['is_south_to_north'],
     }
-    
+
+    util.join_topdir(cnf)

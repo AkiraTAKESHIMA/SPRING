@@ -6,7 +6,7 @@
     "type": "polygon",
     "np": 4,
     "nij": 92160,
-    "dir": "../../../../dat/grid_system/COCO/1deg",
+    "dir": "dat/grid_system/COCO/1deg",
     "f_lon_vertex": {
       "path": "COCO_lon.bin",
       "dtype": "dble"
@@ -38,7 +38,7 @@
     "type": "latlon",
     "nx": 256,
     "ny": 128,
-    "dir": "../../../../dat/grid_system/T85",
+    "dir": "dat/grid_system/T85",
     "f_lon_bound": {
       "path": "T85_lon_bound.bin"
     },
@@ -117,12 +117,12 @@
   "remapping_table": {
     "dtype_idx": "int4",
     "endian": "big_endian",
-    "make_verification_data": true,
+    "make_verification_data": true
   }, 
   "options": {
     "Earth": {
       "shape": "sphere",
-      "r": 6371e+3
+      "diameter": 6371e+3
     }
   }
 }

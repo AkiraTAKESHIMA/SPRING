@@ -3,15 +3,22 @@
 
 - Shapefile input
 #---------------------------------------------------------------
+[2025/7/18]
+#---------------------------------------------------------------
+run/ILS_bnd/sample/script
+run/rt_ILS_default/sample/script
+
+Updated the scripts.
+#---------------------------------------------------------------
 [2025/07/15]
 #---------------------------------------------------------------
-main_ext/cpl_aogcm-ils_define_mat/mod_set.f90
+src/main_ext/cpl_aogcm-ils_define_mat/mod_set.f90
 
 Set the default data types for some data.
 #---------------------------------------------------------------
 [2025/07/15]
 #---------------------------------------------------------------
-main_ext/cpl_aogcm-ils_define_mat/mod_define_mat.f90 make_rt_agcm_to_lsm
+src/main_ext/cpl_aogcm-ils_define_mat/mod_define_mat.f90 make_rt_agcm_to_lsm
 
 Modified as below because `grdidx` is generally not sorted.
 
@@ -26,23 +33,23 @@ deallocate(arg)
 #---------------------------------------------------------------
 [2025/07/15]
 #---------------------------------------------------------------
-cmn1/cmn1_gs_grid_util.f90 print_indices
+src/cmn1/cmn1_gs_grid_util.f90 print_indices
 
 Modified lbound and ubound of allocatable array `arr`
 from (1,mh) to (hi,hf).
 #---------------------------------------------------------------
 [2025/07/15]
 #---------------------------------------------------------------
-cmn3/cmn3_rt_driv.f90
+src/cmn3/cmn3_rt_driv.f90
 
 Added a branch for the case of an empty remapping table.
 #---------------------------------------------------------------
 [2025/05/13]
 #---------------------------------------------------------------
-cmn1/cmn1_type_gs.f90
-cmn1/cmn1_gs_base.f90
-cmn1/cmn1_gs_define_polygon.f90
-cmn2/cmn2_area_raster_polygon.f90
+src/cmn1/cmn1_type_gs.f90
+src/cmn1/cmn1_gs_base.f90
+src/cmn1/cmn1_gs_define_polygon.f90
+src/cmn2/cmn2_area_raster_polygon.f90
 
 Removed the component "n_prev" and "n_next" from type "gs_polygon_".
 They require large memory when the number of vertices of one polygon
@@ -52,7 +59,7 @@ respectively.
 #---------------------------------------------------------------
 [2025/05/13]
 #---------------------------------------------------------------
-cmn3/cmn3_rst_run.f90
+src/cmn3/cmn3_rst_run.f90
 main_std/rasterize/mod_rasterize_*.f90
 
 Added function to reverse 2d-maps corresponding to the directions 
@@ -60,35 +67,37 @@ of their vertical axis.
 #---------------------------------------------------------------
 [2025/05/13]
 #---------------------------------------------------------------
-cmn1/cmn1_type_gs.f90
+src/cmn1/cmn1_type_gs.f90
+
 Changed the components "id" and "name" from length-fixed character to 
 length-changable character.
 #---------------------------------------------------------------
 [2025/05/13]
 #---------------------------------------------------------------
-main_std/rasterize/mod_set.f90
+src/main_std/rasterize/mod_set.f90
   read_settings_latlon, read_settings_polygon, read_settings_raster
+
 Changed the intent of the argument from "out" to "inout",
 otherwise it causes segmentation fault due to an unallocated
 length-changable character.
 #---------------------------------------------------------------
 [2025/05/13]
 #---------------------------------------------------------------
-main_std/merge_remapping_tables/mod_grid.f90
+src/main_std/merge_remapping_tables/mod_grid.f90
 read_all_data
 
 Fixed a bug.
 #---------------------------------------------------------------
 [2025/04/24]
 #---------------------------------------------------------------
-common2/common_area_raster_polygon.f90 update_area_normal_convex_downward
+src/common2/common_area_raster_polygon.f90 update_area_normal_convex_downward
 
 In case that the arc is below the zone, $dh was used for an index of $dara_1rad.
 Replaced $dh with $idv.
 #---------------------------------------------------------------
 [2025/04/13]
 #---------------------------------------------------------------
-common1/common_gs_define_polygon.f90 calc_range_of_latit
+src/common1/common_gs_define_polygon.f90 calc_range_of_latit
 
 Added initialization of %lontop and %lattop.
 It will not affect the action of the program with the normal mode
@@ -96,15 +105,15 @@ but will avoid an error in the debugging mode.
 #---------------------------------------------------------------
 [2025/04/11]
 #---------------------------------------------------------------
-lib/
+src/lib/
 
 Updated the library.
 #---------------------------------------------------------------
 [2025/04/09]
 #---------------------------------------------------------------
-main_std/remap/mod_rt.f90
-main_std/remap/mod_rt_raster_raster.f90
-common3/common_rt_raster_raster.f90
+src/main_std/remap/mod_rt.f90
+src/main_std/remap/mod_rt_raster_raster.f90
+src/common3/common_rt_raster_raster.f90
 
 Introduced the function to remap from raster to raster.
 Alleviated the definition of raster grid system, for which only the integer bbox was allowed (e.g. west=120, east=150, south=20, north=50). Now real number can be used for bbox (e.g. west=130, east=130.66666, south=35, north=35.33333).
