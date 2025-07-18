@@ -185,7 +185,8 @@ subroutine calc_relations_llbnds_core(&
   if( tcyclic )then
     t_intersects_lon0 = .true.
   else
-    t_intersects_lon0 = any(tlon0(:)) .or. any(tlon(:) == rad_0deg)
+    !t_intersects_lon0 = any(tlon0(:)) .or. any(tlon(:) == rad_0deg)
+    t_intersects_lon0 = any(tlon0(:))
   endif
 
   call edbg('s: '//str(slon(shi-1:shi)*r2d,'f12.7',', ')//&
@@ -251,7 +252,6 @@ subroutine calc_relations_llbnds_core(&
   counter = 0
   do while( ish <= shf )
     if( .not. tcyclic )then
-
       if( t_intersects_lon0 )then
         is_out_of_range = ( tlon(thf) < slon(ish) .and. slon(ish) <= tlon(thi-1) )
       else
