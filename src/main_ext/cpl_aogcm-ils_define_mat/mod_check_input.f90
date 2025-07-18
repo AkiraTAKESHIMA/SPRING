@@ -109,8 +109,6 @@ subroutine check_relations_rt_grid(&
   allocate(grdara(ngij))
   allocate(grdara_rt(ngij))
   allocate(rerr_grdara(ngij))
-
-  call argsort(grdidx, grdidxarg)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

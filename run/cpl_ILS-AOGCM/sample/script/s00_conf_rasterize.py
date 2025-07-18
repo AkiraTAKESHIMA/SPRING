@@ -1,7 +1,11 @@
 import os
 import sys
 
-import s00_const as const
+
+sys.path.append('../../../common')
+import const, util
+
+import s00_const as lconst
 
 
 def block_raster(rst):
@@ -28,7 +32,7 @@ def block_output(step):
   include_min: false\n\
   ratio_min: 0.999999d0\n\
 \n\
-  dir: "{const.directory["tmp"][step]["self"]}"\n\
+  dir: "{lconst.dir_tmp[step]}"\n\
   f_area_sum : "area.bin"\n\
   f_ratio_sum: "ratio.bin"\n\
   f_mask     : "mask.bin", int1\n\

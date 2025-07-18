@@ -3,9 +3,12 @@ import sys
 import subprocess
 import json
 
-import s00_const as const
-import s00_util as util
-import s00_conf as conf
+sys.path.append('../../../common')
+import const, util
+
+import s00_const as lconst
+import s00_util as lutil
+import s00_conf as lconf
 
 
 def block_common(RM):
@@ -24,12 +27,12 @@ def block_cmf():
     s = f'\
 \n\
 [cama-flood]\n\
-  dir: "{const.directory["tmp"][util.istep("run_FLOW")]["self"]}/map"\n\
-  fin_catmxy: "1min/catmxy.bin"\n\
-  fin_nextxy: "nextxy.bin"\n\
-  fin_basin: "basin.bin"\n\
+  dir: "{lconst.dir_tmp[lutil.istep("run_FLOW")]}"\n\
+  fin_catmxy: "tmp/map/1min/catmxy.bin"\n\
+  fin_nextxy: "map/nextxy.bin"\n\
+  fin_basin : "map/basin.bin"\n\
 \n\
-  dir: "{const.directory["tmp"][step]["self"]}"\n\
+  dir: "{lconst.dir_tmp[step]}"\n\
   fout_grdidx_river    : "grdidx_river.bin"\n\
   fout_grdidx_river_end: "grdidx_river-end.bin"\n\
   fout_grdidx_noriv    : "grdidx_noriv.bin"\n\
@@ -53,17 +56,26 @@ def block_cmf():
 
 
 if __name__ == '__main__':
-    step = 5
+    step = int(sys.argv[0][1:3])
 
-    cnf = json.load(open('test.json','r'))
-    util.adjust_config(cnf)
+    cnf = json.load(open(lconst.f_cnf,'r'))
+    lutil.adjust_config(cnf)
 
-    f_conf, f_report = util.get_f_conf(step)
+    os.makedirs(lconst.dir_set[step], exist_ok=True)
+    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
+    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    os.makedirs(lconst.dir_out[step], exist_ok=True)
+
+    f_conf = f'{lconst.dir_tmp[step]}/a.conf'
 
     print(f_conf)
-    fp = open(f_conf,'w')
-    fp.write(conf.head(f_report))
+    fp = open(f_conf, 'w')
+    fp.write(lconf.head(lconst.dir_tmp[step]))
     fp.write(block_common(cnf['RM']))
     fp.write(block_cmf())
-    fp.write(conf.remap.block_options(cnf['options']))
+    fp.write(lconf.remap.block_options(cnf['options']))
     fp.close()
+
+    f_log = f'{lconst.dir_log[step]}/a.out'
+    f_err = f'{lconst.dir_log[step]}/a.err'
+    util.exec_program(const.prog_make_cmf_mat, f_conf, f_log, f_err)

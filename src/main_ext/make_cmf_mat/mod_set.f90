@@ -591,7 +591,6 @@ subroutine read_settings_cmf(cmn, cmf)
                 'which is given by "fin_list_catmxy".')
     endif
   endif
-  print*, cmn%is_raster_input
 
   if( cmn%is_tiled )then
     cmf%dir_catmxy = dirname(cmf%path_list_catmxy)

@@ -3,12 +3,17 @@ import sys
 import subprocess
 import json
 
+sys.path.append('../../../common')
+import const, util
 
-def block_gs(gs, landType=None):
+import s00_const as lconst
+
+
+def block_gs(gs):
     if gs['type'] == 'latlon':
         return block_gs_latlon(gs)
     elif gs['type'] == 'raster':
-        return block_gs_raster(gs, landType)
+        return block_gs_raster(gs)
     elif gs['type'] == 'polygon':
         return block_gs_polygon(gs)
 
@@ -20,23 +25,51 @@ def block_gs_latlon(gs):
 [grid_system_latlon]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx"]}\n\
-  ny: {gs["ny"]}\n\
-  dir: "{gs["directory"]}"\n'
+  ny: {gs["ny"]}\n'
 
-    for key in ['f_lon_bound', 'f_lat_bound', 'fin_grdidx']:
-        if key in gs.keys():
-            f = gs[key]
-            s += f'\
-  {key}: "{f["path"]}", {f["dtype"]}, {f["rec"]}, {f["endian"]}\n'
+    if 'dir' in gs.keys():
+        s += f'\
+  dir: "{gs["dir"]}"\n'
+
+    if 'west' in gs.keys():
+        s += f'\
+  west: {gs["west"]}\n\
+  east: {gs["east"]}\n\
+'
+    else:
+        s += f'\
+  f_lon_bound: {util.str_file_bin(gs["f_lon_bound"])}\n\
+'
+
+    if 'south' in gs.keys():
+        s += f'\
+  south: {gs["south"]}\n\
+  north: {gs["north"]}\n\
+'
+    else:
+        s += f'\
+  f_lat_bound: {util.str_file_bin(gs["f_lat_bound"])}\n\
+'
+
+    if 'fin_grdidx' in gs.keys():
+        s += f'\
+  fin_grdidx: {util.str_file_bin(gs["fin_grdidx"])}\n\
+'
 
     s += f'\
-  is_south_to_north: {gs["is_south_to_north"]}\n\
+  is_south_to_north: {gs["is_south_to_north"]}\n'
+
+    if 'idx_bgn' in gs.keys():
+        s += f'\
+  idx_bgn: {gs["idx_bgn"]}\n'
+
+    s += '\
 [end]\n'
 
     return s
 
 
-def block_gs_raster(gs, landType):
+def block_gs_raster(gs):
     s = f'\
 \n\
 [grid_system_raster]\n\
@@ -49,9 +82,9 @@ def block_gs_raster(gs, landType):
   north: {gs["north"]}\n\
   is_south_to_north: {gs["is_south_to_north"]}\n\
 \n\
-  dir: "{gs["directory"]}"\n\
-  fin_rstidx: "rstidx_{landType}.bin"\n\
-  fin_grdidx: "grdidx_{landType}.bin"\n\
+  dir: "{gs["dir"]}"\n\
+  fin_rstidx: {util.str_file_bin(gs["fin_rstidx"])}\n\
+  fin_grdidx: {util.str_file_bin(gs["fin_grdidx"])}\n\
   in_grid_sz: {gs["ncx"]}, {gs["ncy"]}\n\
   idx_miss: {gs["idx_miss"]}\n\
 [end]\n'
@@ -67,22 +100,20 @@ def block_gs_polygon(gs):
   np: {gs["np"]}\n\
   nij: {gs["nij"]}\n\
 \n\
-  dir: "{gs["directory"]}"\n'
+  dir: "{gs["dir"]}"\n'
 
     if 'f_lon_vertex' in gs.keys():
         keys = ['f_lon_vertex', 'f_lat_vertex']
     elif 'f_x_vertex' in gs.keys():
         keys = ['f_x_vertex', 'f_y_vertex', 'f_z_vertex']
     for key in keys:
-        f = gs[key]
         s += f'\
-  {key}: "{f["path"]}", {f["dtype"]}, {f["rec"]}, {f["endian"]}\n'
+  {key}: {util.str_file_bin(gs[key])}\n'
 
     for key in ['f_arctyp', 'fin_grdidx']:
         if key in gs.keys():
-            f = gs[key]
             s += f'\
-  {key}: "{f["path"]}", {f["dtype"]}, {f["rec"]}, {f["endian"]}\n'
+  {key}: {util.str_file_bin(gs[key])}\n'
 
     s += f'\
   coord_unit: {gs["coord_unit"]}\n\
@@ -99,22 +130,22 @@ def block_remapping(rmp, dir_tmp_this):
 \n\
 [remapping]\n\
   dir: "{dir_tmp_this}"\n\
-  f_send: "grid.bin", {rmp["dtype_idx"]}, rec=1\n\
-  f_recv: "grid.bin", {rmp["dtype_idx"]}, rec=2\n\
-  f_area: "area.bin"\n\
-  f_coef: "coef.bin"\n\
+  fout_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
+  fout_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
+  fout_rt_area: "area.bin", endian={rmp["endian"]}\n\
+  fout_rt_coef: "coef.bin", endian={rmp["endian"]}\n\
 \n\
-  vrf_send_form: auto\n\
-  fout_vrf_grdidx     : "vrf/send_idx.bin"\n\
-  fout_vrf_grdara_true: "vrf/send_val.bin", rec=1\n\
-  fout_vrf_grdara_rt  : "vrf/send_val.bin", rec=2\n\
-  fout_vrf_rerr_grdara: "vrf/send_val.bin", rec=3\n\
+  vrf_source_form: auto\n\
+  fout_vrf_grdidx     : "vrf/src_idx.bin"\n\
+  fout_vrf_grdara_true: "vrf/src_val.bin", rec=1\n\
+  fout_vrf_grdara_rt  : "vrf/src_val.bin", rec=2\n\
+  fout_vrf_rerr_grdara: "vrf/src_val.bin", rec=3\n\
 \n\
-  vrf_recv_form: auto\n\
-  fout_vrf_grdidx     : "vrf/send_idx.bin"\n\
-  fout_vrf_grdara_true: "vrf/send_val.bin", rec=1\n\
-  fout_vrf_grdara_rt  : "vrf/send_val.bin", rec=2\n\
-  fout_vrf_rerr_grdara: "vrf/send_val.bin", rec=3\n\
+  vrf_target_form: auto\n\
+  fout_vrf_grdidx     : "vrf/tgt_idx.bin"\n\
+  fout_vrf_grdara_true: "vrf/tgt_val.bin", rec=1\n\
+  fout_vrf_grdara_rt  : "vrf/tgt_val.bin", rec=2\n\
+  fout_vrf_rerr_grdara: "vrf/tgt_val.bin", rec=3\n\
 [end]\n'
 
     return s

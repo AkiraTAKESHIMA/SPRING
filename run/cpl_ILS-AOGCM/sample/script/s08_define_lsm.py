@@ -3,66 +3,61 @@ import sys
 import subprocess
 import json
 
-import s00_const as const
-import s00_util as util
-import s00_conf as conf
+sys.path.append('../../../common')
+import const, util
+
+import s00_const as lconst
+import s00_util as lutil
+import s00_conf as lconf
 
 
 def blocks_body(cnf):
-    d_rt = const.directory['tmp'][util.istep('make_rt_standard-1')]
-    dtype_idx = cnf['remapping']['dtype_idx']
-    endian = cnf['remapping']['endian']
-    print(d_rt)
+    dir_rt = lconst.dir_tmp[lutil.istep('make_rt_standard-1')]
+    dtype_idx = cnf['remapping_table']['dtype_idx']
+    endian = cnf['remapping_table']['endian']
 
-    nij_rt_OGCM_ocean_to_AGCM = \
-      int(os.path.getsize(f'{d_rt["child"]["OGCM_ocean_to_AGCM"]}/grid.bin') \
-            / util.byte(dtype_idx))
+    nij_rt_OGCM_ocean_to_AGCM = util.get_nij(f'{dir_rt}/OGCM_ocean_to_AGCM/grid.bin', dtype_idx)
+    nij_rt_RM_river_to_AGCM   = util.get_nij(f'{dir_rt}/RM_river_to_AGCM/grid.bin', dtype_idx)
+    nij_rt_RM_noriv_to_AGCM   = util.get_nij(f'{dir_rt}/RM_noriv_to_AGCM/grid.bin', dtype_idx)
+    nij_rt_RM_ocean_to_AGCM   = util.get_nij(f'{dir_rt}/RM_ocean_to_AGCM/grid.bin', dtype_idx)
 
     s = f'\
 \n\
 [input_rt_ogcm_ocean_to_agcm]\n\
   length: {nij_rt_OGCM_ocean_to_AGCM}\n\
-  dir: "{d_rt["OGCM_ocean_to_AGCM"]}"\n\
-  f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
-  f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
-  f_area: "area.bin", dble, 1, {endian}\n\
-[end]\n\
-\n\
-[input_rt_ogcm_land_to_agcm]\n\
-  length: {nij_rt_ogcm_land_to_agcm}\n\
-  dir: "{d_rt["OGCM_land_to_AGCM"]}"\n\
+  dir: "{dir_rt}/OGCM_ocean_to_AGCM"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
 [end]\n\
 \n\
 [input_rt_rm_river_to_agcm]\n\
-  length: {nij_rt_rm_river_to_agcm}\n\
-  dir: "{d_rt["RM_river_to_AGCM"]}"\n\
+  length: {nij_rt_RM_river_to_AGCM}\n\
+  dir: "{dir_rt}/RM_river_to_AGCM"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
 [end]\n\
 \n\
 [input_rt_rm_noriv_to_agcm]\n\
-  length: {nij_rt_rm_noriv_to_agcm}\n\
-  dir: "{d_rt["RM_noriv_to_AGCM"]}"\n\
+  length: {nij_rt_RM_noriv_to_AGCM}\n\
+  dir: "{dir_rt}/RM_noriv_to_AGCM"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
 [end]\n\
 \n\
 [input_rt_rm_ocean_to_agcm]\n\
-  length: {nij_rt_rm_ocean_to_agcm}\n\
-  dir: "{d_rt["RM_ocean_to_AGCM"]}"\n\
+  length: {nij_rt_RM_ocean_to_AGCM}\n\
+  dir: "{dir_rt}/RM_ocean_to_AGCM"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
 [end]\n\
 \n\
 [input_agcm]\n\
-  nij: {cnf["AGCM"]["nij"]}\n\
-  dir: "{d["tmp"]}/[util.istep("make_grid_data_AGCM")]"\n\
+  nij: {cnf["AGCM"]["nx"]*cnf["AGCM"]["ny"]}\n\
+  dir: "{lconst.dir_tmp[lutil.istep("make_grid_data_AGCM")]}"\n\
   f_grdidx: "grdidx.bin"\n\
   f_grdara: "grdara.bin"\n\
 [end]\n\
@@ -73,17 +68,17 @@ def blocks_body(cnf):
   nx_grid: {cnf["RM"]["ncx"]}\n\
   ny_grid: {cnf["RM"]["ncy"]}\n\
 \n\
-  dir: "{d["tmp"][util.istep("make_idxmap_RM")]}"\n\
+  dir: "{lconst.dir_tmp[lutil.istep("make_idxmap_RM")]}"\n\
   f_grdidx_river: "grdidx_river.bin"\n\
   f_grdidx_noriv: "grdidx_noriv.bin"\n\
   f_grdidx_ocean: "grdidx_ocean.bin"\n\
 \n\
-  dir: "{d["tmp"][util.istep("make_idxmap_RM")]}"\n\
+  dir: "{lconst.dir_tmp[lutil.istep("make_idxmap_RM")]}"\n\
   f_rstidx_river: "rstidx_river.bin"\n\
   f_rstidx_noriv: "rstidx_noriv.bin"\n\
   f_rstidx_ocean: "rstidx_ocean.bin"\n\
 \n\
-  dir: "{d["tmp"][util.istep("make_grid_data_RM")]}"\n\
+  dir: "{lconst.dir_tmp[lutil.istep("make_grid_data_RM")]}"\n\
   f_grdara_river: "grdara_river.bin"\n\
   f_grdara_noriv: "grdara_noriv.bin"\n\
   f_grdara_ocean: "grdara_ocean.bin"\n\
@@ -92,7 +87,7 @@ def blocks_body(cnf):
 [end]\n\
 \n\
 [output_rt_lsm_river_to_agcm]\n\
-  dir: "{d["tmp"][step]["rt_LSM_river_to_AGCM"]}"\n\
+  dir: "{lconst.dir_tmp[step]}/rt_LSM_river_to_AGCM"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
@@ -100,7 +95,7 @@ def blocks_body(cnf):
 [end]\n\
 \n\
 [output_rt_lsm_noriv_to_agcm]\n\
-  dir: "{d["tmp"][step]["rt_LSM_noriv_to_AGCM"]}"\n\
+  dir: "{lconst.dir_tmp[step]}/rt_LSM_noriv_to_AGCM"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
@@ -108,7 +103,7 @@ def blocks_body(cnf):
 [end]\n\
 \n\
 [output_rt_agcm_to_lsm_river]\n\
-  dir: "{d["tmp"][step]["rt_AGCM_to_LSM_river"]}"\n\
+  dir: "{lconst.dir_tmp[step]}/rt_AGCM_to_LSM_river"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
@@ -116,7 +111,7 @@ def blocks_body(cnf):
 [end]\n\
 \n\
 [output_rt_agcm_to_lsm_noriv]\n\
-  dir: "{d["tmp"][step]["rt_AGCM_to_LSM_noriv"]}"\n\
+  dir: "{lconst.dir_tmp[step]}/rt_AGCM_to_LSM_noriv"\n\
   f_sidx: "grid.bin", {dtype_idx}, 1, {endian}\n\
   f_tidx: "grid.bin", {dtype_idx}, 2, {endian}\n\
   f_area: "area.bin", dble, 1, {endian}\n\
@@ -124,7 +119,7 @@ def blocks_body(cnf):
 [end]\n\
 \n\
 [output_agcm]\n\
-  dir: "{d["tmp"][step]["AGCM"]}"\n\
+  dir: "{lconst.dir_tmp[step]}/AGCM"\n\
   f_lndara_ogcm      : "lndara_ogcm.bin"\n\
   f_lndara_river     : "lndara_river.bin"\n\
   f_lndara_noriv_real: "lndara_noriv_real.bin"\n\
@@ -133,7 +128,7 @@ def blocks_body(cnf):
 [end]\n\
 \n\
 [output_lsm]\n\
-  dir: "{d["tmp"][step]["LSM"]}"\n\
+  dir: "{lconst.dir_tmp[step]}/LSM"\n\
 \n\
   f_grdmsk_river     : "grdmsk_river.bin", real, 1, {endian}\n\
   f_grdmsk_noriv     : "grdmsk_noriv.bin", real, 1, {endian}\n\
@@ -185,17 +180,25 @@ def block_options(opt):
 
 
 if __name__ == '__main__':
-    step = 8
+    step = int(sys.argv[0][1:3])
 
-    cnf = json.load(open('test.json','r'))
-    util.adjust_config(cnf)
+    cnf = json.load(open(lconst.f_cnf, 'r'))
+    lutil.adjust_config(cnf)
 
+    os.makedirs(lconst.dir_set[step], exist_ok=True)
+    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
+    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    os.makedirs(lconst.dir_out[step], exist_ok=True)
 
-    f_conf, f_report, _, _ = util.get_f_conf(step)
+    f_conf = f'{lconst.dir_set[step]}/a.conf'
 
     print(f_conf)
     fp = open(f_conf,'w')
-    fp.write(conf.head(f_report))
+    fp.write(lconf.head(lconst.dir_tmp[step]))
     fp.write(blocks_body(cnf))
     fp.write(block_options(cnf))
     fp.close()
+
+    f_log = f'{lconst.dir_log[step]}/a.out'
+    f_err = f'{lconst.dir_log[step]}/a.err'
+    util.exec_program(const.prog_cpl_define_mat, f_conf, f_log, f_err)

@@ -8,10 +8,10 @@ import s00_conf_remap as remap
 import s00_conf_rasterize as rasterize
 
 
-def head(path_report):
+def head(dir_out):
     s = f'\
 #\n\
-path_report: "{path_report}"\n\
+path_report: "{dir_out}/report.txt"\n\
 '
 
     return s

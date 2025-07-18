@@ -1444,8 +1444,9 @@ subroutine check_keynum_relations()
   endif
 
   if( keynum('fin_grdidx') == 0 .and. keynum('idx_miss') == 1 )then
-    call eerr(str(msg_invalid_input())//&
-            '\n  "idx_miss" is given although "fin_grdidx" is not given.')
+    call ewrn(str(msg_undesirable_input())//&
+            '\nThe value for "idx_miss" is given although that for "fin_grdidx" is not given.'//&
+              ' The input for "idx_miss" is ignored.')
   endif
 
   if( keynum('fin_grdara') == 1 .and. keynum('fin_grdwgt') == 1 )then
