@@ -5,7 +5,7 @@ dir_tmp = '../tmp'
 dir_out = '../out'
 dir_log = '../log'
 
-dir_bin = '/data7/akira/SPRING/SPRING/bin'
+dir_bin = '../../../../bin'
 prog_make_grid_data = f'{dir_bin}/main_std/make_grid_data.exe'
 prog_rasterize      = f'{dir_bin}/main_std/rasterize.exe'
 prog_remap          = f'{dir_bin}/main_std/remap.exe'
