@@ -3,6 +3,7 @@ module lib_log_proc
   use lib_time , only: &
     date_and_time_values, &
     timediff
+  use lib_log_str
   implicit none
   private
   !-------------------------------------------------------------
@@ -183,31 +184,19 @@ recursive subroutine echo(cd, msg, opt)
     allocate(ls%quitAtError(0:PROCDEPTH))
     allocate(ls%measureTime(0:PROCDEPTH))
 
-    do iDepth = 0, PROCDEPTH
-      lsc => ls%echoProcess(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(0) = echoProcess_default
+    ls%echoProcess(:)%is_updated = .false.
+    ls%echoContent(:)%is_updated = .false.
+    ls%echoWarning(:)%is_updated = .false.
+    ls%echoProcBar(:)%is_updated = .false.
+    ls%quitAtError(:)%is_updated = .false.
+    ls%measureTime(:)%is_updated = .false.
 
-      lsc => ls%echoContent(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(0) = echoContent_default
-
-      lsc => ls%echoWarning(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(0) = echoWarning_default
-
-      lsc => ls%echoProcBar(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(0) = echoProcBar_default
-
-      lsc => ls%quitAtError(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(0) = quitAtError_default
-
-      lsc => ls%measureTime(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(0) = measureTime_default
-    enddo
+    ls%echoProcess(:)%is_recursive = .false.
+    ls%echoContent(:)%is_recursive = .false.
+    ls%echoWarning(:)%is_recursive = .false.
+    ls%echoProcBar(:)%is_recursive = .false.
+    ls%quitAtError(:)%is_recursive = .false.
+    ls%measureTime(:)%is_recursive = .false.
 
     ls%echoProcess(:)%nCommand = 0
     ls%echoContent(:)%nCommand = 0
@@ -215,6 +204,32 @@ recursive subroutine echo(cd, msg, opt)
     ls%echoProcBar(:)%nCommand = 0
     ls%quitAtError(:)%nCommand = 0
     ls%measureTime(:)%nCommand = 0
+
+    do iDepth = 0, PROCDEPTH
+      lsc => ls%echoProcess(iDepth)
+      allocate(lsc%tf(0:PROCDEPTH))
+      lsc%tf(:) = echoProcess_default
+
+      lsc => ls%echoContent(iDepth)
+      allocate(lsc%tf(0:PROCDEPTH))
+      lsc%tf(:) = echoContent_default
+
+      lsc => ls%echoWarning(iDepth)
+      allocate(lsc%tf(0:PROCDEPTH))
+      lsc%tf(:) = echoWarning_default
+
+      lsc => ls%echoProcBar(iDepth)
+      allocate(lsc%tf(0:PROCDEPTH))
+      lsc%tf(:) = echoProcBar_default
+
+      lsc => ls%quitAtError(iDepth)
+      allocate(lsc%tf(0:PROCDEPTH))
+      lsc%tf(:) = quitAtError_default
+
+      lsc => ls%measureTime(iDepth)
+      allocate(lsc%tf(0:PROCDEPTH))
+      lsc%tf(:) = measureTime_default
+    enddo
 
     allocate(ls%indentInc(0:PROCDEPTH))
     allocate(ls%proc(0:PROCDEPTH))
@@ -407,17 +422,22 @@ recursive subroutine echo(cd, msg, opt)
       ls%is_proc(ls%depth) = .false.
     endselect
 
+!print"(1x,a)", trim(msg)//' '//str(cd)//' depth '//str(ls%depth)//' echoProcess%nCommand '//&
+!               str(ls%echoProcess(ls%depth)%nCommand)//' tf '//str(tf_echoProcess)//&
+!               ' is_updated '//str(ls%echoProcess(ls%depth)%is_updated)
     call update_commands_in(tf_echoProcess, ls%echoProcess, ls%depth, is_echoProcess_recursive)
     call update_commands_in(tf_echoContent, ls%echoContent, ls%depth, is_echoContent_recursive)
     call update_commands_in(tf_echoWarning, ls%echoWarning, ls%depth, is_echoWarning_recursive)
     call update_commands_in(tf_echoProcBar, ls%echoProcBar, ls%depth, is_echoProcBar_recursive)
     call update_commands_in(tf_quitAtError, ls%quitAtError, ls%depth, is_quitAtError_recursive)
     call update_commands_in(tf_measureTime, ls%measureTime, ls%depth, is_measureTime_recursive)
+!print*, trim(msg)//' '//str(cd)//' depth '//str(ls%depth)//' echoProcess%nCommand '//&
+!        str(ls%echoProcess(ls%depth)%nCommand)
     !-----------------------------------------------------------
     ! Set indent
     !-----------------------------------------------------------
     if( indent == indent_miss ) indent = ls%indent
-    !indent = indent + indentInc
+    indent = indent + indentInc
     !-----------------------------------------------------------
     ! Echo message
     !-----------------------------------------------------------
@@ -488,12 +508,16 @@ recursive subroutine echo(cd, msg, opt)
     !-----------------------------------------------------------
     ! Update commands
     !-----------------------------------------------------------
+!print*, trim(msg)//' '//str(cd)//' depth '//str(ls%depth)//' echoProcess%nCommand '//&
+!        str(ls%echoProcess(ls%depth)%nCommand)//' tf '//str(tf_echoProcess)
     call update_commands_out(ls%echoProcess, ls%depth)
     call update_commands_out(ls%echoContent, ls%depth)
     call update_commands_out(ls%echoWarning, ls%depth)
     call update_commands_out(ls%echoProcBar, ls%depth)
     call update_commands_out(ls%quitAtError, ls%depth)
     call update_commands_out(ls%measureTime, ls%depth)
+!print*, trim(msg)//' '//str(cd)//' depth '//str(ls%depth)//' echoProcess%nCommand '//&
+!        str(ls%echoProcess(ls%depth)%nCommand)
 
     ls%depth = ls%depth - 1
   !-------------------------------------------------------------
@@ -644,12 +668,18 @@ subroutine update_commands_in(cmd, ls_comp, depth, is_recursive)
       lsc => ls_comp(iDepth)
       lsc%nCommand = lsc%nCommand + 1
       lsc%tf(lsc%nCommand) = cmd == tf_true
+!print"(1x,a)", 'update_commands_in depth '//str(iDepth)//' nCommand '//&
+!               str(lsc%nCommand)//' -> '//str(lsc%nCommand+1)
     enddo
   else
     lsc => ls_comp(depth)
+!print"(1x,a)", 'update_commands_in depth '//str(depth)//' nCommand '//&
+!               str(lsc%nCommand)//' -> '//str(lsc%nCommand+1)
     lsc%nCommand = lsc%nCommand + 1
     lsc%tf(lsc%nCommand) = cmd == tf_true
   endif
+
+  nullify(lsc)
 end subroutine update_commands_in
 !===============================================================
 !
@@ -659,15 +689,28 @@ subroutine update_commands_out(ls_comp, depth)
   type(log_stat_comp_), pointer :: ls_comp(:)
   integer, intent(in) :: depth
 
+  integer :: iDepth
+  type(log_stat_comp_), pointer :: lsc
+
   if( ls_comp(depth)%is_updated )then
     if( ls_comp(depth)%is_recursive )then
-      ls_comp(depth:)%nCommand = ls_comp(depth:)%nCommand - 1
+      do iDepth = depth, PROCDEPTH
+        lsc => ls_comp(iDepth)
+!print"(1x,a)", 'update_commands_out depth '//str(iDepth)//' nCommand '//&
+!               str(lsc%nCommand)//' -> '//str(lsc%nCommand-1)
+        lsc%nCommand = lsc%nCommand - 1
+      enddo
     else
-      ls_comp(depth)%nCommand = ls_comp(depth)%nCommand - 1
+      lsc => ls_comp(depth)
+!print"(1x,a)", 'update_commands_out depth '//str(depth)//' nCommand '//&
+!               str(lsc%nCommand)//' -> '//str(lsc%nCommand-1)
+      lsc%nCommand = lsc%nCommand - 1
     endif
 
     ls_comp(depth)%is_updated = .false.
   endif
+
+  nullify(lsc)
 end subroutine update_commands_out
 !===============================================================
 !
