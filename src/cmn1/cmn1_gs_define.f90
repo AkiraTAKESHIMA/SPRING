@@ -197,11 +197,14 @@ subroutine set_gs__latlon(ul, lon, lat)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  ul%lon0(:) = ul%lon(:ul%nh-1) > ul%lon(1:)
+  !ul%lon0(:) = ul%lon(:ul%nh-1) > ul%lon(1:)
+  do ih = 1, ul%nh
+    ul%lon0(ih) = ul%lon(ih-1) > ul%lon(ih) .and. ul%lon(ih-1) /= rad_360deg
+  enddo
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call print_grids_latlon(ul%is_cyclic, ul%lon, ul%lat)
+  call print_grids_latlon(ul%is_cyclic, ul%lon, ul%lat, ul%lon0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_gs__latlon
@@ -285,7 +288,7 @@ subroutine set_gs__raster(ar)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call print_grids_latlon(ar%is_cyclic, ar%lon, ar%lat)
+  call print_grids_latlon(ar%is_cyclic, ar%lon, ar%lat, ar%lon0)
   !-------------------------------------------------------------
   ! Divide the grid system by the zero-longit. line
   !-------------------------------------------------------------
@@ -571,12 +574,13 @@ end subroutine check_bounds_lat
 !===============================================================
 !
 !===============================================================
-subroutine print_grids_latlon(is_cyclic, lon, lat)
+subroutine print_grids_latlon(is_cyclic, lon, lat, lon0)
   implicit none
   logical, intent(in) :: is_cyclic
   real(8), pointer :: lon(:), lat(:)
+  logical, pointer :: lon0(:)
 
-  integer(8) :: mh, hi, hf, mv, vi, vf
+  integer(8) :: mh, hi, hf, mv, vi, vf, ih
 
   call echo(code%bgn, 'print_grids_latlon', '-p -x2')
   !-------------------------------------------------------------
@@ -601,6 +605,17 @@ subroutine print_grids_latlon(is_cyclic, lon, lat)
             ', ..., '//str(lat(vf-2_8:vf)*r2d,'f12.7',', ')//' (deg)')
   else
     call edbg('lat: '//str(lat*r2d,'f12.7',', ')//' (deg)')
+  endif
+
+  if( any(lon0) )then
+    do ih = hi, hf
+      if( .not. lon0(ih) ) cycle
+      call edbg('Cell # '//str(ih)//' intersects with zero-longit. line.'//&
+              '\n(west: '//str(lon(ih-1)*r2d,'f12.7')//&
+               ', east: '//str(lon(ih  )*r2d,'f12.7')//')')
+    enddo
+  else
+    call edbg('Any cell or pixel does not intersect with zero-longit. line.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
