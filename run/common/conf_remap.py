@@ -196,7 +196,19 @@ def block_remapping(rmp, dir_out,
                     fname_rt_grid='grid', fname_rt_area='area', fname_rt_coef='coef'):
     s = f'\
 \n\
-[remapping]\n\
+[remapping]\n'
+
+    for key in ['opt_coef_sum_modify',
+                'opt_coef_sum_modify_ulim',
+                'grid_coef',
+                'grid_sort',
+                'allow_empty']:
+        if util.key_val_exist(rmp, key):
+            s += f'\
+  {key}: {rmp[key]}\n'
+
+    s += f'\
+\n\
   dir: "{dir_out}"\n\
   fout_rt_sidx: "{fname_rt_grid}.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
   fout_rt_tidx: "{fname_rt_grid}.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
