@@ -3,7 +3,6 @@ module lib_log_proc
   use lib_time , only: &
     date_and_time_values, &
     timediff
-  use lib_log_str
   implicit none
   private
   !-------------------------------------------------------------
