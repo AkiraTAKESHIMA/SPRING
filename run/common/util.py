@@ -16,6 +16,8 @@ def exec_program(prog, f_conf, f_log, f_err):
         fp.write(pc.stdout)
     with open(f_err, 'w') as fp:
         fp.write(pc.stderr)
+    print(f'stdout: {f_log}')
+    print(f'stderr: {f_err}')
 
     if pc.returncode != 0:
         #raise Exception(f'Program `{prog}` failed.')

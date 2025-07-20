@@ -29,8 +29,13 @@ def block_cmf(cmf, dir_in, dir_out):
 \n\
 [cama-flood]\n\
   dir: "{dir_in}"\n\
-  fin_catmxy: {util.str_file_bin(cmf["f_catmxy"])}\n\
-  fin_nextxy: {util.str_file_bin(cmf["f_nextxy"])}\n\
+  fin_catmxy: {util.str_file_bin(cmf["fin_catmxy"])}\n\
+  fin_nextxy: {util.str_file_bin(cmf["fin_nextxy"])}\n'
+    if util.key_val_exist(cmf, 'fin_basin'):
+        s += f'\
+  fin_basin: {util.str_file_bin(cmf["fin_basin"])}\n'
+
+    s += f'\
   catmxy_noriv_coastal: {cmf["catmxy_index"]["noriv_coastal"]}\n\
   catmxy_noriv_inland : {cmf["catmxy_index"]["noriv_inland"]}\n\
   catmxy_ocean        : {cmf["catmxy_index"]["ocean"]}\n\
@@ -40,11 +45,17 @@ def block_cmf(cmf, dir_in, dir_out):
   dir: "{dir_out}"\n'
 
     for gridName in ['rst', 'grd']:
-        for varName in ['idx', 'bsn']:
-            for landType in ['river', 'river_end', 'noriv', 'ocean']:
-                key = f'fout_{gridName}{varName}_{landType}'
-                if key in cmf.keys():
-                    s += f'\
+        varName  = 'idx'
+        for landType in ['river', 'river_end', 'noriv', 'ocean']:
+            key = f'fout_{gridName}{varName}_{landType}'
+            if util.key_val_exist(cmf, key):
+                s += f'\
+  {key}: {util.str_file_bin(cmf[key])}\n'
+
+        varName = 'bsn' 
+        key = f'fout_{gridName}{varName}'
+        if util.key_val_exist(cmf, key):
+                s += f'\
   {key}: {util.str_file_bin(cmf[key])}\n'
 
     s += f'\

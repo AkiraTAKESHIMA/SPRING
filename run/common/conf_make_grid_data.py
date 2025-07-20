@@ -128,10 +128,7 @@ def block_gs_raster(gs, landType, lst_varname_in, dir_out, lst_varname_out):
   north: {gs["north"]}\n\
   is_south_to_north: {gs["is_south_to_north"]}\n\
 \n\
-  dir: "{gs["dir"]}"\n'
-
-    if 'rstidx' in lst_varname_in:
-            s += f'\
+  dir: "{gs["dir"]}"\n\
   fin_rstidx: {util.str_file_bin(gs[f"fin_rstidx"])}\n'
 
     if 'grdidx' in lst_varname_in:
