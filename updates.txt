@@ -2,13 +2,37 @@
 - Multiple missing indices
 
 - Shapefile input
+#===============================================================
+# v02.02.01
+#===============================================================
+#---------------------------------------------------------------
+#[2025/07/20]
+#---------------------------------------------------------------
+run/ILS_bnd/sample/script/conf.json
+(and related scripts)
+
+Added a key `remapping > allow_empty`,
+which allows the case that either of grids have no valid grid.
+#---------------------------------------------------------------
+[2025/7/20]
+#---------------------------------------------------------------
+src/cmn1, src/cmn3
+
+Fixed a bug for rempping between RLL regional grid that has 
+a grid line on the zero-longit line and other RLL or raster grid.
 #---------------------------------------------------------------
 [2025/7/18]
 #---------------------------------------------------------------
 run/ILS_bnd/sample/script
 run/rt_ILS_default/sample/script
 
-Updated the scripts.
+Updated the scripts. Now they will work.
+#---------------------------------------------------------------
+[2025/07/18]
+#---------------------------------------------------------------
+src/lib/lib_log/lib_log_proc.f90
+
+Fixed a bug of initialization.
 #---------------------------------------------------------------
 [2025/07/15]
 #---------------------------------------------------------------
