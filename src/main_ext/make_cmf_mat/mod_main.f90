@@ -45,6 +45,7 @@ end subroutine make_cmf_mat
 !
 !===============================================================
 subroutine make_cmf(cmn, cmf, opt)
+  use cmn1_const
   implicit none
   type(cmn_), intent(in)         :: cmn
   type(cmf_), intent(in), target :: cmf
@@ -242,10 +243,10 @@ subroutine make_cmf(cmn, cmf, opt)
   !-------------------------------------------------------------
   if( cmn%is_raster_input )then
     grdidx_noriv(:,:) = cmf%idx_miss
-    if( cmf%make_river        ) grdstat_river(:,:)        = grdstat_invalid
-    if( cmf%make_river_end    ) grdstat_river_end(:,:)    = grdstat_invalid
-    if( cmf%make_river_mouth  ) grdstat_river_mouth(:,:)  = grdstat_invalid
-    if( cmf%make_river_inland ) grdstat_river_inland(:,:) = grdstat_invalid
+    if( cmf%make_river        ) grdstat_river(:,:)        = GRDSTAT_INVALID
+    if( cmf%make_river_end    ) grdstat_river_end(:,:)    = GRDSTAT_INVALID
+    if( cmf%make_river_mouth  ) grdstat_river_mouth(:,:)  = GRDSTAT_INVALID
+    if( cmf%make_river_inland ) grdstat_river_inland(:,:) = GRDSTAT_INVALID
 
     allocate(catmxx(cmn%nklx,cmn%nkly))
     allocate(catmyy(cmn%nklx,cmn%nkly))
@@ -356,10 +357,11 @@ subroutine make_cmf(cmn, cmf, opt)
 
       call echo(code%ext)
       !-----------------------------------------------------------
-      ! Check consistency between grid and raster of river
+      ! Update river grid status
       !-----------------------------------------------------------
       if( cmf%make_river )then
-        call echo(code%ent, 'Checking consistency between grid and raster of river')
+        ! Check if the set of indices of raster are in that of grid
+        call echo(code%ent, 'Updating `river` grid status referring raster map')
 
         call update_grdstat_rstidx_river(&
                cmn, cmf%idx_miss, &
@@ -367,12 +369,20 @@ subroutine make_cmf(cmn, cmf, opt)
                grdstat_river)
 
         call echo(code%ext)
+
+        ! Check if the set of indices of grid are in that of raster
+        if( .not. cmn%is_tiled )then
+          call check_if_grdidx_in_rstidx(&
+                 'river', cmf%idx_miss, &
+                 grdidx_river, grdstat_river, &
+                 cmf%grdidx_condition)
+        endif
       endif
       !-----------------------------------------------------------
-      ! Check consistency between grid and raster of river_end
+      ! Update river_end grid status
       !-----------------------------------------------------------
       if( cmf%make_river_end )then
-        call echo(code%ent, 'Checking consistency between grid and raster of river_end')
+        call echo(code%ent, 'Updating `river_end` grid status referring raster map')
 
         call update_grdstat_rstidx_river(&
                cmn, cmf%idx_miss, &
@@ -380,12 +390,20 @@ subroutine make_cmf(cmn, cmf, opt)
                grdstat_river_end)
 
         call echo(code%ext)
+
+        ! Check if the set of indices of grid are in that of raster
+        if( .not. cmn%is_tiled )then
+          call check_if_grdidx_in_rstidx(&
+                 'river_end', cmf%idx_miss, &
+                 grdidx_river_end, grdstat_river_end, &
+                 cmf%grdidx_condition)
+        endif
       endif
       !-----------------------------------------------------------
-      ! Check consistency between grid and raster of river_mouth
+      ! Update river_mouth grid status
       !-----------------------------------------------------------
       if( cmf%make_river_mouth )then
-        call echo(code%ent, 'Checking consistency between grid and raster of river_mouth')
+        call echo(code%ent, 'Updating `river_mouth` grid status referring raster map')
 
         call update_grdstat_rstidx_river(&
                cmn, cmf%idx_miss, &
@@ -393,12 +411,20 @@ subroutine make_cmf(cmn, cmf, opt)
                grdstat_river_mouth)
 
         call echo(code%ext)
+
+        ! Check if the set of indices of grid are in that of raster
+        if( .not. cmn%is_tiled )then
+          call check_if_grdidx_in_rstidx(&
+                 'river_mouth', cmf%idx_miss, &
+                 grdidx_river_mouth, grdstat_river_mouth, &
+                 cmf%grdidx_condition)
+        endif
       endif
       !-----------------------------------------------------------
-      ! Check consistency between grid and raster of river_inland
+      ! Update river_inland grid status
       !-----------------------------------------------------------
       if( cmf%make_river_inland )then
-        call echo(code%ent, 'Checking consistency between grid and raster of river_inland')
+        call echo(code%ent, 'Updating `river_inland` grid status referring raster map')
 
         call update_grdstat_rstidx_river(&
                cmn, cmf%idx_miss, &
@@ -406,9 +432,17 @@ subroutine make_cmf(cmn, cmf, opt)
                grdstat_river_inland)
 
         call echo(code%ext)
+
+        ! Check if the set of indices of grid are in that of raster
+        if( .not. cmn%is_tiled )then
+          call check_if_grdidx_in_rstidx(&
+                 'river_inland', cmf%idx_miss, &
+                 grdidx_river_inland, grdstat_river_inland, &
+                 cmf%grdidx_condition)
+        endif
       endif
       !-----------------------------------------------------------
-      !
+      ! Make a raster basin map
       !-----------------------------------------------------------
       if( cmf%f_rstbsn%path /= '' .or. cmf%dir_rstbsn /= '' )then
         call echo(code%ent, 'Making raster of basin')
@@ -635,9 +669,12 @@ subroutine make_cmf(cmn, cmf, opt)
   if( cmn%is_tiled )then
     call echo(code%ent, 'Checking consistency of status and grid of river')
 
-    call check_consistency_cmf_grdstat_river(&
-         cmf%idx_miss, grdidx_river, grdstat_river, &
-         nextxx, nextyy, cmf%opt_invalid_grdidx_catmxy)
+    !call check_consistency_cmf_grdstat_river(&
+    !     cmf%idx_miss, grdidx_river, grdstat_river, &
+    !     nextxx, nextyy, cmf%opt_invalid_grdidx_catmxy)
+    call check_if_grdidx_in_rstidx(&
+           'river', cmf%idx_miss, grdidx_river, grdstat_river, &
+           cmf%grdidx_condition)
 
     call echo(code%ext)
   endif
@@ -3092,7 +3129,7 @@ subroutine check_consistency_grdidx_river(&
     enddo
   endif
   !-------------------------------------------------------------
-  call edbg('>>> Consistency was verified <<<')
+  call edbg('...OK')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_consistency_grdidx_river
@@ -3237,7 +3274,7 @@ subroutine check_consistency_rstidx_river(&
     enddo
   endif
   !-------------------------------------------------------------
-  call edbg('>>> Consistency was verified <<<')
+  call edbg('...OK')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_consistency_rstidx_river
@@ -3306,7 +3343,7 @@ subroutine check_consistency_rstidx_validity(&
     enddo
   enddo
 
-  call edbg('>>> Consistency was verified <<<')
+  call edbg('...OK')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_consistency_rstidx_validity
@@ -3362,7 +3399,7 @@ subroutine check_consistency_grdidx_rstidx_rect(&
     enddo
   enddo
 
-  call edbg('>>> Consistency was verified <<<')
+  call edbg('...OK')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_consistency_grdidx_rstidx_rect
@@ -3382,14 +3419,15 @@ subroutine update_grdstat_rstidx_river(&
   integer(8), allocatable :: grdidx_1d(:)
   integer(8), allocatable :: arg(:)
   integer(8) :: ncgij, cgij, cgx, cgy
-  integer(8) :: nkx, nky, ikx, iky
+  integer(8) :: ikx, iky
   integer(8) :: idx, idx_prev
   integer(8) :: loc
 
   call echo(code%bgn, 'update_grdstat_rstidx_river', '-p -x2')
   !-------------------------------------------------------------
-  nkx = size(rstidx,1)
-  nky = size(rstidx,2)
+  ! Check if the set of indices of rstidx is in that of grdidx
+  !-------------------------------------------------------------
+  call echo(code%ent, 'Checking if the set of indices of rstidx is in that of grdidx')
 
   ncgij = cmn%ncgx * cmn%ncgy
   allocate(grdidx_1d(ncgij))
@@ -3400,8 +3438,8 @@ subroutine update_grdstat_rstidx_river(&
 
   idx_prev = idx_miss
 
-  do iky = 1_8, nky
-    do ikx = 1_8, nkx
+  do iky = 1_8, size(rstidx,2)
+    do ikx = 1_8, size(rstidx,1)
       idx = rstidx(ikx,iky)
       if( idx == idx_miss ) cycle
 
@@ -3417,17 +3455,83 @@ subroutine update_grdstat_rstidx_river(&
       cgij = arg(loc)
       cgy = (cgij-1_8) / cmn%ncgx + 1_8
       cgx = cgij - cmn%ncgx*(cgy-1_8)
-      grdstat(cgx,cgy) = grdstat_valid
+      grdstat(cgx,cgy) = GRDSTAT_VALID
     enddo
   enddo
 
   deallocate(grdidx_1d)
   deallocate(arg)
 
-  call edbg('>>> Status of consistency was updated <<<')
+  call edbg('...OK')
+
+  call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine update_grdstat_rstidx_river
+!===============================================================
+!
+!===============================================================
+subroutine check_if_grdidx_in_rstidx(&
+    landType, idx_miss, grdidx, grdstat, &
+    grdidx_condition)
+  use cmn1_const
+  implicit none
+  character(*), intent(in) :: landType
+  integer(8)  , intent(in)    :: idx_miss
+  integer(8)  , intent(in)    :: grdidx(:,:)
+  integer(1)  , intent(inout) :: grdstat(:,:)
+  character(*), intent(in) :: grdidx_condition
+
+  integer :: icgx, icgy, cgx, cgy
+  integer :: num_invalid
+
+  call echo(code%bgn, 'check_if_grdidx_in_rstidx', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  num_invalid = 0
+  do icgy = 1, size(grdidx,2)
+  do icgx = 1, size(grdidx,1)
+    if( grdidx(icgx,icgy) /= idx_miss .and. &
+        grdstat(icgx,icgy) == GRDSTAT_INVALID )then
+      if( num_invalid == 0 )then
+        cgx = icgx
+        cgy = icgy
+      endif
+      call add(num_invalid)
+    endif
+  enddo  ! icgx/
+  enddo  ! icgy/
+
+  if( num_invalid == 0 )then
+    call edbg('...OK')
+    call echo(code%ret)
+    return
+  endif
+
+  selectcase( grdidx_condition )
+  case( GRDIDX_CONDITION__MATCH, GRDIDX_CONDITION__GRD_IN_RST )
+    call eerr(str(msg_unexpected_condition())//&
+            '\n  '//str(num_invalid)//' grids are defined but'//&
+              ' not found in the raster map.'//&
+            '\n  e.g. @ (icgx,icgy) = ('//str((/cgx,cgy/),',')//'), '//&
+            '\n  grdidx /= idx_miss .and. grdstat == GRDSTAT_INVALID'//&
+           '\n  (landType = '//str(landType)//')'//&
+           '\nIt means that grid index '//str(grdidx(cgx,cgy))//&
+             ' in `grdidx` does not exist in `rstidx`. This can'//&
+             ' occur when `rstidx` is an upscaled one, not the'//&
+             ' original one. For example, the case that you are using'//&
+             ' `rstidx` of 1min resolution and CaMa-Flood map is'//&
+             ' generated from 3sec map. You can ignore this error '//&
+             ' by setting an option "grdidx_condition: raster_in_grid"'//&
+             ' in the block "cama-flood".')
+  case( GRDIDX_CONDITION__RST_IN_GRD )
+    call edbg(str(num_invalid)//' grids are defined but'//&
+              ' not found in the raster map.')
+  endselect
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine check_if_grdidx_in_rstidx
 !===============================================================
 !
 !===============================================================
@@ -3465,7 +3569,8 @@ subroutine check_consistency_cmf_grdstat_river(&
   num_invalid_upper = 0_8
   do icgy = 1_8, ncgy
     do icgx = 1_8, ncgx
-      if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+      if( grdidx(icgx,icgy) /= idx_miss .and. &
+          grdstat(icgx,icgy) == GRDSTAT_INVALID )then
         call add(num_invalid)
         if( nextxx(icgx,icgy) <= 0_8 )then
           call add(num_invalid_end)
@@ -3479,7 +3584,7 @@ subroutine check_consistency_cmf_grdstat_river(&
   selectcase( opt_invalid )
   !-------------------------------------------------------------
   ! Case: Allow nothing
-  case( opt_invalid_grdidx_catmxy_allow_nothing )
+  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING )
     if( num_invalid > 0 )then
       call eerr(str(msg_unexpected_condition())//&
               '\n'//str(num_invalid)//' grid(s) is (are) defined '//&
@@ -3488,7 +3593,8 @@ subroutine check_consistency_cmf_grdstat_river(&
       num_invalid = 0_8
       do icgy = 1_8, ncgy
         do icgx = 1_8, ncgx
-          if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+          if( grdidx(icgx,icgy) /= idx_miss .and. &
+              grdstat(icgx,icgy) == GRDSTAT_INVALID )then
             call add(num_invalid)
             if( num_invalid <= ulim_num_invalid )then
               call eerr('  @ ('//str((/icgx,icgy/),dgt_cgxy,', ')//') '//&
@@ -3509,7 +3615,7 @@ subroutine check_consistency_cmf_grdstat_river(&
     endif
   !-------------------------------------------------------------
   ! Case: Allow end
-  case( opt_invalid_grdidx_catmxy_allow_end )
+  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_END )
     if( num_invalid_upper > 0_8 )then
       call eerr(str(msg_unexpected_condition())//&
               '\n'//str(num_invalid)//' grid(s) that is (are) not river end'//&
@@ -3518,7 +3624,8 @@ subroutine check_consistency_cmf_grdstat_river(&
       num_invalid_upper = 0_8
       do icgy = 1_8, ncgy
         do icgx = 1_8, ncgx
-          if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+          if( grdidx(icgx,icgy) /= idx_miss .and. &
+              grdstat(icgx,icgy) == GRDSTAT_INVALID )then
             if( grdidx(icgx,icgy) > 0_8 )then
               call add(num_invalid_upper)
               if( num_invalid_upper <= ulim_num_invalid )then
@@ -3544,7 +3651,8 @@ subroutine check_consistency_cmf_grdstat_river(&
       num_invalid_end = 0_8
       do icgy = 1_8, ncgy
         do icgx = 1_8, ncgx
-          if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+          if( grdidx(icgx,icgy) /= idx_miss .and. &
+              grdstat(icgx,icgy) == GRDSTAT_INVALID )then
             call add(num_invalid_end)
             if( num_invalid_end <= ulim_num_invalid )then
               call edbg('  @ ('//str((/icgx,icgy/),dgt_cgxy,', ')//') '//&
@@ -3563,14 +3671,15 @@ subroutine check_consistency_cmf_grdstat_river(&
     endif
   !-------------------------------------------------------------
   ! Case: Allow all
-  case( opt_invalid_grdidx_catmxy_allow_all )
+  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL )
     if( num_invalid > 0_8 )then
       call edbg(str(num_invalid)//' grid(s) is (are) defined but not found in catmxy.')
 
       num_invalid = 0_8
       do icgy = 1_8, ncgy
         do icgx = 1_8, ncgx
-          if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+          if( grdidx(icgx,icgy) /= idx_miss .and. &
+              grdstat(icgx,icgy) == GRDSTAT_INVALID )then
             call add(num_invalid)
             if( num_invalid <= ulim_num_invalid )then
               call edbg('  @ ('//str((/icgx,icgy/),dgt_cgxy,', ')//') '//&
@@ -3626,7 +3735,8 @@ subroutine check_consistency_mat_grdstat_river(&
     num_invalid = 0_8
     do icgy = 1_8, ncgy
       do icgx = 1_8, ncgx
-        if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+        if( grdidx(icgx,icgy) /= idx_miss .and. &
+            grdstat(icgx,icgy) == GRDSTAT_INVALID )then
           call add(num_invalid)
         endif
       enddo  ! icgx/
@@ -3640,7 +3750,8 @@ subroutine check_consistency_mat_grdstat_river(&
       loop_mat:&
       do icgy = 1_8, ncgy
         do icgx = 1_8, ncgx
-          if( grdidx(icgx,icgy) /= idx_miss .and. grdstat(icgx,icgy) == grdstat_invalid )then
+          if( grdidx(icgx,icgy) /= idx_miss .and. &
+              grdstat(icgx,icgy) == GRDSTAT_INVALID )then
             call add(num_invalid)
             if( num_invalid > 10_8 )then
               call eerr('...')
@@ -3658,7 +3769,7 @@ subroutine check_consistency_mat_grdstat_river(&
       call eerr('', '-p')
     endif
 
-  call edbg('>>> Consistency was verified <<<')
+  call edbg('...OK')
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_consistency_mat_grdstat_river
