@@ -6,6 +6,29 @@
 # v02.02.01
 #===============================================================
 #---------------------------------------------------------------
+[2025/07/22]
+#---------------------------------------------------------------
+src/main_ext/make_cmf_mat/mod_set.f90, mod_main.f90
+
+Removed a key "opt_invalid_grdidx_catmxy" and added "grdidx_condition"
+for the block "cama-flood".
+Added checking functions for the correspondance of grid and raster
+for non-tiled data.
+#---------------------------------------------------------------
+[2025/07/21]
+#---------------------------------------------------------------
+src/main_ext/cpl_aogcm-ils_define_mat/mod_set.f90 read_settings_input_rt
+
+Fixed a bug that the subroutine `read_value` was called for
+variables type file_ as if they are paths.
+#---------------------------------------------------------------
+[2025/7/20]
+#---------------------------------------------------------------
+src/cmn1, src/cmn3
+
+Fixed a bug for rempping between RLL regional grid that has
+a grid line on the zero-longit line and other RLL or raster grid.
+#---------------------------------------------------------------
 #[2025/07/20]
 #---------------------------------------------------------------
 run/ILS_bnd/sample/script/conf.json
@@ -13,20 +36,6 @@ run/ILS_bnd/sample/script/conf.json
 
 Added a key `remapping > allow_empty`,
 which allows the case that either of grids have no valid grid.
-#---------------------------------------------------------------
-[2025/7/20]
-#---------------------------------------------------------------
-src/cmn1, src/cmn3
-
-Fixed a bug for rempping between RLL regional grid that has 
-a grid line on the zero-longit line and other RLL or raster grid.
-#---------------------------------------------------------------
-[2025/7/18]
-#---------------------------------------------------------------
-run/ILS_bnd/sample/script
-run/rt_ILS_default/sample/script
-
-Updated the scripts. Now they will work.
 #---------------------------------------------------------------
 [2025/07/18]
 #---------------------------------------------------------------
