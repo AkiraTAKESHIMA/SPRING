@@ -29,8 +29,8 @@ def block_cmf(cmf, dir_in, dir_out):
 \n\
 [cama-flood]\n\
   dir: "{dir_in}"\n\
-  fin_catmxy: {util.str_file_bin(cmf["f_catmxy"])}\n\
-  fin_nextxy: {util.str_file_bin(cmf["f_nextxy"])}\n\
+  fin_catmxy: {util.str_file_bin(cmf["fin_catmxy"])}\n\
+  fin_nextxy: {util.str_file_bin(cmf["fin_nextxy"])}\n\
   catmxy_noriv_coastal: {cmf["catmxy_index"]["noriv_coastal"]}\n\
   catmxy_noriv_inland : {cmf["catmxy_index"]["noriv_inland"]}\n\
   catmxy_ocean        : {cmf["catmxy_index"]["ocean"]}\n\
@@ -48,7 +48,11 @@ def block_cmf(cmf, dir_in, dir_out):
   {key}: {util.str_file_bin(cmf[key])}\n'
 
     s += f'\
-  idx_miss: {cmf["idx_miss"]}\n\
+  idx_miss: {cmf["idx_miss"]}\n'
+
+    if 'grdidx_condition' in cmf.keys():
+        s += f'\
+  grdidx_condition: {grdidx_condition}\n\
 [end]\n\
 '
 
