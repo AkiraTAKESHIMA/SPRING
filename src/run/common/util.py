@@ -7,6 +7,19 @@ import numpy as np
 import const
 
 
+class Job():
+    def __init__(self):
+        self.job = None
+
+    def put_job(self, job):
+        self.job = job
+
+    def get_job(self, job):
+        job = self.job
+
+job = Job()
+
+
 def exec_program(prog, f_conf, f_log, f_err):
     pc = subprocess.run([prog, f_conf],
                        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -48,10 +61,12 @@ def make_slink(org, dst):
     print(f'linked: {dst} -> {org}')
 
 
+def istep(name):
+    if job.job is None:
+        raise Exception('`job.job` is undefined.')
 
-def istep(name, job):
-    for key in job.keys():
-        if job[key] == name:
+    for key in job.job.keys():
+        if job.job[key] == name:
             return key
     raise Exception(f'Invalid value in $name: {name}')
 
