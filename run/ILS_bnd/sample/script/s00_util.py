@@ -47,6 +47,7 @@ def adjust_settings(cnf):
       'fout_rstidx_mkbnd_river': util.file_bin('raster/index_mkbnd_river.bin'),
       'fout_rstidx_mkbnd_noriv': util.file_bin('raster/index_mkbnd_noriv.bin'),
       'idx_miss': -9999,
+      'grdidx_condition': cmf['grdidx_condition'],
     }
     cnf['MATSIRO'] = mat
 
@@ -69,6 +70,7 @@ def adjust_settings(cnf):
           'fin_rstidx': mat[f'fout_rstidx_mkbnd_{landType}'],
           'fin_grdidx': mat[f'fout_grdidx_mkbnd_{landType}'],
           'idx_miss': mat['idx_miss'],
+          'grdidx_condition': mat['grdidx_condition'],
         }
 
     util.join_topdir(cnf)
