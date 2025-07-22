@@ -21,7 +21,6 @@ FC = gfortran
 CC = gcc
 ifeq ($(DEBUG), true)
   FCFLAGS = -O0 -Wall -g\
-            -fopenmp\
             -fcheck=bounds,do,mem,pointer,recursion\
             -frecord-marker=4\
             -fmax-errors=5\

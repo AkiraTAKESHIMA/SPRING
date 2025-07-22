@@ -8,7 +8,7 @@
 #---------------------------------------------------------------
 [2025/07/21]
 #---------------------------------------------------------------
-src/main_ext/cpl_aogcm-ils_define_mat/mod_set.f90 read_settings_input_rt)
+src/main_ext/cpl_aogcm-ils_define_mat/mod_set.f90 read_settings_input_rt
 
 Fixed a bug that the subroutine `read_value` was called for 
 variables type file_ as if they are paths. 
@@ -26,8 +26,6 @@ run/cpl_ILS-AOGCM/sample/script  => src/run/cpl_ILS-AOGCM
 run/rt_ILS_default/sample/run_all.py
 run/rt_ILS_default/sample/conf.json
 run/rt_ILS_default/sample/script --> src/run/rt_ILS_default
-
-
 #---------------------------------------------------------------
 [2025/07/20]
 #---------------------------------------------------------------
@@ -43,13 +41,6 @@ src/cmn1, src/cmn3
 
 Fixed a bug for rempping between RLL regional grid that has
 a grid line on the zero-longit line and other RLL or raster grid.
-#---------------------------------------------------------------
-[2025/7/18]
-#---------------------------------------------------------------
-run/ILS_bnd/sample/script
-run/rt_ILS_default/sample/script
-
-Updated the scripts.
 #---------------------------------------------------------------
 [2025/07/18]
 #---------------------------------------------------------------
