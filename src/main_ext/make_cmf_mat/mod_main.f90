@@ -3504,7 +3504,7 @@ subroutine check_if_grdidx_in_rstidx(&
   case( GRDIDX_CONDITION__MATCH, GRDIDX_CONDITION__GRD_IN_RST )
     call eerr(str(msg_unexpected_condition())//&
             '\n  '//str(num_invalid)//' grids are defined but'//&
-              ' not found in the raster map.'
+              ' not found in the raster map.'//&
             '\n  e.g. @ (icgx,icgy) = ('//str((/cgx,cgy/),',')//'), '//
             '\n  grdidx /= idx_miss .and. grdstat == GRDSTAT_INVALID'//&
            '\n  (landType = '//str(landType)//')'//&
