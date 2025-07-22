@@ -8,6 +8,13 @@
 #---------------------------------------------------------------
 [2025/07/21]
 #---------------------------------------------------------------
+src/main_ext/cpl_aogcm-ils_define_mat/mod_set.f90 read_settings_input_rt)
+
+Fixed a bug that the subroutine `read_value` was called for 
+variables type file_ as if they are paths. 
+#---------------------------------------------------------------
+[2025/07/21]
+#---------------------------------------------------------------
 Made a directory `src/run` to manage scripts that was originally
 under `run`.
 And now all the scripts are executed with `python run_all.py`.
