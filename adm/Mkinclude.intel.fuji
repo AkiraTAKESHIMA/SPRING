@@ -1,0 +1,82 @@
+#==============================================================
+#
+#==============================================================
+DEBUG = false
+
+#USE_C = false
+#TERMINAL_WIDTH = 128
+
+ILS ?= F
+#==============================================================
+#
+#==============================================================
+ifeq ($(USE_C), true)
+  FOPT_USE_C = -DUSE_C
+endif
+ifdef TERMINAL_WIDTH
+  FOPT_TERMINAL_WIDTH = -DTERMINAL_WIDTH=$(TERMINAL_WIDTH)
+endif
+
+#FC = ifort
+#CC = icc
+FC = singularity run /export/home/atakeshima/imageshare/oneapi-hpckit_latest.sif ifort
+CC = singularity run /export/home/atakeshima/imageshare/oneapi-hpckit_latest.sif icc
+
+ifeq ($(DEBUG), true)
+  FCFLAGS = -O0 -check all -check noarg_temp_created -warn all -CB\
+            -gen_interfaces -traceback -g\
+            -assume byterecl -convert big_endian\
+            -assume realloc_lhs -fstack-protector\
+            -assume protect_parens\
+            -fpe0 -ftrapuv
+  CCFLAGS = -O0 -g -debug all -std=c99 -no-multibyte-chars
+else
+  FCFLAGS = -O2 -g -assume byterecl -convert big_endian
+  CCFLAGS = -O2 -std=c99 -no-multibyte-chars
+endif
+#==============================================================
+#
+#==============================================================
+MAKE = make
+INSTALL = install
+AR = ar
+ARFLAGS = rv
+RANLIB = ranlib
+
+MKDIR = mkdir
+MKDIRFLAGS = -p
+RM = rm
+RMFLAGS = -f
+CP = cp
+CPFLAGS = -f
+
+LD = $(FC)
+LDFLAGS = $(FCFLAGS)
+#==============================================================
+#
+#==============================================================
+TOPLIBDIR     = $(TOPSRCDIR)/lib
+LIB           = $(TOPLIBDIR)/lib.a
+LIBDIR_CONST  = $(TOPLIBDIR)/lib_const
+LIBDIR_BASE   = $(TOPLIBDIR)/lib_base
+LIBDIR_TIME   = $(TOPLIBDIR)/lib_time
+LIBDIR_LOG    = $(TOPLIBDIR)/lib_log
+LIBDIR_UTIL   = $(TOPLIBDIR)/lib_util
+LIBDIR_RANDOM = $(TOPLIBDIR)/lib_random
+LIBDIR_ARRAY  = $(TOPLIBDIR)/lib_array
+LIBDIR_MATH   = $(TOPLIBDIR)/lib_math
+LIBDIR_STATS  = $(TOPLIBDIR)/lib_stats
+LIBDIR_PROJ   = $(TOPLIBDIR)/lib_proj
+LIBDIR_IO     = $(TOPLIBDIR)/lib_io
+LIBDIR_PNG    = $(TOPLIBDIR)/lib_png
+MODDIR = $(TOPLIBDIR)/mod
+
+CMNDIR1 = $(TOPSRCDIR)/cmn1
+CMNDIR2 = $(TOPSRCDIR)/cmn2
+CMNDIR3 = $(TOPSRCDIR)/cmn3
+
+ifeq ($(ILS),T)
+  include $(TOPSRCDIR)/../../../Mkinclude
+  FCFLAGS = $(FFLAGS)
+  CCFLAGS = $(CFLAGS)
+endif
