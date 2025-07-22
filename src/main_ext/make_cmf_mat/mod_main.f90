@@ -374,7 +374,8 @@ subroutine make_cmf(cmn, cmf, opt)
         if( .not. cmn%is_tiled )then
           call check_if_grdidx_in_rstidx(&
                  'river', cmf%idx_miss, &
-                 grdidx_river, grdstat_river)
+                 grdidx_river, grdstat_river, &
+                 cmf%grdidx_condition)
         endif
       endif
       !-----------------------------------------------------------
@@ -394,7 +395,8 @@ subroutine make_cmf(cmn, cmf, opt)
         if( .not. cmn%is_tiled )then
           call check_if_grdidx_in_rstidx(&
                  'river_end', cmf%idx_miss, &
-                 grdidx_river_end, grdstat_river_end)
+                 grdidx_river_end, grdstat_river_end, &
+                 cmf%grdidx_condition)
         endif
       endif
       !-----------------------------------------------------------
@@ -414,7 +416,8 @@ subroutine make_cmf(cmn, cmf, opt)
         if( .not. cmn%is_tiled )then
           call check_if_grdidx_in_rstidx(&
                  'river_mouth', cmf%idx_miss, &
-                 grdidx_river_mouth, grdstat_river_mouth)
+                 grdidx_river_mouth, grdstat_river_mouth, &
+                 cmf%grdidx_condition)
         endif
       endif
       !-----------------------------------------------------------
@@ -434,7 +437,8 @@ subroutine make_cmf(cmn, cmf, opt)
         if( .not. cmn%is_tiled )then
           call check_if_grdidx_in_rstidx(&
                  'river_inland', cmf%idx_miss, &
-                 grdidx_river_inland, grdstat_river_inland)
+                 grdidx_river_inland, grdstat_river_inland, &
+                 cmf%grdidx_condition)
         endif
       endif
       !-----------------------------------------------------------
@@ -669,7 +673,8 @@ subroutine make_cmf(cmn, cmf, opt)
     !     cmf%idx_miss, grdidx_river, grdstat_river, &
     !     nextxx, nextyy, cmf%opt_invalid_grdidx_catmxy)
     call check_if_grdidx_in_rstidx(&
-           'river', cmf%idx_miss, grdidx_river, grdstat_river)
+           'river', cmf%idx_miss, grdidx_river, grdstat_river, &
+           cmf%grdidx_condition)
 
     call echo(code%ext)
   endif
@@ -3467,14 +3472,18 @@ end subroutine update_grdstat_rstidx_river
 !
 !===============================================================
 subroutine check_if_grdidx_in_rstidx(&
-    landType, idx_miss, grdidx, grdstat)
+    landType, idx_miss, grdidx, grdstat, &
+    grdidx_condition)
+  use cmn1_const
   implicit none
   character(*), intent(in) :: landType
-  integer(8), intent(in)    :: idx_miss
-  integer(8), intent(in)    :: grdidx(:,:)
-  integer(1), intent(inout) :: grdstat(:,:)
+  integer(8)  , intent(in)    :: idx_miss
+  integer(8)  , intent(in)    :: grdidx(:,:)
+  integer(1)  , intent(inout) :: grdstat(:,:)
+  character(*), intent(in) :: grdidx_condition
 
   integer :: icgx, icgy, cgx, cgy
+  integer :: num_invalid
 
   call echo(code%bgn, 'check_if_grdidx_in_rstidx', '-p -x2')
   !-------------------------------------------------------------
@@ -3505,7 +3514,7 @@ subroutine check_if_grdidx_in_rstidx(&
     call eerr(str(msg_unexpected_condition())//&
             '\n  '//str(num_invalid)//' grids are defined but'//&
               ' not found in the raster map.'//&
-            '\n  e.g. @ (icgx,icgy) = ('//str((/cgx,cgy/),',')//'), '//
+            '\n  e.g. @ (icgx,icgy) = ('//str((/cgx,cgy/),',')//'), '//&
             '\n  grdidx /= idx_miss .and. grdstat == GRDSTAT_INVALID'//&
            '\n  (landType = '//str(landType)//')'//&
            '\nIt means that grid index '//str(grdidx(cgx,cgy))//&
