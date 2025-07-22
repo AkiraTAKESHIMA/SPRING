@@ -107,7 +107,8 @@ module def_type
     integer(8) :: bsn_miss
 
     ! option
-    character(clen_key) :: opt_invalid_grdidx_catmxy
+    !character(clen_key) :: opt_invalid_grdidx_catmxy
+    character(clen_key) :: grdidx_condition
   end type
 
   type mat_

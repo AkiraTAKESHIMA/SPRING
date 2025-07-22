@@ -23,6 +23,7 @@ CC = icc
 ifeq ($(DEBUG), true)
   FCFLAGS = -O0 -check all -check noarg_temp_created -warn all -CB\
             -gen_interfaces -traceback -g\
+            -heap-arrays
             -assume byterecl -convert big_endian\
             -assume realloc_lhs -fstack-protector\
             -assume protect_parens\
