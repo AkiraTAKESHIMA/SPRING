@@ -372,10 +372,12 @@ subroutine make_cmf(cmn, cmf, opt)
 
         ! Check if the set of indices of grid are in that of raster
         if( .not. cmn%is_tiled )then
+          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
           call check_if_grdidx_in_rstidx(&
                  'river', cmf%idx_miss, &
                  grdidx_river, grdstat_river, &
                  cmf%grdidx_condition)
+          call echo(code%ext)
         endif
       endif
       !-----------------------------------------------------------
@@ -393,10 +395,12 @@ subroutine make_cmf(cmn, cmf, opt)
 
         ! Check if the set of indices of grid are in that of raster
         if( .not. cmn%is_tiled )then
+          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
           call check_if_grdidx_in_rstidx(&
                  'river_end', cmf%idx_miss, &
                  grdidx_river_end, grdstat_river_end, &
                  cmf%grdidx_condition)
+          call echo(code%ext)
         endif
       endif
       !-----------------------------------------------------------
@@ -414,10 +418,12 @@ subroutine make_cmf(cmn, cmf, opt)
 
         ! Check if the set of indices of grid are in that of raster
         if( .not. cmn%is_tiled )then
+          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
           call check_if_grdidx_in_rstidx(&
                  'river_mouth', cmf%idx_miss, &
                  grdidx_river_mouth, grdstat_river_mouth, &
                  cmf%grdidx_condition)
+          call echo(code%ext)
         endif
       endif
       !-----------------------------------------------------------
@@ -435,10 +441,12 @@ subroutine make_cmf(cmn, cmf, opt)
 
         ! Check if the set of indices of grid are in that of raster
         if( .not. cmn%is_tiled )then
+          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
           call check_if_grdidx_in_rstidx(&
                  'river_inland', cmf%idx_miss, &
                  grdidx_river_inland, grdstat_river_inland, &
                  cmf%grdidx_condition)
+          call echo(code%ext)
         endif
       endif
       !-----------------------------------------------------------
