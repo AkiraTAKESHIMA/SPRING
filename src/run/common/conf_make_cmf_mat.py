@@ -59,7 +59,11 @@ def block_cmf(cmf, dir_in, dir_out):
   {key}: {util.str_file_bin(cmf[key])}\n'
 
     s += f'\
-  idx_miss: {cmf["idx_miss"]}\n\
+  idx_miss: {cmf["idx_miss"]}\n'
+
+    if 'grdidx_condition' in cmf.keys():
+        s += f'\
+  grdidx_condition: {cmf["grdidx_condition"]}\n\
 [end]\n\
 '
 
