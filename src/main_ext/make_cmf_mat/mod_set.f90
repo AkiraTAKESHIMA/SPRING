@@ -337,6 +337,8 @@ end subroutine read_settings_cmn
 !
 !===============================================================
 subroutine read_settings_cmf(cmn, cmf)
+  use cmn1_const_util, only: &
+        checkval_grdidx_condition
   use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
@@ -405,7 +407,8 @@ subroutine read_settings_cmf(cmn, cmf)
   call set_keynum('nextxy_ocean'       , 0, 1)
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('bsn_miss', 0, 1)
-  call set_keynum('opt_invalid_grdidx_catmxy', 0, 1)
+  call set_keynum('grdidx_condition', 0, 1)
+  !call set_keynum('opt_invalid_grdidx_catmxy', 0, 1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -436,19 +439,16 @@ subroutine read_settings_cmf(cmn, cmf)
       call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Input grid data
-    !-----------------------------------------------------------
     case( 'fin_nextxy' )
       call read_value(cmf%f_nextxy, dir)
     case( 'fin_basin' )
       call read_value(cmf%f_basin, dir)
     !-----------------------------------------------------------
     ! catmxy (untiled)
-    !-----------------------------------------------------------
     case( 'fin_catmxy' )
       call read_value(cmf%f_catmxy, dir)
     !-----------------------------------------------------------
     ! catmxy (tiled)
-    !-----------------------------------------------------------
     case( 'fin_list_catmxy' )
       call read_value(cmf%path_list_catmxy, is_path=.true., dir=dir)
     case( 'dtype_catmxy' )
@@ -457,7 +457,6 @@ subroutine read_settings_cmf(cmn, cmf)
       call read_value(cmf%endian_catmxy, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Output grid data (untiled)
-    !-----------------------------------------------------------
     case( 'fout_grdidx_river' )
       call read_value(cmf%f_grdidx_river, dir)
     case( 'fout_grdidx_river_end' )
@@ -472,7 +471,6 @@ subroutine read_settings_cmf(cmn, cmf)
       call read_value(cmf%f_grdidx_ocean, dir)
     !-----------------------------------------------------------
     ! Output raster data (untiled)
-    !-----------------------------------------------------------
     case( 'fout_rstidx_river' )
       call read_value(cmf%f_rstidx_river, dir)
     case( 'fout_rstidx_river_end' )
@@ -489,7 +487,6 @@ subroutine read_settings_cmf(cmn, cmf)
       call read_value(cmf%f_rstbsn, dir)
     !-----------------------------------------------------------
     ! Output raster data (tiled)
-    !-----------------------------------------------------------
     case( 'dirout_rstidx_river' )
       call read_value(cmf%dir_rstidx_river, is_path=.true., dir=dir)
     case( 'dirout_rstidx_river_end' )
@@ -519,7 +516,6 @@ subroutine read_settings_cmf(cmn, cmf)
       call read_value(cmf%endian_rstbsn, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Special values
-    !-----------------------------------------------------------
     case( 'catmxy_noriv_coastal' )
       call read_value(cmf%catmxy_noriv_coastal)
     case( 'catmxy_noriv_inland' )
@@ -539,9 +535,12 @@ subroutine read_settings_cmf(cmn, cmf)
     case( 'bsn_miss' )
       call read_value(cmf%bsn_miss)
     !-----------------------------------------------------------
-    ! Option
-    case( 'opt_invalid_grdidx_catmxy' )
-      call read_value(cmf%opt_invalid_grdidx_catmxy, is_keyword=.true.)
+    ! Options
+    case( 'grdidx_condition' )
+      call read_value(cmf%grdidx_condition, is_keyword=.true.)
+
+    !case( 'opt_invalid_grdidx_catmxy' )
+    !  call read_value(cmf%opt_invalid_grdidx_catmxy, is_keyword=.true.)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -558,19 +557,21 @@ subroutine read_settings_cmf(cmn, cmf)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  selectcase( cmf%opt_invalid_grdidx_catmxy )
-  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL, &
-        OPT_INVALID_GRDIDX_CATMXY_ALLOW_END, &
-        OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING )
-    continue
-  case default
-    call eerr(str(msg_invalid_value())//&
-            '\nOnly the folowing values are allowed for the key '//&
-              '"opt_invalid_grdidx_catmxy":'//&
-            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL)//&
-            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_END)//&
-            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING))
-  endselect
+  call checkval_grdidx_condition(cmf%grdidx_condition, 'cmf%grdidx_condition')
+
+!  selectcase( cmf%opt_invalid_grdidx_catmxy )
+!  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL, &
+!        OPT_INVALID_GRDIDX_CATMXY_ALLOW_END, &
+!        OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING )
+!    continue
+!  case default
+!    call eerr(str(msg_invalid_value())//&
+!            '\nOnly the folowing values are allowed for the key '//&
+!              '"opt_invalid_grdidx_catmxy":'//&
+!            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL)//&
+!            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_END)//&
+!            '\n  '//str(OPT_INVALID_GRDIDX_CATMXY_ALLOW_NOTHING))
+!  endselect
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1478,7 +1479,8 @@ subroutine set_default_values_cmf(cmf)
   cmf%idx_miss = cmf_idx_miss_default
   cmf%bsn_miss = cmf_bsn_miss_default
 
-  cmf%opt_invalid_grdidx_catmxy = opt_invalid_grdidx_catmxy_default
+  !cmf%opt_invalid_grdidx_catmxy = opt_invalid_grdidx_catmxy_default
+  cmf%grdidx_condition = GRDIDX_CONDITION__MATCH
 
 
   call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
@@ -1791,7 +1793,8 @@ subroutine echo_settings_cmf(cmn, cmf)
   call edbg('    Basin: '//str(cmf%bsn_miss))
   !-------------------------------------------------------------
   call edbg('Options')
-  call edbg('  opt_invalid_grdidx_catmxy: '//str(cmf%opt_invalid_grdidx_catmxy))
+  !call edbg('  opt_invalid_grdidx_catmxy: '//str(cmf%opt_invalid_grdidx_catmxy))
+  call edbg('  grdidx_condition: '//str(cmf%grdidx_condition))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_cmf
