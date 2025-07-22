@@ -48,12 +48,12 @@ def make_slink(org, dst):
     print(f'linked: {dst} -> {org}')
 
 
+
 def istep(name, job):
     for key in job.keys():
         if job[key] == name:
             return key
     raise Exception(f'Invalid value in $name: {name}')
-
 
 
 def join_topdir(cnf):
@@ -63,7 +63,8 @@ def join_topdir(cnf):
         if 'dir' in cnf[key].keys():
             cnf[key]['dir'] = os.path.join(cnf['dir_top'], cnf[key]['dir'])
         elif '_dir' in cnf[key].keys():
-            cnf[key]['dir'] = os.path.join(os.getcwd(), cnf[key]['_dir'])
+        #    cnf[key]['dir'] = os.path.join(os.getcwd(), cnf[key]['_dir'])
+            cnf[key]['dir'] = cnf[key]['_dir']
 
 
 def key_val_exist(dct, key):
