@@ -1,9 +1,11 @@
 import os, sys
 
-sys.path.append('../../../common')
 import const, util
 
 f_cnf = 'conf.json'
+k_lt = 'landTypes'
+k_gs = 'grid_systems'
+k_rt = 'remapping_tables'
 
 job = {
   1: 'make_grid_data',
