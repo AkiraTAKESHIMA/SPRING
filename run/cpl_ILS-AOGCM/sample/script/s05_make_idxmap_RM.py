@@ -5,6 +5,7 @@ import json
 
 sys.path.append('../../../common')
 import const, util
+from util import istep
 
 import s00_const as lconst
 import s00_util as lutil
@@ -27,7 +28,7 @@ def block_cmf():
     s = f'\
 \n\
 [cama-flood]\n\
-  dir: "{lconst.dir_tmp[lutil.istep("run_FLOW")]}"\n\
+  dir: "{lconst.dir_tmp[istep("run_FLOW",lconst.job)]}"\n\
   fin_catmxy: "tmp/map/1min/catmxy.bin"\n\
   fin_nextxy: "map/nextxy.bin"\n\
   fin_basin : "map/basin.bin"\n\

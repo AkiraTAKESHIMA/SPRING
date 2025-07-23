@@ -157,16 +157,16 @@ def block_options(opt):
 [options]\n\
   old_files: remove\n'
 
-    if opt['earth']['shape'] == 'sphere':
+    if opt['Earth']['shape'] == 'sphere':
         s += f'\
-  earth_shape: {opt["earth"]["shape"]}\n\
-  earth_r    : {opt["earth"]["r"]}\n'
+  earth_shape: {opt["Earth"]["shape"]}\n\
+  earth_r    : {opt["Earth"]["diameter"]}\n'
 
-    elif opt['earth']['shape'] == 'ellips':
+    elif opt['Earth']['shape'] == 'ellips':
         s += f'\
-  earth_shape: {opt["earth"]["shape"]}\n\
-  earth_r    : {opt["earth"]["r"]}\n\
-  earth_e2   : {opt["earth"]["e2"]}\n'
+  earth_shape: {opt["Earth"]["shape"]}\n\
+  earth_r    : {opt["Earth"]["diameter"]}\n\
+  earth_e2   : {opt["Earth"]["square_eccentricity"]}\n'
 
     s += '\
 [end]\n'
