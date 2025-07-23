@@ -67,6 +67,9 @@ def block_gs_latlon(gs, landType, lst_varname_in, dir_out, lst_varname_out):
     if 'grdidx' in lst_varname_in:
             s += f'\
   fin_grdidx: {util.str_file_bin(gs[f"fin_grdidx"])}\n'
+    elif util.key_val_exist(gs, 'idx_bgn'):
+        s += f'\
+  idx_bgn: {gs["idx_bgn"]}\n'
 
     s += f'\
   is_south_to_north: {gs["is_south_to_north"]}\n'
@@ -221,8 +224,11 @@ def block_gs_polygon(gs, landType, lst_varname_in, dir_out, lst_varname_out):
   coord_miss: {gs["coord_miss"]}\n'
 
     if 'grdidx' in lst_varname_in:
-            s += f'\
+        s += f'\
   fin_grdidx: {util.str_file_bin(gs[f"fin_grdidx"])}\n'
+    elif util.key_val_exist(gs, 'idx_bgn'):
+        s += f'\
+  idx_bgn: {gs["idx_bgn"]}\n'
 
     if util.key_val_exist(gs, 'idx_miss'):
         s += f'\

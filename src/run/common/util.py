@@ -71,15 +71,18 @@ def istep(name):
     raise Exception(f'Invalid value in $name: {name}')
 
 
-def join_topdir(cnf):
+def join_topdir(cnf, dir_top):
     for key in cnf.keys():
-        if type(cnf[key]) is not dict: continue
-
-        if 'dir' in cnf[key].keys():
-            cnf[key]['dir'] = os.path.join(cnf['dir_top'], cnf[key]['dir'])
-        elif '_dir' in cnf[key].keys():
-        #    cnf[key]['dir'] = os.path.join(os.getcwd(), cnf[key]['_dir'])
-            cnf[key]['dir'] = cnf[key]['_dir']
+        if type(cnf[key]) is dict:
+            cnf[key] = join_topdir(cnf[key], dir_top)
+        elif type(cnf[key]) is str:
+            if key == 'dir':
+                cnf[key] = os.path.join(dir_top, cnf[key])
+            elif key == '_dir':
+                if 'dir' in cnf[key].keys():
+                    raise Exception('"_dir" and "dir" cannot be given for one data.')
+                cnf[key]['dir'] = cnf[key]['_dir']
+    return cnf
 
 
 def key_val_exist(dct, key):
@@ -96,6 +99,37 @@ def get_meshBaseName(meshName):
         return meshName[:meshName.index('landType')-2]
     else:
         return meshName
+
+
+def get_tile_bbox_latlon(tileName):
+    if tileName[0] not in ['W','E'] or tileName[4] not in ['N','S'] or len(tileName) != 7:
+        raise Exception(('Unexpected format of tileName: {}'\
+                       '\ntileName must be like "W140N40" or "E010S20".').format(tileName))
+
+    if tileName[0] == 'W':
+        west = -int(tileName[1:4])
+    else:
+        west = int(tileName[1:4])
+    east = west + 10
+
+    if tileName[4] == 'N':
+        north = int(tileName[5:7])
+    else:
+        north = -int(tileName[5:7])
+    south = north - 10
+
+    return west, east, south, north
+
+
+def get_raster_bounds(
+      west, east, south, north, mx_1deg, my_1deg,
+      twest, teast, tsouth, tnorth):
+    dxi = int(np.floor((twest-west) * mx_1deg+1))
+    dxf = int(np.ceil((teast-west) * mx_1deg))
+    dyi = int(np.floor((north-tnorth) * my_1deg+1))
+    dyf = int(np.ceil((north-tsouth) * my_1deg))
+
+    return dxi, dxf, dyi, dyf
 
 
 def get_nij(f_rt_idx, dtype):

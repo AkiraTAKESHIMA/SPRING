@@ -63,9 +63,10 @@ def block_cmf(cmf, dir_in, dir_out):
 
     if 'grdidx_condition' in cmf.keys():
         s += f'\
-  grdidx_condition: {cmf["grdidx_condition"]}\n\
-[end]\n\
-'
+  grdidx_condition: {cmf["grdidx_condition"]}\n'
+
+    s += f'\
+[end]\n'
 
     return s
 

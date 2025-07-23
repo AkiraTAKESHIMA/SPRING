@@ -4,7 +4,9 @@ import argparse
 
 sys.path.append('../../../src/run/common')
 sys.path.append('script')
-from script import s01_make_grid_data_AGCM, \
+import const, util, conf
+from script import s00_const as lconst, \
+                   s01_make_grid_data_AGCM, \
                    s02_make_grid_data_OGCM, \
                    s03_rasterize_OGCM     , \
                    s04_run_FLOW           , \
@@ -21,6 +23,8 @@ from script import s01_make_grid_data_AGCM, \
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--step', help='step number', type=int)
 args = parser.parse_args()
+
+util.job.put_job(lconst.job)
 
 if args.step is None:
     s01_make_grid_data_AGCM.run()
