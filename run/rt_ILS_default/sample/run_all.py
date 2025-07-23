@@ -3,12 +3,12 @@ import sys
 import argparse
 
 sys.path.append('../../../src/run/common')
-sys.path.append('script')
+sys.path.append('../../../src/run/rt_ILS_default')
 import const, util, conf
-from script import s00_const as lconst, \
-                   s01_make_grid_data, \
-                   s02_make_rt       , \
-                   s03_merge_rt
+import s00_const as lconst
+import s01_make_grid_data, \
+       s02_make_rt       , \
+       s03_merge_rt
 
 
 parser = argparse.ArgumentParser()

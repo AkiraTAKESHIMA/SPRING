@@ -1,95 +1,155 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
-  "landType": ["river", "noriv"],
-  "MATSIRO": {
-    "name": "MATSIRO",
-    "type": "raster",
-    "nx_raster": 21600,
-    "ny_raster": 10800,
-    "nx_grid": 720,
-    "ny_grid": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false",
-    "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/matsiro",
-    "f_rstidx_river"    : {"path": "raster/index_river.bin"},
-    "f_rstidx_noriv"    : {"path": "raster/index_noriv.bin"},
-    "f_grdidx_river"    : {"path": "grid/index_river.bin"},
-    "f_grdidx_noriv"    : {"path": "grid/index_noriv.bin"},
-    "f_grdidx_bnd_river": {"path": "grid/index_bnd_river.bin"},
-    "f_grdidx_bnd_noriv": {"path": "grid/index_bnd_noriv.bin"},
-    "f_grdara_river"    : {"path": "grid/area_river.bin"},
-    "f_grdara_noriv"    : {"path": "grid/area_noriv.bin"},
-    "idx_miss": -9999
+  "landTypes": ["river", "noriv"],
+  "grid_systems": {
+    "MATSIRO_{landType}": {
+      "type": "raster",
+      "nx_raster": 21600,
+      "ny_raster": 10800,
+      "nx_grid": 720,
+      "ny_grid": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/matsiro",
+      "fin_rstidx": {"path": "raster/index_{landType}.bin"},
+      "fin_grdidx": {"path": "grid/index_{landType}.bin"},
+      "fin_grdara": {"path": "grid/area_{landType}.bin"},
+      "idx_miss": -9999
+    },
+    "MATSIRO_latlon_{landType}": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/matsiro",
+      "fin_grdidx": {"path": "grid/index_{landType}.bin"}
+    },
+    "CMF": {
+      "type": "raster",
+      "nx_raster": 21600,
+      "ny_raster": 10800,
+      "nx_grid": 720,
+      "ny_grid": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "fin_rstidx": {"path": "raster/index_river.bin"},
+      "fin_grdidx": {"path": "grid/index_river.bin"},
+      "fin_grdara": {"path": "grid/area_river.bin"},
+      "idx_miss": -9999
+    },
+    "CMF_latlon": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "fin_grdidx": {"path": "grid/index_river.bin"},
+      "idx_miss": -9999
+    },
+    "IO_met": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false"
+    },
+    "IO_metnc": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "true"
+    },
+    "IO_latlon": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false"
+    },
+    "IO_MATSIRO_bnd_river": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false"
+    },
+    "IO_MATSIRO_bnd_noriv": {
+      "share": "IO_MATSIRO_bnd_river",
+      "idx_bgn": 259201
+    },
+    "IO_MATSIRO_row_{landType}": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": "false"
+    },
+    "IO_CMF_row": {
+      "share": "IO_MATSIRO_row_river"
+    }
   },
-  "CaMa-Flood": {
-    "name": "CaMa-Flood",
-    "type": "raster",
-    "nx_raster": 21600,
-    "ny_raster": 10800,
-    "nx_grid": 720,
-    "ny_grid": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false",
-    "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
-    "f_rstidx_river": {"path": "raster/index_river.bin"},
-    "f_rstidx_noriv": {"path": "raster/index_noriv.bin"},
-    "f_grdidx_river": {"path": "grid/index_river.bin"},
-    "f_grdidx_noriv": {"path": "grid/index_noriv.bin"},
-    "f_grdara_river": {"path": "grid/area_river.bin"},
-    "f_grdara_noriv": {"path": "grid/area_noriv.bin"},
-    "idx_miss": -9999
+  "remapping_tables": {
+    "IO_met_to_MATSIRO": {
+      "source": "IO_met",
+      "target": "MATSIRO_{landType}"
+    },
+    "IO_metnc_to_MATSIRO": {
+      "source": "IO_metnc",
+      "target": "MATSIRO_{landType}"
+    },
+    "IO_MATSIRO_bnd_to_MATSIRO": {
+      "source": "IO_MATSIRO_bnd_{landType}",
+      "target": "MATSIRO_latlon_{landType}"
+    },
+    "MATSIRO_to_CMF": {
+      "source": "MATSIRO_latlon_river",
+      "target": "CMF_latlon"
+    },
+    "MATSIRO_to_IO_row": {
+      "source": "MATSIRO_latlon_{landType}",
+      "target": "IO_MATSIRO_row_{landType}"
+    },
+    "MATSIRO_to_IO_latlon": {
+      "source": "MATSIRO_{landType}",
+      "target": "IO_latlon"
+    },
+    "CMF_to_IO_row": {
+      "source": "CMF_latlon",
+      "target": "IO_CMF_row"
+    }
   },
-  "IO_MATSIRO_bnd": {
-    "name": "IO_MATSIRO_bnd",
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false"
-  },
-  "IO_met": {
-    "name": "IO_met",
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false"
-  },
-  "IO_metnc": {
-    "name": "IO_metnc", 
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "true"
-  },
-  "IO_latlon": {
-    "name": "IO_latlon",
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": "false"
-  },
-  "remapping_table": {
+  "options_remapping_tables": {
     "dtype_idx": "int4",
     "endian": "big_endian",
     "make_verification_data": false
