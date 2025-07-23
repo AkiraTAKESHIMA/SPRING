@@ -5,6 +5,7 @@ import json
 
 sys.path.append('../../../common')
 import const, util, conf
+from util import istep
 
 import s00_const as lconst
 import s00_util as lutil
@@ -13,7 +14,7 @@ import s00_util as lutil
 def merge_rt(cnf, step,
              srcMeshNameFmt, tgtMeshNameFmt, runname_out,
              opt_idx_duplication, grid_coef, opt_coef_sum_modify):
-    dir_tmp_make_rt = f'{lconst.dir_tmp[util.istep("make_rt", lconst.job)]}'
+    dir_tmp_make_rt = f'{lconst.dir_tmp[istep("make_rt")]}'
 
     srcMeshName = util.get_meshBaseName(srcMeshNameFmt)
     tgtMeshName = util.get_meshBaseName(tgtMeshNameFmt)

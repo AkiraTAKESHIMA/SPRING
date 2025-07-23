@@ -4,7 +4,9 @@ import argparse
 
 sys.path.append('../../../src/run/common')
 sys.path.append('script')
-from script import s01_make_grid_data, \
+import const, util, conf
+from script import s00_const as lconst, \
+                   s01_make_grid_data, \
                    s02_make_rt       , \
                    s03_merge_rt
 
@@ -12,6 +14,8 @@ from script import s01_make_grid_data, \
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--step', help='step number', type=int)
 args = parser.parse_args()
+
+util.job.put_job(lconst.job)
 
 if args.step is None:
     s01_make_grid_data.run()
