@@ -13,9 +13,9 @@ def make_cmf_mat(cnf, step):
     f_conf = f'{lconst.dir_set[step]}/a.conf'
     print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
-    fp.write(conf.make_cmf_mat.block_common(cnf['CaMa-Flood']))
-    fp.write(conf.make_cmf_mat.block_cmf(cnf['CaMa-Flood'], 
-               cnf['CaMa-Flood']['dir'], f'{lconst.dir_tmp[step]}/CaMa-Flood'))
+    fp.write(conf.make_cmf_mat.block_common(cnf['CMF']))
+    fp.write(conf.make_cmf_mat.block_cmf(cnf['CMF'], 
+               cnf['CMF']['dir'], f'{lconst.dir_tmp[step]}/CMF'))
     fp.write(conf.make_cmf_mat.block_matsiro(cnf['MATSIRO'],
                 cnf['MATSIRO']['dir']))
     fp.write(conf.make_cmf_mat.block_options(cnf['options']))
@@ -25,8 +25,8 @@ def make_cmf_mat(cnf, step):
     f_err = f'{lconst.dir_log[step]}/a.err'
     util.exec_program(const.prog_make_cmf_mat, f_conf, f_log, f_err)
 
-    util.make_slink(f'{lconst.dir_tmp[step]}/CaMa-Flood', 
-                    f'{const.dir_out}/grid/CaMa-Flood')
+    util.make_slink(f'{lconst.dir_tmp[step]}/CMF', 
+                    f'{const.dir_out}/grid/CMF')
     util.make_slink(f'{lconst.dir_tmp[step]}/MATSIRO', 
                     f'{const.dir_out}/grid/MATSIRO')
 
@@ -35,7 +35,7 @@ def run():
     step = int(__name__.split('.')[-1][1:3])
 
     cnf = json.load(open(lconst.f_cnf,'r'))
-    lutil.adjust_config(cnf)
+    cnf = lutil.adjust_config(cnf)
 
     os.makedirs(lconst.dir_set[step], exist_ok=True)
     os.makedirs(lconst.dir_tmp[step], exist_ok=True)

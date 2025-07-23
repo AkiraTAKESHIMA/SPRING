@@ -10,14 +10,14 @@ import s00_const as lconst
 
 
 def adjust_config(cnf):
-    cmf = cnf['CaMa-Flood']
+    cmf = cnf['CMF']
     cmf = dict(**cmf, **{
       'fout_grdidx_river': util.file_bin('grid/index_river.bin'),
       'fout_grdidx_noriv': util.file_bin('grid/index_noriv.bin'),
       'fout_rstidx_river': util.file_bin('raster/index_river.bin'),
       'fout_rstidx_noriv': util.file_bin('raster/index_noriv.bin'),
     })
-    cnf['CaMa-Flood'] = cmf
+    cnf['CMF'] = cmf
 
     mat = {
       'name': 'MATSIRO',
@@ -33,7 +33,7 @@ def adjust_config(cnf):
       'is_south_to_north': cmf['is_south_to_north'],
       'mx_raster_1deg': int(cmf['nx_raster'] / (cmf['east']-cmf['west'])),  # used for MODIS
       'my_raster_1deg': int(cmf['ny_raster'] / (cmf['north']-cmf['south'])),
-      'dir': f'{os.getcwd()}/{lconst.dir_tmp[util.istep("make_cmf_mat", lconst.job)]}/MATSIRO',
+      'dir': f'{os.getcwd()}/{lconst.dir_tmp[util.istep("make_cmf_mat")]}/MATSIRO',
       'fout_grdmsk_river': util.file_bin('grid/land_mask_river.bin', 'real', 'big', None),
       'fout_grdmsk_noriv': util.file_bin('grid/land_mask_noriv.bin', 'real', 'big', None),
       'fout_grdidx_river': util.file_bin('grid/index_river.bin'),
@@ -71,34 +71,10 @@ def adjust_config(cnf):
           'idx_miss': mat['idx_miss'],
         }
 
-    util.join_topdir(cnf)
+    for dataName in cnf['input_data'].keys():
+        d = cnf['input_data'][dataName]
+        d['name'] = dataName
 
+    cnf = util.join_topdir(cnf, cnf['dir_top'])
 
-def get_tile_bbox_latlon(tileName):
-    if tileName[0] not in ['W','E'] or tileName[4] not in ['N','S'] or len(tileName) != 7:
-        raise Exception(('Unexpected format of tileName: {}'\
-                       '\ntileName must be like "W140N40" or "E010S20".').format(tileName))
-
-    if tileName[0] == 'W':
-        west = -int(tileName[1:4])
-    else:
-        west = int(tileName[1:4])
-    east = west + 10
-
-    if tileName[4] == 'N':
-        north = int(tileName[5:7])
-    else:
-        north = -int(tileName[5:7])
-    south = north - 10
-
-    return west, east, south, north
-
-
-def get_raster_bounds(mat, twest, teast, tsouth, tnorth):
-    dxi = int(np.floor((twest-mat['west']) * mat['mx_raster_1deg']+1))
-    dxf = int(np.ceil((teast-mat['west']) * mat['mx_raster_1deg']))
-    dyi = int(np.floor((mat['north']-tnorth) * mat['my_raster_1deg']+1))
-    dyf = int(np.ceil((mat['north']-tsouth) * mat['my_raster_1deg']))
-
-    return dxi, dxf, dyi, dyf
-
+    return cnf

@@ -3,11 +3,11 @@ import sys
 import argparse
 
 sys.path.append('../../../src/run/common')
-sys.path.append('script')
+sys.path.append('../../../src/run/ILS_bnd')
 import const, util, conf
-from script import s00_const as lconst
-from script import s01_make_cmf_mat, \
-                   s02_make_rt
+import s00_const as lconst
+import s01_make_cmf_mat, \
+       s02_make_rt
 
 
 parser = argparse.ArgumentParser()

@@ -19,9 +19,9 @@ def make_rt_untiled(cnf, step, dataName, landType):
     print(f'config: {f_conf}')
     fp = open(f_conf, 'w')
     fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
-    fp.write(conf.remap.block_gs(cnf[dataName]))
+    fp.write(conf.remap.block_gs(cnf['input_data'][dataName]))
     fp.write(conf.remap.block_gs(cnf[f'MATSIRO_{landType}']))
-    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp,
+    fp.write(conf.remap.block_remapping(cnf['remapping_tables_common'], dir_tmp,
                fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
                fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
                fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
@@ -35,11 +35,11 @@ def make_rt_untiled(cnf, step, dataName, landType):
 
 def make_rt_tiled(cnf, step, dataName, landType, tileName):
     mat = copy.deepcopy(cnf[f'MATSIRO_{landType}'])
-    dat = copy.deepcopy(cnf[dataName])
+    dat = copy.deepcopy(cnf['input_data'][dataName])
 
     dat['name'] = dat['name'] + '_' + tileName
     if dat['type'] == 'latlon':
-        west, east, south, north = lutil.get_tile_bbox_latlon(tileName)
+        west, east, south, north = util.get_tile_bbox_latlon(tileName)
         dat['west']  = west
         dat['east']  = east
         dat['south'] = south
@@ -53,7 +53,10 @@ def make_rt_tiled(cnf, step, dataName, landType, tileName):
     else:
         raise Exception(f'Invalid value in `dat["type"]`: {dat["type"]}')
 
-    dxi, dxf, dyi, dyf = lutil.get_raster_bounds(mat, west, east, south, north)
+    dxi, dxf, dyi, dyf = util.get_raster_bounds(
+        mat['west'], mat['east'], mat['south'], mat['north'],
+        mat['mx_raster_1deg'], mat['my_raster_1deg'],
+        west, east, south, north)
     mat['dxi'] = dxi
     mat['dxf'] = dxf
     mat['dyi'] = dyi
@@ -67,7 +70,7 @@ def make_rt_tiled(cnf, step, dataName, landType, tileName):
     fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
     fp.write(conf.remap.block_gs(dat))
     fp.write(conf.remap.block_gs(mat))
-    fp.write(conf.remap.block_remapping(cnf['remapping'], dir_tmp,
+    fp.write(conf.remap.block_remapping(cnf['remapping_tables_common'], dir_tmp,
                fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
                fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
                fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
@@ -89,10 +92,10 @@ def mkdir(step, dataName, landType):
 
 
 def driv_make_rt(cnf, step, dataName_run, landType_run, tileName_run):
-    lst_dataName = ['GLCNMO', 'GTOPO30', 'HWSD', 'ISLSCP1', 'JRA55', 'MODIS']
+    lst_dataName = cnf['input_data'].keys()
 
     if dataName_run is not None and dataName_run not in lst_dataName:
-        raise Exception(f'Data name "{dataName}" is invalid.  Valid data names: {lst_dataName}')
+        raise Exception(f'Undefined input data "{dataName_run}" was specified.')
 
     if landType_run is not None and landType_run not in cnf['landType']:
         raise Exception(f'Land type "{landType_run}" is invalid. Check the value of "landType" '\
@@ -107,8 +110,9 @@ def driv_make_rt(cnf, step, dataName_run, landType_run, tileName_run):
             mkdir(step, dataName, landType)
 
         # Make remapping tables
-        if 'f_list_tiles' in cnf[dataName].keys():
-            f_list_tiles = os.path.join(cnf[dataName]['dir'], cnf[dataName]['f_list_tiles'])
+        dat = cnf['input_data'][dataName]
+        if 'f_list_tiles' in cnf['input_data'][dataName].keys():
+            f_list_tiles = os.path.join(dat['dir'], dat['f_list_tiles'])
             if not os.path.isfile(f_list_tiles):
                 raise Exception(f'File not found: {f_list_tiles}'+\
                               '\nCheck the values in the setting file.')
