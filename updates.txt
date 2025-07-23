@@ -9,11 +9,13 @@
 [2025/07/22]
 #---------------------------------------------------------------
 src/main_ext/make_cmf_mat/mod_set.f90, mod_main.f90
+run/ILS_bnd/conf.json, s00_util.py
 
 Removed a key "opt_invalid_grdidx_catmxy" and added "grdidx_condition"
 for the block "cama-flood".
 Added checking functions for the correspondance of grid and raster
 for non-tiled data.
+Related script and JSON file were also updated.
 #---------------------------------------------------------------
 [2025/07/21]
 #---------------------------------------------------------------

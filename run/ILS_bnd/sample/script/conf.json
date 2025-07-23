@@ -34,7 +34,8 @@
       "noriv_inland" :  -999,
       "ocean"        : -9999
     },
-    "idx_miss": -9999
+    "idx_miss": -9999,
+    "grdidx_condition": "raster_in_grid"
   },
   "GLCNMO": {
     "name": "GLCNMO",
