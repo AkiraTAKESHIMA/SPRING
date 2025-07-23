@@ -642,13 +642,13 @@ subroutine read_settings_input_rt(rt)
       call read_value(rtm%nij)
 
     case( 'f_sidx' )
-      call read_value(rtm%f%sidx%path, is_path=.true., dir=dir)
+      call read_value(rtm%f%sidx, dir)
 
     case( 'f_tidx' )
-      call read_value(rtm%f%tidx%path, is_path=.true., dir=dir)
+      call read_value(rtm%f%tidx, dir)
 
     case( 'f_area' )
-      call read_value(rtm%f%area%path, is_path=.true., dir=dir)
+      call read_value(rtm%f%area, dir)
     !-----------------------------------------------------------
     ! ERROR
     case default

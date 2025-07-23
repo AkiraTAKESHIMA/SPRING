@@ -9,7 +9,7 @@ import s00_const as lconst
 import s00_util as lutil
 
 
-def make_grid_data(cnf, meshName, landType):
+def make_grid_data(cnf, step, meshName, landType):
     dir_tmp = f'{lconst.dir_tmp[step]}/{meshName}'
 
     f_conf = f'{lconst.dir_set[step]}/{meshName}.conf'
@@ -29,8 +29,8 @@ def make_grid_data(cnf, meshName, landType):
 
 
 
-if __name__ == '__main__':
-    step = int(sys.argv[0][1:3])
+def run():
+    step = int(__name__.split('.')[-1][1:3])
 
     cnf = json.load(open(lconst.f_cnf,'r'))
     lutil.adjust_config(cnf)
@@ -39,5 +39,5 @@ if __name__ == '__main__':
     os.makedirs(lconst.dir_tmp[step], exist_ok=True)
     os.makedirs(lconst.dir_log[step], exist_ok=True)
 
-    make_grid_data(cnf, 'CaMa-Flood_river', 'river')
+    make_grid_data(cnf, step, 'CaMa-Flood_river', 'river')
 

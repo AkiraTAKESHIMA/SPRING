@@ -14,6 +14,8 @@ from s01_make_grid_data_AGCM import make_grid_data
 def run():
     step = int(__name__.split('.')[-1][1:3])
 
+    util.job.put_job(lconst.job)
+
     cnf = json.load(open(lconst.f_cnf,'r'))
     lutil.adjust_config(cnf)
 

@@ -106,38 +106,38 @@ def block_out_lsm(dir_out):
 \n\
   f_grdmsk_river     : "grdmsk_river.bin", real, 1, big\n\
   f_grdmsk_noriv     : "grdmsk_noriv.bin", real, 1, big\n\
-  f_grdmsk_noriv_real: "grdmsk_noriv-real.bin", real, 1, big\n\
-  f_grdmsk_noriv_virt: "grdmsk_noriv-virt.bin", real, 1, big\n\
+  f_grdmsk_noriv_real: "grdmsk_noriv_real.bin", real, 1, big\n\
+  f_grdmsk_noriv_virt: "grdmsk_noriv_virt.bin", real, 1, big\n\
 \n\
   f_grdidx_bnd_river     : "grdidx_bnd_river.bin"\n\
   f_grdidx_bnd_noriv     : "grdidx_bnd_noriv.bin"\n\
-  f_grdidx_bnd_noriv_real: "grdidx_bnd_noriv-real.bin"\n\
-  f_grdidx_bnd_noriv_virt: "grdidx_bnd_noriv-virt.bin"\n\
+  f_grdidx_bnd_noriv_real: "grdidx_bnd_noriv_real.bin"\n\
+  f_grdidx_bnd_noriv_virt: "grdidx_bnd_noriv_virt.bin"\n\
 \n\
   f_grdidx_river     : "grdidx_river.bin"\n\
   f_grdidx_noriv     : "grdidx_noriv.bin"\n\
-  f_grdidx_noriv_real: "grdidx_noriv-real.bin"\n\
-  f_grdidx_noriv_virt: "grdidx_noriv-virt.bin"\n\
+  f_grdidx_noriv_real: "grdidx_noriv_real.bin"\n\
+  f_grdidx_noriv_virt: "grdidx_noriv_virt.bin"\n\
 \n\
   f_grdara_river     : "grdara_river.bin"\n\
   f_grdara_noriv     : "grdara_noriv.bin"\n\
-  f_grdara_noriv_real: "grdara_noriv-real.bin"\n\
-  f_grdara_noriv_virt: "grdara_noriv-virt.bin"\n\
+  f_grdara_noriv_real: "grdara_noriv_real.bin"\n\
+  f_grdara_noriv_virt: "grdara_noriv_virt.bin"\n\
 \n\
   f_grdwgt_river     : "grdwgt_river.bin"\n\
   f_grdwgt_noriv     : "grdwgt_noriv.bin"\n\
-  f_grdwgt_noriv_virt: "grdwgt_noriv-virt.bin"\n\
-  f_grdwgt_noriv_real: "grdwgt_noriv-real.bin"\n\
+  f_grdwgt_noriv_real: "grdwgt_noriv_real.bin"\n\
+  f_grdwgt_noriv_virt: "grdwgt_noriv_virt.bin"\n\
 \n\
   f_rstidx_river     : "rstidx_river.bin"\n\
   f_rstidx_noriv     : "rstidx_noriv.bin"\n\
-  f_rstidx_noriv_real: "rstidx_noriv-real.bin"\n\
-  f_rstidx_noriv_virt: "rstidx_noriv-virt.bin"\n\
+  f_rstidx_noriv_real: "rstidx_noriv_real.bin"\n\
+  f_rstidx_noriv_virt: "rstidx_noriv_virt.bin"\n\
 \n\
   f_rstidx_bnd_river     : "rstidx_bnd_river.bin"\n\
   f_rstidx_bnd_noriv     : "rstidx_bnd_noriv.bin"\n\
-  f_rstidx_bnd_noriv_real: "rstidx_bnd_noriv-real.bin"\n\
-  f_rstidx_bnd_noriv_virt: "rstidx_bnd_noriv-virt.bin"\n\
+  f_rstidx_bnd_noriv_real: "rstidx_bnd_noriv_real.bin"\n\
+  f_rstidx_bnd_noriv_virt: "rstidx_bnd_noriv_virt.bin"\n\
 [end]\n'
 
     return s

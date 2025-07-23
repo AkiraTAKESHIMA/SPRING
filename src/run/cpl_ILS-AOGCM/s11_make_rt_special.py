@@ -4,7 +4,8 @@ import subprocess
 import json
 
 sys.path.append('../../../common')
-import const, util
+import const, util, conf
+from util import istep
 
 import s00_const as lconst
 import s00_util as lutil
@@ -12,7 +13,7 @@ import s00_conf as lconf
 
 
 def blocks_body(cnf, srcMeshName, runname, dir_lsm, landType):
-    dir_rt = f'{lconst.dir_tmp[lutil.istep("make_rt_standard-1")]}/rt_AGCM_to_OGCM_ocean'
+    dir_rt = f'{lconst.dir_tmp[istep("make_rt_standard-1")]}/rt_AGCM_to_OGCM_ocean'
     nij_rt = util.get_nij(f'{dir_rt}/grid.bin', cnf['remapping_table']['dtype_idx'])
 
     s = f'\
@@ -79,9 +80,45 @@ def get_runname(component, landType):
     return f'rt_{srcMeshName}_to_OGCM_via_AGCM'
 
 
+def make_rt_all(cnf, step,):
+    dir_rt = f'{lconst.dir_tmp[istep("make_rt_standard-1")]}/rt_AGCM_to_OGCM_ocean'
+    nij_rt = util.get_nij(f'{dir_rt}/grid.bin', cnf['remapping_table']['dtype_idx'])
 
-if __name__ == '__main__':
-    step = int(sys.argv[0][1:3])
+    for component in ['LSM', 'RM']:
+        if component == 'LSM':
+            dir_lsm = lconst.dir_tmp[istep('make_grid_data_LSM')]
+            lst_landType = ['river', 'noriv_real', 'noriv_virt']
+        else:
+            dir_lsm = lconst.dir_tmp[istep('make_grid_data_RM')]
+            lst_landType = ['river_end']
+
+        for landType in lst_landType:
+            #srcMeshName = get_srcMeshName(component, landType)
+            srcMeshName = f'{component}_latlon_{landType}'
+            runname = get_runname(component, landType)
+            dir_tmp = f'{lconst.dir_tmp[step]}/{runname}'
+
+            f_conf = f'{lconst.dir_set[step]}/{runname}.conf'
+            print(f_conf)
+            fp = open(f_conf, 'w')
+            #fp.write(lconf.head(lconst.dir_tmp[step]))
+            #fp.write(blocks_body(cnf, srcMeshName, runname, dir_lsm, landType))
+            fp.write(conf.cpl_make_rt.head(lconst.dir_tmp[step]))
+            fp.write(conf.cpl_make_rt.block_in_rt(dir_rt, nij_rt, cnf['remapping_table']))
+            fp.write(conf.cpl_make_rt.block_agcm(cnf['AGCM']))
+            fp.write(conf.cpl_make_rt.block_lsm(cnf[srcMeshName]))
+            fp.write(conf.cpl_make_rt.block_rt(dir_tmp, cnf['remapping_table']))
+            fp.close()
+
+            f_log = f'{lconst.dir_log[step]}/{runname}.out'
+            f_err = f'{lconst.dir_log[step]}/{runname}.err'
+            util.exec_program(const.prog_cpl_make_rt, f_conf, f_log, f_err)
+
+
+def run():
+    step = int(__name__.split('.')[-1][1:3])
+
+    util.job.put_job(lconst.job)
 
     cnf = json.load(open(lconst.f_cnf,'r'))
     lutil.adjust_config(cnf)
@@ -89,28 +126,6 @@ if __name__ == '__main__':
     os.makedirs(lconst.dir_set[step], exist_ok=True)
     os.makedirs(lconst.dir_tmp[step], exist_ok=True)
     os.makedirs(lconst.dir_log[step], exist_ok=True)
-    os.makedirs(lconst.dir_out[step], exist_ok=True)
 
-    for component in ['LSM', 'RM']:
-        if component == 'LSM':
-            dir_lsm = lconst.dir_tmp[lutil.istep('make_grid_data_LSM')]
-            lst_landType = ['river', 'noriv_real', 'noriv_virt']
-        else:
-            dir_lsm = lconst.dir_tmp[lutil.istep('make_grid_data_RM')]
-            lst_landType = ['river_end']
+    make_rt_all(cnf, step)
 
-        for landType in lst_landType:
-            srcMeshName = get_srcMeshName(component, landType)
-            runname = get_runname(component, landType)
-
-            f_conf = f'{lconst.dir_set[step]}/{runname}.conf'
-            print(f_conf)
-            fp = open(f_conf, 'w')
-            fp.write(lconf.head(lconst.dir_tmp[step]))
-            fp.write(blocks_body(cnf, srcMeshName, runname, dir_lsm, landType))
-            fp.close()
-
-
-            f_log = f'{lconst.dir_log[step]}/{runname}.out'
-            f_err = f'{lconst.dir_log[step]}/{runname}.err'
-            util.exec_program(const.prog_cpl_make_rt, f_conf, f_log, f_err)

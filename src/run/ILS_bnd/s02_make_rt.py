@@ -141,8 +141,17 @@ def driv_make_rt(cnf, step, dataName_run, landType_run, tileName_run):
                         f'{const.dir_out}/remapping_table/{dataName}')
             
 
-def run():
+def run(data, land, tile):
     step = int(__name__.split('.')[-1][1:3])
+
+    cnf = json.load(open(lconst.f_cnf, 'r'))
+    lutil.adjust_config(cnf)
+
+    driv_make_rt(cnf, step, data, land, tile)
+
+
+if __name__ == '__init__':
+    step = int(sys.argv[1][1:3])
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', help='data name')
@@ -150,7 +159,5 @@ def run():
     parser.add_argument('-t', '--tile', help='tile name')
     args = parser.parse_args()
 
-    cnf = json.load(open(lconst.f_cnf, 'r'))
-    lutil.adjust_config(cnf)
+    run(args.data, args.land, args.tile)
 
-    driv_make_rt(cnf, step, args.data, args.land, args.tile)

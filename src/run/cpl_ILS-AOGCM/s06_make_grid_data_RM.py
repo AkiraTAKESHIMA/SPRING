@@ -31,6 +31,8 @@ def make_grid_data(cnf, step, landType):
 def run():
     step = int(__name__.split('.')[-1][1:3])
 
+    util.job.put_job(lconst.job)
+
     cnf = json.load(open(lconst.f_cnf, 'r'))
     lutil.adjust_config(cnf)
 

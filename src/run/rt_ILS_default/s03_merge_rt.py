@@ -10,7 +10,8 @@ import s00_const as lconst
 import s00_util as lutil
 
 
-def merge_rt(srcMeshNameFmt, tgtMeshNameFmt, runname_out,
+def merge_rt(cnf, step,
+             srcMeshNameFmt, tgtMeshNameFmt, runname_out,
              opt_idx_duplication, grid_coef, opt_coef_sum_modify):
     dir_tmp_make_rt = f'{lconst.dir_tmp[util.istep("make_rt", lconst.job)]}'
 
@@ -56,8 +57,8 @@ def merge_rt(srcMeshNameFmt, tgtMeshNameFmt, runname_out,
     return
 
 
-if __name__ == '__main__':
-    step = int(sys.argv[0][1:3])
+def run():
+    step = int(__name__.split('.')[-1][1:3])
 
     cnf = json.load(open(lconst.f_cnf,'r'))
     lutil.adjust_config(cnf)
@@ -67,27 +68,32 @@ if __name__ == '__main__':
     os.makedirs(lconst.dir_log[step], exist_ok=True)
 
     # IO_bnd to MATSIRO
-    merge_rt('IO_MATSIRO_bnd_{landType}', 'MATSIRO_bnd_{landType}', 
+    merge_rt(cnf, step,
+             'IO_MATSIRO_bnd_{landType}', 'MATSIRO_bnd_{landType}', 
              'IO_bnd_to_MATSIRO',
              'stop', 'target', "1.d0")
 
     # IO_met to MATSIRO
-    merge_rt('IO_met', 'MATSIRO_{landType}', 
+    merge_rt(cnf, step,
+             'IO_met', 'MATSIRO_{landType}', 
              'IO_met_to_MATSIRO',
              'stop', 'target', "1.d0")
 
     # IO_metnc to MATSIRO
-    merge_rt('IO_metnc', 'MATSIRO_{landType}',
+    merge_rt(cnf, step, 
+             'IO_metnc', 'MATSIRO_{landType}',
              'IO_metnc_to_MATSIRO',
              'stop', 'target', "1.d0")
 
     # MATSIRO to IO_row
-    merge_rt('MATSIRO_latlon_{landType}', 'IO_MATSIRO_row_{landType}',
+    merge_rt(cnf, step,
+             'MATSIRO_latlon_{landType}', 'IO_MATSIRO_row_{landType}',
              'MATSIRO_to_IO_row',
              'stop', 'target', "1.d0")
 
     # MATSIRO to IO_latlon
-    merge_rt('MATSIRO_{landType}', 'IO_latlon',
+    merge_rt(cnf, step,
+             'MATSIRO_{landType}', 'IO_latlon',
              'MATSIRO_to_IO_latlon',
              'stop', 'target', "1.d0")
 
