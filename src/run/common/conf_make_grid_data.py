@@ -98,6 +98,10 @@ def block_gs_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s += f'\
   in_grid_sz: {gs["nx_grid"]}, {gs["ny_grid"]}\n'
 
+    if 'grdidx_condition' in gs.keys():
+        s += f'\
+  grdidx_condition: {gs["grdidx_condition"]}\n'
+
     s += part_gs_out(gs, dir_out, lst_varname_out)
 
     s += part_gs_miss(gs)

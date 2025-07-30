@@ -35,7 +35,7 @@ def preprocess(cnf):
         c = cnf[k_gs][meshName]
         for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
                     'west', 'east', 'south', 'north', 'is_south_to_north',
-                    'idx_miss']:
+                    'idx_miss', 'grdidx_condition']:
             util.copy_dict_elem(c, CMF, key)
         util.copy_dict_elem(c, CMF, 'dir')
         util.copy_dict_elem(c, CMF, '_dir')
