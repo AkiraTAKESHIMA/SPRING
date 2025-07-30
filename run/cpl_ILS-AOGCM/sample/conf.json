@@ -107,85 +107,219 @@
     "flwdir": "flwdir.bin",
     "elevtn": "elevtn.bin"
   },
-  "remapping_tables": {
-    "IO_bnd_to_LSM": {
-      "source": "IO_LSM_bnd_{landType}",
-      "target": "LSM_simplified_{landType}",
-      "landTypes": ["river", "noriv"]
-    },
-    "IO_met_to_LSM": {
-      "source": "IO_met",
-      "target": "LSM_{landType}",
-      "landTypes": ["river", "noriv_real", "noriv_virt"]
-    },
-    "IO_metnc_to_LSM": {
-      "source": "IO_metnc",
-      "target": "LSM_{landType}",
-      "landTypes": ["river", "noriv_real", "noriv_virt"]
-    },
-    "LSM_to_IO_row": {
-      "source": "LSM_simplified_{landType}",
-      "target": "IO_LSM_row",
-      "landTypes": ["river", "noriv_real", "noriv_virt"]
-    },
-    "LSM_to_IO_latlon": {
-      "source": "LSM_{landType}",
-      "target": "IO_latlon",
-      "landTypes": ["river", "noriv_real", "noriv_virt"]
-    },
-    "RM_to_IO_row": {
-      "source": "RM_simplified_{landType}",
-      "target": "IO_RM_row",
-      "landTypes": ["river"]
-    },
-    "LSM_to_RM": {
-      "source": "LSM_simplified_{landType}",
-      "target": "RM_simplified_{landType}",
-      "landTypes": ["river"]
-    },
-    "RM_to_LSM": {
-      "source": "RM_simplified_{landType}",
-      "target": "LSM_simplified_{landType}",
-      "landTypes": ["river"]
-    },
-    "AGCM_to_LSM": {
-      "source": "AGCM",
-      "target": "LSM_{landType}",
-      "landTypes": ["river", "noriv"]
-    },
-    "LSM_to_AGCM": {
-      "source": "LSM_{landType}",
-      "target": "AGCM",
-      "landTypes": ["river", "noriv"]
-    },
-    "LSM_noriv_to_AGCM": {
-      "source": "LSM_noriv",
-      "target": "AGCM"
-    },
-    "LSM_to_OGCM_via_AGCM": {
-      "source": "LSM_{landType}",
-      "target": "AGCM",
-      "landTypes": ["river", "noriv"]
-    },
-    "LSM_noriv_to_OGCM_via_AGCM": {
-      "source": "LSM_{landType}",
-      "target": "AGCM",
-      "landTypes": ["noriv"]
-    },
-    "RM_to_OGCM_via_AGCM": {
-      "source": "RM_river_end",
-      "target": "AGCM"
-    }
-  },
   "remapping_tables_common": {
     "dtype_idx": "int4",
     "endian": "big_endian",
     "make_verification_data": true
   }, 
+  "remapping_tables": {
+    "IO_bnd_to_LSM": {
+      "sourceTables": "IO_LSM_bnd_simple_{landType}_to_LSM_bnd_simple_{landType}",
+      "landTypes": [
+        "river", 
+        "noriv"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "IO_met_to_LSM": {
+      "sourceTables": "IO_met_to_LSM_{landType}",
+      "landTypes": [
+        "river",
+        "noriv_real",
+        "noriv_virt"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "IO_metnc_to_LSM": {
+      "sourceTables": "IO_metnc_to_LSM_{landType}",
+      "landTypes": [
+        "river",
+        "noriv_real",
+        "noriv_virt"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_to_IO_row": {
+      "sourceTables": "LSM_simple_{landType}_to_IO_LSM_row_{landType}",
+      "landTypes": [
+        "river",
+        "noriv_real",
+        "noriv_virt"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_to_IO_latlon": {
+      "sourceTables": "LSM_{landType}_to_IO_latlon",
+      "landTypes": [
+        "river",
+        "noriv_real",
+        "noriv_virt"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "RM_to_IO_row": {
+      "sourceTables": "RM_simple_{landType}_to_IO_RM_row_{landType}",
+      "landTypes": [
+        "river"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "RM_to_IO_latlon": {
+      "sourceTables": "RM_{landType}_to_IO_latlon",
+      "landTypes": [
+        "river"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_to_RM": {
+      "sourceTables": "LSM_simple_{landType}_to_RM_simple_{landType}",
+      "landTypes": [
+        "river"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "RM_to_LSM": {
+      "sourceTables": "RM_simple_{landType}_to_LSM_simple_{landType}",
+      "landTypes": [
+        "river"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "AGCM_to_LSM": {
+      "sourceTables": "AGCM_to_LSM_{landType}",
+      "landTypes": [
+        "river",
+        "noriv"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_to_AGCM": {
+      "sourceTables": "LSM_{landType}_to_AGCM",
+      "landTypes": [
+        "river",
+        "noriv"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_noriv_to_AGCM": {
+      "sourceTables": "LSM_{landType}_to_AGCM",
+      "landTypes": [
+        "noriv"
+      ],
+      "grid_coef": "none",
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_to_OGCM_via_AGCM": {
+      "sourceTables": "LSM_simple_{landType}_to_OGCM_via_AGCM",
+      "landTypes": [
+        "river",
+        "noriv_real",
+        "noriv_virt"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "LSM_noriv_to_OGCM_via_AGCM": {
+      "sourceTables": "LSM_simple_{landType}_to_OGCM_via_AGCM",
+      "landTypes": [
+        "noriv_real",
+        "noriv_virt"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    },
+    "RM_to_OGCM_via_AGCM": {
+      "sourceTables": "RM_simple_{landType}_to_OGCM_via_AGCM",
+      "landTypes": [
+        "river_end"
+      ],
+      "grid_coef": "target",
+      "opt_coef_sum_modify": 1.0,
+      "opt_idx_duplication": "stop"
+    }
+  },
+  "intermediate_remapping_tables": {
+    "OGCM_{landType}_to_AGCM": {
+      "landTypes": ["ocean"]
+    },
+    "AGCM_to_OGCM_{landType}": {
+      "landTypes": ["ocean"]
+    },
+    "RM_{landType}_to_AGCM": {
+      "landTypes": ["river", "noriv", "ocean"]
+    },
+    "AGCM_to_LSM_{landType}": {
+      "landTypes": ["river", "noriv"]
+    },
+    "LSM_{landType}_to_AGCM": {
+      "landTypes": ["river", "noriv"]
+    },
+    "IO_LSM_bnd_simple_{landType}_to_LSM_bnd_simple_{landType}": {
+      "landTypes": ["river", "noriv"]
+    },
+    "IO_met_to_LSM_{landType}": {
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "IO_metnc_to_LSM_{landType}": {
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "LSM_simple_{landType}_to_RM_simple_{landType}": {
+      "landTypes": ["river"]
+    },
+    "RM_simple_{landType}_to_LSM_simple_{landType}": {
+      "landTypes": ["river"],
+      "use_tgt_grdara": true
+    },
+    "LSM_simple_{landType}_to_IO_LSM_row_{landType}": {
+      "landTypes": ["river", "noriv_real", "noriv_virt"],
+      "use_tgt_grdara": true
+    },
+    "LSM_{landType}_to_IO_latlon": {
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "RM_simple_{landType}_to_IO_RM_row_{landType}": {
+      "landTypes": ["river"],
+      "use_tgt_grdara": true
+    },
+    "RM_{landType}_to_IO_latlon": {
+      "landTypes": ["river"]
+    },
+    "LSM_simple_{landType}_to_OGCM_via_AGCM": {
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "RM_simple_{landType}_to_OGCM_via_AGCM": {
+      "landTypes": ["river_end"]
+    }
+  },
   "options": {
     "Earth": {
       "shape": "sphere",
       "diameter": 6371e+3
-    }
+    },
+    "method_rivwat": "weighted_dist"
   }
 }

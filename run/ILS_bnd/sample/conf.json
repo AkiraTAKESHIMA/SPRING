@@ -1,43 +1,46 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
-  "landType": ["river", "noriv"],
-  "CMF": {
-    "type": "raster",
-    "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
-    "nx_raster" : 21600, 
-    "ny_raster" : 10800,
-    "nx_grid":   720, 
-    "ny_grid":   360,
-    "west": -180, 
-    "east":  180, 
-    "south": -90, 
-    "north":  90,
-    "is_south_to_north": false,
-    "fin_nextxy": {
-      "path"  : "grid/nextxy.bin", 
-      "dtype" : "int4", 
-      "endian": "little"
-    },
-    "nextxy_index" : {
-      "river_mouth" :    -9,
-      "river_inland":   -10,
-      "ocean"       : -9999
-    },
-    "fin_catmxy": {
-      "path"  : "raster/catmxy.bin", 
-      "dtype" : "int2", 
-      "endian": "little"
-    },
-    "catmxy_index" : {
-      "noriv_coastal":  -999,
-      "noriv_inland" :  -999,
-      "ocean"        : -9999
-    },
-    "idx_miss": -9999,
-    "grdidx_condition": "match"
+  "landTypes": ["river", "noriv"],
+  "grid_systems": {
+    "CMF": {
+      "type": "raster",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "nx_raster" : 21600, 
+      "ny_raster" : 10800,
+      "nx_grid":   720, 
+      "ny_grid":   360,
+      "west": -180, 
+      "east":  180, 
+      "south": -90, 
+      "north":  90,
+      "is_south_to_north": false,
+      "fin_nextxy": {
+        "path"  : "grid/nextxy.bin", 
+        "dtype" : "int4", 
+        "endian": "little"
+      },
+      "nextxy_index" : {
+        "river_mouth" :    -9,
+        "river_inland":   -10,
+        "ocean"       : -9999
+      },
+      "fin_catmxy": {
+        "path"  : "raster/catmxy.bin", 
+        "dtype" : "int2", 
+        "endian": "little"
+      },
+      "catmxy_index" : {
+        "noriv_coastal":  -999,
+        "noriv_inland" :  -999,
+        "ocean"        : -9999
+      },
+      "idx_miss": -9999,
+      "grdidx_condition": "match"
+    }
   },
   "input_data": {
     "GLCNMO": {
+      "name": "GLCNMO",
       "type": "latlon",
       "nx": 2400,
       "ny": 2400,
