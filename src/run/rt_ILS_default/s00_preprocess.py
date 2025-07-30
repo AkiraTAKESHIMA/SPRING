@@ -16,16 +16,17 @@ def preprocess(cnf):
     CMF = cnf[k_gs]['CMF']
 
     meshName = 'CMF_pre'
-    cnf[k_gs][meshName] = {}
-    c = cnf[k_gs][meshName]
-    for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
-                'west', 'east', 'south', 'north', 'is_south_to_north',
-                'idx_miss',
-                'dir', '_dir', 'fin_catmxy', 'fin_nextxy', 
-                'catmxy_index', 'nextxy_index',
-                'fin_rstidx_river', 'fin_grdidx_river',
-                'fin_rstidx_noriv', 'fin_grdidx_noriv']:
-        util.copy_dict_elem(c, CMF, key)
+    cnf[k_gs][meshName] = copy.deepcopy(CMF)
+    #cnf[k_gs][meshName] = {}
+    #c = cnf[k_gs][meshName]
+    #for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
+    #            'west', 'east', 'south', 'north', 'is_south_to_north',
+    #            'idx_miss',
+    #            'dir', '_dir', 'fin_catmxy', 'fin_nextxy', 
+    #            'catmxy_index', 'nextxy_index',
+    #            'fin_rstidx_river', 'fin_grdidx_river',
+    #            'fin_rstidx_noriv', 'fin_grdidx_noriv']:
+    #    util.copy_dict_elem(c, CMF, key)
 
 
     for landType in cnf[k_lt]:

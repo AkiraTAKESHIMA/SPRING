@@ -34,7 +34,8 @@
         "river_inland": -10,
         "ocean": -9999
       },
-      "idx_miss": -9999
+      "idx_miss": -9999,
+      "grdidx_condition": "match"
     },
     "IO_met": {
       "type": "latlon",
