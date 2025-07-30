@@ -62,9 +62,9 @@ def block_cmf(cmf, dir_in, dir_out):
         s += f'\
   idx_miss: {cmf["idx_miss"]}\n'
 
-    if 'grdidx_condition' in cmf.keys():
+    if 'idx_condition' in cmf.keys():
         s += f'\
-  grdidx_condition: {cmf["grdidx_condition"]}\n'
+  idx_condition: {cmf["idx_condition"]}\n'
 
     s += f'\
 [end]\n'

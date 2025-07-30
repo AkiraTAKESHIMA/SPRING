@@ -3,18 +3,7 @@
   "landTypes": ["river", "noriv"],
   "grid_systems": {
     "MATSIRO_{landType}": {
-      "landTypes": ["river", "noriv"],
-      "type": "raster",
-      "nx_raster": 21600,
-      "ny_raster": 10800,
-      "nx_grid": 720,
-      "ny_grid": 360,
-      "west": -180,
-      "east":  180,
-      "south": -90,
-      "north":  90,
-      "is_south_to_north": "false",
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/matsiro",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/MATSIRO",
       "fin_rstidx"   : {"path": "raster/index_{landType}.bin"},
       "fin_grdidx"   : {"path": "grid/index_{landType}.bin"},
       "fin_grdbndidx": {"path": "grid/index_bnd_{landType}.bin"},
@@ -32,7 +21,7 @@
       "south": -90,
       "north":  90,
       "is_south_to_north": "false",
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/CMF",
       "fin_rstidx_river": {"path": "raster/index_river.bin"},
       "fin_grdidx_river": {"path": "grid/index_river.bin"},
       "idx_miss": -9999
@@ -66,6 +55,27 @@
       "south": -90,
       "north":  90,
       "is_south_to_north": "false"
+    },
+    "MATSIRO_simple_{landType}": {
+      "desc": "Simplified MATSIRO grid"
+    },
+    "MATSIRO_bnd_simple_{landType}": {
+      "desc": "Simplified MATSIRO grid for BC"
+    },
+    "IO_MATSIRO_bnd_simple_{landType}": {
+      "desc": "IO grid for MATSIRO BC"
+    },
+    "IO_MATSIRO_row_{landType}": {
+      "desc": "IO grid for MATSIRO output"
+    },
+    "CMF_{landType}": {
+      "desc": "CMF grid"
+    },
+    "CMF_simple_{landType}": {
+      "desc": "Simplified CMF grid"
+    },
+    "IO_CMF_row_{landType}": {
+      "desc": "IO grid for CMF output"
     }
   },
   "remapping_tables_common": {
@@ -92,7 +102,7 @@
     },
     "MATSIRO_to_IO_row": {
       "sourceTables": "MATSIRO_simple_{landType}_to_IO_MATSIRO_row_{landType}",
-      "landTypes": ["river"]
+      "landTypes": ["river", "noriv"]
     },
     "MATSIRO_to_IO_latlon": {
       "sourceTables": "MATSIRO_{landType}_to_IO_latlon",

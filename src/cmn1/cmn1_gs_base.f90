@@ -420,7 +420,7 @@ subroutine set_default_values_gs_raster(ur)
   ur%status_wgtmap = GRID_STATUS__TO_BE_PREPARED
   ur%idxmin = 0_8
   ur%idxmax = 0_8
-  ur%grdidx_condition = GRDIDX_CONDITION__MATCH
+  ur%idx_condition = IDX_CONDITION__MATCH
 
   ur%idx_miss    = IDX_MISS_DEFAULT
   ur%uwa_miss    = UWA_MISS_DEFAULT

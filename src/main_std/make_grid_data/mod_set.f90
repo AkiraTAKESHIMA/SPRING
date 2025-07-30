@@ -720,7 +720,7 @@ end subroutine read_settings_gs_latlon
 !===============================================================
 subroutine read_settings_gs_raster(a)
   use cmn1_const_util, only: &
-        checkval_grdidx_condition
+        checkval_idx_condition
   use cmn1_set, only: &
         key                    , &
         keynum                 , &
@@ -782,7 +782,7 @@ subroutine read_settings_gs_raster(a)
   call set_keynum('in_grid_lb', 0, 1)
   call set_keynum('in_grid_ub', 0, 1)
   call set_keynum('in_unit_ara', 0, 1)
-  call set_keynum('grdidx_condition', 0, 1)
+  call set_keynum('idx_condition', 0, 1)
   call set_keynum('out_form', 1, 1)
   call set_keynum('fout_grdmsk', 0, 1)
   call set_keynum('fout_grdidx', 0, 1)
@@ -908,8 +908,8 @@ subroutine read_settings_gs_raster(a)
     case( 'in_unit_ara' )
       call read_value(fg_in%unit_ara, is_keyword=.true.)
 
-    case( 'grdidx_condition' )
-      call read_value(ar%grdidx_condition, is_keyword=.true.)
+    case( 'idx_condition' )
+      call read_value(ar%idx_condition, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Grid data (out)
     case( 'out_form' )
@@ -995,7 +995,7 @@ subroutine read_settings_gs_raster(a)
 
   call check_bounds_lon(ar%west , ar%east )
   call check_bounds_lat(ar%south, ar%north)
-  call checkval_grdidx_condition(ar%grdidx_condition, 'ar%grdidx_condition')
+  call checkval_idx_condition(ar%idx_condition, 'ar%idx_condition')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1888,7 +1888,7 @@ subroutine echo_settings_gs_raster(ar)
                      ', '//str((/fg_in%lb(2),fg_in%ub(2)/),dgt_xy,':')//')')
     call edbg('  Length: '//str(fg_in%nij))
     if( fg_in%idx%path /= '' )then
-      call edbg('  Condition for index: '//str(ar%grdidx_condition))
+      call edbg('  Condition for index: '//str(ar%idx_condition))
     endif
     if( fg_in%ara%path /= '' )then
       call edbg('  Unit of area: '//str(fg_in%unit_ara))

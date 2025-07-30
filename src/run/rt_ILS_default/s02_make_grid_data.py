@@ -74,16 +74,18 @@ def make_grid_data_all(cnf, step, update_data):
         cin = cnf[k_gs][f'MATSIRO_{landType}']
 
         c = cnf[k_gs][f'MATSIRO_simple_{landType}']
-        util.copy_dict_elem(c, cin, 'dir')
-        util.copy_dict_elem(c, cin, '_dir')
-        util.copy_dict_elem(c, cin, 'fin_grdidx')
-        util.copy_dict_elem(c, cin, 'fin_grdara')
+        for key in ['dir', '_dir', 'fin_grdidx', 'fin_grdara']:
+            util.copy_dict_elem(c, cin, key)
 
         c = cnf[k_gs][f'IO_MATSIRO_row_{landType}']
-        util.copy_dict_elem(c, cin, 'dir')
-        util.copy_dict_elem(c, cin, '_dir')
-        util.copy_dict_elem(c, cin, 'fin_grdidx')
-        util.copy_dict_elem(c, cin, 'fin_grdara')
+        for key in ['dir', '_dir', 'fin_grdidx', 'fin_grdara']:
+            util.copy_dict_elem(c, cin, key)
+
+        c = cnf[k_gs][f'MATSIRO_bnd_simple_{landType}']
+        for key_in, key_out in zip(
+          ['dir', '_dir', 'fin_grdbndidx', 'fin_grdara'],
+          ['dir', '_dir', 'fin_grdidx'   , 'fin_grdara']):
+            util.copy_dict_elem(c, cin, key_out, key_in)
 
 
 def run(update_data):

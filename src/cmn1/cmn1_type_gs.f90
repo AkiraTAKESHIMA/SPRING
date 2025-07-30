@@ -305,7 +305,7 @@ module cmn1_type_gs
                            status_mskmap, &
                            status_wgtmap
     integer(8) :: idxmin, idxmax
-    character(CLEN_KEY) :: grdidx_condition
+    character(CLEN_KEY) :: idx_condition
 
     integer(8) :: idx_miss
     real(8)    :: ara_miss

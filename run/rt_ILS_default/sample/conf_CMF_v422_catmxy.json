@@ -2,22 +2,20 @@
   "dir_top": "/data7/akira/SPRING/SPRING",
   "landTypes": ["river", "noriv"],
   "grid_systems": {
-    "MATSIRO_{landType}": {
-    },
     "CMF": {
       "type": "raster",
       "nx_raster": 21600,
       "ny_raster": 10800,
-      "nx_grid": 720,
-      "ny_grid": 360,
+      "nx_grid": 1440,
+      "ny_grid": 720,
       "west": -180,
       "east":  180,
       "south": -90,
       "north":  90,
       "is_south_to_north": "false",
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "dir": "dat/grid_system/CaMa-Flood/cmf_v422/glb_15min/1min/CMF",
       "fin_catmxy": {
-        "path": "raster/catmxy.bin", 
+        "path": "raster/1min.catmxy.bin", 
         "dtype": "int2"
       },
       "fin_nextxy": {
@@ -34,8 +32,7 @@
         "river_inland": -10,
         "ocean": -9999
       },
-      "idx_miss": -9999,
-      "grdidx_condition": "match"
+      "idx_miss": -9999
     },
     "IO_met": {
       "type": "latlon",
@@ -66,6 +63,30 @@
       "south": -90,
       "north":  90,
       "is_south_to_north": "false"
+    },
+    "MATSIRO_{landType}": {
+      "desc": "MATSIRO grid"
+    },
+    "MATSIRO_simple_{landType}": {
+      "desc": "Simplified MATSIRO grid"
+    },
+    "MATSIRO_bnd_simple_{landType}": {
+      "desc": "Simplified MATSIRO grid for BC"
+    },
+    "IO_MATSIRO_bnd_simple_{landType}": {
+      "desc": "IO grid for MATSIRO BC"
+    },
+    "IO_MATSIRO_row_{landType}": {
+      "desc": "IO grid for MATSIRO output"
+    },
+    "CMF_{landType}": {
+      "desc": "CMF grid"
+    },
+    "CMF_simple_{landType}": {
+      "desc": "Simplified CMF grid"
+    },
+    "IO_CMF_row_{landType}": {
+      "desc": "IO grid for CMF output"
     }
   },
   "remapping_tables_common": {
@@ -92,7 +113,7 @@
     },
     "MATSIRO_to_IO_row": {
       "sourceTables": "MATSIRO_simple_{landType}_to_IO_MATSIRO_row_{landType}",
-      "landTypes": ["river"]
+      "landTypes": ["river", "noriv"]
     },
     "MATSIRO_to_IO_latlon": {
       "sourceTables": "MATSIRO_{landType}_to_IO_latlon",

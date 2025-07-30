@@ -17,32 +17,23 @@ def preprocess(cnf):
 
     meshName = 'CMF_pre'
     cnf[k_gs][meshName] = copy.deepcopy(CMF)
-    #cnf[k_gs][meshName] = {}
-    #c = cnf[k_gs][meshName]
-    #for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
-    #            'west', 'east', 'south', 'north', 'is_south_to_north',
-    #            'idx_miss',
-    #            'dir', '_dir', 'fin_catmxy', 'fin_nextxy', 
-    #            'catmxy_index', 'nextxy_index',
-    #            'fin_rstidx_river', 'fin_grdidx_river',
-    #            'fin_rstidx_noriv', 'fin_grdidx_noriv']:
-    #    util.copy_dict_elem(c, CMF, key)
 
-
-    for landType in cnf[k_lt]:
+    for layer, landType in enumerate(cnf[k_lt]):
         meshName = f'CMF_{landType}'
-        cnf[k_gs][meshName] = {}
+        util.add_mesh(cnf[k_gs], meshName)
         c = cnf[k_gs][meshName]
         for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
                     'west', 'east', 'south', 'north', 'is_south_to_north',
-                    'idx_miss', 'grdidx_condition']:
+                    'idx_miss', 'idx_condition', 
+                    'dir', '_dir']:
             util.copy_dict_elem(c, CMF, key)
-        util.copy_dict_elem(c, CMF, 'dir')
-        util.copy_dict_elem(c, CMF, '_dir')
-        util.copy_dict_elem(c, CMF, 'fin_rstidx', f'fin_rstidx_{landType}')
-        util.copy_dict_elem(c, CMF, 'fin_grdidx', f'fin_grdidx_{landType}')
+        for key_in, key_out in zip(
+          [f'fin_rstidx_{landType}', f'fin_grdidx_{landType}'],
+          [ 'fin_rstidx'           ,  'fin_grdidx'           ]):
+            util.copy_dict_elem(c, CMF, key_out, key_in)
 
         meshName = f'CMF_simple_{landType}'
+        util.add_mesh(cnf[k_gs], meshName)
         cnf[k_gs][meshName] = {
           'type': 'latlon',
           'nx': CMF['nx_grid'],
@@ -52,19 +43,25 @@ def preprocess(cnf):
         for key in ['west', 'east', 'south', 'north', 'is_south_to_north']:
             util.copy_dict_elem(c, CMF, key)
 
-        cnf[k_gs][f'IO_CMF_simple_{landType}'] = copy.deepcopy(cnf[k_gs][f'CMF_simple_{landType}'])
-
-        cnf[k_gs][f'IO_CMF_row_{landType}'] = copy.deepcopy(cnf[k_gs][f'CMF_simple_{landType}'])
+        meshName = f'IO_CMF_row_{landType}'
+        util.add_mesh(cnf[k_gs], meshName)
+        c = cnf[k_gs][meshName]
+        for key in cnf[k_gs][f'CMF_simple_{landType}'].keys():
+            util.copy_dict_elem(c, cnf[k_gs][f'CMF_simple_{landType}'], key)
+        for key_in, key_out in zip(
+          ['dir', '_dir', 'fin_grdara'],
+          ['dir', '_dir', 'fin_grdara']):
+            util.copy_dict_elem(c, CMF, key_out, key_in)
+        c['idx_bgn'] = (c['nx']*c['ny'])*layer + 1
 
 
     for layer, landType in enumerate(cnf[k_lt]):
         meshName = f'MATSIRO_{landType}'
-        if meshName not in cnf[k_gs].keys():
-            cnf[k_gs][meshName] = {}
+        util.add_mesh(cnf[k_gs], meshName)
         c = cnf[k_gs][meshName]
         for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
                     'west', 'east', 'south', 'north', 'is_south_to_north',
-                    'grdidx_condition']:
+                    'idx_condition',]:
             util.copy_dict_elem(c, CMF, key)
         util.set_dict_default(c, 'idx_miss', -9999)
 
@@ -82,27 +79,42 @@ def preprocess(cnf):
         }
 
         meshName = f'MATSIRO_simple_{landType}'
-        cnf[k_gs][meshName] = copy.deepcopy(MAT_simple_cmn)
+        util.add_mesh(cnf[k_gs], meshName)
         c = cnf[k_gs][meshName]
-        util.copy_dict_elem(c, MAT, 'dir')
-        util.copy_dict_elem(c, MAT, '_dir')
-        util.copy_dict_elem(c, MAT, 'fin_grdidx')
+        for key in MAT_simple_cmn.keys():
+            util.copy_dict_elem(c, MAT_simple_cmn, key)
+        for key_in, key_out in zip(
+          ['dir', '_dir', 'fin_grdidx', 'fin_grdara'],
+          ['dir', '_dir', 'fin_grdidx', 'fin_grdara']):
+            util.copy_dict_elem(c, MAT, key_out, key_in)
 
         meshName = f'MATSIRO_bnd_simple_{landType}'
-        cnf[k_gs][meshName] = copy.deepcopy(MAT_simple_cmn)
+        util.add_mesh(cnf[k_gs], meshName)
         c = cnf[k_gs][meshName]
-        util.copy_dict_elem(c, MAT, 'dir')
-        util.copy_dict_elem(c, MAT, '_dir')
-        util.copy_dict_elem(c, MAT, 'fin_grdidx', 'fin_grdidx_bnd')
+        for key in MAT_simple_cmn.keys():
+            util.copy_dict_elem(c, MAT_simple_cmn, key)
+        for key_in, key_out in zip(
+          ['dir', '_dir', 'fin_grdbndidx'],
+          ['dir', '_dir', 'fin_grdidx'   ]):
+            util.copy_dict_elem(c, MAT, key_out, key_in)
 
         meshName = f'IO_MATSIRO_bnd_simple_{landType}'
-        cnf[k_gs][meshName] = copy.deepcopy(MAT_simple_cmn)
+        util.add_mesh(cnf[k_gs], meshName)
         c = cnf[k_gs][meshName]
+        for key in MAT_simple_cmn.keys():
+            util.copy_dict_elem(c, MAT_simple_cmn, key)
         c['idx_bgn'] = (c['nx']*c['ny'])*layer + 1
 
         meshName = f'IO_MATSIRO_row_{landType}'
-        cnf[k_gs][meshName] = copy.deepcopy(MAT_simple_cmn)
+        util.add_mesh(cnf[k_gs], meshName)
         c = cnf[k_gs][meshName]
+        for key in MAT_simple_cmn.keys():
+            util.copy_dict_elem(c, MAT_simple_cmn, key)
+        for key_in, key_out in zip(
+          ['dir', '_dir', 'fin_grdara'],
+          ['dir', '_dir', 'fin_grdara']):
+            util.copy_dict_elem(c, MAT, key_out, key_in)
+        c['idx_bgn'] = (c['nx']*c['ny'])*layer + 1
 
     del(cnf[k_gs]['CMF'])
 

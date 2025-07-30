@@ -146,12 +146,38 @@ subroutine read_settings(input, output, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Detecting conflictions')
 
-  if( input%nFiles_grid > 0 .and. output%rt%main%opt_coef%is_sum_modify_enabled )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  input%nFiles_grid > 0 .and. output%rt%main%opt_coef%is_sum_modify_enabled'//&
-            '\nInput grid data must not be enabled in the block "'//str(block_name_input)//&
-              '" when coef_sum is enabled in the block "'//str(block_name_output)//'".')
-  endif
+  selectcase( output%rt%main%grid_coef )
+  case( GRID_SOURCE, &
+        GRID_TARGET )
+    if( output%rt%main%opt_coef%is_sum_modify_enabled )then
+      if( input%nFiles_grid > 0 )then
+        call ewrn(str(msg_unexpected_condition())//&
+                '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//'" is active and grid data are input.'//&
+                '\nInterpolation coefficients are computed using intersection area data '//&
+                  'of the remapping tables and modified so that the summuation of the '//&
+                  'coefficients of each grid (specified by the key "grid_coef" in the block "'//&
+                  str(BLOCK_NAME_OUTPUT)//'" and is "target" by default) is equal to the '//&
+                  'value specified by the key "'//str(KEY_OPT_COEF_SUM_MODIFY)//'". '//&
+                  'Inputs of grid area data and index data are ignored because they '//&
+                  'are not used with the current settings.')
+      endif
+    else
+      if( input%nFiles_grid == 0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//'" is inactive and grid data are not input.'//&
+                '\nInterpolation coefficients are computed using intersection area '//&
+                  'data of the remapping tables and grid area data, but now grid area data '//&
+                  'are missing. Specify the files of grid area data and correspondant '//&
+                  'grid index data by the keys "fin_grdara" and "fin_grdidx", respectively, '//&
+                  'in the block "'//str(BLOCK_NAME_INPUT)//'".')
+      endif
+    endif
+  case( GRID_NONE )
+    continue
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  output%rt%main%grid_coef: '//str(output%rt%main%grid_coef))
+  endselect
 
   call echo(code%ext)
   !-------------------------------------------------------------

@@ -1510,12 +1510,10 @@ subroutine make_grdidx__raster(ar)
               f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
     call argsort(g%idx, g%idxarg)
 
-    allocate(is_valid(ar%idxmin:ar%idxmax))
-
-    selectcase( ar%grdidx_condition )
+    selectcase( ar%idx_condition )
     !-----------------------------------------------------------
     ! Case: Set of indices from grdidx and that from rstidx must match
-    case( GRDIDX_CONDITION__MATCH )
+    case( IDX_CONDITION__MATCH )
       call echo(code%ent, 'Case: Set of indices from grdidx and that from rstidx must match')
       !---------------------------------------------------------
       ! Check if the ranges match
@@ -1545,6 +1543,8 @@ subroutine make_grdidx__raster(ar)
       !---------------------------------------------------------
       ! Check if the sets are identical
       !---------------------------------------------------------
+      allocate(is_valid(ar%idxmin:ar%idxmax))
+
       is_valid(:) = .false.
       idx_prev = ar%idx_miss
       ij_prev = 0_8
@@ -1577,15 +1577,17 @@ subroutine make_grdidx__raster(ar)
                     'was not found in the raster map.')
         endif
       enddo  ! ij/
+
+      deallocate(is_valid)
       !---------------------------------------------------------
-      ! Make the grid mask
+      ! Make a grid mask
       !---------------------------------------------------------
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: Set of indices from rstidx must be an element of that from grdidx
-    case( GRDIDX_CONDITION__RST_IN_GRD )
+    case( IDX_CONDITION__RST_IN_GRD )
       call echo(code%ent, 'Case: Set of indices of rstidx '//&
                 'must be an element of that of grdidx')
       !---------------------------------------------------------
@@ -1607,10 +1609,12 @@ subroutine make_grdidx__raster(ar)
                   '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - '))
         endif
       endif
+      ar%idxmin = g%idxmin
+      ar%idxmax = g%idxmax
       !---------------------------------------------------------
       ! Check if the sets fulfill the condition
       !---------------------------------------------------------
-      is_valid(:) = .false.
+!      is_valid(:) = .false.
       idx_prev = ar%idx_miss
       ij_prev = 0_8
       do iz = 1, ar%nZone
@@ -1626,27 +1630,28 @@ subroutine make_grdidx__raster(ar)
                       '\nIndex '//str(arz%idxmap(ih,iv))//', that is in the raster map, '//&
                         'was not found in the given set.')
             endif
-            is_valid(arz%idxmap(ih,iv)) = .true.
+!            is_valid(arz%idxmap(ih,iv)) = .true.
           enddo  ! ih/
         enddo  ! iv/
       enddo  ! iz/
       !---------------------------------------------------------
-      ! Make the grid mask
+      ! Make a grid mask
       !---------------------------------------------------------
-      do ij = 1_8, g%nij
-        if( g%idx(ij) == ar%idx_miss )then
-          g%msk(ij) = .false.
-        elseif( g%idx(ij) < ar%idxmin .or. ar%idxmax < g%idx(ij) )then
-          g%msk(ij) = .false.
-        else
-          g%msk(ij) = is_valid(g%idx(ij))
-        endif
-      enddo
+!      do ij = 1_8, g%nij
+!        if( g%idx(ij) == ar%idx_miss )then
+!          g%msk(ij) = .false.
+!        elseif( g%idx(ij) < ar%idxmin .or. ar%idxmax < g%idx(ij) )then
+!          g%msk(ij) = .false.
+!        else
+!          g%msk(ij) = is_valid(g%idx(ij))
+!        endif
+!      enddo
+      g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: Set of indices from grdidx must be an element of that from rstidx
-    case( GRDIDX_CONDITION__GRD_IN_RST )
+    case( IDX_CONDITION__GRD_IN_RST )
       call echo(code%ent, 'Case: Set of indices of grdidx '//&
                 'must be an element of that of rstidx')
       !---------------------------------------------------------
@@ -1675,6 +1680,9 @@ subroutine make_grdidx__raster(ar)
       !---------------------------------------------------------
       ! Check if the sets fulfills the condition
       !---------------------------------------------------------
+      allocate(is_valid(ar%idxmin:ar%idxmax))
+
+      is_valid(:) = .false.
       idx_prev = ar%idx_miss
       ij_prev = 0_8
       do iz = 1, ar%nZone
@@ -1702,15 +1710,17 @@ subroutine make_grdidx__raster(ar)
                     'was not found in the raster map.')
         endif
       enddo
+
+      deallocate(is_valid)
       !---------------------------------------------------------
-      ! Make the grid mask
+      ! Make a grid mask
       !---------------------------------------------------------
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: No condition
-    case( GRDIDX_CONDITION__NONE )
+    case( IDX_CONDITION__NONE )
       call echo(code%ent, 'No condition')
 
       g%msk(:) = g%idx(:) /= ar%idx_miss
@@ -1718,19 +1728,19 @@ subroutine make_grdidx__raster(ar)
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: ERROR (undef)
-    case( GRDIDX_CONDITION__UNDEF )
+    case( IDX_CONDITION__UNDEF )
       call eerr(str(msg_unexpected_condition())//&
-              '\n  ar%condition_grdidx: '//str(ar%grdidx_condition))
+              '\n  ar%idx_condition: '//str(ar%idx_condition))
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  ar%condition_grdidx: '//str(ar%grdidx_condition))
+              '\n  ar%idx_condition: '//str(ar%idx_condition))
     endselect
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    deallocate(is_valid)
+    !deallocate(is_valid)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -1877,20 +1887,41 @@ subroutine make_grduwa__raster(ar)
     enddo  ! iv/
   enddo  ! iz/
 
-  do ij = 1_8, g%nij
-    if( g%msk(ij) )then
-      if( g%uwa(ij) <= 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%uwa(ij) <= 0.0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  uwa: '//str(g%uwa(ij)))
+  selectcase( ar%idx_condition )
+  case( IDX_CONDITION__MATCH, IDX_CONDITION__GRD_IN_RST )
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        if( g%uwa(ij) <= 0.d0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  g%uwa(ij) <= 0.0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  uwa: '//str(g%uwa(ij)))
+        endif
+        g%uwa(ij) = g%uwa(ij) * earth%r**2
+      else
+        g%uwa(ij) = ar%uwa_miss
       endif
-      g%uwa(ij) = g%uwa(ij) * earth%r**2
-    else
-      g%uwa(ij) = ar%uwa_miss
-    endif
-  enddo
+    enddo
+  case( IDX_CONDITION__RST_IN_GRD, IDX_CONDITION__NONE )
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        if( g%uwa(ij) < 0.d0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  g%uwa(ij) <= 0.0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  uwa: '//str(g%uwa(ij)))
+        endif
+        g%uwa(ij) = g%uwa(ij) * earth%r**2
+      else
+        g%uwa(ij) = ar%uwa_miss
+      endif
+    enddo
+  case default
+    call eerr(str(msg_invalid_value())//&
+           '\n  ar%idx_condition: '//str(ar%idx_condition))
+  endselect
 
   deallocate(rstuwa_col)
   !-----------------------------------------------------------

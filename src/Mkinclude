@@ -17,10 +17,8 @@ ifdef TERMINAL_WIDTH
   FOPT_TERMINAL_WIDTH = -DTERMINAL_WIDTH=$(TERMINAL_WIDTH)
 endif
 
-#FC = ifort
-#CC = icc
-FC = singularity run /export/home/atakeshima/imageshare/oneapi-hpckit_latest.sif ifort
-CC = singularity run /export/home/atakeshima/imageshare/oneapi-hpckit_latest.sif icc
+FC = ifort
+CC = icc
 
 ifeq ($(DEBUG), true)
   FCFLAGS = -O0 -check all -check noarg_temp_created -warn all -CB\
@@ -32,7 +30,7 @@ ifeq ($(DEBUG), true)
             -fpe0 -ftrapuv
   CCFLAGS = -O0 -g -debug all -std=c99 -no-multibyte-chars
 else
-  FCFLAGS = -O2 -g -heap-arrays -assume byterecl -convert big_endian
+  FCFLAGS = -O2 -g -assume byterecl -convert big_endian
   CCFLAGS = -O2 -std=c99 -no-multibyte-chars
 endif
 #==============================================================

@@ -78,29 +78,6 @@ subroutine merge_rt(input, output, opt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( rtm%grid_coef )
-  case( grid_source, &
-        grid_target )
-    if( rtm%opt_coef%is_sum_modify_enabled )then
-      if( input%nFiles_grid > 0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rtm%opt_coef%is_sum_modify_speicified .and. input%nFiles_grid > 0')
-      endif
-    else
-      if( input%nFiles_grid == 0 )then
-        call eerr(str(msg_unexpected_condition())//&
-               '\n  .not. rtm%opt_coef%is_sum_modify_enabled .and. input%nFiles_grid == 0')
-      endif
-    endif
-  case( grid_none )
-    continue
-  case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
-  endselect
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
   if( opt%sys%memory_ulim == 0.d0 )then
     nmax_ulim = 0_8
   else

@@ -5,39 +5,39 @@ module cmn1_const
   !-------------------------------------------------------------
   ! Grid system
   !-------------------------------------------------------------
-  character(clen_key), parameter :: gs_type_latlon  = 'latlon'
-  character(clen_key), parameter :: gs_type_raster  = 'raster'
-  character(clen_key), parameter :: gs_type_polygon = 'polygon'
+  character(CLEN_KEY), parameter :: GS_TYPE_LATLON  = 'latlon'
+  character(CLEN_KEY), parameter :: GS_TYPE_RASTER  = 'raster'
+  character(CLEN_KEY), parameter :: GS_TYPE_POLYGON = 'polygon'
 
-  character(clen_key), parameter :: grid_none   = 'none'
-  character(clen_key), parameter :: grid_source = 'source'
-  character(clen_key), parameter :: grid_target = 'target'
+  character(CLEN_KEY), parameter :: GRID_NONE   = 'none'
+  character(CLEN_KEY), parameter :: GRID_SOURCE = 'source'
+  character(CLEN_KEY), parameter :: GRID_TARGET = 'target'
 
-  integer(8), parameter :: idx_miss_default    = -9999_8
-  real(8)   , parameter :: uwa_miss_default    = -1d20
-  real(8)   , parameter :: ara_miss_default    = -1d20
-  real(8)   , parameter :: wgt_miss_default    = -1d20
-  real(8)   , parameter :: xyz_miss_default    = -1d20
-  real(8)   , parameter :: lonlat_miss_default = -1d20
-  real(8)   , parameter :: dval_miss_default   = -1d20
-  integer(8), parameter :: ival_miss_default   = -9999_8
+  integer(8), parameter :: IDX_MISS_DEFAULT    = -9999_8
+  real(8)   , parameter :: UWA_MISS_DEFAULT    = -1d20
+  real(8)   , parameter :: ARA_MISS_DEFAULT    = -1d20
+  real(8)   , parameter :: WGT_MISS_DEFAULT    = -1d20
+  real(8)   , parameter :: XYZ_MISS_DEFAULT    = -1d20
+  real(8)   , parameter :: LONLAT_MISS_DEFAULT = -1d20
+  real(8)   , parameter :: DVAL_MISS_DEFAULT   = -1d20
+  integer(8), parameter :: IVAL_MISS_DEFAULT   = -9999_8
 
-  real(8), parameter :: coord_miss_c_default = -1d20
-  real(8), parameter :: coord_miss_s_default = -1d20
+  real(8), parameter :: COORD_MISS_C_DEFAULT = -1d20
+  real(8), parameter :: COORD_MISS_S_DEFAULT = -1d20
 
-  character(CLEN_KEY), parameter :: origin_south = 'south'
-  character(CLEN_KEY), parameter :: origin_north = 'north'
+  character(CLEN_KEY), parameter :: ORIGIN_SOUTH = 'south'
+  character(CLEN_KEY), parameter :: ORIGIN_NORTH = 'north'
 
-  character(CLEN_KEY), parameter :: grid_status__undef          = 'undef'
-  character(CLEN_KEY), parameter :: grid_status__prepared       = 'prepared'
-  character(CLEN_KEY), parameter :: grid_status__to_be_prepared = 'to_be_prepared'
-  character(CLEN_KEY), parameter :: grid_status__not_used       = 'not_uesd'
+  character(CLEN_KEY), parameter :: GRID_STATUS__UNDEF          = 'undef'
+  character(CLEN_KEY), parameter :: GRID_STATUS__PREPARED       = 'prepared'
+  character(CLEN_KEY), parameter :: GRID_STATUS__TO_BE_PREPARED = 'to_be_prepared'
+  character(CLEN_KEY), parameter :: GRID_STATUS__NOT_USED       = 'not_uesd'
 
-  character(CLEN_KEY), parameter :: grdidx_condition__undef      = 'undef'
-  character(CLEN_KEY), parameter :: grdidx_condition__match      = 'match'
-  character(CLEN_KEY), parameter :: grdidx_condition__grd_in_rst = 'grid_in_raster'
-  character(CLEN_KEY), parameter :: grdidx_condition__rst_in_grd = 'raster_in_grid'
-  character(CLEN_KEY), parameter :: grdidx_condition__none       = 'none'
+  character(CLEN_KEY), parameter :: IDX_CONDITION__UNDEF      = 'undef'
+  character(CLEN_KEY), parameter :: IDX_CONDITION__MATCH      = 'match'
+  character(CLEN_KEY), parameter :: IDX_CONDITION__GRD_IN_RST = 'grid_in_raster'
+  character(CLEN_KEY), parameter :: IDX_CONDITION__RST_IN_GRD = 'raster_in_grid'
+  character(CLEN_KEY), parameter :: IDX_CONDITION__NONE       = 'none'
 
   integer(4), parameter :: INPUTFORM__NOT_GIVEN = -9
   integer(4), parameter :: INPUTFORM__FILE_BIN = 0
@@ -59,80 +59,80 @@ module cmn1_const
 !  integer, parameter :: rec_im_lon = 9
 !  integer, parameter :: rec_im_lat = 10
 
-  character(clen_var), parameter :: varname_idx = 'idx'
-  character(clen_var), parameter :: varname_msk = 'msk'
-  character(clen_var), parameter :: varname_uwa = 'uwa'
-  character(clen_var), parameter :: varname_ara = 'ara'
-  character(clen_var), parameter :: varname_wgt = 'wgt'
-  character(clen_var), parameter :: varname_x   = 'x'
-  character(clen_var), parameter :: varname_y   = 'y'
-  character(clen_var), parameter :: varname_z   = 'z'
-  character(clen_var), parameter :: varname_lon = 'lon'
-  character(clen_var), parameter :: varname_lat = 'lat'
+  character(CLEN_VAR), parameter :: VARNAME_IDX = 'idx'
+  character(CLEN_VAR), parameter :: VARNAME_MSK = 'msk'
+  character(CLEN_VAR), parameter :: VARNAME_UWA = 'uwa'
+  character(CLEN_VAR), parameter :: VARNAME_ARA = 'ara'
+  character(CLEN_VAR), parameter :: VARNAME_WGT = 'wgt'
+  character(CLEN_VAR), parameter :: VARNAME_X   = 'x'
+  character(CLEN_VAR), parameter :: VARNAME_Y   = 'y'
+  character(CLEN_VAR), parameter :: VARNAME_Z   = 'z'
+  character(CLEN_VAR), parameter :: VARNAME_LON = 'lon'
+  character(CLEN_VAR), parameter :: VARNAME_LAT = 'lat'
 
-  character(clen_var), parameter :: varname_grdidx    = 'grdidx'
-  character(clen_var), parameter :: varname_grdmsk    = 'grdmsk'
-  character(clen_var), parameter :: varname_grduwa    = 'grduwa'
-  character(clen_var), parameter :: varname_grdara    = 'grdara'
-  character(clen_var), parameter :: varname_grdwgt    = 'grdwgt'
-  character(clen_var), parameter :: varname_grdx      = 'grdx'
-  character(clen_var), parameter :: varname_grdy      = 'grdy'
-  character(clen_var), parameter :: varname_grdz      = 'grdz'
-  character(clen_var), parameter :: varname_grdxyz    = 'grdxyz'
-  character(clen_var), parameter :: varname_grdlon    = 'grdlon'
-  character(clen_var), parameter :: varname_grdlat    = 'grdlat'
-  character(clen_var), parameter :: varname_grdlonlat = 'grdlonlat'
+  character(CLEN_VAR), parameter :: VARNAME_GRDIDX    = 'grdidx'
+  character(CLEN_VAR), parameter :: VARNAME_GRDMSK    = 'grdmsk'
+  character(CLEN_VAR), parameter :: VARNAME_GRDUWA    = 'grduwa'
+  character(CLEN_VAR), parameter :: VARNAME_GRDARA    = 'grdara'
+  character(CLEN_VAR), parameter :: VARNAME_GRDWGT    = 'grdwgt'
+  character(CLEN_VAR), parameter :: VARNAME_GRDX      = 'grdx'
+  character(CLEN_VAR), parameter :: VARNAME_GRDY      = 'grdy'
+  character(CLEN_VAR), parameter :: VARNAME_GRDZ      = 'grdz'
+  character(CLEN_VAR), parameter :: VARNAME_GRDXYZ    = 'grdxyz'
+  character(CLEN_VAR), parameter :: VARNAME_GRDLON    = 'grdlon'
+  character(CLEN_VAR), parameter :: VARNAME_GRDLAT    = 'grdlat'
+  character(CLEN_VAR), parameter :: VARNAME_GRDLONLAT = 'grdlonlat'
 
-  character(clen_var), parameter :: varname_rstidx    = 'rstidx'
-  character(clen_var), parameter :: varname_rstara    = 'rstara'
-  character(clen_var), parameter :: varname_rstwgt    = 'rstwgt'
+  character(CLEN_VAR), parameter :: VARNAME_RSTIDX    = 'rstidx'
+  character(CLEN_VAR), parameter :: VARNAME_RSTARA    = 'rstara'
+  character(CLEN_VAR), parameter :: VARNAME_RSTWGT    = 'rstwgt'
 
-  character(clen_var), parameter :: varname_idxmap    = 'idxmap'
-  character(clen_var), parameter :: varname_aramap    = 'aramap'
-  character(clen_var), parameter :: varname_wgtmap    = 'wgtmap'
+  character(CLEN_VAR), parameter :: VARNAME_IDXMAP    = 'idxmap'
+  character(CLEN_VAR), parameter :: VARNAME_ARAMAP    = 'aramap'
+  character(CLEN_VAR), parameter :: VARNAME_WGTMAP    = 'wgtmap'
 
-  character(clen_var), parameter :: varname_polygon   = 'polygon'
+  character(CLEN_VAR), parameter :: VARNAME_POLYGON   = 'polygon'
   !-------------------------------------------------------------
   ! Rasterization
   !-------------------------------------------------------------
-  character(clen_var), parameter :: varname_iarea_sum  = 'iarea_sum'
-  character(clen_var), parameter :: varname_iratio_sum = 'iratio_sum'
-  character(clen_var), parameter :: varname_mask       = 'mask'
-  !character(clen_var), parameter :: varname_idx      = 'idx'
+  character(CLEN_VAR), parameter :: VARNAME_IAREA_SUM  = 'iarea_sum'
+  character(CLEN_VAR), parameter :: VARNAME_IRATIO_SUM = 'iratio_sum'
+  character(CLEN_VAR), parameter :: VARNAME_MASK       = 'mask'
+  !character(CLEN_VAR), parameter :: VARNAME_IDX      = 'idx'
   !-------------------------------------------------------------
   ! Remapping
   !-------------------------------------------------------------
-  character(clen_key), parameter :: remap_mode_1st_order_conservative = '1st_order_conservative'
+  character(CLEN_KEY), parameter :: REMAP_MODE_1ST_ORDER_CONSERVATIVE = '1st_order_conservative'
   !-------------------------------------------------------------
   ! Remapping table
   !-------------------------------------------------------------
-  integer(8), parameter :: rtm_ijsize_init = 1024_8
-  integer(8), parameter :: rt1d_ijsize_init = 8_8
-  real(8)   , parameter :: rt1d_extend_rate = 2.d0
+  integer(8), parameter :: RTM_IJSIZE_INIT = 1024_8
+  integer(8), parameter :: RT1D_IJSIZE_INIT = 8_8
+  real(8)   , parameter :: RT1D_EXTEND_RATE = 2.d0
 
-  character(clen_key), parameter :: grid_form_auto   = 'auto'
-  character(clen_key), parameter :: grid_form_index  = 'index'
-  character(clen_key), parameter :: grid_form_raster = 'raster'
+  character(CLEN_VAR), parameter :: GRID_FORM_AUTO   = 'auto'
+  character(CLEN_VAR), parameter :: GRID_FORM_INDEX  = 'index'
+  character(CLEN_VAR), parameter :: GRID_FORM_RASTER = 'raster'
 
-  !character(clen_var), parameter :: varname_grdidx      = 'grdidx'
-  character(clen_var), parameter :: varname_grdara_true = 'grdara_true'
-  character(clen_var), parameter :: varname_grdara_rt   = 'grdara_rt'
-  character(clen_var), parameter :: varname_rerr_grdara = 'rerr_grdara'
-  character(clen_var), parameter :: varname_grdnum      = 'grdnum'
-  integer, parameter :: cl_varname_vrf = 11
+  !character(CLEN_VAR), parameter :: VARNAME_GRDIDX      = 'grdidx'
+  character(CLEN_VAR), parameter :: VARNAME_GRDARA_TRUE = 'grdara_true'
+  character(CLEN_VAR), parameter :: VARNAME_GRDARA_RT   = 'grdara_rt'
+  character(CLEN_VAR), parameter :: VARNAME_RERR_GRDARA = 'rerr_grdara'
+  character(CLEN_VAR), parameter :: VARNAME_GRDNUM      = 'grdnum'
+  integer, parameter :: CL_VARNAME_VRF = 11
   !-------------------------------------------------------------
   ! Options
   !-------------------------------------------------------------
-  character(clen_var), parameter :: opt_old_files_stop      = 'stop'
-  character(clen_var), parameter :: opt_old_files_remove    = 'remove'
-  character(clen_var), parameter :: opt_old_files_overwrite = 'overwrite'
+  character(CLEN_VAR), parameter :: OPT_OLD_FILES_STOP      = 'stop'
+  character(CLEN_VAR), parameter :: OPT_OLD_FILES_REMOVE    = 'remove'
+  character(CLEN_VAR), parameter :: OPT_OLD_FILES_OVERWRITE = 'overwrite'
 
-  character(clen_key), parameter :: input_opt_idx_dup_sum  = 'sum'
-  character(clen_key), parameter :: input_opt_idx_dup_stop = 'stop'
+  character(CLEN_KEY), parameter :: INPUT_OPT_IDX_DUP_SUM  = 'sum'
+  character(CLEN_KEY), parameter :: INPUT_OPT_IDX_DUP_STOP = 'stop'
   !-----------------------------------------------------------
   ! For formatting
   !-----------------------------------------------------------
-  character(clen_wfmt), parameter :: wfmt_mem = 'es10.3'
+  character(CLEN_WFMT), parameter :: WFMT_MEM = 'es10.3'
 
-  character(2), parameter :: hut_command = '+ '
+  character(2), parameter :: HUT_COMMAND = '+ '
 end module cmn1_const

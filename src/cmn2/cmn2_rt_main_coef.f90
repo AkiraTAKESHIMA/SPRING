@@ -269,14 +269,7 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
                 '\n  coefidx: '//str(coefidx(ijs)))
       endif
 
-      if( grdara(gij) <= 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  grdara('//str(gij)//') <= 0.0'//&
-                '\n  grdidx: '//str(grdidx(gij))//&
-                '\n  grdara: '//str(grdara(gij)))
-      endif
-
-      rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(gij)
+      call calc_coef()
     enddo  ! ije/
   !-------------------------------------------------------------
   ! Case: $grdidx is not sorted
@@ -300,14 +293,7 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
 
       gij = grdidxarg(loc)
 
-      if( grdara(gij) <= 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  grdara('//str(gij)//') <= 0.0'//&
-                '\n  grdidx: '//str(grdidx(gij))//&
-                '\n  grdara: '//str(grdara(gij)))
-      endif
-
-      rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(gij)
+      call calc_coef()
     enddo  ! ije/
   endif
 
@@ -396,6 +382,35 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
   call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ret)
+!---------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine calc_coef()
+  implicit none
+
+  if( grdara(gij) > 0.d0 )then
+    rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(gij)
+  else
+    if( all(rtm%area(ijs:ije) == 0.d0) )then
+      ! TODO: option for allowing zero area grid
+      call ewrn(str(msg_unexpected_condition())//&
+              '\n  grdara('//str(gij)//') <= 0.0'//&
+              '\n  grdidx: '//str(grdidx(gij))//&
+              '\n  grdara: '//str(grdara(gij))//&
+              '\n  rtm%area min: '//str(minval(rtm%area(ijs:ije)),'es10.3')//&
+                         ', max: '//str(maxval(rtm%area(ijs:ije)),'es10.3'))
+      rtm%coef(ijs:ije) = 0.d0
+    else
+      call eerr(str(msg_unexpected_condition())//&
+              '\n  grdara('//str(gij)//') <= 0.0'//&
+              '\n  grdidx: '//str(grdidx(gij))//&
+              '\n  grdara: '//str(grdara(gij))//&
+              '\n  rtm%area min: '//str(minval(rtm%area(ijs:ije)),'es10.3')//&
+                         ', max: '//str(maxval(rtm%area(ijs:ije)),'es10.3'))
+    endif
+  endif
+end subroutine calc_coef
+!---------------------------------------------------------------
 end subroutine calc_rt_coef_sum_modify_not_enabled
 !===============================================================
 !

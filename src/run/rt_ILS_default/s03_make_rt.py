@@ -48,7 +48,7 @@ def make_rt(cnf, step, update_data,
 def make_rt_all(cnf, step, update_data):
     for rtName in cnf[k_int_rt].keys():
         print(rtName)
-        #if rtName != 'MATSIRO_simple_{landType}_to_IO_MATSIRO_row_{landType}': continue
+        #if rtName != 'MATSIRO_simple_{landType}_to_CMF_simple_{landType}': continue
         rt = cnf[k_int_rt][rtName]
         make_rt(cnf, step, update_data, rt, True)
 

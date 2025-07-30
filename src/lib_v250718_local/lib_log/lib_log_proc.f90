@@ -720,7 +720,6 @@ subroutine echo_lines(msg, un, idt, adv)
     write(un, wfmt, advance=advance) trim(msg)
 
   else
-
     msg_ = msg
     leng = len_trim(msg)
 

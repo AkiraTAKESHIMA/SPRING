@@ -122,9 +122,9 @@ def block_gs_raster(gs, use_grdara):
     s += f'\
   in_grid_sz: {gs["nx_grid"]}, {gs["ny_grid"]}\n'
 
-    if util.key_val_exist(gs, 'grdidx_condition'):
+    if util.key_val_exist(gs, 'idx_condition'):
         s += f'\
-  grdidx_condition: {gs["grdidx_condition"]}\n'
+  idx_condition: {gs["idx_condition"]}\n'
 
     if util.key_val_exist(gs, 'idx_miss'):
         s += f'\

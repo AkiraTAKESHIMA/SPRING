@@ -338,7 +338,7 @@ end subroutine read_settings_cmn
 !===============================================================
 subroutine read_settings_cmf(cmn, cmf)
   use cmn1_const_util, only: &
-        checkval_grdidx_condition
+        checkval_idx_condition
   use cmn1_set, only: &
         line_number            , &
         back_to_block_head     , &
@@ -407,7 +407,7 @@ subroutine read_settings_cmf(cmn, cmf)
   call set_keynum('nextxy_ocean'       , 0, 1)
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('bsn_miss', 0, 1)
-  call set_keynum('grdidx_condition', 0, 1)
+  call set_keynum('idx_condition', 0, 1)
   !call set_keynum('opt_invalid_grdidx_catmxy', 0, 1)
 
   call echo(code%ext)
@@ -536,8 +536,8 @@ subroutine read_settings_cmf(cmn, cmf)
       call read_value(cmf%bsn_miss)
     !-----------------------------------------------------------
     ! Options
-    case( 'grdidx_condition' )
-      call read_value(cmf%grdidx_condition, is_keyword=.true.)
+    case( 'idx_condition' )
+      call read_value(cmf%idx_condition, is_keyword=.true.)
 
     !case( 'opt_invalid_grdidx_catmxy' )
     !  call read_value(cmf%opt_invalid_grdidx_catmxy, is_keyword=.true.)
@@ -557,7 +557,7 @@ subroutine read_settings_cmf(cmn, cmf)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking the values')
 
-  call checkval_grdidx_condition(cmf%grdidx_condition, 'cmf%grdidx_condition')
+  call checkval_idx_condition(cmf%idx_condition, 'cmf%idx_condition')
 
 !  selectcase( cmf%opt_invalid_grdidx_catmxy )
 !  case( OPT_INVALID_GRDIDX_CATMXY_ALLOW_ALL, &
@@ -1480,7 +1480,7 @@ subroutine set_default_values_cmf(cmf)
   cmf%bsn_miss = cmf_bsn_miss_default
 
   !cmf%opt_invalid_grdidx_catmxy = opt_invalid_grdidx_catmxy_default
-  cmf%grdidx_condition = GRDIDX_CONDITION__MATCH
+  cmf%idx_condition = IDX_CONDITION__MATCH
 
 
   call set_file_default(dtype=DTYPE_INT4, action=ACTION_READ)
@@ -1794,7 +1794,7 @@ subroutine echo_settings_cmf(cmn, cmf)
   !-------------------------------------------------------------
   call edbg('Options')
   !call edbg('  opt_invalid_grdidx_catmxy: '//str(cmf%opt_invalid_grdidx_catmxy))
-  call edbg('  grdidx_condition: '//str(cmf%grdidx_condition))
+  call edbg('  idx_condition: '//str(cmf%idx_condition))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_cmf

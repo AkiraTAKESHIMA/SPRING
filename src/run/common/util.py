@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import subprocess
+import copy
 import json
 import numpy as np
 
@@ -61,8 +62,8 @@ def exec_program(prog, f_conf, f_log, f_err):
     print(f'stderr: {f_err}')
 
     if pc.returncode != 0:
-        #raise Exception(f'Program `{prog}` failed.')
-        print(f'*** Program `{prog}` failed.')
+        raise Exception(f'Program `{prog}` failed.')
+        #print(f'*** Program `{prog}` failed.')
 
 
 def make_slink(org, dst):
@@ -106,6 +107,11 @@ def key_val_exist(dct, key):
         return False
     else:
         return True
+
+
+def add_mesh(cnf_gs, meshName):
+    if meshName not in cnf_gs.keys():
+        cnf_gs[meshName] = {}
 
 
 def check_landTypes(cnf_int_rt, rtName, lst_landType):
@@ -184,7 +190,7 @@ def copy_dict_elem(dout, din, kout, kin=None):
     if kin is None:
         kin = kout
     if not kout in dout.keys() and kin in din.keys():
-        dout[kout] = din[kin]
+        dout[kout] = copy.deepcopy(din[kin])
 
 
 def read_bin(f, d='', miss=None):
