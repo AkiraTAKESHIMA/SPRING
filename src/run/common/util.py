@@ -2,22 +2,50 @@ import os
 import sys
 import shutil
 import subprocess
+import json
 import numpy as np
 
 import const
 
 
-class Job():
+class Env():
     def __init__(self):
         self.job = None
+        self.f_cnf = None
 
-    def put_job(self, job):
-        self.job = job
+    def put_job(self, a):
+        self.job = a
 
-    def get_job(self, job):
-        job = self.job
+    def put_f_cnf(self, a):
+        self.f_cnf = a
 
-job = Job()
+    def get_job(self):
+        return self.job
+
+    def get_f_cnf(self):
+        return self.f_cnf
+
+env = Env()
+
+
+def get_f_cnf(step):
+    if step == 0:
+        return env.f_cnf
+    else:
+        return f'set/{step-1:02d}_{env.job[step-1]}/newconf.json'
+
+
+def read_cnf(step):
+    f_cnf = get_f_cnf(step)
+    print(f'[step {step}] Overall settings: {f_cnf}')
+    return json.load(open(f_cnf,'r'))
+
+
+def make_new_f_cnf(step, cnf):
+    f_cnf = get_f_cnf(step+1)
+    print('New settings: '+f_cnf)
+    with open(f_cnf, 'w') as fp:
+        fp.write(json.dumps(cnf, indent=2))
 
 
 def exec_program(prog, f_conf, f_log, f_err):
@@ -62,27 +90,13 @@ def make_slink(org, dst):
 
 
 def istep(name):
-    if job.job is None:
-        raise Exception('`job.job` is undefined.')
+    if env.job is None:
+        raise Exception('`env.job` is undefined.')
 
-    for key in job.job.keys():
-        if job.job[key] == name:
+    for key in env.job.keys():
+        if env.job[key] == name:
             return key
     raise Exception(f'Invalid value in $name: {name}')
-
-
-def join_topdir(cnf, dir_top):
-    for key in cnf.keys():
-        if type(cnf[key]) is dict:
-            cnf[key] = join_topdir(cnf[key], dir_top)
-        elif type(cnf[key]) is str:
-            if key == 'dir':
-                cnf[key] = os.path.join(dir_top, cnf[key])
-            elif key == '_dir':
-                if 'dir' in cnf[key].keys():
-                    raise Exception('"_dir" and "dir" cannot be given for one data.')
-                cnf[key]['dir'] = cnf[key]['_dir']
-    return cnf
 
 
 def key_val_exist(dct, key):
@@ -94,11 +108,22 @@ def key_val_exist(dct, key):
         return True
 
 
+def check_landTypes(cnf_int_rt, rtName, lst_landType):
+    if cnf_int_rt[rtName]['landTypes'] !=  lst_landType:
+        raise Exception('The list "landTypes" of the intermediate remapping table '+\
+                        f'"{rtName}" is incorrect.')
+
+
 def get_meshBaseName(meshName):
     if 'landType' in meshName:
         return meshName[:meshName.index('landType')-2]
     else:
         return meshName
+
+
+def meshName_from_rtName(rtName):
+    loc = rtName.index('_to_')
+    return rtName[:loc], rtName[loc+4:]
 
 
 def get_tile_bbox_latlon(tileName):
@@ -150,6 +175,18 @@ def set_dir(pdir, job):
     return d
 
 
+def set_dict_default(d, key, val):
+    if key not in d.keys():
+        d[key] = val
+
+
+def copy_dict_elem(dout, din, kout, kin=None):
+    if kin is None:
+        kin = kout
+    if not kout in dout.keys() and kin in din.keys():
+        dout[kout] = din[kin]
+
+
 def read_bin(f, d='', miss=None):
     if miss is None:
         return np.fromfile(os.path.join(d, f['path']), dtype_str_to_np(f['dtype']))
@@ -159,7 +196,7 @@ def read_bin(f, d='', miss=None):
                  miss)
 
 
-def file_bin(path, dtype=None, endian=None, rec=None):
+def file_bin(path, dtype=None, rec=None, endian=None):
     f = {'path': path}
     if dtype is not None:
         f['dtype'] = dtype
@@ -186,12 +223,10 @@ def dtype_str_to_np(dtype_str):
 
 
 def str_endian(s):
-    if s in [const.str_endian_little_long, 
-             const.str_endian_little_short]:
-        return const.str_endian_little_long
-    elif s in [const.str_endian_big_long,
-               const.str_endian_big_short]:
-        return const.str_endian_big_long
+    if s in ['little_endian', 'little']:
+        return 'little_endian'
+    elif s in ['big_endian', 'big']:
+        return 'big_endian'
     else:
         raise Exception(f'Invalid value in $s: {s}')
 
@@ -218,17 +253,17 @@ def str_file_bin(f):
 
 
 def byte(dtype):
-    if dtype == const.str_dtype_int1:
+    if dtype == 'int1':
         b = 1
-    elif dtype == const.str_dtype_int2:
+    elif dtype == 'int2':
         b = 2
-    elif dtype == const.str_dtype_int4:
+    elif dtype == 'int4':
         b = 4
-    elif dtype == const.str_dtype_int8:
+    elif dtype == 'int8':
         b = 8
-    elif dtype == const.str_dtype_real:
+    elif dtype == 'real':
         b = 4
-    elif dtype == const.str_dtype_dble:
+    elif dtype == 'dble':
         b = 8
     else:
         raise Exception(f'Invalid value in $dtype: {dtype}')

@@ -42,16 +42,20 @@ def block_input_end(opt_idx_duplication='stop'):
 
     return s
 
-def block_output(rmp, dir_out, grid_coef, opt_coef_sum_modify=None):
+def block_output(rmp, dir_out, rt):
     s = f'\
 \n\
 [output]\n\
-  grid_coef: {grid_coef}\n\
-  grid_sort: target\n'
+  grid_coef: {rt["grid_coef"]}\n\
+  grid_sort: {rt["grid_sort"]}\n'
 
-    if opt_coef_sum_modify is not None:
+    if 'opt_coef_sum_modify' in rt.keys():
         s += f'\
-  opt_coef_sum_modify: {opt_coef_sum_modify}\n'
+  opt_coef_sum_modify: {rt["opt_coef_sum_modify"]}\n'
+
+    if 'opt_coef_sum_modify_ulim' in rt.keys():
+        s += f'\
+  opt_coef_sum_modify_ulim: {rt["opt_coef_sum_modify_ulim"]}\n'
 
     s += f'\
 \n\

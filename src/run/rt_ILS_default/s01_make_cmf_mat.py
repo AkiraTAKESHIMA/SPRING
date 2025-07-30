@@ -12,7 +12,37 @@ import s00_const as lconst
 import s00_util as lutil
 
 
+def make_links_cmf(cnf, step):
+    for landType in ['river']:
+        dir_out = lutil.get_outdir_grid('CMF', landType)
+        path_rstidx = f'{dir_out}/rstidx.bin'
+        path_grdidx = f'{dir_out}/grdidx.bin'
+        os.makedirs(dir_out, exist_ok=True)
+        CMF = cnf[k_gs][f'CMF_{landType}']
+        util.make_slink(f'{os.path.join(CMF["dir"], CMF["fin_rstidx"]["path"])}',
+                        f'{path_rstidx}')
+        util.make_slink(f'{os.path.join(CMF["dir"], CMF["fin_grdidx"]["path"])}',
+                        f'{path_grdidx}')
+
+
+def make_links_mat(cnf, step):
+    for landType in ['river']:
+        dir_out = lutil.get_outdir_grid('MATSIRO', landType)
+        path_rstidx = f'{dir_out}/rstidx.bin'
+        path_grdidx = f'{dir_out}/grdidx.bin'
+        path_grdbndidx = f'{dir_out}/grdbndidx.bin'
+        os.makedirs(dir_out, exist_ok=True)
+        MAT = cnf[k_gs][f'MATSIRO_{landType}']
+        util.make_slink(f'{os.path.join(MAT["dir"], MAT["fin_rstidx"]["path"])}',
+                        f'{path_rstidx}')
+        util.make_slink(f'{os.path.join(MAT["dir"], MAT["fin_grdidx"]["path"])}',
+                        f'{path_grdidx}')
+        util.make_slink(f'{os.path.join(MAT["dir"], MAT["fin_grdbndidx"]["path"])}',
+                        f'{path_grdbndidx}')
+
+
 def make_cmf_mat(cnf, step, update_data):
+
     dir_tmp = f'{lconst.dir_tmp[step]}'
     dir_tmp_cmf = f'{dir_tmp}/CMF'
     dir_tmp_mat = f'{dir_tmp}/MATSIRO'
@@ -98,4 +128,3 @@ def run(update_data):
     make_cmf_mat(cnf, step, update_data)
 
     util.make_new_f_cnf(step, cnf)
-

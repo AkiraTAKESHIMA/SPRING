@@ -5,7 +5,7 @@ import subprocess
 import json
 
 import const, util
-from conf_make_grid_data import block_options
+from util import str_file_bin
 
 
 def head(dir_out, fname_report='report'):
@@ -37,10 +37,10 @@ def block_agcm(gs):
 [input_agcm]\n\
   nij: {gs["nij"]}\n\
   dir: "{gs["dir"]}"\n\
-  f_grdidx: "grdidx.bin"\n\
-  f_grdara: "grdara.bin"\n\
-  f_grdlon: "grdlonlat.bin", rec=1\n\
-  f_grdlat: "grdlonlat.bin", rec=2\n\
+  f_grdidx: {str_file_bin(gs["fin_grdidx"])}\n\
+  f_grdara: {str_file_bin(gs["fin_grdara"])}\n\
+  f_grdlon: {str_file_bin(gs["fin_grdlon"])}\n\
+  f_grdlat: {str_file_bin(gs["fin_grdlat"])}\n\
   idx_miss: {gs["idx_miss"]}\n\
 [end]\n'
 
@@ -53,10 +53,10 @@ def block_lsm(gs):
 [input_lsm]\n\
   nij: {gs["nij"]}\n\
   dir: "{gs["dir"]}"\n\
-  f_grdidx: {util.str_file_bin(gs["fin_grdidx"])}\n\
-  f_grdara: {util.str_file_bin(gs["fin_grdara"])}\n\
-  f_grdlon: {util.str_file_bin(gs["fin_grdlon"])}\n\
-  f_grdlat: {util.str_file_bin(gs["fin_grdlat"])}\n\
+  f_grdidx: {str_file_bin(gs["fin_grdidx"])}\n\
+  f_grdara: {str_file_bin(gs["fin_grdara"])}\n\
+  f_grdlon: {str_file_bin(gs["fin_grdlon"])}\n\
+  f_grdlat: {str_file_bin(gs["fin_grdlat"])}\n\
   idx_miss: {gs["idx_miss"]}\n\
 [end]\n'
 
@@ -78,6 +78,32 @@ def block_rt(dir_out, rmp):
 \n\
   vrf_target_form: auto\n\
   fout_vrf_grdnum: "vrf/tgt_grdnum.bin"\n\
+[end]\n'
+
+    return s
+
+
+def block_options(opt):
+    s = '\
+\n\
+[options]\n\
+  old_files: remove\n'
+
+    if opt['Earth']['shape'] == 'sphere':
+        s += f'\
+  earth_shape: {opt["Earth"]["shape"]}\n\
+  earth_r    : {opt["Earth"]["diameter"]}\n'
+
+    elif opt['Earth']['shape'] == 'ellips':
+        s += f'\
+  earth_shape: {opt["Earth"]["shape"]}\n\
+  earth_r    : {opt["Earth"]["diameter"]}\n\
+  earth_e2   : {opt["Earth"]["square_eccentricity"]}\n'
+
+    s += f'\
+  method_rivwat: {opt["method_rivwat"]}\n'
+
+    s += '\
 [end]\n'
 
     return s

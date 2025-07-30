@@ -1,120 +1,183 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
-  "landType": ["river", "noriv"],
-  "OGCM_ocean": {
-    "name": "COCO-1deg_ocean",
-    "type": "polygon",
-    "np": 4,
-    "nij": 92160,
-    "dir": "dat/grid_system/COCO/1deg",
-    "f_lon_vertex": {
-      "path": "COCO_lon.bin",
-      "dtype": "dble"
-    },
-    "f_lat_vertex": {
-      "path": "COCO_lat.bin",
-      "dtype": "dble"
-    },
-    "f_arctyp": {
-      "path": "COCO_arctyp.bin",
-      "dtype": "int1"
-    },
-    "coord_unit": "degree",
-    "coord_miss": -999.0,
-    "fin_grdidx": {
-      "path": "COCO_idx_ocean.bin",
-      "dtype": "int4"
-    },
-    "idx_miss": 0
+  "landTypes": {
+    "1": ["land", "ocean"],
+    "2": ["river", "noriv"],
+    "3": ["river", "noriv", "noriv_real", "noriv_virt"],
+    "4": ["river", "river_end", "noriv", "ocean"]
   },
-  "OGCM_land": {
-    "fin_grdidx": {
-      "path": "COCO_idx_land.bin",
-      "dtype": "int4"
+  "grid_systems": {
+    "OGCM_{landType1}": {
+      "type": "polygon",
+      "np": 4,
+      "nij": 92160,
+      "dir": "dat/grid_system/COCO/1deg",
+      "f_lon_vertex": {
+        "path": "COCO_lon.bin",
+        "dtype": "dble"
+      },
+      "f_lat_vertex": {
+        "path": "COCO_lat.bin",
+        "dtype": "dble"
+      },
+      "f_arctyp": {
+        "path": "COCO_arctyp.bin",
+        "dtype": "int1"
+      },
+      "coord_unit": "degree",
+      "coord_miss": -999.0,
+      "fin_grdidx": {
+        "path": "COCO_idx_{landType1}.bin",
+        "dtype": "int4"
+      },
+      "idx_miss": 0
+    },
+    "AGCM": {
+      "type": "latlon",
+      "nx": 256,
+      "ny": 128,
+      "dir": "dat/grid_system/T85",
+      "f_lon_bound": {
+        "path": "T85_lon_bound.bin"
+      },
+      "f_lat_bound": {
+        "path": "T85_lat_bound.bin"
+      },
+      "is_south_to_north": false,
+      "idx_miss": -9999
+    },
+    "RM": {
+      "type": "raster",
+      "nx_raster": 21600,
+      "ny_raster": 10800,
+      "nx_grid": 720,
+      "ny_grid": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": false,
+      "idx_miss": -9999
+    },
+    "IO_met": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": false
+    },
+    "IO_metnc": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": true
+    },
+    "IO_LSM_bnd_{landType2}": {
+      "nx": 720,
+      "ny": 360
+    },
+    "IO_LSM_row_{landType3}": {
+      "nx": 720,
+      "ny": 360
+    },
+    "IO_RM_row_{landType4}": {
+      "nx": 720,
+      "ny": 360
+    },
+    "IO_latlon": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": false
     }
-  },
-  "AGCM": {
-    "name": "T85",
-    "type": "latlon",
-    "nx": 256,
-    "ny": 128,
-    "dir": "dat/grid_system/T85",
-    "f_lon_bound": {
-      "path": "T85_lon_bound.bin"
-    },
-    "f_lat_bound": {
-      "path": "T85_lat_bound.bin"
-    },
-    "is_south_to_north": false,
-    "idx_miss": -9999
-  },
-  "RM": {
-    "name": "CaMa-Flood",
-    "type": "raster",
-    "nx_raster": 21600,
-    "ny_raster": 10800,
-    "nx_grid": 720,
-    "ny_grid": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": false,
-    "idx_miss": -9999
-  },
-  "LSM": {
-    "name": "MATSIRO",
-    "type": "raster",
-    "nx_raster": 21600,
-    "ny_raster": 10800,
-    "nx_grid": 720,
-    "ny_grid": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": false,
-    "idx_miss": -9999
-  },
-  "IO_met": {
-    "name": "IO_met",
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": false
-  },
-  "IO_metnc": {
-    "name": "IO_metnc",
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": true
-  },
-  "IO_latlon": {
-    "name": "IO_latlon",
-    "type": "latlon",
-    "nx": 720,
-    "ny": 360,
-    "west": -180,
-    "east":  180,
-    "south": -90,
-    "north":  90,
-    "is_south_to_north": false
   },
   "FLOW": {
     "dir": "/data16/akira/GlobalFlowDir_20220420/glbdir_1min_gcm",
     "flwdir": "flwdir.bin",
     "elevtn": "elevtn.bin"
   },
-  "remapping_table": {
+  "remapping_tables": {
+    "IO_bnd_to_LSM": {
+      "source": "IO_LSM_bnd_{landType}",
+      "target": "LSM_simplified_{landType}",
+      "landTypes": ["river", "noriv"]
+    },
+    "IO_met_to_LSM": {
+      "source": "IO_met",
+      "target": "LSM_{landType}",
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "IO_metnc_to_LSM": {
+      "source": "IO_metnc",
+      "target": "LSM_{landType}",
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "LSM_to_IO_row": {
+      "source": "LSM_simplified_{landType}",
+      "target": "IO_LSM_row",
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "LSM_to_IO_latlon": {
+      "source": "LSM_{landType}",
+      "target": "IO_latlon",
+      "landTypes": ["river", "noriv_real", "noriv_virt"]
+    },
+    "RM_to_IO_row": {
+      "source": "RM_simplified_{landType}",
+      "target": "IO_RM_row",
+      "landTypes": ["river"]
+    },
+    "LSM_to_RM": {
+      "source": "LSM_simplified_{landType}",
+      "target": "RM_simplified_{landType}",
+      "landTypes": ["river"]
+    },
+    "RM_to_LSM": {
+      "source": "RM_simplified_{landType}",
+      "target": "LSM_simplified_{landType}",
+      "landTypes": ["river"]
+    },
+    "AGCM_to_LSM": {
+      "source": "AGCM",
+      "target": "LSM_{landType}",
+      "landTypes": ["river", "noriv"]
+    },
+    "LSM_to_AGCM": {
+      "source": "LSM_{landType}",
+      "target": "AGCM",
+      "landTypes": ["river", "noriv"]
+    },
+    "LSM_noriv_to_AGCM": {
+      "source": "LSM_noriv",
+      "target": "AGCM"
+    },
+    "LSM_to_OGCM_via_AGCM": {
+      "source": "LSM_{landType}",
+      "target": "AGCM",
+      "landTypes": ["river", "noriv"]
+    },
+    "LSM_noriv_to_OGCM_via_AGCM": {
+      "source": "LSM_{landType}",
+      "target": "AGCM",
+      "landTypes": ["noriv"]
+    },
+    "RM_to_OGCM_via_AGCM": {
+      "source": "RM_river_end",
+      "target": "AGCM"
+    }
+  },
+  "remapping_tables_common": {
     "dtype_idx": "int4",
     "endian": "big_endian",
     "make_verification_data": true

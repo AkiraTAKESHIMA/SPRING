@@ -3,18 +3,18 @@ import sys
 import subprocess
 import json
 
-sys.path.append('../../../common')
 import const, util, conf
+from const import k_lt, k_gs, k_rt, k_rtc, k_int_rt, k_opt
+from util import istep, file_bin
 
 import s00_const as lconst
 import s00_util as lutil
-import s00_conf as lconf
 
 
 #def make_rtdummy_AGCM_to_RM():
 
 
-def make_rt(cnf, step,
+def make_rt(cnf, step, update_data,
             srcMeshNameFmt, tgtMeshNameFmt, 
             use_grdara_src, use_grdara_tgt, 
             lst_landType):
@@ -30,48 +30,53 @@ def make_rt(cnf, step,
         print('config: '+f_conf)
         fp = open(f_conf, 'w')
         fp.write(conf.head(dir_tmp))
-        fp.write(conf.remap.block_gs(cnf[srcMeshName], use_grdara_src))
-        fp.write(conf.remap.block_gs(cnf[tgtMeshName], use_grdara_tgt))
-        fp.write(conf.remap.block_remapping(cnf['remapping_table'], dir_tmp))
-        fp.write(conf.remap.block_options(cnf['options']))
+        fp.write(conf.remap.block_gs(cnf[k_gs][srcMeshName], use_grdara_src))
+        fp.write(conf.remap.block_gs(cnf[k_gs][tgtMeshName], use_grdara_tgt))
+        fp.write(conf.remap.block_remapping(cnf[k_rtc], dir_tmp))
+        fp.write(conf.remap.block_options(cnf[k_opt]))
         fp.close()
 
-        f_log = f'{lconst.dir_log[step]}/{runname}.out'
-        f_err = f'{lconst.dir_log[step]}/{runname}.err'
-        util.exec_program(const.prog_remap, f_conf, f_log, f_err)
+        if update_data:
+            f_log = f'{lconst.dir_log[step]}/{runname}.out'
+            f_err = f'{lconst.dir_log[step]}/{runname}.err'
+            util.exec_program(const.prog_remap, f_conf, f_log, f_err)
+
+    rtName = f'{srcMeshNameFmt}_to_{tgtMeshNameFmt}'
+    util.check_landTypes(cnf[k_int_rt], rtName, lst_landType)
+    cnf[k_int_rt][rtName]['_dir'] = f'{lconst.dir_tmp[step]}/rt_{rtName}'
 
 
-def make_rt_all(cnf, step):
+def make_rt_all(cnf, step, update_data):
 
     # AGCM to RM
 
     # IO_bnd to LSM
-    make_rt(cnf, step, 
-            'IO_LSM_bnd_{landType}', 'LSM_bnd_{landType}', 
+    make_rt(cnf, step, update_data, ''
+            'IO_LSM_bnd_simple_{landType}', 'LSM_bnd_simple_{landType}', 
             False, False,
             ['river', 'noriv'])
 
     # IO_met to LSM
-    make_rt(cnf, step,
+    make_rt(cnf, step, update_data,
             'IO_met', 'LSM_{landType}', 
             False, False, 
             ['river', 'noriv_real', 'noriv_virt'])
 
     # IO_metnc to LSM
-    make_rt(cnf, step,
+    make_rt(cnf, step, update_data,
             'IO_metnc', 'LSM_{landType}', 
             False, False,
             ['river', 'noriv_real', 'noriv_virt'])
 
     # LSM to RM
-    make_rt(cnf, step,
-            'LSM_latlon_{landType}', 'RM_latlon_{landType}', 
+    make_rt(cnf, step, update_data,
+            'LSM_simple_{landType}', 'RM_simple_{landType}', 
             False, False,
             ['river'])
 
     # RM to LSM
-    make_rt(cnf, step,
-            'RM_latlon_{landType}', 'LSM_latlon_{landType}', 
+    make_rt(cnf, step, update_data,
+            'RM_simple_{landType}', 'LSM_simple_{landType}', 
             False, False,
             ['river'])
 
@@ -79,36 +84,42 @@ def make_rt_all(cnf, step):
     # rt_area will be incorrect if rt is calculated as if they are latlon grids,
     # so grdara is given to IO_LSM_row. This is different from grid area of latlon grid,
     # so verification data for LSM_latlon_* will be incorrect.
-    make_rt(cnf, step,
-            'LSM_latlon_{landType}', 'IO_LSM_row_{landType}', 
+    make_rt(cnf, step, update_data,
+            'LSM_simple_{landType}', 'IO_LSM_row_{landType}', 
             False, True,
             ['river', 'noriv_real', 'noriv_virt'])
 
     # LSM to IO_latlon
-    make_rt(cnf, step,
+    make_rt(cnf, step, update_data,
             'LSM_{landType}', 'IO_latlon', 
             False, False,
             ['river', 'noriv_real', 'noriv_virt'])
 
     # RM to IO_row
     # grdara is given to IO_RM_row for the same reason with LSM to IO_row.
-    make_rt(cnf, step,
-            'RM_latlon_{landType}', 'IO_RM_row_{landType}', 
+    make_rt(cnf, step, update_data,
+            'RM_simple_{landType}', 'IO_RM_row_{landType}', 
             False, True,
             ['river'])
 
+    # RM to IO_latlon
+    make_rt(cnf, step, update_data, 
+            'RM_{landType}', 'IO_latlon', 
+            False, False,
+            ['river'])
 
-def run():
+
+def run(update_data):
     step = int(__name__.split('.')[-1][1:3])
 
-    util.job.put_job(lconst.job)
-
-    cnf = json.load(open(lconst.f_cnf,'r'))
-    lutil.adjust_config(cnf)
+    cnf = util.read_cnf(step)
+    cnf = lutil.adjust_config(cnf)
 
     os.makedirs(lconst.dir_set[step], exist_ok=True)
     os.makedirs(lconst.dir_tmp[step], exist_ok=True)
     os.makedirs(lconst.dir_log[step], exist_ok=True)
 
-    make_rt_all(cnf, step)
+    make_rt_all(cnf, step, update_data)
+
+    util.make_new_f_cnf(step, cnf)
 
