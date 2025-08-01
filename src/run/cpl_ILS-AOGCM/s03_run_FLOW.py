@@ -5,18 +5,18 @@ import subprocess
 import json
 
 import const, util, conf
-from const import k_lt, k_gs, k_rt, k_opt
-from util import istep, file_bin
+from const import k
+from util import env, istep, file_bin
 
-import s00_const as lconst
-import s00_util as lutil
+import s___const as lconst
+import s___util as lutil
 
 
-def run_FLOW(cnf, step, update_data):
+def run_FLOW(cnf, update_data):
     #
     # Prepare directories and input data
     #
-    dir_flwdir = os.path.join(lconst.dir_tmp[step], '1min_flwdir')
+    dir_flwdir = os.path.join(env.dir_tmp, '1min_flwdir')
     if update_data:
         if os.path.isdir(dir_flwdir):
             shutil.rmtree(dir_flwdir)
@@ -31,41 +31,41 @@ def run_FLOW(cnf, step, update_data):
         cnf['FLOW'][var] = f'{var}.bin'
     cnf['FLOW']['dir'] = os.path.join(os.getcwd(), dir_flwdir)
 
-    dir_gcmmap = os.path.join(lconst.dir_tmp[step], 'gcmmap')
+    dir_gcmmap = os.path.join(env.dir_tmp, 'gcmmap')
     if update_data:
         os.makedirs(dir_gcmmap, exist_ok=True)
 
-    dir_tmp = os.path.join(lconst.dir_tmp[step], 'tmp')
+    dir_tmp = os.path.join(env.dir_tmp, 'tmp')
     if update_data:
         os.makedirs(os.path.join(dir_tmp, '1min'), exist_ok=True)
         os.makedirs(os.path.join(dir_tmp, 'map/1min'), exist_ok=True)
 
-    dir_map = os.path.join(lconst.dir_tmp[step], 'map')
+    dir_map = os.path.join(env.dir_tmp, 'map')
     if update_data:
         os.makedirs(dir_map, exist_ok=True)
 
     #
     # Make a setting file for FLOW
     #
-    f_params = os.path.join(lconst.dir_tmp[step], 'params.txt')
+    f_params = os.path.join(env.dir_tmp, 'params.txt')
     fp = open(f_params,'w')
     fp.write(f'\
-{cnf[f"{k_gs}"]["RM"]["nx_grid"]}  ! nXX\n\
-{cnf[f"{k_gs}"]["RM"]["ny_grid"]}  ! nYY\n\
+{cnf[f"{k.m}"]["RM"]["nx_grid"]}  ! nXX\n\
+{cnf[f"{k.m}"]["RM"]["ny_grid"]}  ! nYY\n\
 ""  ! fgcmidx\n\
-{cnf[f"{k_opt}"]["Earth"]["shape"]}  ! earth\'s shape\n\
-{cnf[f"{k_opt}"]["Earth"]["diameter"]}  ! earth\'s diameter [m]\n\
+{cnf[f"{k.opt}"]["Earth"]["shape"]}  ! earth\'s shape\n\
+{cnf[f"{k.opt}"]["Earth"]["diameter"]}  ! earth\'s diameter [m]\n\
 0.d0  ! square of the earth\'s eccentricity\n')
     fp.close()
 
     #
     # Run FLOW
     #
-    dir_log = f'{os.getcwd()}/{lconst.dir_log[step]}'
+    dir_log = f'{os.getcwd()}/{env.dir_log}'
     dir_FLOW_src = f'{os.getcwd()}/{const.dir_FLOW_src}'
 
     cwd = os.getcwd()
-    os.chdir(lconst.dir_tmp[step])
+    os.chdir(env.dir_tmp)
 
     for i, prog in enumerate([
       'make_gcmmap',
@@ -86,9 +86,8 @@ def run_FLOW(cnf, step, update_data):
 
     os.chdir(cwd)
 
-    dir_tmp = lconst.dir_tmp[step]
-    RM = cnf[k_gs]['RM']
-    cnf[k_gs]['RM_pre'] = {
+    RM = cnf[k.m]['RM']
+    cnf[k.m]['RM_pre'] = {
       'nx_raster': RM['nx_raster'],
       'ny_raster': RM['ny_raster'],
       'nx_grid': RM['nx_grid'],
@@ -99,9 +98,9 @@ def run_FLOW(cnf, step, update_data):
       'north': RM['north'],
       'is_south_to_north': RM['is_south_to_north'],
       'dir': os.getcwd(),
-      'fin_catmxy': file_bin(f'{dir_tmp}/tmp/map/1min/catmxy.bin'),
-      'fin_nextxy': file_bin(f'{dir_tmp}/map/nextxy.bin'),
-      'fin_basin' : file_bin(f'{dir_tmp}/map/basin.bin'),
+      'fin_catmxy': file_bin(f'{env.dir_tmp}/tmp/map/1min/catmxy.bin'),
+      'fin_nextxy': file_bin(f'{env.dir_tmp}/map/nextxy.bin'),
+      'fin_basin' : file_bin(f'{env.dir_tmp}/map/basin.bin'),
       'catmxy_index': {
         'noriv_coastal': 0,
         'noriv_inland' : -1,
@@ -122,10 +121,8 @@ def run(update_data):
     cnf = util.read_cnf(step)
     cnf = lutil.adjust_config(cnf)
 
-    os.makedirs(lconst.dir_set[step], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
-    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    env.set_dir(step)
 
-    run_FLOW(cnf, step, update_data)
+    run_FLOW(cnf, update_data)
 
-    util.make_new_f_cnf(step, cnf)
+    util.make_new_f_cnf(cnf)

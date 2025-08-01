@@ -5,11 +5,11 @@ import copy
 import json
 
 import const, util, conf
-from const import k_lt, k_gs, k_rt, k_rtc, k_int_rt, k_opt
-from util import istep, file_bin
+from const import k
+from util import env, istep, file_bin
 
-import s00_const as lconst
-import s00_util as lutil
+import s___const as lconst
+import s___util as lutil
 
 
 def preprocess(cnf):
@@ -22,10 +22,9 @@ def run(update_data):
     cnf = util.read_cnf(step)
     cnf = lutil.adjust_config(cnf)
 
-    os.makedirs(lconst.dir_set[step], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
-    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    env.set_dir(step)
 
     preprocess(cnf)
 
-    util.make_new_f_cnf(step, cnf)
+    util.make_new_f_cnf(cnf)
+

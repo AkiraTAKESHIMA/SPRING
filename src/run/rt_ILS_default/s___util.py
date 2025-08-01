@@ -3,7 +3,8 @@ import sys
 import shutil
 import copy
 
-import const
+import const, util
+from util import env
 import pyconf
 
 
@@ -18,5 +19,5 @@ def adjust_config(cnf):
 
 
 def get_outdir_grid(meshBaseName, landType):
-    return os.path.join(const.dir_out, 'grid', meshBaseName, landType)
+    return os.path.join(env.dir_out, 'grid', meshBaseName, landType)
 

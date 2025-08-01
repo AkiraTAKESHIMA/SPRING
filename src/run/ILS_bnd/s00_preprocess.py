@@ -5,19 +5,19 @@ import copy
 import json
 
 import const, util, conf
-from const import k_lt, k_gs, k_rt, k_rtc, k_int_rt, k_opt
-from util import istep, file_bin
+from const import k
+from util import env, istep, file_bin
 
-import s00_const as lconst
-import s00_util as lutil
+import s___const as lconst
+import s___util as lutil
 
 
 def preprocess(cnf):
-    CMF = cnf[k_gs]['CMF']
+    CMF = cnf[k.m]['CMF']
 
     meshName = 'CMF_pre'
-    cnf[k_gs][meshName] = {}
-    c = cnf[k_gs][meshName]
+    cnf[k.m][meshName] = {}
+    c = cnf[k.m][meshName]
     for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
                 'west', 'east', 'south', 'north', 'is_south_to_north',
                 'idx_miss',
@@ -27,10 +27,10 @@ def preprocess(cnf):
                 'fin_rstidx_noriv', 'fin_grdidx_noriv']:
         util.copy_dict_elem(c, CMF, key)
 
-    for landType in cnf[k_lt]:
+    for landType in cnf[k.lt]:
         meshName = f'CMF_{landType}'
-        cnf[k_gs][meshName] = {}
-        c = cnf[k_gs][meshName]
+        cnf[k.m][meshName] = {}
+        c = cnf[k.m][meshName]
         for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
                     'west', 'east', 'south', 'north', 'is_south_to_north',
                     'idx_miss']:
@@ -40,19 +40,20 @@ def preprocess(cnf):
         util.copy_dict_elem(c, CMF, 'fin_rstidx', f'fin_rstidx_{landType}')
         util.copy_dict_elem(c, CMF, 'fin_grdidx', f'fin_grdidx_{landType}')
 
-    for layer, landType in enumerate(cnf[k_lt]):
+    for layer, landType in enumerate(cnf[k.lt]):
         meshName = f'MATSIRO_{landType}'
-        if meshName not in cnf[k_gs].keys():
-            cnf[k_gs][meshName] = {}
-        c = cnf[k_gs][meshName]
+        if meshName not in cnf[k.m].keys():
+            cnf[k.m][meshName] = {}
+        c = cnf[k.m][meshName]
         for key in ['type', 'nx_raster', 'ny_raster', 'nx_grid', 'ny_grid',
                     'west', 'east', 'south', 'north', 'is_south_to_north']:
             util.copy_dict_elem(c, CMF, key)
         util.set_dict_default(c, 'idx_miss', -9999)
         c['mx_raster_1deg'] = int(c['nx_raster'] / (c['east']-c['west']))
         c['my_raster_1deg'] = int(c['ny_raster'] / (c['north']-c['south']))
+        util.set_dict_default(c, 'dir', '')
 
-    del(cnf[k_gs]['CMF'])
+    del(cnf[k.m]['CMF'])
 
 
 
@@ -62,10 +63,9 @@ def run(update_data):
     cnf = util.read_cnf(step)
     cnf = lutil.adjust_config(cnf)
 
-    os.makedirs(lconst.dir_set[step], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
-    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    env.set_dir(step)
 
     preprocess(cnf)
 
-    util.make_new_f_cnf(step, cnf)
+    util.make_new_f_cnf(cnf)
+

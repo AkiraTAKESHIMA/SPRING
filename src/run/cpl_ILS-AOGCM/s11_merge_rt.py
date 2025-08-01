@@ -5,24 +5,24 @@ import json
 
 sys.path.append('../../../common')
 import const, util, conf
-from const import k_lt, k_gs, k_rt, k_rtc, k_int_rt, k_opt
-from util import istep, file_bin
+from const import k
+from util import env, istep, file_bin
 
-import s00_const as lconst
-import s00_util as lutil
+import s___const as lconst
+import s___util as lutil
 
 
-def merge_rt(cnf, step, update_data, 
+def merge_rt(cnf, update_data, 
              rtName):
-    rt = cnf[k_rt][rtName]
+    rt = cnf[k.rt][rtName]
     rtiName = rt['sourceTables']
-    rti = cnf[k_int_rt][rtiName]
+    rti = cnf[k.irt][rtiName]
     srcMeshNameFmt, tgtMeshNameFmt = util.meshName_from_rtName(rtiName)
     srcMeshName, tgtMeshName = util.meshName_from_rtName(rtName)
 
-    dir_tmp = f'{lconst.dir_tmp[step]}/rt_{rtName}'
+    dir_tmp = f'{env.dir_tmp}/rt_{rtName}'
 
-    f_conf = f'{lconst.dir_set[step]}/rt_{rtName}.conf'
+    f_conf = f'{env.dir_set}/rt_{rtName}.conf'
     print('config: '+f_conf)
     fp = open(f_conf, 'w')
     fp.write(conf.merge_rt.head(dir_tmp))
@@ -31,73 +31,26 @@ def merge_rt(cnf, step, update_data,
         srcMeshName_this = srcMeshNameFmt.format(landType=landType)
         tgtMeshName_this = tgtMeshNameFmt.format(landType=landType)
         dir_rt = rti['_dir'].format(landType=landType)
-        nij = util.get_nij(dir_rt+'/grid.bin', cnf[k_rtc]['dtype_idx'])
-        fp.write(conf.merge_rt.block_input_rt(nij, dir_rt, cnf[k_rtc]))
+        nij = util.get_nij(dir_rt+'/grid.bin', cnf[k.rtc]['dtype_idx'])
+        fp.write(conf.merge_rt.block_input_rt(nij, dir_rt, cnf[k.rtc]))
     fp.write(conf.merge_rt.block_input_end())
-    fp.write(conf.merge_rt.block_output(cnf[k_rtc], dir_tmp, rt))
-    fp.write(conf.merge_rt.block_options(cnf[k_opt]))
+    fp.write(conf.merge_rt.block_output(cnf[k.rtc], dir_tmp, rt))
+    fp.write(conf.merge_rt.block_options(cnf[k.opt]))
     fp.close()
 
     if update_data:
-        f_log = f'{lconst.dir_log[step]}/rt_{rtName}.out'
-        f_err = f'{lconst.dir_log[step]}/rt_{rtName}.err'
+        f_log = f'{env.dir_log}/rt_{rtName}.out'
+        f_err = f'{env.dir_log}/rt_{rtName}.err'
         util.exec_program(const.prog_merge_rt, f_conf, f_log, f_err)
 
 
 
-def merge_rt_all(cnf, step, update_data):
+def merge_rt_all(cnf, update_data):
 
-    for rtKey in cnf[k_rt].keys():
+    for rtKey in cnf[k.rt].keys():
         #if rtKey != "RM_to_OGCM_via_AGCM": continue
         print(rtKey)
-        merge_rt(cnf, step, update_data, rtKey)
-
-    # IO_bnd to LSM
-    #merge_rt(cnf, step, update_data, 
-    #         'IO_LSM_bnd_{landType}', 'LSM_bnd_{landType}', 
-    #         ['river', 'noriv'],
-    #         lconst.dir_tmp[istep('make_rt_standard-2')], 
-    #         'target')
-
-    # IO_met to LSM
-    #merge_rt('IO_met', 'LSM_{landType}', 
-    #         ['river', 'noriv_real', 'noriv_virt'],
-    #         lconst.dir_tmp[istep('make_rt_standard-2')],
-    #         'target')
-
-    # IO_metnc to LSM
-    #merge_rt('IO_metnc', 'LSM_{landType}', 
-    #         ['river', 'noriv_real', 'noriv_virt'],
-    #         lconst.dir_tmp[istep('make_rt_standard-2')],
-    #         'target')
-
-    # AGCM to LSM
-    #merge_rt('AGCM', 'LSM_{landType}', 
-    #         ['river', 'noriv'], 
-    #         lconst.dir_tmp[istep('define_LSM')],
-    #         'target')
-
-    # LSM to AGCM
-    #merge_rt('LSM_{landType}', 'AGCM', 
-    #         ['river', 'noriv'], 
-    #         lconst.dir_tmp[istep('define_LSM')],
-    #         'target')
-
-    # LSM to IO_row
-    #merge_rt('LSM_latlon_{landType}', 'IO_LSM_row', 
-    #         ['river', 'noriv_real', 'noriv_virt'],
-    #         lconst.dir_tmp[istep('make_rt_standard-2')],
-    #         'target')
-
-    # LSM to IO_latlon
-    #merge_rt('LSM_{landType}', 'IO_latlon', 
-    #         ['river', 'noriv_real', 'noriv_virt'],
-    #         lconst.dir_tmp[istep('make_rt_standard-2')],
-    #         'target')
-
-    # LSM to OGCM via AGCM
-
-    # LSM_noriv to OGCM via AGCM
+        merge_rt(cnf, update_data, rtKey)
 
 
 def run(update_data):
@@ -106,12 +59,10 @@ def run(update_data):
     cnf = util.read_cnf(step)
     cnf = lutil.adjust_config(cnf)
 
-    os.makedirs(lconst.dir_set[step], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
-    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    env.set_dir(step)
 
-    merge_rt_all(cnf, step, update_data)
+    merge_rt_all(cnf, update_data)
 
-    util.make_new_f_cnf(step, cnf)
+    util.make_new_f_cnf(cnf)
 
 

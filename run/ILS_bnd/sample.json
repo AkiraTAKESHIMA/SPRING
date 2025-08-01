@@ -1,11 +1,11 @@
 {
-  "dir": "/data7/akira/SPRING/SPRING",
+  "dir_top": "/data7/akira/SPRING/SPRING",
   "runName": "sample",
   "landTypes": ["river", "noriv"],
   "meshes": {
     "CMF": {
       "type": "raster",
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/CMF",
       "nx_raster" : 21600, 
       "ny_raster" : 10800,
       "nx_grid":   720, 
@@ -34,6 +34,9 @@
         "noriv_coastal":  -999,
         "noriv_inland" :  -999,
         "ocean"        : -9999
+      },
+      "fin_rstidx_river": {
+        "path": "raster/index_river.bin"
       },
       "idx_miss": -9999,
       "idx_condition": "match"

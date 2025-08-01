@@ -85,7 +85,7 @@ def block_out_agcm(dir_out):
     s = f'\
 \n\
 [output_agcm]\n\
-  dir: "dir_out"\n\
+  dir: "{dir_out}"\n\
   f_lndara_ogcm      : "lndara_ogcm.bin"\n\
   f_lndara_river     : "lndara_river.bin"\n\
   f_lndara_noriv_real: "lndara_noriv_real.bin"\n\

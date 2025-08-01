@@ -1,12 +1,13 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
+  "runName": "sample",
   "landTypes": {
     "1": ["land", "ocean"],
     "2": ["river", "noriv"],
     "3": ["river", "noriv", "noriv_real", "noriv_virt"],
     "4": ["river", "river_end", "noriv", "ocean"]
   },
-  "grid_systems": {
+  "meshes": {
     "OGCM_{landType1}": {
       "type": "polygon",
       "np": 4,
@@ -107,12 +108,12 @@
     "flwdir": "flwdir.bin",
     "elevtn": "elevtn.bin"
   },
-  "remapping_tables_common": {
+  "remappingTables_common": {
     "dtype_idx": "int4",
     "endian": "big_endian",
     "make_verification_data": true
   }, 
-  "remapping_tables": {
+  "remappingTables": {
     "IO_bnd_to_LSM": {
       "sourceTables": "IO_LSM_bnd_simple_{landType}_to_LSM_bnd_simple_{landType}",
       "landTypes": [
@@ -262,7 +263,7 @@
       "opt_idx_duplication": "stop"
     }
   },
-  "intermediate_remapping_tables": {
+  "intermediateRemappingTables": {
     "OGCM_{landType}_to_AGCM": {
       "landTypes": ["ocean"]
     },

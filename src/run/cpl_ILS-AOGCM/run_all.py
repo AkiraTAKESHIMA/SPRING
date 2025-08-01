@@ -3,10 +3,11 @@ import sys
 import argparse
 
 sys.path.append('../../src/run/common')
-sys.path.append('../../src/run/rt_ILS_default')
+sys.path.append('../../src/run/cpl_ILS-AOGCM')
 import const, util, conf
-from util import env
+from util import env, istep
 import s___const as lconst
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-s', '--step', help=f'step number (<= {lconst.step_max})', type=int)
@@ -16,9 +17,8 @@ args = parser.parse_args()
 
 update_data = not args.x
 
-env.put_job(lconst.job)
-env.put_f_cnf(args.config)
-
+util.env.put_job(lconst.job)
+util.env.put_f_cnf(args.config)
 
 if args.step is None:
     for step in range(env.step_max+1):

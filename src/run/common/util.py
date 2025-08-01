@@ -7,18 +7,33 @@ import json
 import numpy as np
 
 import const
+from const import k
 
 
 class Env():
     def __init__(self):
         self.job = None
+        self.step_max = None
         self.f_cnf = None
+        self.runName = None
+        self.sdir_tmp = None
+        self.sdir_set = None
+        self.sdir_log = None
+        self.dir_tmp = None
+        self.dir_set = None
+        self.dir_log = None
 
     def put_job(self, a):
         self.job = a
+        self.step_max = len(a.keys()) - 1
 
     def put_f_cnf(self, a):
         self.f_cnf = a
+        if not os.path.isfile(a):
+            raise Exception(f'Config file not found: {a}')
+
+        cnf = json.load(open(a, 'r'))
+        self.runName = cnf[k.run]
 
     def get_job(self):
         return self.job
@@ -26,26 +41,40 @@ class Env():
     def get_f_cnf(self):
         return self.f_cnf
 
+    def set_dir(self, step):
+        self.sdir_tmp = {}
+        self.sdir_set = {}
+        self.sdir_log = {}
+        for i in range(self.step_max+1):
+            jobId = f'{i:02d}_{self.job[i]}'
+            self.sdir_tmp[i] = os.path.join(self.runName, 'tmp', jobId)
+            self.sdir_set[i] = os.path.join(self.runName, 'set', jobId)
+            self.sdir_log[i] = os.path.join(self.runName, 'log', jobId)
+        self.dir_tmp = self.sdir_tmp[step]
+        self.dir_set = self.sdir_set[step]
+        self.dir_log = self.sdir_log[step]
+        self.dir_out = os.path.join(self.runName, 'out')
+        os.makedirs(self.dir_tmp, exist_ok=True)
+        os.makedirs(self.dir_set, exist_ok=True)
+        os.makedirs(self.dir_log, exist_ok=True)
+        os.makedirs(self.dir_out, exist_ok=True)
+
 env = Env()
 
 
-def get_f_cnf(step):
-    if step == 0:
-        return env.f_cnf
-    else:
-        return f'set/{step-1:02d}_{env.job[step-1]}/newconf.json'
-
-
 def read_cnf(step):
-    f_cnf = get_f_cnf(step)
-    print(f'[step {step}] Overall settings: {f_cnf}')
-    return json.load(open(f_cnf,'r'))
+    if step == 0:
+        f = env.f_cnf
+    else:
+        f = f'{env.sdir_set[step-1]}/newconf.json'
+    print(f'[step {step}] Overall settings: {f}')
+    return json.load(open(f, 'r'))
 
 
-def make_new_f_cnf(step, cnf):
-    f_cnf = get_f_cnf(step+1)
-    print('New settings: '+f_cnf)
-    with open(f_cnf, 'w') as fp:
+def make_new_f_cnf(cnf):
+    f = f'{env.dir_set}/newconf.json'
+    print('New settings: '+f)
+    with open(f, 'w') as fp:
         fp.write(json.dumps(cnf, indent=2))
 
 
@@ -87,7 +116,18 @@ def make_slink(org, dst):
         command = f'{const.command_ln} {const.options_ln} {absorg} {absdst}'
         raise Exception(f'Failed: \n{command}')
 
-    print(f'linked: {dst} -> {org}')
+    cwd = os.getcwd()
+
+    print(f'linked: {path_abs_to_rel(absdst)} -> {path_abs_to_rel(absorg)}')
+
+
+def path_abs_to_rel(abspath):
+    cwd = os.getcwd() + '/'
+    relpath = abspath
+    if cwd in abspath:
+        if abspath.index(cwd) == 0:
+            relpath = abspath[len(cwd):]
+    return relpath
 
 
 def istep(name):
@@ -174,10 +214,10 @@ def set_gs_dir(gs, dir_top):
         gs['dir'] = os.path.join(dir_top, gs['dir'])
 
 
-def set_dir(pdir, job):
+def set_dir(dir_top, runName, job):
     d = {}
     for step in job.keys():
-        d[step] = os.path.join(pdir, f'{step:02d}_{job[step]}')
+        d[step] = os.path.join(dir_top, runName, f'{step:02d}_{job[step]}')
     return d
 
 

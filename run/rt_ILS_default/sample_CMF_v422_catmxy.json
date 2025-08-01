@@ -1,19 +1,20 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
+  "runName": "sample_CMF_v422_catmxy",
   "landTypes": ["river", "noriv"],
-  "grid_systems": {
+  "meshes": {
     "CMF": {
       "type": "raster",
       "nx_raster": 21600,
       "ny_raster": 10800,
-      "nx_grid": 3600,
-      "ny_grid": 1800,
+      "nx_grid": 1440,
+      "ny_grid": 720,
       "west": -180,
       "east":  180,
       "south": -90,
       "north":  90,
       "is_south_to_north": "false",
-      "dir": "dat/grid_system/CaMa-Flood/cmf_v407/glb_06min/1min/CMF",
+      "dir": "dat/grid_system/CaMa-Flood/cmf_v422/glb_15min/1min/CMF",
       "fin_catmxy": {
         "path": "raster/1min.catmxy.bin", 
         "dtype": "int2"
@@ -32,8 +33,7 @@
         "river_inland": -10,
         "ocean": -9999
       },
-      "idx_miss": -9999,
-      "idx_condition": "raster_in_grid"
+      "idx_miss": -9999
     },
     "IO_met": {
       "type": "latlon",
@@ -57,8 +57,8 @@
     },
     "IO_latlon": {
       "type": "latlon",
-      "nx": 3600,
-      "ny": 1800,
+      "nx": 720,
+      "ny": 360,
       "west": -180,
       "east":  180,
       "south": -90,
@@ -90,12 +90,12 @@
       "desc": "IO grid for CMF output"
     }
   },
-  "remapping_tables_common": {
+  "remappingTables_common": {
     "dtype_idx": "int4",
     "endian": "big_endian",
     "make_verification_data": false
   },
-  "remapping_tables": {
+  "remappingTables": {
     "IO_met_to_MATSIRO": {
       "sourceTables": "IO_met_to_MATSIRO_{landType}",
       "landTypes": ["river", "noriv"]
@@ -129,7 +129,7 @@
       "landTypes": ["river"]
     }
   },
-  "intermediate_remapping_tables": {
+  "intermediateRemappingTables": {
     "IO_met_to_MATSIRO_{landType}": {
       "landTypes": ["river", "noriv"]
     },

@@ -4,14 +4,14 @@ import subprocess
 import json
 
 import const, util, conf
-from const import k_lt, k_gs, k_rt, k_rtc, k_int_rt, k_opt
-from util import istep, file_bin
+from const import k
+from util import env, istep, file_bin
 
-import s00_const as lconst
-import s00_util as lutil
+import s___const as lconst
+import s___util as lutil
 
 
-def make_rt(cnf, step, update_data,
+def make_rt(cnf, update_data,
             rt, is_tmp):
 
     rtNameFmt = rt['name']
@@ -22,21 +22,21 @@ def make_rt(cnf, step, update_data,
         srcMeshName = srcMeshNameFmt.format(landType=landType)
         tgtMeshName = tgtMeshNameFmt.format(landType=landType)
 
-        dir_tmp = f'{lconst.dir_tmp[step]}/rt_{rtName}'
+        dir_tmp = f'{env.dir_tmp}/rt_{rtName}'
 
-        f_conf = f'{lconst.dir_set[step]}/rt_{rtName}.conf'
+        f_conf = f'{env.dir_set}/rt_{rtName}.conf'
         print('config: '+f_conf)
         fp = open(f_conf, 'w')
         fp.write(conf.head(dir_tmp))
-        fp.write(conf.remap.block_gs(cnf[k_gs][srcMeshName], rt['use_src_grdara']))
-        fp.write(conf.remap.block_gs(cnf[k_gs][tgtMeshName], rt['use_tgt_grdara']))
-        fp.write(conf.remap.block_remapping(cnf[k_rtc], dir_tmp))
-        fp.write(conf.remap.block_options(cnf[k_opt]))
+        fp.write(conf.remap.block_gs(cnf[k.m][srcMeshName], rt['use_src_grdara']))
+        fp.write(conf.remap.block_gs(cnf[k.m][tgtMeshName], rt['use_tgt_grdara']))
+        fp.write(conf.remap.block_remapping(cnf[k.rtc], dir_tmp))
+        fp.write(conf.remap.block_options(cnf[k.opt]))
         fp.close()
 
         if update_data:
-            f_log = f'{lconst.dir_log[step]}/rt_{rtName}.out'
-            f_err = f'{lconst.dir_log[step]}/rt_{rtName}.err'
+            f_log = f'{env.dir_log}/rt_{rtName}.out'
+            f_err = f'{env.dir_log}/rt_{rtName}.err'
             util.exec_program(const.prog_remap, f_conf, f_log, f_err)
 
             if not is_tmp:
@@ -45,17 +45,17 @@ def make_rt(cnf, step, update_data,
     rt['_dir'] = dir_tmp
 
 
-def make_rt_all(cnf, step, update_data):
-    for rtName in cnf[k_int_rt].keys():
+def make_rt_all(cnf, update_data):
+    for rtName in cnf[k.irt].keys():
         print(rtName)
         #if rtName != 'MATSIRO_simple_{landType}_to_CMF_simple_{landType}': continue
-        rt = cnf[k_int_rt][rtName]
-        make_rt(cnf, step, update_data, rt, True)
+        rt = cnf[k.irt][rtName]
+        make_rt(cnf, update_data, rt, True)
 
-    for rtName in cnf[k_rt].keys():
-        rt = cnf[k_rt][rtName]
+    for rtName in cnf[k.rt].keys():
+        rt = cnf[k.rt][rtName]
         if 'sourceTables' in rt.keys(): continue
-        make_rt(cnf, step, update_data, rt, False)
+        make_rt(cnf, update_data, rt, False)
 
 
 def run(update_data):
@@ -65,77 +65,21 @@ def run(update_data):
     cnf = lutil.adjust_config(cnf)
 
     # Check 'landType'
-    if len(cnf[k_lt]) == 1:
-        if cnf[k_lt][0] != 'river':
-            raise Exception(f'The list "{k_lt}" must be `["river"]` '\
+    if len(cnf[k.lt]) == 1:
+        if cnf[k.lt][0] != 'river':
+            raise Exception(f'The list "{k.lt}" must be `["river"]` '\
                             'when its length is 1.')
-    elif len(cnf[k_lt]) == 2:
-        if not ('river' in cnf[k_lt] and 'noriv' in cnf[k_lt]):
-            raise Exception(f'The list "{k_lt}" must be `["river", "noriv"]` '\
+    elif len(cnf[k.lt]) == 2:
+        if not ('river' in cnf[k.lt] and 'noriv' in cnf[k.lt]):
+            raise Exception(f'The list "{k.lt}" must be `["river", "noriv"]` '\
                             'when its length is 1.')
     else:
-        raise Exception(f'Length of the list "{k_lt}" must be '\
+        raise Exception(f'Length of the list "{k.lt}" must be '\
                         'less than or equal to 2.')
 
-    os.makedirs(lconst.dir_set[step], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
-    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    env.set_dir(step)
 
-    make_rt_all(cnf, step, update_data)
+    make_rt_all(cnf, update_data)
 
-    util.make_new_f_cnf(step, cnf)
-
-    return
-
-    # IO_bnd to MATSIRO
-    make_rt(cnf, step, 
-            'IO_MATSIRO_bnd_{landType}', 'MATSIRO_bnd_{landType}', 
-            cnf[k_lt],
-            False, False, 'IO_MATSIRO_bnd_to_MATSIRO_bnd')
-
-    # IO_met to MATSIRO
-    make_rt(cnf, step, 
-            'IO_met', 'MATSIRO_{landType}', 
-            cnf['landType'],
-            False, False, 'IO_met_to_MATSIRO')
-
-    # IO_metnc to MATSIRO
-    make_rt(cnf, step, 
-            'IO_metnc', 'MATSIRO_{landType}',
-            cnf['landType'],
-            False, False, 'IO_metnc_to_MATSIRO')
-
-    # MATSIRO to CMF
-    # *** Values of "area.bin" is incorrect but not used for remapping
-    make_rt(cnf, step, 
-            'MATSIRO_latlon_{landType}', 'CMF_latlon_{landType}',
-            ['river'],
-            False, False, 'MATSIRO_to_CMF')
-
-    # CMF to MATSIRO
-    # *** Values of "area.bin" is incorrect but not used for remapping
-    make_rt(cnf, step, 
-            'CMF_latlon_{landType}', 'MATSIRO_latlon_{landType}',
-            ['river'],
-            False, False, 'CMF_to_MATSIRO')
-
-    # MATSIRO to IO_row
-    # *** Verification data for source grid is incorrect
-    make_rt(cnf, step, 
-            'MATSIRO_latlon_{landType}', 'IO_MATSIRO_row_{landType}',
-            cnf['landType'],
-            False, True, 'MATSIRO_to_IO_MATSIRO_row')
-
-    # MATSIRO to IO_latlon
-    make_rt(cnf, step, 
-            'MATSIRO_{landType}', 'IO_latlon',
-            cnf['landType'],
-            False, False, 'MATSIRO_to_IO_latlon')
-
-    # CMF to IO_row
-    # *** Verification data for source grid is incorrect
-    make_rt(cnf, step, 
-            'CMF_latlon_{landType}', 'IO_CMF_row_{landType}',
-            cnf['landType'],
-            False, True, 'CMF_to_IO_CMF_row')
+    util.make_new_f_cnf(cnf)
 

@@ -3,7 +3,7 @@ import sys
 import copy
 
 import const, util
-from const import k_lt, k_gs, k_int_rt, k_rt
+from const import k
 
 
 def format_any(a, d_fill):
@@ -22,10 +22,10 @@ def format_any(a, d_fill):
 def substitute_gs_landType_each(cnfin, lst_landType, landTypeAnchor):
     cnf = {}
     for key in cnfin.keys():
-        if key == k_gs: continue
+        if key == k.m: continue
         cnf[key] = copy.deepcopy(cnfin[key])
 
-    cin = cnfin[k_gs]
+    cin = cnfin[k.m]
     c = {}
     for gsNameFmt in cin.keys():
         if f'{{{landTypeAnchor}}}' in gsNameFmt:
@@ -42,20 +42,20 @@ def substitute_gs_landType_each(cnfin, lst_landType, landTypeAnchor):
             #print(gsName)
             c[gsName] = copy.deepcopy(cin[gsName])
             c[gsName]['name'] = gsName
-    cnf[k_gs] = c
+    cnf[k.m] = c
 
     return cnf
 
 
 def substitute_gs_landType(cnfin):
-    if type(cnfin[k_lt]) is list:
-        cnf = substitute_gs_landType_each(cnfin, cnfin[k_lt], 'landType')
-    elif type(cnfin[k_lt]) is dict:
+    if type(cnfin[k.lt]) is list:
+        cnf = substitute_gs_landType_each(cnfin, cnfin[k.lt], 'landType')
+    elif type(cnfin[k.lt]) is dict:
         cnf = copy.deepcopy(cnfin)
-        for key in cnfin[k_lt].keys():
-            cnf = substitute_gs_landType_each(cnf, cnfin[k_lt][key], 'landType'+key)
+        for key in cnfin[k.lt].keys():
+            cnf = substitute_gs_landType_each(cnf, cnfin[k.lt][key], 'landType'+key)
 
-    #for gsName in cnf[k_gs].keys():
+    #for gsName in cnf[k.m].keys():
     #    print(gsName)
 
     return cnf
@@ -63,23 +63,23 @@ def substitute_gs_landType(cnfin):
 
 def copy_gs_shared(cnfin):
     cnf = copy.deepcopy(cnfin)
-    for gsName in cnf[k_gs].keys():
-        if not 'share' in cnf[k_gs][gsName].keys(): continue
-        gsName_shared = cnf[k_gs][gsName]['share']
+    for gsName in cnf[k.m].keys():
+        if not 'share' in cnf[k.m][gsName].keys(): continue
+        gsName_shared = cnf[k.m][gsName]['share']
         #print(f'{gsName_shared} < {gsName}')
-        if gsName_shared not in cnf[k_gs].keys():
-            raise Exception(f'An undefined grid system "{cnf[k_gs][key]["share"]}" '\
+        if gsName_shared not in cnf[k.m].keys():
+            raise Exception(f'An undefined grid system "{cnf[k.m][key]["share"]}" '\
                             f'appeared in "{gsName}" > "share".')
-        for key in cnf[k_gs][gsName_shared].keys():
-            if key in cnf[k_gs][gsName].keys(): continue
-            cnf[k_gs][gsName][key] = copy.deepcopy(cnf[k_gs][gsName_shared][key])
+        for key in cnf[k.m][gsName_shared].keys():
+            if key in cnf[k.m][gsName].keys(): continue
+            cnf[k.m][gsName][key] = copy.deepcopy(cnf[k.m][gsName_shared][key])
 
     return cnf
 
 
 def set_rt_default(cnf):
-    for rtName in cnf[k_int_rt].keys():
-        rt = cnf[k_int_rt][rtName]
+    for rtName in cnf[k.irt].keys():
+        rt = cnf[k.irt][rtName]
         rt['name'] = rtName
 
         if 'use_src_grdara' not in rt.keys():
@@ -101,8 +101,8 @@ def set_rt_default(cnf):
         if 'opt_idx_duplication' not in rt.keys():
             rt['opt_idx_duplication'] = 'stop'
 
-    for rtName in cnf[k_rt].keys():
-        rt = cnf[k_rt][rtName]
+    for rtName in cnf[k.rt].keys():
+        rt = cnf[k.rt][rtName]
         rt['name'] = rtName
 
         if 'sourceTable' not in rt.keys():

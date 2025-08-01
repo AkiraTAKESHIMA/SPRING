@@ -5,33 +5,31 @@ import copy
 import json
 
 import const, util, conf
-from const import k_lt, k_gs, k_rt, k_opt
-from util import istep, file_bin
+from const import k
+from util import env, istep, file_bin
 
-import s00_const as lconst
-import s00_util as lutil
+import s___const as lconst
+import s___util as lutil
 
 
-def make_cmf_mat(cnf, step, update_data):
-    dir_tmp = lconst.dir_tmp[step]
-
-    RM_pre = cnf[k_gs]['RM_pre']
+def make_cmf_mat(cnf, update_data):
+    RM_pre = cnf[k.m]['RM_pre']
     for landType in ['river', 'river_end', 'noriv', 'ocean']:
-        RM_pre[f'fout_rstidx_{landType}'] = file_bin(f'{dir_tmp}/{landType}/rstidx.bin','int4')
-        RM_pre[f'fout_grdidx_{landType}'] = file_bin(f'{dir_tmp}/{landType}/grdidx.bin','int4')
-    RM_pre['fout_rstbsn'] = file_bin(f'{dir_tmp}/river/rstbsn.bin','int4')
+        RM_pre[f'fout_rstidx_{landType}'] = file_bin(f'{env.dir_tmp}/{landType}/rstidx.bin','int4')
+        RM_pre[f'fout_grdidx_{landType}'] = file_bin(f'{env.dir_tmp}/{landType}/grdidx.bin','int4')
+    RM_pre['fout_rstbsn'] = file_bin(f'{env.dir_tmp}/river/rstbsn.bin','int4')
 
-    f_conf = f'{lconst.dir_set[step]}/a.conf'
+    f_conf = f'{env.dir_set}/a.conf'
     print('config: '+f_conf)
     fp = open(f_conf, 'w')
     fp.write(conf.make_cmf_mat.block_common(RM_pre))
     fp.write(conf.make_cmf_mat.block_cmf(RM_pre, RM_pre['dir'], ''))
-    fp.write(conf.make_cmf_mat.block_options(cnf[k_opt]))
+    fp.write(conf.make_cmf_mat.block_options(cnf[k.opt]))
     fp.close()
 
     if update_data:
-        f_log = f'{lconst.dir_log[step]}/a.out'
-        f_err = f'{lconst.dir_log[step]}/a.err'
+        f_log = f'{env.dir_log}/a.out'
+        f_err = f'{env.dir_log}/a.err'
         util.exec_program(const.prog_make_cmf_mat, f_conf, f_log, f_err)
 
     RM_cmn = {
@@ -63,25 +61,25 @@ def make_cmf_mat(cnf, step, update_data):
     }
 
     for landType in ['river', 'river_end', 'noriv', 'ocean']:
-        cnf[k_gs][f'RM_{landType}'] = dict(
+        cnf[k.m][f'RM_{landType}'] = dict(
           **RM_cmn, **{
             'name': f'RM_{landType}',
             'fin_rstidx': RM_pre[f'fout_rstidx_{landType}'],
             'fin_grdidx': RM_pre[f'fout_grdidx_{landType}'],
           })
 
-        cnf[k_gs][f'RM_simple_{landType}'] = dict(
+        cnf[k.m][f'RM_simple_{landType}'] = dict(
           **RM_simple_cmn, **{
             'name': f'RM_simple_{landType}',
             'fin_grdidx': RM_pre[f'fout_grdidx_{landType}'],
           })
 
-        cnf[k_gs][f'IO_RM_row_{landType}'] = dict(
+        cnf[k.m][f'IO_RM_row_{landType}'] = dict(
           **RM_simple_cmn, **{
             'name': f'IO_RM_row_{landType}',
           })
 
-    del(cnf[k_gs]['RM_pre'])
+    del(cnf[k.m]['RM_pre'])
 
 
 def run(update_data):
@@ -90,10 +88,8 @@ def run(update_data):
     cnf = util.read_cnf(step)
     cnf = lutil.adjust_config(cnf)
 
-    os.makedirs(lconst.dir_set[step], exist_ok=True)
-    os.makedirs(lconst.dir_tmp[step], exist_ok=True)
-    os.makedirs(lconst.dir_log[step], exist_ok=True)
+    env.set_dir(step)
 
-    make_cmf_mat(cnf, step, update_data)
+    make_cmf_mat(cnf, update_data)
 
-    util.make_new_f_cnf(step, cnf)
+    util.make_new_f_cnf(cnf)
