@@ -4,8 +4,11 @@ import argparse
 
 sys.path.append('../../../src/run/common')
 sys.path.append('../../../src/run/ILS_bnd')
+
 import const, util, conf
-import s00_const as lconst
+from util import istep
+
+import s___const as lconst
 import s00_preprocess, \
        s01_make_cmf_mat, \
        s02_make_rt
@@ -25,26 +28,23 @@ update_data = not args.x
 util.env.put_job(lconst.job)
 util.env.put_f_cnf(args.config)
 
-scripts = {
-  0: s00_preprocess, 
-  1: s01_make_cmf_mat,
-  2: s02_make_rt,
-}
-
 if args.step is None:
-    for step in range(3):
-        if step == 2:
+    for step in range(lconst.step_max+1):
+        if step == istep('make_rt'):
             scripts[step].run(update_data, args.data, args.land, args.tile)
         else:
             scripts[step].run(update_data)
 
 else:
+    if args.step > lconst.step_max:
+        raise Exception(f'Step must be less than or equal to {lconst.step_max}.')
+
     for step in range(args.step):
-        if step == 2:
+        if step == istep('make_rt'):
             scripts[step].run(False, args.data, args.land, args.tile)
         else:
             scripts[step].run(False)
-    if args.step == 2:
+    if args.step == istep('make_rt'):
         scripts[args.step].run(update_data, args.data, args.land, args.tile)
     else:
         scripts[args.step].run(update_data)
