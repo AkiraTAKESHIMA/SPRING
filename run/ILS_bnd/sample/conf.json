@@ -4,7 +4,7 @@
   "grid_systems": {
     "CMF": {
       "type": "raster",
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/cmf",
+      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/CMF",
       "nx_raster" : 21600, 
       "ny_raster" : 10800,
       "nx_grid":   720, 
