@@ -1995,6 +1995,7 @@ subroutine make_grdara__raster(ar)
   elseif( fg_in%wgt%path /= '' )then
     call echo(code%ent, 'Case: Grid weight data were given')
 
+    call make_grduwa__raster(ar)
     call make_grdwgt__raster(ar)
 
     do ij = 1_8, g%nij
