@@ -47,6 +47,10 @@ def make_grid_data(cnf, update_data, landType):
         cnf[k.m][f'RM_simple_{landType}'][f'fin_grd{var}'] = RM[f'fin_grd{var}']
         cnf[k.m][f'IO_RM_row_{landType}'][f'fin_grd{var}'] = RM[f'fin_grd{var}']
 
+    for var_org, var_dst in zip(['ara', 'lonlat', 'xyz'], ['area', 'lonlat', 'xyz']):
+        util.make_slink(f'{env.dir_tmp}/{landType}/grd{var_org}.bin',
+                        f'{env.dir_out}/grid/RM/{landType}/grid/{var_dst}.bin')
+
 
 
 def run(update_data):

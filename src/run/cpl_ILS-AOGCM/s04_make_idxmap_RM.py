@@ -13,8 +13,10 @@ import s___util as lutil
 
 
 def make_cmf_mat(cnf, update_data):
+    lst_landType = ['river', 'river_end', 'noriv', 'ocean']
+
     RM_pre = cnf[k.m]['RM_pre']
-    for landType in ['river', 'river_end', 'noriv', 'ocean']:
+    for landType in lst_landType:
         RM_pre[f'fout_rstidx_{landType}'] = file_bin(f'{env.dir_tmp}/{landType}/rstidx.bin','int4')
         RM_pre[f'fout_grdidx_{landType}'] = file_bin(f'{env.dir_tmp}/{landType}/grdidx.bin','int4')
     RM_pre['fout_rstbsn'] = file_bin(f'{env.dir_tmp}/river/rstbsn.bin','int4')
@@ -60,7 +62,7 @@ def make_cmf_mat(cnf, update_data):
       'dir': RM_pre['dir'],
     }
 
-    for landType in ['river', 'river_end', 'noriv', 'ocean']:
+    for landType in lst_landType:
         cnf[k.m][f'RM_{landType}'] = dict(
           **RM_cmn, **{
             'name': f'RM_{landType}',
@@ -80,6 +82,15 @@ def make_cmf_mat(cnf, update_data):
           })
 
     del(cnf[k.m]['RM_pre'])
+
+    if update_data:
+        for landType in lst_landType:
+            util.make_slink(f'{env.dir_tmp}/{landType}/grdidx.bin',
+                            f'{env.dir_out}/grid/RM/{landType}/grid/index.bin')
+            util.make_slink(f'{env.dir_tmp}/{landType}/rstidx.bin',
+                            f'{env.dir_out}/grid/RM/{landType}/raster/index.bin')
+        util.make_slink(f'{env.dir_tmp}/river/rstbsn.bin',
+                        f'{env.dir_out}/grid/RM/river/raster/basin.bin')
 
 
 def run(update_data):

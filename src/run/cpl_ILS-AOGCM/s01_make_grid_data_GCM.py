@@ -47,6 +47,10 @@ def make_grid_data(cnf, update_data, gsName):
         c[f'fin_grd{var}'] = c[f'fout_grd{var}']
         del(c[f'fout_grd{var}'])
 
+    if update_data:
+        util.make_slink(f'{env.dir_tmp}/{gsName}',
+                        f'{env.dir_out}/grid/{gsName}')
+
 
 def run(update_data):
     step = int(__name__.split('.')[-1][1:3])

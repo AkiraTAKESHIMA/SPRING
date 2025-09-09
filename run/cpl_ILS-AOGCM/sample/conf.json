@@ -7,7 +7,7 @@
       "type": "polygon",
       "np": 4,
       "nij": 92160,
-      "dir": "dat/grid_system/COCO/1deg",
+      "dir": "dat/mesh/COCO/1deg",
       "f_lon_vertex": {
         "path": "COCO_lon.bin",
         "dtype": "dble"
@@ -32,7 +32,7 @@
       "type": "latlon",
       "nx": 256,
       "ny": 128,
-      "dir": "dat/grid_system/T85",
+      "dir": "dat/mesh/T85",
       "f_lon_bound": {
         "path": "T85_lon_bound.bin"
       },

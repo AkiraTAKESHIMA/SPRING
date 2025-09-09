@@ -43,6 +43,11 @@ def merge_rt(cnf, update_data,
         f_err = f'{env.dir_log}/rt_{rtName}.err'
         util.exec_program(const.prog_merge_rt, f_conf, f_log, f_err)
 
+    # Make links for output data
+    if update_data:
+        util.make_slink(f'{env.dir_tmp}/rt_{rtName}',
+                        f'{env.dir_out}/remapping_table/{rtName}')
+
 
 
 def merge_rt_all(cnf, update_data):
