@@ -110,6 +110,9 @@ def preprocess(cnf):
 
     del(cnf[k.m]['CMF'])
 
+    for meshName in cnf[k.m].keys():
+        cnf[k.m][meshName]['name'] = meshName
+
 
 
 def run(update_data):

@@ -2,8 +2,8 @@ import os
 import sys
 import argparse
 
-sys.path.append('../../src/run/common')
-sys.path.append('../../src/run/cpl_ILS-AOGCM')
+sys.path.append('../../../src/run/common')
+sys.path.append('../../../src/run/cpl_ILS-AOGCM')
 import const, util, conf
 from util import env, istep
 import s___const as lconst

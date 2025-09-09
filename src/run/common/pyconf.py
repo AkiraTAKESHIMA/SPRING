@@ -19,44 +19,47 @@ def format_any(a, d_fill):
         return a
 
 
-def substitute_gs_landType_each(cnfin, lst_landType, landTypeAnchor):
-    cnf = {}
-    for key in cnfin.keys():
-        if key == k.m: continue
-        cnf[key] = copy.deepcopy(cnfin[key])
+def fill_landTypes(cnfin, lst_landType_default=None, landType=None):
+    if type(cnfin) is dict:
+        cnfout = {}
+        for key in cnfin.keys():
+            c = cnfin[key]
+            if '{landType}' in key:
+                if k.lt in cnfin[key]:
+                    lst_landType = c[k.lt]
+                elif lst_landType_default is not None:
+                    lst_landType = lst_landType_default
+                else:
+                    raise Exception(f'"{k.lt}" is undefined in "{key}" or in the overall settings.')
+                for landType in lst_landType:
+                    key_new = key.format(landType=landType)
+                    #print(f'key_new: {key_new}, landType: {landType}')
+                    cnfout[key_new] = copy.deepcopy(c)
+                    if k.lt in cnfout[key_new].keys():
+                        del(cnfout[key_new][k.lt])
+                    cnfout[key_new] = fill_landTypes(cnfout[key_new], lst_landType_default, landType)
+            else:
+                cnfout[key] = fill_landTypes(c, lst_landType_default, landType)
+    elif type(cnfin) is list:
+        cnfout = []
+        for c in cnfin:
+            cnfout.append(fill_landTypes(c))
+    elif type(cnfin) is str:
+        cnfout = cnfin
+        if '{landType}' in cnfout:
+            cnfout = cnfout.format(landType=landType)
+    else:
+        cnfout = cnfin
 
-    cin = cnfin[k.m]
-    c = {}
-    for gsNameFmt in cin.keys():
-        if f'{{{landTypeAnchor}}}' in gsNameFmt:
-            #print(gsNameFmt)
-            for landType in lst_landType:
-                gsName = gsNameFmt.format(**{landTypeAnchor: landType})
-                #print(gsName)
-                c[gsName] = copy.deepcopy(cin[gsNameFmt])
-                c[gsName]['name'] = gsName
-                for key in c[gsName].keys():
-                    c[gsName][key] = format_any(c[gsName][key], {landTypeAnchor: landType})
-        else:
-            gsName = gsNameFmt
-            #print(gsName)
-            c[gsName] = copy.deepcopy(cin[gsName])
-            c[gsName]['name'] = gsName
-    cnf[k.m] = c
-
-    return cnf
+    return cnfout
 
 
-def substitute_gs_landType(cnfin):
-    if type(cnfin[k.lt]) is list:
-        cnf = substitute_gs_landType_each(cnfin, cnfin[k.lt], 'landType')
-    elif type(cnfin[k.lt]) is dict:
-        cnf = copy.deepcopy(cnfin)
-        for key in cnfin[k.lt].keys():
-            cnf = substitute_gs_landType_each(cnf, cnfin[k.lt][key], 'landType'+key)
-
-    #for gsName in cnf[k.m].keys():
-    #    print(gsName)
+def fill_landTypes_meshes(cnf):
+    if k.lt in cnf.keys():
+        lst_landType_default = cnf[k.lt]
+    else:
+        lst_landType_default = None
+    cnf[k.m] = fill_landTypes(cnf[k.m], lst_landType_default)
 
     return cnf
 

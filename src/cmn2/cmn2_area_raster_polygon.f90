@@ -254,7 +254,7 @@ subroutine initialize_zone(srz)
   !-------------------------------------------------------------
   ! Set const.
   !-------------------------------------------------------------
-  call edbg('Setting the constant values.')
+  call edbg('Setting the constant values')
 
   ! module
   ndh = srz%nh
@@ -300,7 +300,7 @@ subroutine initialize_zone(srz)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Setting the changable fields.')
+  call edbg('Setting the changable fields')
 
   allocate(clons(sdhi-2:sdhf+1))
   allocate(clons_diff(sdhi-2:sdhf+1))

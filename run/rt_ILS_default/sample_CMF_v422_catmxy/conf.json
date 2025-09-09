@@ -1,32 +1,38 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
-  "runName": "sample_FLOW_v396_idxmap",
+  "runName": "sample_CMF_v422_catmxy",
   "landTypes": ["river", "noriv"],
   "meshes": {
-    "MATSIRO_{landType}": {
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/MATSIRO",
-      "fin_rstidx"   : {"path": "raster/index_{landType}.bin"},
-      "fin_grdidx"   : {"path": "grid/index_{landType}.bin"},
-      "fin_grdbndidx": {"path": "grid/index_bnd_{landType}.bin"},
-      "fin_grdara"   : {"path": "grid/area_{landType}.bin"},
-      "idx_miss": -9999
-    },
     "CMF": {
       "type": "raster",
       "nx_raster": 21600,
       "ny_raster": 10800,
-      "nx_grid": 720,
-      "ny_grid": 360,
+      "nx_grid": 1440,
+      "ny_grid": 720,
       "west": -180,
       "east":  180,
       "south": -90,
       "north":  90,
       "is_south_to_north": "false",
-      "dir": "dat/grid_system/CaMa-Flood/FLOW_v396_20200311/glb_30min/CMF",
-      "fin_rstidx_river": {"path": "raster/index_river.bin"},
-      "fin_grdidx_river": {"path": "grid/index_river.bin"},
-      "fin_rstidx_noriv": {"path": "raster/index_noriv.bin"},
-      "fin_grdidx_noriv": {"path": "grid/index_noriv.bin"},
+      "dir": "dat/mesh/CaMa-Flood/cmf_v422/glb_15min/1min/CMF",
+      "fin_catmxy": {
+        "path": "raster/1min.catmxy.bin", 
+        "dtype": "int2"
+      },
+      "fin_nextxy": {
+        "path": "grid/nextxy.bin", 
+        "dtype": "int4"
+      },
+      "catmxy_index": {
+        "noriv_coastal": -999,
+        "noriv_inland": -999,
+        "ocean": -9999
+      },
+      "nextxy_index": {
+        "river_mouth": -9,
+        "river_inland": -10,
+        "ocean": -9999
+      },
       "idx_miss": -9999
     },
     "IO_met": {
@@ -58,6 +64,9 @@
       "south": -90,
       "north":  90,
       "is_south_to_north": "false"
+    },
+    "MATSIRO_{landType}": {
+      "desc": "MATSIRO grid"
     },
     "MATSIRO_simple_{landType}": {
       "desc": "Simplified MATSIRO grid"

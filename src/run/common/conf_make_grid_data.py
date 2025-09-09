@@ -26,7 +26,7 @@ def block_gs(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
 def block_gs_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s = f'\
 \n\
-[grid_system_latlon]\n\
+[mesh_latlon]\n\
   name: {gs["name"]}\n\
   nx: {gs["nx"]}\n\
   ny: {gs["ny"]}\n\
@@ -78,7 +78,7 @@ def block_gs_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
 def block_gs_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s = f'\
 \n\
-[grid_system_raster]\n\
+[mesh_raster]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx_raster"]}\n\
   ny: {gs["ny_raster"]}\n\
@@ -115,7 +115,7 @@ def block_gs_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
 def block_gs_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s = f'\
 \n\
-[grid_system_polygon]\n\
+[mesh_polygon]\n\
   name: "{gs["name"]}"\n\
   np: {gs["np"]}\n\
   nij: {gs["nij"]}\n'

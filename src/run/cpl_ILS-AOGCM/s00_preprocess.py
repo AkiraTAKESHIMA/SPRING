@@ -13,7 +13,8 @@ import s___util as lutil
 
 
 def preprocess(cnf):
-    pass
+    for meshName in cnf[k.m]:
+        cnf[k.m][meshName]['name'] = meshName
 
 
 def run(update_data):

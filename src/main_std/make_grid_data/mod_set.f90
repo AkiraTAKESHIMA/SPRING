@@ -69,9 +69,9 @@ subroutine read_settings(a)
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'grid_system_latlon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'grid_system_raster'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'grid_system_polygon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'mesh_polygon'
   character(CLEN_VAR), parameter :: BLOCK_NAME_OPT        = 'options'
 
   character(CLEN_VAR) :: block_name

@@ -78,9 +78,9 @@ subroutine read_settings(gs_source, gs_target, rt)
   integer :: iFile_vrf
   character(CLEN_KEY) :: grid
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'grid_system_latlon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'grid_system_raster'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'grid_system_polygon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'mesh_polygon'
   character(CLEN_VAR), parameter :: BLOCK_NAME_REMAPPING  = 'remapping'
   character(CLEN_VAR), parameter :: BLOCK_NAME_OPT        = 'options'
   character(CLEN_VAR), parameter :: BLOCK_NAME_FIG        = 'figures'
@@ -203,7 +203,7 @@ subroutine read_settings(gs_source, gs_target, rt)
                 '\n  opt%earth%shp == '//str(opt%earth%shp)//&
                   ' .and. '//str(a%id)//'%gs_type == '//str(a%gs_type)//&
                 '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                  ' for the grid type "'//str(a%gs_type)//'".')
+                  ' for the mesh type "'//str(a%gs_type)//'".')
       endselect
     enddo
   endif
@@ -240,7 +240,7 @@ subroutine read_settings(gs_source, gs_target, rt)
                   '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
                     ' .and. '//str(ac%id)//'%gs_type /= '//str(GS_TYPE_RASTER)//&
                   '\nForm of verification data for '//str(grid)//' grid is "'//&
-                    str(GRID_FORM_RASTER)//'", but grid type is "'//str(ac%gs_type)//'".')
+                    str(GRID_FORM_RASTER)//'", but mesh type is "'//str(ac%gs_type)//'".')
         endif
       !---------------------------------------------------------
       ! Case: ERROR
@@ -355,7 +355,7 @@ subroutine update_counter(n, block_name)
         BLOCK_NAME_GS_POLYGON )
     if( n > 2 )then
       call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-              '\nBlocks of grid system appeared more than twice:'//&
+              '\nBlocks of mesh appeared more than twice:'//&
               '\n  "'//str(BLOCK_NAME_GS_LATLON)//'"'//&
               '\n  "'//str(BLOCK_NAME_GS_RASTER)//'"'//&
               '\n  "'//str(BLOCK_NAME_GS_POLYGON)//'"')
@@ -380,7 +380,7 @@ subroutine check_number_of_blocks()
   !-------------------------------------------------------------
   if( counter%gs /= 2 )then
     call eerr(str(msg_invalid_input())//&
-            '\nThe number of blocks of grid system is invalid:'//&
+            '\nThe number of blocks of mesh is invalid:'//&
             '\n  "'//str(BLOCK_NAME_GS_LATLON)//'"'//&
             '\n  "'//str(BLOCK_NAME_GS_RASTER)//'"'//&
             '\n  "'//str(BLOCK_NAME_GS_POLYGON)//'"')
@@ -1159,7 +1159,7 @@ subroutine read_settings_gs_polygon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(31)
+  call alloc_keynum(32)
   call set_keynum('name', 0, 1)
   call set_keynum('np', 1, 1)
   call set_keynum('nij', 1, 1)
@@ -1181,6 +1181,7 @@ subroutine read_settings_gs_polygon(a)
   call set_keynum('fin_grdy'  , 0, 1)
   call set_keynum('fin_grdz'  , 0, 1)
   call set_keynum('fin_grdlon', 0, 1)
+  call set_keynum('fin_grdlat', 0, 1)
   call set_keynum('in_grid_sz', 0, 1)
   call set_keynum('in_grid_lb', 0, 1)
   call set_keynum('in_grid_ub', 0, 1)
@@ -1440,15 +1441,15 @@ subroutine check_keynum_relations()
        keynum('in_grid_ub') == 1) )then
     call ewrn(str(msg_undesirable_input())//&
             '\nAny value is given by the following keywords:'//&
-            '\n  "'//str('in_grid_sz')//'"'//&
-            '\n  "'//str('in_grid_lb')//'"'//&
-            '\n  "'//str('in_grid_ub')//'"'//&
+            '\n  "in_grid_sz"'//&
+            '\n  "in_grid_lb"'//&
+            '\n  "in_grid_ub"'//&
             '\nbut any value is not given by the following keywords:'//&
-            '\n  "'//str('fin_grdidx')//'"'//&
-            '\n  "'//str('fin_grdara')//'"'//&
-            '\n  "'//str('fin_grdwgt')//'"'//&
-            '\n  "'//str('fin_grdx')//'"'//&
-            '\n  "'//str('fin_grdlon')//'"'//&
+            '\n  "fin_grdidx"'//&
+            '\n  "fin_grdara"'//&
+            '\n  "fin_grdwgt"'//&
+            '\n  "fin_grdx"'//&
+            '\n  "fin_grdlon"'//&
             '\nThe inputs given by the former keywords are ignored.')
   endif
   !-------------------------------------------------------------
@@ -1543,8 +1544,8 @@ subroutine read_settings_remapping(rt, s, t)
   call alloc_keynum(30)
   call set_keynum('rt_status', 0, 1)
   call set_keynum('mode', 0, 1)
-  call set_keynum('grid_coef', 0, 1)
-  call set_keynum('grid_sort', 0, 1)
+  call set_keynum('mesh_coef', 0, 1)
+  call set_keynum('mesh_sort', 0, 1)
   call set_keynum('allow_empty', 0, 1)
   call set_keynum('dir', 0, -1)
   call set_keynum('fin_grdval' , 0, -1)
@@ -1657,10 +1658,10 @@ subroutine read_settings_remapping(rt, s, t)
     case( 'mode' )
       call read_value(rtm%mode, is_keyword=.true.)
 
-    case( 'grid_coef' )
+    case( 'mesh_coef' )
       call read_value(rtm%grid_coef, is_keyword=.true.)
 
-    case( 'grid_sort' )
+    case( 'mesh_sort' )
       call read_value(rtm%grid_sort, is_keyword=.true.)
 
     case( 'allow_empty' )
@@ -1780,14 +1781,14 @@ subroutine assert_cst_vrfForm_gsType(gsType)
       call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
               '\n  key: '//str(key())//&
               '\n  val: '//str(fvrf%form)//&
-              '\nThis value is invalid for grid type "'//str(gsType)//'."')
+              '\nThis value is invalid for mesh type "'//str(gsType)//'."')
     endif
   case( GS_TYPE_RASTER )
     if( key() == GRID_FORM_AUTO )then
       call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
               '\n  key: '//str(key())//&
               '\n  val: '//str(fvrf%form)//&
-              '\nThis value is invalid for grid type "'//str(gsType)//'."')
+              '\nThis value is invalid for mesh type "'//str(gsType)//'."')
     endif
   case default
     call eerr('Invalid value in $gs_type: '//str(gsType))
@@ -1954,10 +1955,10 @@ subroutine check_keynum_relations()
   ! Options for coef
   !--------------------------------------------------------------
   if( keynum('fout_rt_coef') == 0 )then
-    if( keynum('grid_coef') == 1 )then
+    if( keynum('mesh_coef') == 1 )then
       call ewrn(str(msg_undesirable_input())//&
-             '\n"grid_coef is given although "fout_rt_coef" is not given.'//&
-                ' The input given by "grid_coef" is ignored.')
+             '\n"mesh_coef is given although "fout_rt_coef" is not given.'//&
+                ' The input given by "mesh_coef" is ignored.')
     endif
 
     if( keynum(KEY_OPT_COEF_SUM_MODIFY)       == 1 .or. &
@@ -2513,7 +2514,7 @@ subroutine echo_settings_gs_raster(ar)
   call edbg('  Input: ('//str((/fr%lb(1),fr%ub(1)/),dgt_nxy,':')//&
                     ', '//str((/fr%lb(2),fr%ub(2)/),dgt_nxy,':')//')')
 
-  call edbg('Grid data (in)')
+  call edbg('Cell data (in)')
   if( fg_in%idx%path /= '' .or. fg_in%ara%path /= '' .or. fg_in%wgt%path /= '' )then
     call edbg('  Index : '//str(fileinfo(fg_in%idx)))
     call edbg('  Area  : '//str(fileinfo(fg_in%ara)))
@@ -2695,8 +2696,8 @@ subroutine echo_settings_remapping(rt, s, t)
 
   call edbg('Allow empty: '//str(rtm%allow_empty))
 
-  call edbg('Grid to calc coef.: '//str(rtm%grid_coef))
-  call edbg('Grid to sort by index: '//str(rtm%grid_sort))
+  call edbg('Mesh to calc coef.: '//str(rtm%grid_coef))
+  call edbg('Mesh to sort by index: '//str(rtm%grid_sort))
 
   call echo_settings_opt_rt_coef(rtm%opt_coef, 0)
 

@@ -12,7 +12,7 @@ import s___const as lconst
 
 def adjust_config(cnf):
 
-    cnf = pyconf.substitute_gs_landType(cnf)
+    cnf = pyconf.fill_landTypes_meshes(cnf)
     cnf = pyconf.copy_gs_shared(cnf)
     #cnf = pyconf.set_rt_default(cnf)
     cnf = pyconf.join_topdir(cnf, cnf['dir_top'])

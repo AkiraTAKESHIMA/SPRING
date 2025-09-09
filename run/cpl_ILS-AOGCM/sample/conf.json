@@ -1,14 +1,9 @@
 {
   "dir_top": "/data7/akira/SPRING/SPRING",
   "runName": "sample",
-  "landTypes": {
-    "1": ["land", "ocean"],
-    "2": ["river", "noriv"],
-    "3": ["river", "noriv", "noriv_real", "noriv_virt"],
-    "4": ["river", "river_end", "noriv", "ocean"]
-  },
   "meshes": {
-    "OGCM_{landType1}": {
+    "OGCM_{landType}": {
+      "landTypes": ["land", "ocean"],
       "type": "polygon",
       "np": 4,
       "nij": 92160,
@@ -28,7 +23,7 @@
       "coord_unit": "degree",
       "coord_miss": -999.0,
       "fin_grdidx": {
-        "path": "COCO_idx_{landType1}.bin",
+        "path": "COCO_idx_{landType}.bin",
         "dtype": "int4"
       },
       "idx_miss": 0
@@ -80,15 +75,18 @@
       "north":  90,
       "is_south_to_north": true
     },
-    "IO_LSM_bnd_{landType2}": {
+    "IO_LSM_bnd_{landType}": {
+      "landTypes": ["river", "noriv"],
       "nx": 720,
       "ny": 360
     },
-    "IO_LSM_row_{landType3}": {
+    "IO_LSM_row_{landType}": {
+      "landTypes": ["river", "noriv", "noriv_real", "noriv_virt"],
       "nx": 720,
       "ny": 360
     },
-    "IO_RM_row_{landType4}": {
+    "IO_RM_row_{landType}": {
+      "landTypes": ["river", "river_end", "noriv", "ocean"],
       "nx": 720,
       "ny": 360
     },

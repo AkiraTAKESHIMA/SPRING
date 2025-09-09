@@ -47,13 +47,17 @@ class Env():
         self.sdir_log = {}
         for i in range(self.step_max+1):
             jobId = f'{i:02d}_{self.job[i]}'
-            self.sdir_tmp[i] = os.path.join(self.runName, 'tmp', jobId)
-            self.sdir_set[i] = os.path.join(self.runName, 'set', jobId)
-            self.sdir_log[i] = os.path.join(self.runName, 'log', jobId)
+            #self.sdir_tmp[i] = os.path.join(self.runName, 'tmp', jobId)
+            #self.sdir_set[i] = os.path.join(self.runName, 'set', jobId)
+            #self.sdir_log[i] = os.path.join(self.runName, 'log', jobId)
+            self.sdir_tmp[i] = 'tmp/' + jobId
+            self.sdir_set[i] = 'set/' + jobId
+            self.sdir_log[i] = 'log/' + jobId
         self.dir_tmp = self.sdir_tmp[step]
         self.dir_set = self.sdir_set[step]
         self.dir_log = self.sdir_log[step]
-        self.dir_out = os.path.join(self.runName, 'out')
+        #self.dir_out = os.path.join(self.runName, 'out')
+        self.dir_out = 'out'
         os.makedirs(self.dir_tmp, exist_ok=True)
         os.makedirs(self.dir_set, exist_ok=True)
         os.makedirs(self.dir_log, exist_ok=True)
@@ -91,7 +95,7 @@ def exec_program(prog, f_conf, f_log, f_err):
     print(f'stderr: {f_err}')
 
     if pc.returncode != 0:
-        raise Exception(f'Program `{prog}` failed.')
+        raise Exception(f'Program `{prog}` failed. See log file: {f_log}')
         #print(f'*** Program `{prog}` failed.')
 
 

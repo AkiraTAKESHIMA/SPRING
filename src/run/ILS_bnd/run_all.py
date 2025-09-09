@@ -2,8 +2,8 @@ import os
 import sys
 import argparse
 
-sys.path.append('../../src/run/common')
-sys.path.append('../../src/run/ILS_bnd')
+sys.path.append('../../../src/run/common')
+sys.path.append('../../../src/run/ILS_bnd')
 import const, util, conf
 from util import env, istep
 import s___const as lconst

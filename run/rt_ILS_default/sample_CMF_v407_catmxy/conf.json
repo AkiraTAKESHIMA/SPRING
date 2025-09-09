@@ -14,7 +14,7 @@
       "south": -90,
       "north":  90,
       "is_south_to_north": "false",
-      "dir": "dat/grid_system/CaMa-Flood/cmf_v407/glb_06min/1min/CMF",
+      "dir": "dat/mesh/CaMa-Flood/cmf_v407/glb_06min/1min/CMF",
       "fin_catmxy": {
         "path": "raster/1min.catmxy.bin", 
         "dtype": "int2"

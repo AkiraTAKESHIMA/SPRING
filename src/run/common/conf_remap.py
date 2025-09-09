@@ -27,7 +27,7 @@ def block_gs(gs, use_grdara=False):
 def block_gs_latlon(gs, use_grdara):
     s = f'\
 \n\
-[grid_system_latlon]\n\
+[mesh_latlon]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx"]}\n\
   ny: {gs["ny"]}\n'
@@ -85,7 +85,7 @@ def block_gs_latlon(gs, use_grdara):
 def block_gs_raster(gs, use_grdara):
     s = f'\
 \n\
-[grid_system_raster]\n\
+[mesh_raster]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx_raster"]}\n\
   ny: {gs["ny_raster"]}\n\
@@ -139,7 +139,7 @@ def block_gs_raster(gs, use_grdara):
 def block_gs_polygon(gs, use_grdara):
     s = f'\
 \n\
-[grid_system_polygon]\n\
+[mesh_polygon]\n\
   name: "{gs["name"]}"\n\
   np: {gs["np"]}\n\
   nij: {gs["nij"]}\n'

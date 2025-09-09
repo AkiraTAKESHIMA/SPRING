@@ -63,9 +63,9 @@ subroutine read_settings(s, t, dout)
 
   character(CLEN_VAR) :: block_name
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: block_name_gs_latlon  = 'grid_system_latlon'
-  character(CLEN_VAR), parameter :: block_name_gs_raster  = 'grid_system_raster'
-  character(CLEN_VAR), parameter :: block_name_gs_polygon = 'grid_system_polygon'
+  character(CLEN_VAR), parameter :: block_name_gs_latlon  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: block_name_gs_raster  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: block_name_gs_polygon = 'mesh_polygon'
   character(CLEN_VAR), parameter :: block_name_raster     = 'raster'
   character(CLEN_VAR), parameter :: block_name_output     = 'output'
   character(CLEN_VAR), parameter :: block_name_opt        = 'options'
