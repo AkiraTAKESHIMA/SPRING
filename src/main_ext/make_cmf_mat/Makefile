@@ -10,7 +10,7 @@ mod_main.o\
 main.o
 
 TARGET = main
-BINDIR = $(TOPSRCDIR)/../bin/main_ext
+BINDIR = $(TOPSRCDIR)/../bin/ext
 BIN = $(BINDIR)/make_cmf_mat.exe
 
 all:

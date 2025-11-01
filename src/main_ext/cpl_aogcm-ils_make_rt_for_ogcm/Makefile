@@ -12,7 +12,7 @@ mod_finalize.o\
 main.o
 
 TARGET = main
-BINDIR = $(TOPSRCDIR)/../bin/main_ext
+BINDIR = $(TOPSRCDIR)/../bin/ext
 BIN = $(BINDIR)/cpl_aogcm-ils_make_rt_for_ogcm.exe
 
 all:

@@ -13,7 +13,7 @@ mod_finalize.o\
 main.o
 
 TARGET = main
-BINDIR = $(TOPSRCDIR)/../bin/main_ext
+BINDIR = $(TOPSRCDIR)/../bin/ext
 BIN = $(BINDIR)/cpl_aogcm-ils_define_mat.exe
 
 all:

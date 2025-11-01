@@ -15,7 +15,7 @@ include $(TOPSRCDIR)/Mkinclude
 	@:
 
 TARGET = main
-BINDIR = $(TOPSRCDIR)/../bin/main_std
+BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/rasterize.exe
 
 OBJ_F = \
