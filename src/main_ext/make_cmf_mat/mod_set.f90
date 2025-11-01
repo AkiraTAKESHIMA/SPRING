@@ -194,14 +194,17 @@ subroutine read_settings_cmn(cmn)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(11)
+  call alloc_keynum()
+
   call set_keynum('nx_grid', 1, 1)
   call set_keynum('ny_grid', 1, 1)
   call set_keynum('nx_raster', 1, 1)
   call set_keynum('ny_raster', 1, 1)
+
   call set_keynum('nx_tile', 0, 1)
   call set_keynum('ny_tile', 0, 1)
   call set_keynum('ntiles', 0, 1)
+
   call set_keynum('west' , 0, 1)
   call set_keynum('east' , 0, 1)
   call set_keynum('south', 0, 1)
@@ -367,20 +370,24 @@ subroutine read_settings_cmf(cmn, cmf)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(40)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
+
   call set_keynum('fin_nextxy'     , 1, 1)
   call set_keynum('fin_basin'      , 0, 1)
   call set_keynum('fin_catmxy'     , 0, 1)
   call set_keynum('fin_list_catmxy', 0, 1)
   call set_keynum('dtype_catmxy'   , 0, 1)
   call set_keynum('endian_catmxy'  , 0, 1)
+
   call set_keynum('fout_grdidx_river'       , 1, 1)
   call set_keynum('fout_grdidx_river_end'   , 0, 1)
   call set_keynum('fout_grdidx_river_mouth' , 0, 1)
   call set_keynum('fout_grdidx_river_inland', 0, 1)
   call set_keynum('fout_grdidx_noriv'       , 0, 1)
   call set_keynum('fout_grdidx_ocean'       , 0, 1)
+
   call set_keynum('fout_rstidx_river'       , 0, 1)
   call set_keynum('fout_rstidx_river_end'   , 0, 1)
   call set_keynum('fout_rstidx_river_mouth' , 0, 1)
@@ -388,6 +395,7 @@ subroutine read_settings_cmf(cmn, cmf)
   call set_keynum('fout_rstidx_noriv'       , 0, 1)
   call set_keynum('fout_rstidx_ocean'       , 0, 1)
   call set_keynum('fout_rstbsn'             , 0, 1)
+
   call set_keynum('dirout_rstidx_river'       , 0, 1)
   call set_keynum('dirout_rstidx_river_end'   , 0, 1)
   call set_keynum('dirout_rstidx_river_mouth' , 0, 1)
@@ -399,6 +407,7 @@ subroutine read_settings_cmf(cmn, cmf)
   call set_keynum('endian_rstidx', 0, 1)
   call set_keynum('dtype_rstbsn' , 0, 1)
   call set_keynum('endian_rstbsn', 0, 1)
+
   call set_keynum('catmxy_noriv_coastal', 0, 1)
   call set_keynum('catmxy_noriv_inland' , 0, 1)
   call set_keynum('catmxy_ocean'        , 0, 1)
@@ -407,6 +416,7 @@ subroutine read_settings_cmf(cmn, cmf)
   call set_keynum('nextxy_ocean'       , 0, 1)
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('bsn_miss', 0, 1)
+
   call set_keynum('idx_condition', 0, 1)
   !call set_keynum('opt_invalid_grdidx_catmxy', 0, 1)
 
@@ -861,8 +871,10 @@ subroutine read_settings_mat(cmn, mat)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(49)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
+
   call set_keynum('fout_grdmsk_river'       , 0, 1)
   call set_keynum('fout_grdmsk_river_end'   , 0, 1)
   call set_keynum('fout_grdmsk_river_mouth' , 0, 1)
@@ -880,6 +892,7 @@ subroutine read_settings_mat(cmn, mat)
   call set_keynum('fout_grdidx_bnd_noriv'       , 0, 1)
   call set_keynum('fout_grdidx_mkbnd_river', 0, 1)
   call set_keynum('fout_grdidx_mkbnd_noriv', 0, 1)
+
   call set_keynum('fout_rstidx_river'       , 0, 1)
   call set_keynum('fout_rstidx_river_end'   , 0, 1)
   call set_keynum('fout_rstidx_river_mouth' , 0, 1)
@@ -892,6 +905,7 @@ subroutine read_settings_mat(cmn, mat)
   call set_keynum('fout_rstidx_bnd_noriv'       , 0, 1)
   call set_keynum('fout_rstidx_mkbnd_river', 0, 1)
   call set_keynum('fout_rstidx_mkbnd_noriv', 0, 1)
+
   call set_keynum('dirout_rstidx_river'       , 0, 1)
   call set_keynum('dirout_rstidx_river_end'   , 0, 1)
   call set_keynum('dirout_rstidx_river_mouth' , 0, 1)
@@ -910,6 +924,7 @@ subroutine read_settings_mat(cmn, mat)
   call set_keynum('dirout_rstidx_mkbnd_noriv', 0, 1)
   call set_keynum('dtype_rstidx_mkbnd' , 0, 1)
   call set_keynum('endian_rstidx_mkbnd', 0, 1)
+
   call set_keynum('idx_miss', 0, 1)
 
   call echo(code%ext)
@@ -1378,7 +1393,8 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(5)
+  call alloc_keynum()
+
   call set_keynum(KEY_OLD_FILES, 0, 1)
   call set_keynum(KEY_EARTH_SHAPE, 0, 1)
   call set_keynum(KEY_EARTH_R    , 0, 1)

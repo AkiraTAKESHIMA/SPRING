@@ -306,7 +306,7 @@ subroutine read_settings_input(input)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(11)
+  call alloc_keynum()
   call set_keynum('dir', 0, -1)
   call set_keynum('length_rt', 1, -1)
   call set_keynum('f_rt_sidx', 1, -1)
@@ -634,10 +634,10 @@ subroutine read_settings_output(output)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(30)
+  call alloc_keynum()
   call set_keynum('dir', 0, -1)
-  call set_keynum('grid_coef', 0, 1)
-  call set_keynum('grid_sort', 0, 1)
+  call set_keynum('mesh_coef', 0, 1)
+  call set_keynum('mesh_sort', 0, 1)
   call set_keynum('f_rt_sidx', 1, 1)
   call set_keynum('f_rt_tidx', 1, 1)
   call set_keynum('f_rt_area', 1, 1)
@@ -708,10 +708,10 @@ subroutine read_settings_output(output)
       call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Remapping table
-    case( 'grid_coef' )
+    case( 'mesh_coef' )
       call read_value(rtm%grid_coef, is_keyword=.true.)
 
-    case( 'grid_sort' )
+    case( 'mesh_sort' )
       call read_value(rtm%grid_sort, is_keyword=.true.)
 
     case( 'f_rt_sidx' )
@@ -774,7 +774,7 @@ subroutine read_settings_output(output)
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  rtm%grid_coef: '//str(rtm%grid_coef)//&
-            '\nCheck value of "grid_coef".')
+            '\nCheck value of "mesh_coef".')
   endselect
 
   selectcase( rtm%grid_sort )
@@ -846,7 +846,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)

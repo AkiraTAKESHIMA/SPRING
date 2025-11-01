@@ -40,7 +40,10 @@ module cmn2_rt_base
   public :: set_default_values_rt_vrf
   public :: set_default_values_rt_vrf_file
 
-  public :: set_endian_file_rt_main
+  public :: set_endian_rt_main_file
+  public :: set_status_rt_main_file
+  public :: set_action_rt_main_file
+  public :: apply_oldfiles_rt_main_file
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -60,6 +63,8 @@ subroutine init_rt(rt)
   call init_rt_main(rt%main)
   call init_rt_vrf(rt%vrf_source)
   call init_rt_vrf(rt%vrf_target)
+
+  rt%status = RT_STATUS__MAKE
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine init_rt
@@ -74,7 +79,6 @@ subroutine init_rt_main(rtm)
   !-------------------------------------------------------------
   rtm%id = ''
 
-  rtm%status = STATUS_UNDEF
   rtm%grid_coef = GRID_NONE
   rtm%grid_sort = GRID_NONE
   rtm%allow_empty = .true.
@@ -407,24 +411,30 @@ end subroutine clear_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt(rt, nFiles_vrf_source, nFiles_vrf_target)
+subroutine set_default_values_rt(&
+    rt, &
+    status, &
+    nFiles_vrf_src, nFiles_vrf_tgt)
   implicit none
   type(rt_), intent(inout) :: rt
-  integer  , intent(in), optional :: nFiles_vrf_source, nFiles_vrf_target
+  character(*), intent(in), optional :: status
+  integer     , intent(in), optional :: nFiles_vrf_src, nFiles_vrf_tgt
 
-  integer :: nFiles_vrf_source_, nFiles_vrf_target_
+  integer :: nFiles_vrf_src_, nFiles_vrf_tgt_
 
   call echo(code%bgn, 'set_default_values_rt', '-p -x2')
   !-------------------------------------------------------------
-  nFiles_vrf_source_ = rt%vrf_source%nFiles
-  nFiles_vrf_target_ = rt%vrf_target%nFiles
-  if( present(nFiles_vrf_source) ) nFiles_vrf_source_ = nFiles_vrf_source
-  if( present(nFiles_vrf_target) ) nFiles_vrf_target_ = nFiles_vrf_target
+  nFiles_vrf_src_ = rt%vrf_source%nFiles
+  nFiles_vrf_tgt_ = rt%vrf_target%nFiles
+  if( present(nFiles_vrf_src) ) nFiles_vrf_src_ = nFiles_vrf_src
+  if( present(nFiles_vrf_tgt) ) nFiles_vrf_tgt_ = nFiles_vrf_tgt
   !-------------------------------------------------------------
   call set_default_values_rt_main(rt%main, rt%id)
 
-  call set_default_values_rt_vrf(rt%vrf_source, .true. , rt%id, nFiles_vrf_source_)
-  call set_default_values_rt_vrf(rt%vrf_target, .false., rt%id, nFiles_vrf_target_)
+  if( present(status) ) rt%status = status
+
+  call set_default_values_rt_vrf(rt%vrf_source, .true. , rt%id, nFiles_vrf_src_)
+  call set_default_values_rt_vrf(rt%vrf_target, .false., rt%id, nFiles_vrf_tgt_)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_default_values_rt
@@ -433,12 +443,12 @@ end subroutine set_default_values_rt
 !===============================================================
 subroutine set_default_values_rt_main(&
     rtm, &
-    id, status, mode, grid_coef, grid_sort, allow_empty, &
+    id, &
+    mode, grid_coef, grid_sort, allow_empty, &
     sorted_grid, nij)
   implicit none
   type(rt_main_), intent(inout) :: rtm
-  character(*)  , intent(in), optional :: id
-  character(*), intent(in), optional :: status
+  character(*), intent(in), optional :: id
   character(*), intent(in), optional :: mode
   character(*), intent(in), optional :: grid_coef
   character(*), intent(in), optional :: grid_sort
@@ -447,7 +457,6 @@ subroutine set_default_values_rt_main(&
   integer(8)  , intent(in), optional :: nij
 
   character(CLEN_VAR) :: id_
-  character(CLEN_KEY) :: status_
   character(CLEN_KEY) :: mode_
   character(CLEN_KEY) :: grid_coef_
   character(CLEN_KEY) :: grid_sort_
@@ -458,7 +467,6 @@ subroutine set_default_values_rt_main(&
   call echo(code%bgn, 'set_default_values_rt_main', '-p -x2')
   !-------------------------------------------------------------
   id_ = 'rt'
-  status_ = STATUS_UNKNOWN
   mode_ = REMAP_MODE_1ST_ORDER_CONSERVATIVE
   grid_coef_ = GRID_TARGET
   grid_sort_ = GRID_TARGET
@@ -467,7 +475,6 @@ subroutine set_default_values_rt_main(&
   nij_ = 0_8
 
   if( present(id) ) id_ = id
-  if( present(status) ) status_ = status
   if( present(mode) ) mode_ = mode
   if( present(grid_coef) ) grid_coef_ = grid_coef
   if( present(grid_sort) ) grid_sort_ = grid_sort
@@ -476,8 +483,6 @@ subroutine set_default_values_rt_main(&
   if( present(nij) ) nij_ = nij
 
   rtm%id = trim(id_)//'%main'
-
-  rtm%status = status_
 
   rtm%mode = mode_
 
@@ -540,27 +545,8 @@ subroutine set_default_values_rt_main_file(rtm)
   implicit none
   type(rt_main_), intent(inout) :: rtm
 
-  character(clen_key) :: action
-
   call echo(code%bgn, 'set_default_values_rt_main_file', '-p -x2')
   !-------------------------------------------------------------
-  selectcase( rtm%status )
-  case( STATUS_OLD )
-    action = ACTION_READ
-  case( STATUS_NEW )
-    action = ACTION_WRITE
-  case( STATUS_REPLACE )
-    action = ACTION_WRITE
-  case( STATUS_UNKNOWN )
-    action = ACTION_UNDEF
-  case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%status: '//str(rtm%status))
-  endselect
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call set_file_default(action=action)
   rtm%f%sidx = file(dtype=DTYPE_INT4, rec=1, id=trim(rtm%id)//'%f%sidx')
   rtm%f%tidx = file(dtype=DTYPE_INT4, rec=2, id=trim(rtm%id)//'%f%tidx')
   rtm%f%area = file(dtype=DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%area')
@@ -694,13 +680,13 @@ end subroutine set_default_values_rt_vrf_file
 !===============================================================
 !
 !===============================================================
-subroutine set_endian_file_rt_main(&
+subroutine set_endian_rt_main_file(&
     f_rtm, endian)
   implicit none
   type(file_rt_main_), intent(inout) :: f_rtm
   character(*), intent(in) :: endian
 
-  call echo(code%bgn, 'set_endian_file_rt_main', '-p -x2')
+  call echo(code%bgn, 'set_endian_rt_main_file', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -710,7 +696,102 @@ subroutine set_endian_file_rt_main(&
   f_rtm%coef%endian = endian
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine set_endian_file_rt_main
+end subroutine set_endian_rt_main_file
+!===============================================================
+!
+!===============================================================
+subroutine set_status_rt_main_file(&
+    f_rtm, status)
+  implicit none
+  type(file_rt_main_), intent(inout) :: f_rtm
+  character(*), intent(in) :: status
+
+  call echo(code%bgn, 'set_status_rt_main_file', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  f_rtm%sidx%status = status
+  f_rtm%tidx%status = status
+  f_rtm%area%status = status
+  f_rtm%coef%status = status
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine set_status_rt_main_file
+!===============================================================
+!
+!===============================================================
+subroutine set_action_rt_main_file(&
+    f_rtm, action)
+  implicit none
+  type(file_rt_main_), intent(inout) :: f_rtm
+  character(*), intent(in) :: action
+
+  call echo(code%bgn, 'set_action_rt_main_file', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  f_rtm%sidx%action = action
+  f_rtm%tidx%action = action
+  f_rtm%area%action = action
+  f_rtm%coef%action = action
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine set_action_rt_main_file
+!===============================================================
+!
+!===============================================================
+subroutine apply_oldfiles_rt_main_file(rt, opt_old_files)
+  implicit none
+  type(rt_), intent(inout), target :: rt
+  character(*), intent(in), optional :: opt_old_files
+
+  type(file_rt_main_), pointer :: f_rtm
+  character(CLEN_KEY) :: status, action
+
+  call echo(code%bgn, 'apply_oldfiles_rt_main_file', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( rt%status )
+  case( RT_STATUS__MAKE )
+    selectcase( opt_old_files )
+    case( OPT_OLD_FILES_STOP )
+      status = STATUS_NEW
+      action = ACTION_WRITE
+    case( OPT_OLD_FILES_REMOVE )
+      status = STATUS_REPLACE
+      action = ACTION_READWRITE
+    case( OPT_OLD_FILES_OVERWRITE )
+      status = STATUS_UNKNOWN
+      action = ACTION_READWRITE
+    case default
+      call eerr(str(msg_invalid_value())//&
+              '\n  Invalid value in $opt_old_files: '//str(opt_old_files))
+    endselect
+  case( RT_STATUS__READ )
+    status = STATUS_OLD
+    action = ACTION_READ
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in $rt%status: '//str(rt%status))
+  endselect
+
+  f_rtm => rt%main%f
+
+  f_rtm%sidx%status = status
+  f_rtm%tidx%status = status
+  f_rtm%area%status = status
+  f_rtm%coef%status = status
+
+  f_rtm%sidx%action = action
+  f_rtm%tidx%action = action
+  f_rtm%area%action = action
+  f_rtm%coef%action = action
+
+  nullify(f_rtm)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine apply_oldfiles_rt_main_file
 !===============================================================
 !
 !===============================================================

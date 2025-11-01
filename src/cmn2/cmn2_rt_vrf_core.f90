@@ -226,15 +226,20 @@ end subroutine calc_grdara_rt
 !
 !===============================================================
 subroutine calc_rerr_grdara(&
-    grdara_true, grdara_rt, val_miss, grdmsk, rerr_grdara)
+    grdara_true, grdara_rt, val_miss, grdmsk, rerr_grdara, &
+    u)
   implicit none
   real(8)   , intent(in)  :: grdara_true(:)
   real(8)   , intent(in)  :: grdara_rt(:)
   real(8)   , intent(in)  :: val_miss
   logical(1), intent(in)  :: grdmsk(:)
   real(8)   , intent(out) :: rerr_grdara(:)
+  type(gs_) , intent(in), target :: u
 
+  type(gs_common_), pointer :: uc
+  type(gs_raster_), pointer :: ur
   integer(8) :: nij, ij
+  logical :: is_zero_grdara_true_allowed
 
   call echo(code%bgn, 'calc_rerr_grdara')
   !-------------------------------------------------------------
@@ -265,9 +270,45 @@ subroutine calc_rerr_grdara(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  uc => u%cmn
+  selectcase( u%gs_type )
+  case( GS_TYPE_RASTER )
+    ur => u%raster
+    is_zero_grdara_true_allowed = &
+      uc%f_grid_in%ara%path /= '' .or. &
+      ur%idx_condition == IDX_CONDITION__RST_IN_GRD
+  case( GS_TYPE_LATLON, &
+        GS_TYPE_POLYGON )
+    is_zero_grdara_true_allowed = uc%f_grid_in%ara%path /= ''
+  endselect
+
   do ij = 1_8, nij
     if( grdmsk(ij) )then
-      rerr_grdara(ij) = (grdara_rt(ij) - grdara_true(ij)) / grdara_true(ij)
+      if( grdara_true(ij) > 0.d0 )then
+        rerr_grdara(ij) = (grdara_rt(ij) - grdara_true(ij)) / grdara_true(ij)
+      elseif( grdara_true(ij) == 0.d0 )then
+        if( is_zero_grdara_true_allowed )then
+          if( grdara_rt(ij) /= 0.d0 )then
+            call eerr(str(msg_unexpected_condition())//&
+                    '\n  Grid area calculated from remapping table is not zero '//&
+                      'although its true value is zero.'//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  Grid area from rt: '//str(grdara_rt(ij))//&
+                    '\n  True value       : '//str(grdara_true(ij)))
+          endif
+          rerr_grdara(ij) = val_miss
+        else
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  The true value of grid area is equal to zero.'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  Grid area: '//str(grdara_true(ij)))
+        endif
+      else
+        call eerr(str(msg_unexpected_condition())//&
+               '\nThe true value of grid area is negative.'//&
+               '\n  ij: '//str(ij)//&
+               '\n  area: '//str(grdara_true(ij)))
+      endif
     else
       rerr_grdara(ij) = val_miss
     endif

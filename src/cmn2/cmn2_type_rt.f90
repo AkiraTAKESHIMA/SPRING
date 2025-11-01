@@ -67,7 +67,6 @@ module cmn2_type_rt
   type rt_main_
     character(CLEN_VAR) :: id
 
-    character(CLEN_VAR) :: status
     character(CLEN_VAR) :: mode
     character(CLEN_KEY) :: grid_coef
     character(CLEN_KEY) :: grid_sort
@@ -141,6 +140,7 @@ module cmn2_type_rt
     type(rt_main_) :: main
     type(rt_vrf_)  :: vrf_source
     type(rt_vrf_)  :: vrf_target
+    character(CLEN_KEY) :: status  !cmn1 RT_STATUS__*
   end type
 
   type rt1d_

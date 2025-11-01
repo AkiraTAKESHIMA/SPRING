@@ -384,8 +384,10 @@ subroutine read_settings_gs_latlon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(26)
+  call alloc_keynum()
+
   call set_keynum('name', 0, 1)
+
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
   call set_keynum('west' , 0, 1)
@@ -393,11 +395,14 @@ subroutine read_settings_gs_latlon(u)
   call set_keynum('south', 0, 1)
   call set_keynum('north', 0, 1)
   call set_keynum('is_south_to_north', 0, 1)
+
   call set_keynum('dir', 0, -1)
   call set_keynum('f_lon_bound', 0, 1)
   call set_keynum('f_lat_bound', 0, 1)
   call set_keynum('coord_unit', 0, 1)
+
   call set_keynum('idx_bgn', 0, 1)
+
   call set_keynum('fin_grdidx', 0, 1)
   call set_keynum('fin_grdara', 0, 1)
   call set_keynum('fin_grdwgt', 0, 1)
@@ -406,10 +411,12 @@ subroutine read_settings_gs_latlon(u)
   call set_keynum('in_grid_lb', 0, 1)
   call set_keynum('in_grid_ub', 0, 1)
   call set_keynum('in_unit_ara', 0, 1)
+
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('ara_miss', 0, 1)
   call set_keynum('wgt_miss', 0, 1)
   call set_keynum('val_miss', 0, 1)
+
   call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
@@ -736,11 +743,15 @@ subroutine read_settings_gs_polygon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(31)
+  call alloc_keynum()
+
   call set_keynum('name', 0, 1)
+
   call set_keynum('np', 1, 1)
   call set_keynum('nij', 1, 1)
+
   call set_keynum('dir', 0, -1)
+
   call set_keynum('f_lon_vertex', 0, 1)
   call set_keynum('f_lat_vertex', 0, 1)
   call set_keynum('f_x_vertex'  , 0, 1)
@@ -748,25 +759,25 @@ subroutine read_settings_gs_polygon(u)
   call set_keynum('f_z_vertex'  , 0, 1)
   call set_keynum('coord_unit'  , 0, 1)
   call set_keynum('coord_miss'  , 0, 1)
+
   call set_keynum('f_arctyp'    , 0, 1)
   call set_keynum('arc_parallel', 0, 1)
+
   call set_keynum('idx_bgn', 0, 1)
+
   call set_keynum('fin_grdidx', 0, 1)
   call set_keynum('fin_grdara', 0, 1)
   call set_keynum('fin_grdwgt', 0, 1)
-  call set_keynum('fin_grdx'  , 0, 1)
-  call set_keynum('fin_grdy'  , 0, 1)
-  call set_keynum('fin_grdz'  , 0, 1)
-  call set_keynum('fin_grdlon', 0, 1)
   call set_keynum('in_grid_sz', 0, 1)
   call set_keynum('in_grid_lb', 0, 1)
   call set_keynum('in_grid_ub', 0, 1)
-  call set_keynum('idx_miss'   , 0, 1)
-  call set_keynum('ara_miss'   , 0, 1)
-  call set_keynum('wgt_miss'   , 0, 1)
-  call set_keynum('xyz_miss'   , 0, 1)
-  call set_keynum('lonlat_miss', 0, 1)
-  call set_keynum('val_miss'   , 0, 1)
+  call set_keynum('in_unit_ara', 0, 1)
+
+  call set_keynum('idx_miss', 0, 1)
+  call set_keynum('ara_miss', 0, 1)
+  call set_keynum('wgt_miss', 0, 1)
+  call set_keynum('val_miss', 0, 1)
+
   call set_keynum('idx_debug', 0, 1)
 
   call echo(code%ext)
@@ -908,6 +919,8 @@ subroutine read_settings_gs_polygon(u)
     ! Missing values
     case( 'idx_miss' )
       call read_value(up%idx_miss)
+    case( 'ara_miss' )
+      call read_value(up%ara_miss)
     case( 'wgt_miss' )
       call read_value(up%wgt_miss)
     case( 'val_miss' )
@@ -1035,8 +1048,6 @@ subroutine check_keynum_relations()
   if( keynum('fin_grdidx') == 0 .and. &
       keynum('fin_grdara') == 0 .and. &
       keynum('fin_grdwgt') == 0 .and. &
-      keynum('fin_grdx'  ) == 0 .and. &
-      keynum('fin_grdlon') == 0 .and. &
       (keynum('in_grid_sz') == 1 .or. &
        keynum('in_grid_lb') == 1 .or. &
        keynum('in_grid_ub') == 1) )then
@@ -1049,8 +1060,6 @@ subroutine check_keynum_relations()
             '\n  "'//str('fin_grdidx')//'"'//&
             '\n  "'//str('fin_grdara')//'"'//&
             '\n  "'//str('fin_grdwgt')//'"'//&
-            '\n  "'//str('fin_grdx')//'"'//&
-            '\n  "'//str('fin_grdlon')//'"'//&
             '\nThe inputs given by the former keywords are ignored.')
   endif
   !-------------------------------------------------------------
@@ -1066,18 +1075,6 @@ subroutine check_keynum_relations()
     call ewrn(str(msg_undesirable_input())//&
             '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
               ' The input for "wgt_miss" is ignored.')
-  endif
-
-  if( keynum('fin_grdx') == 0 .and. keynum('xyz_miss') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"xyz_miss" is given although "fin_grdx" is not given.'//&
-              ' The input for "xyz_miss" is ignored.')
-  endif
-
-  if( keynum('fin_grdlon') == 0 .and. keynum('lonlat_miss') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"lonlat_miss" is given although "fin_grdlon" is not given.'//&
-              ' The input for "lonlat_miss" is ignored.')
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1130,7 +1127,7 @@ subroutine read_settings_raster(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
   call set_keynum('west' , 1, 1)
@@ -1263,7 +1260,7 @@ subroutine read_settings_output(dout)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(12)
+  call alloc_keynum()
   call set_keynum('ratio_min', 0, 1)
   call set_keynum('ratio_max', 0, 1)
   call set_keynum('include_min', 0, 1)
@@ -1477,7 +1474,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)

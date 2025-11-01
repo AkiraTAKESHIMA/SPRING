@@ -110,6 +110,11 @@ module cmn1_const
   integer(8), parameter :: RT1D_IJSIZE_INIT = 8_8
   real(8)   , parameter :: RT1D_EXTEND_RATE = 2.d0
 
+  character(CLEN_KEY), parameter :: RT_STATUS__UNDEF  = 'undef'
+  character(CLEN_KEY), parameter :: RT_STATUS__MAKE   = 'make'
+  character(CLEN_KEY), parameter :: RT_STATUS__READ   = 'read'
+  character(CLEN_KEY), parameter :: RT_STATUS__NONE   = 'none'
+
   character(CLEN_VAR), parameter :: GRID_FORM_AUTO   = 'auto'
   character(CLEN_VAR), parameter :: GRID_FORM_INDEX  = 'index'
   character(CLEN_VAR), parameter :: GRID_FORM_RASTER = 'raster'

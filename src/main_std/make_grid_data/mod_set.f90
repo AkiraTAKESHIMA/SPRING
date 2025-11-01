@@ -87,7 +87,7 @@ subroutine read_settings(a)
 
   call init_gs(a)
   a%id = 'a'
-  a%nam = 'grid'
+  a%nam = 'mesh'
 
   call set_default_values_opt_sys(opt%sys)
   call set_default_values_opt_log(opt%log)
@@ -335,7 +335,7 @@ subroutine read_settings_gs_latlon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(41)
+  call alloc_keynum()
   call set_keynum('name', 0, 1)
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
@@ -657,6 +657,20 @@ subroutine check_keynum_relations()
             '\nThe former inputs are ignored.')
   endif
 
+  selectcase( fg_out%form )
+  case( GRID_FORM_AUTO )
+    continue
+  case( GRID_FORM_INDEX )
+    if( keynum('fin_grdidx') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n  "fin_grdidx" must be given when '//&
+                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
+    endif
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in "out_form": '//str(fg_out%form))
+  endselect
+
   if( keynum('fout_grdidx') == 0 .and. &
       keynum('fout_grdara') == 0 .and. &
       keynum('fout_grdwgt') == 0 .and. &
@@ -760,7 +774,7 @@ subroutine read_settings_gs_raster(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(43)
+  call alloc_keynum()
   call set_keynum('name',0,1)
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
@@ -1030,17 +1044,6 @@ subroutine check_keynum_relations()
   !-------------------------------------------------------------
   ! 
   !-------------------------------------------------------------
-  selectcase( fg_out%form )
-  case( GRID_FORM_AUTO )
-    continue
-  case( GRID_FORM_INDEX )
-    if( keynum('fin_grdidx') == 0 )then
-      call eerr(str(msg_invalid_input())//&
-              '\n  "fin_grdidx" must be given when '//&
-                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
-    endif
-  endselect
-
   if( keynum('fin_grdidx') == 0 )then
     if( keynum('fin_grdara') == 1 .or. keynum('fin_grdwgt') == 1 )then
       call eerr(str(msg_invalid_input())//&
@@ -1066,6 +1069,20 @@ subroutine check_keynum_relations()
     call eerr(str(msg_invalid_input())//&
             '\n  "fin_grdara" and "fin_grdwgt" cannot be given at the same time.')
   endif
+
+  selectcase( fg_out%form )
+  case( GRID_FORM_AUTO )
+    continue
+  case( GRID_FORM_INDEX )
+    if( keynum('fin_grdidx') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n  "fin_grdidx" must be given when '//&
+                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
+    endif
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in "out_form": '//str(fg_out%form))
+  endselect
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_keynum_relations
@@ -1113,7 +1130,7 @@ subroutine read_settings_gs_polygon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(41)
+  call alloc_keynum()
   call set_keynum('name', 0, 1)
   call set_keynum('np', 1, 1)
   call set_keynum('nij', 1, 1)
@@ -1395,17 +1412,6 @@ subroutine check_keynum_relations()
   !-------------------------------------------------------------
   ! Relations
   !-------------------------------------------------------------
-  selectcase( fg_out%form )
-  case( GRID_FORM_AUTO )
-    continue
-  case( GRID_FORM_INDEX )
-    if( keynum('fin_grdidx') == 0 )then
-      call eerr(str(msg_invalid_input())//&
-              '\n  "fin_grdidx" must be given when '//&
-                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
-    endif
-  endselect
-
   if( keynum('f_lon_vertex') == 1 .neqv. keynum('f_lat_vertex') == 1 )then
     call eerr(str(msg_invalid_input())//&
             '\n  Both "f_lon_vertex" and "f_lat_vertex" must be given'//&
@@ -1453,6 +1459,20 @@ subroutine check_keynum_relations()
     call eerr(str(msg_invalid_input())//&
             '\n  "fin_grdara" and "fin_grdwgt" must not be given at the same time.')
   endif
+
+  selectcase( fg_out%form )
+  case( GRID_FORM_AUTO )
+    continue
+  case( GRID_FORM_INDEX )
+    if( keynum('fin_grdidx') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n  "fin_grdidx" must be given when '//&
+                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
+    endif
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in "out_form": '//str(fg_out%form))
+  endselect
   !--------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_keynum_relations
@@ -1489,7 +1509,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum('old_files'           , 0, 1)
   call set_keynum('dir_intermediates'   , 0, 1)
   call set_keynum('remove_intermediates', 0, 1)
@@ -1660,9 +1680,9 @@ subroutine check_paths(a, opt_sys)
   fg_out => a%cmn%f_grid_out
 
   selectcase( fg_out%form )
-  case( grid_form_auto )
+  case( GRID_FORM_AUTO )
     allow_empty = .true.
-  case( grid_form_index )
+  case( GRID_FORM_INDEX )
     allow_empty = .false.
   case default
     call eerr(str(msg_invalid_value())//&
@@ -1796,9 +1816,12 @@ subroutine echo_settings_gs_latlon(al)
   endif
 
   call edbg('Grid data (out)')
-  if( fg_out%form /= '' )then
+  if( fg_out%save_idx .or. fg_out%save_ara .or. &
+      fg_out%save_wgt .or. &
+      fg_out%save_xyz .or. fg_out%save_lonlat )then
     call edbg('  Form: '//str(fg_out%form))
     call edbg('  File of index  : '//str(fileinfo(fg_out%idx)))
+    call edbg('          mask   : '//str(fileinfo(fg_out%msk)))
     call edbg('          area   : '//str(fileinfo(fg_out%ara)))
     call edbg('          weight : '//str(fileinfo(fg_out%wgt)))
     call edbg('          x      : '//str(fileinfo(fg_out%x)))
@@ -1823,8 +1846,8 @@ subroutine echo_settings_gs_latlon(al)
   call edbg('  Index : '//str(al%idx_miss))
   call edbg('  Area  : '//str(al%ara_miss))
   call edbg('  Weight: '//str(al%wgt_miss))
-  call edbg('  XYZ   : '//str(al%xyz_miss))
-  call edbg('  LonLat: '//str(al%lonlat_miss))
+  call edbg('  xyz   : '//str(al%xyz_miss))
+  call edbg('  lonlat: '//str(al%lonlat_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_latlon
@@ -1896,9 +1919,12 @@ subroutine echo_settings_gs_raster(ar)
   endif
 
   call edbg('Grid data (out)')
-  if( fg_out%form /= '' )then
+  if( fg_out%save_idx .or. fg_out%save_ara .or. &
+      fg_out%save_wgt .or. &
+      fg_out%save_xyz .or. fg_out%save_lonlat )then
     call edbg('  Form: '//str(fg_out%form))
     call edbg('  File of index  : '//str(fileinfo(fg_out%idx)))
+    call edbg('          mask   : '//str(fileinfo(fg_out%msk)))
     call edbg('          area   : '//str(fileinfo(fg_out%ara)))
     call edbg('          weight : '//str(fileinfo(fg_out%wgt)))
     call edbg('          x      : '//str(fileinfo(fg_out%x)))
@@ -1926,8 +1952,8 @@ subroutine echo_settings_gs_raster(ar)
   call edbg('  Index : '//str(ar%idx_miss))
   call edbg('  Area  : '//str(ar%ara_miss))
   call edbg('  Weight: '//str(ar%wgt_miss))
-  call edbg('  XYZ   : '//str(ar%xyz_miss))
-  call edbg('  LonLat: '//str(ar%lonlat_miss))
+  call edbg('  xyz   : '//str(ar%xyz_miss))
+  call edbg('  lonlat: '//str(ar%lonlat_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_raster
@@ -1977,9 +2003,9 @@ subroutine echo_settings_gs_polygon(ap)
     call edbg('    Longit.: '//str(fileinfo(fp%lon)))
     call edbg('    Latit. : '//str(fileinfo(fp%lat)))
   case( COORD_SYS_CARTESIAN )
-    call edbg('    X: '//str(fileinfo(fp%x)))
-    call edbg('    Y: '//str(fileinfo(fp%y)))
-    call edbg('    Z: '//str(fileinfo(fp%z)))
+    call edbg('    x: '//str(fileinfo(fp%x)))
+    call edbg('    y: '//str(fileinfo(fp%y)))
+    call edbg('    z: '//str(fileinfo(fp%z)))
   case default
     call eerr(str(msg_invalid_value())//&
            '\n  ap%coord_sys: '//str(ap%coord_sys))
@@ -2014,9 +2040,12 @@ subroutine echo_settings_gs_polygon(ap)
   endif
 
   call edbg('Grid data (out)')
-  if( fg_out%form /= '' )then
+  if( fg_out%save_idx .or. fg_out%save_ara .or. &
+      fg_out%save_wgt .or. &
+      fg_out%save_xyz .or. fg_out%save_lonlat )then
     call edbg('  Form: '//str(fg_out%form))
     call edbg('  File of index  : '//str(fileinfo(fg_out%idx)))
+    call edbg('          mask   : '//str(fileinfo(fg_out%msk)))
     call edbg('          area   : '//str(fileinfo(fg_out%ara)))
     call edbg('          weight : '//str(fileinfo(fg_out%wgt)))
     call edbg('          x      : '//str(fileinfo(fg_out%x)))
@@ -2041,8 +2070,8 @@ subroutine echo_settings_gs_polygon(ap)
   call edbg('  Index : '//str(ap%idx_miss))
   call edbg('  Area  : '//str(ap%ara_miss))
   call edbg('  Weight: '//str(ap%wgt_miss))
-  call edbg('  XYZ   : '//str(ap%xyz_miss))
-  call edbg('  LonLat: '//str(ap%lonlat_miss))
+  call edbg('  xyz   : '//str(ap%xyz_miss))
+  call edbg('  lonlat: '//str(ap%lonlat_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_polygon

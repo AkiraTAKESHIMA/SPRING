@@ -301,11 +301,16 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   call get_stats(al%idxmap, vmin=al%idxmin, vmax=al%idxmax, miss=al%idx_miss, stat=stat)
   al%is_valid = stat == 0
 
-  do iv = al%vi, al%vf
-    do ih = al%hi, al%hf
-      al%mskmap(ih,iv) = al%idxmap(ih,iv) /= al%idx_miss
-    enddo
-  enddo
+!  do iv = al%vi, al%vf
+!    do ih = al%hi, al%hf
+!      al%mskmap(ih,iv) = al%idxmap(ih,iv) /= al%idx_miss
+!    enddo
+!  enddo
+  where( al%idxmap /= al%idx_miss )
+    al%mskmap = .true.
+  elsewhere
+    al%mskmap = .false.
+  endwhere
 
   if( al%is_valid )then
     call edbg('The number of grids        : '//str(size(al%idxmap))//&
@@ -316,11 +321,16 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   endif
 
   if( al%debug )then
-    do iv = al%vi, al%vf
-      do ih = al%hi, al%hf
-        al%mskmap(ih,iv) = al%idxmap(ih,iv) == al%idx_debug
-      enddo
-    enddo
+!    do iv = al%vi, al%vf
+!      do ih = al%hi, al%hf
+!        al%mskmap(ih,iv) = al%idxmap(ih,iv) == al%idx_debug
+!      enddo
+!    enddo
+    where( al%idxmap == al%idx_debug )
+      al%mskmap = .true.
+    elsewhere
+      al%mskmap = .false.
+    endwhere
   endif
   !-------------------------------------------------------------
   call echo(code%ret)

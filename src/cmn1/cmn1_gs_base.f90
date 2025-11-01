@@ -572,7 +572,7 @@ subroutine set_default_values_file_grid_out(fg)
 
   call echo(code%bgn, 'set_default_values_file_grid_out', '-p -x2')
   !-------------------------------------------------------------
-  fg%form = ''
+  fg%form = GRID_FORM_AUTO
 
   fg%save_idx    = .false.
   fg%save_msk    = .false.

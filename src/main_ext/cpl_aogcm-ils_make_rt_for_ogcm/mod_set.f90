@@ -288,7 +288,8 @@ subroutine read_settings_input_rt(rt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(6)
+  call alloc_keynum()
+
   call set_keynum('length', 1, 1)
   call set_keynum('dir', 0, -1)
   call set_keynum('f_sidx', 1, 1)
@@ -400,7 +401,7 @@ subroutine read_settings_input_agcm(agcm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum('nij', 1, 1)
   call set_keynum('dir', 0, -1)
   call set_keynum('f_grdidx', 0, 1)
@@ -522,7 +523,7 @@ subroutine read_settings_input_lsm(lsm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum('nij', 1, 1)
   call set_keynum('dir', 0, -1)
   call set_keynum('f_grdidx', 0, 1)
@@ -658,10 +659,13 @@ subroutine read_settings_output_rt(rt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(20)
+  call alloc_keynum()
+
   call set_keynum('grid_coef', 0, 1)
   call set_keynum('grid_sort', 0, 1)
+
   call set_keynum('dir', 0, -1)
+
   call set_keynum('fout_rt_sidx', 1, 1)
   call set_keynum('fout_rt_tidx', 1, 1)
   call set_keynum('fout_rt_area', 1, 1)
@@ -672,6 +676,7 @@ subroutine read_settings_output_rt(rt)
   call set_keynum(KEY_OPT_COEF_ZERO_NEGATIVE   , 0, 1)
   call set_keynum(KEY_OPT_COEF_ERROR_EXCESS    , 0, 1)
   call set_keynum(KEY_OPT_COEF_SUM_ERROR_EXCESS, 0, 1)
+
   call set_keynum('vrf_source_form'     , 0, -1)
   call set_keynum('vrf_target_form'     , 0, -1)
   call set_keynum('fout_vrf_grdidx'     , 0, -1)
@@ -711,7 +716,10 @@ subroutine read_settings_output_rt(rt)
 
   rtm => rt%main
 
-  call set_default_values_rt(rt, rt%vrf_source%nFiles, rt%vrf_target%nFiles)
+  call set_default_values_rt(&
+         rt, &
+         nFiles_vrf_src=rt%vrf_source%nFiles, &
+         nFiles_vrf_tgt=rt%vrf_target%nFiles)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -949,7 +957,8 @@ subroutine read_settings_opt(opt, opt_ext)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(8)
+  call alloc_keynum()
+
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
@@ -957,6 +966,7 @@ subroutine read_settings_opt(opt, opt_ext)
   call set_keynum(KEY_EARTH_SHAPE, 0, 1)
   call set_keynum(KEY_EARTH_R    , 0, 1)
   call set_keynum(KEY_EARTH_E2   , 0, 1)
+
   call set_keynum('method_rivwat', 0, 1)
 
   call echo(code%ext)

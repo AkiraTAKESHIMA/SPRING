@@ -52,7 +52,7 @@ subroutine make_rt_vrf(rt, a)
 
     selectcase( frtv%form )
     case( GRID_FORM_AUTO, GRID_FORM_INDEX )
-      call make_rt_vrf_grid(rt, iFile, a%cmn)
+      call make_rt_vrf_grid(rt, iFile, a)
     case( GRID_FORM_RASTER )
       continue
     case default
@@ -66,7 +66,7 @@ end subroutine make_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_vrf_grid(rt, iFile, ac)
+subroutine make_rt_vrf_grid(rt, iFile, a)
   ! common1
   use cmn1_opt_ctrl, only: &
         get_opt_log
@@ -82,10 +82,11 @@ subroutine make_rt_vrf_grid(rt, iFile, ac)
         calc_grdara_rt  , &
         calc_rerr_grdara
   implicit none
-  type(rt_)       , intent(inout), target :: rt
-  type(gs_common_), intent(in)   , target :: ac
-  integer         , intent(in)            :: iFile
+  type(rt_), intent(inout), target :: rt
+  type(gs_), intent(in)   , target :: a
+  integer  , intent(in)            :: iFile
 
+  type(gs_common_)    , pointer :: ac
   type(rt_vrf_)       , pointer :: rtv
   type(file_rt_vrf_)  , pointer :: frtv
   type(file_grid_out_), pointer :: fg_out
@@ -103,6 +104,7 @@ subroutine make_rt_vrf_grid(rt, iFile, ac)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  ac => a%cmn
   if( .not. ac%is_valid )then
     call echo(code%ret)
     return
@@ -196,7 +198,8 @@ subroutine make_rt_vrf_grid(rt, iFile, ac)
     call calc_rerr_grdara(&
            rtv%grdara_true, rtv%grdara_rt, rtv%dval_miss, & ! in
            g%msk,                                         & ! in
-           rtv%rerr_grdara)                                 ! out
+           rtv%rerr_grdara,                               & ! out
+           a)                                               ! in
 
     call echo(code%ext)
   endif
