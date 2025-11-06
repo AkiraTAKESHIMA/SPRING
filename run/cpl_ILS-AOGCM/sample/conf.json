@@ -118,7 +118,7 @@
         "river", 
         "noriv"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -129,7 +129,7 @@
         "noriv_real",
         "noriv_virt"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -140,7 +140,7 @@
         "noriv_real",
         "noriv_virt"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -151,7 +151,7 @@
         "noriv_real",
         "noriv_virt"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -162,7 +162,7 @@
         "noriv_real",
         "noriv_virt"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -171,7 +171,7 @@
       "landTypes": [
         "river"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -180,7 +180,7 @@
       "landTypes": [
         "river"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -189,7 +189,7 @@
       "landTypes": [
         "river"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -198,7 +198,7 @@
       "landTypes": [
         "river"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -208,7 +208,7 @@
         "river",
         "noriv"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -218,7 +218,7 @@
         "river",
         "noriv"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -227,7 +227,7 @@
       "landTypes": [
         "noriv"
       ],
-      "grid_coef": "none",
+      "mesh_coef": "none",
       "opt_idx_duplication": "stop"
     },
     "LSM_to_OGCM_via_AGCM": {
@@ -237,7 +237,7 @@
         "noriv_real",
         "noriv_virt"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -247,7 +247,7 @@
         "noriv_real",
         "noriv_virt"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     },
@@ -256,7 +256,7 @@
       "landTypes": [
         "river_end"
       ],
-      "grid_coef": "target",
+      "mesh_coef": "target",
       "opt_coef_sum_modify": 1.0,
       "opt_idx_duplication": "stop"
     }
