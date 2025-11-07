@@ -26,7 +26,7 @@ def make_grid_data(cnf, update_data, landType):
     print('config: '+f_conf)
     fp = open(f_conf, 'w')
     fp.write(conf.make_grid_data.head(f'{env.dir_tmp}/{landType}'))
-    fp.write(conf.make_grid_data.block_gs(
+    fp.write(conf.make_grid_data.block_mesh(
                c, '', '', 
                ['grdidx'], 
                ['idx', 'ara', 'xyz', 'lonlat']

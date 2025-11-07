@@ -93,12 +93,12 @@ subroutine make_idxmap_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_idxmap__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_idxmap__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
@@ -115,12 +115,12 @@ subroutine make_wgtmap_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_wgtmap__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_wgtmap__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
@@ -137,12 +137,12 @@ subroutine make_grdidx_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_grdidx__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_grdidx__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
@@ -159,12 +159,12 @@ subroutine make_grdara_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_grdara__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_grdara__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     call make_grdara__polygon(a%polygon)
   endselect
   !-------------------------------------------------------------
@@ -1918,7 +1918,7 @@ subroutine make_grduwa__raster(ar)
       if( g%msk(ij) )then
         if( g%uwa(ij) < 0.d0 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  g%uwa(ij) <= 0.0'//&
+                  '\n  g%uwa(ij) < 0.0'//&
                   '\n  ij: '//str(ij)//&
                   '\n  idx: '//str(g%idx(ij))//&
                   '\n  uwa: '//str(g%uwa(ij)))

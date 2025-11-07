@@ -27,7 +27,7 @@ def make_grid_data_lsm(cnf, update_data):
         print('config: '+f_conf)
         fp = open(f_conf,'w')
         fp.write(conf.head(env.dir_tmp))
-        fp.write(conf.make_grid_data.block_gs(
+        fp.write(conf.make_grid_data.block_mesh(
                    c, c['dir'], '', 
                    ['rstidx', 'grdidx'],
                    ['idx', 'ara', 'xyz', 'lonlat']))

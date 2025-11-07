@@ -306,7 +306,7 @@ subroutine read_settings_input_rt(rt)
   rtm => rt%main
 
   call set_default_values_rt(rt)
-  rtm%grid_sort = GRID_NONE
+  rtm%mesh_sort = MESH__NONE
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -649,9 +649,10 @@ subroutine read_settings_output_rt(rt)
   type(rt_), intent(inout), target :: rt
 
   type(rt_main_), pointer :: rtm
-  type(file_rt_vrf_), pointer :: fvrf
+  type(rt_vrf_), pointer :: rtv
 
   character(CLEN_PATH) :: dir
+  character(CLEN_KEY) :: mesh_vrf
 
   call echo(code%bgn, 'read_settings_output_rt')
   !-------------------------------------------------------------
@@ -661,8 +662,8 @@ subroutine read_settings_output_rt(rt)
 
   call alloc_keynum()
 
-  call set_keynum('grid_coef', 0, 1)
-  call set_keynum('grid_sort', 0, 1)
+  call set_keynum('mesh_coef', 0, 1)
+  call set_keynum('mesh_sort', 0, 1)
 
   call set_keynum('dir', 0, -1)
 
@@ -677,36 +678,13 @@ subroutine read_settings_output_rt(rt)
   call set_keynum(KEY_OPT_COEF_ERROR_EXCESS    , 0, 1)
   call set_keynum(KEY_OPT_COEF_SUM_ERROR_EXCESS, 0, 1)
 
-  call set_keynum('vrf_source_form'     , 0, -1)
-  call set_keynum('vrf_target_form'     , 0, -1)
+  call set_keynum('mesh_vrf'     , 0, -1)
   call set_keynum('fout_vrf_grdidx'     , 0, -1)
   call set_keynum('fout_vrf_grdara_true', 0, -1)
   call set_keynum('fout_vrf_grdara_rt'  , 0, -1)
   call set_keynum('fout_vrf_rerr_grdara', 0, -1)
   call set_keynum('fout_vrf_grdnum'     , 0, -1)
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Count the number of times each keyword was used
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of times each keyword was used')
-
-  rt%vrf_source%nFiles = 0
-  rt%vrf_target%nFiles = 0
-
-  do
-    call read_input()
-    call update_keynum()
-
-    selectcase( key() )
-    case( '' )
-      exit
-    case( 'vrf_source_form' )
-      call add(rt%vrf_source%nFiles)
-    case( 'vrf_target_form' )
-      call add(rt%vrf_target%nFiles)
-    endselect
-  enddo
+  call set_keynum('vrf_val_miss'        , 0, -1)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -716,10 +694,7 @@ subroutine read_settings_output_rt(rt)
 
   rtm => rt%main
 
-  call set_default_values_rt(&
-         rt, &
-         nFiles_vrf_src=rt%vrf_source%nFiles, &
-         nFiles_vrf_tgt=rt%vrf_target%nFiles)
+  call set_default_values_rt(rt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -731,8 +706,6 @@ subroutine read_settings_output_rt(rt)
   call reset_keynum()
 
   dir = ''
-  rt%vrf_source%nFiles = 0
-  rt%vrf_target%nFiles = 0
 
   do
     call read_input()
@@ -745,11 +718,11 @@ subroutine read_settings_output_rt(rt)
       exit
     !-----------------------------------------------------------
     !
-    case( 'grid_coef' )
-      call read_value(rtm%grid_coef, is_keyword=.true.)
+    case( 'mesh_coef' )
+      call read_value(rtm%mesh_coef, is_keyword=.true.)
 
-    case( 'grid_sort' )
-      call read_value(rtm%grid_sort, is_keyword=.true.)
+    case( 'mesh_sort' )
+      call read_value(rtm%mesh_sort, is_keyword=.true.)
     !-----------------------------------------------------------
     !
     case( 'dir' )
@@ -787,37 +760,31 @@ subroutine read_settings_output_rt(rt)
       rtm%opt_coef%is_sum_error_excess_enabled = .true.
     !-----------------------------------------------------------
     ! Verification data
-    case( 'vrf_source_form' )
-      call add(rt%vrf_source%nFiles)
-      fvrf => rt%vrf_source%f(rt%vrf_source%nFiles)
-      call read_value(fvrf%form, is_keyword=.true.)
-      call check_value_vrf_form(fvrf%form, key())
-
-    case( 'vrf_target_form' )
-      call add(rt%vrf_target%nFiles)
-      fvrf => rt%vrf_target%f(rt%vrf_target%nFiles)
-      call read_value(fvrf%form, is_keyword=.true.)
-      call check_value_vrf_form(fvrf%form, key())
+    case( 'mesh_vrf' )
+      call read_value(mesh_vrf, is_keyword=.true.)
+      selectcase( mesh_vrf )
+      case( MESH__SOURCE )
+        rtv => rt%vrf_src
+      case( MESH__TARGET )
+        rtv => rt%vrf_tgt
+      case default
+        call eerr(str(msg_invalid_value())//&
+                '\n  mesh_vrf: '//str(mesh_vrf))
+      endselect
 
     case( 'fout_vrf_grdidx' )
-      call check_form_and_file_path(fvrf%out_grdidx, fvrf%form, key())
-      call read_value(fvrf%out_grdidx, dir)
-
+      call read_value_fvrf_file(rtv%f%out_grdidx)
     case( 'fout_vrf_grdara_true' )
-      call check_form_and_file_path(fvrf%out_grdara_true, fvrf%form, key())
-      call read_value(fvrf%out_grdara_true, dir)
-
+      call read_value_fvrf_file(rtv%f%out_grdara_true)
     case( 'fout_vrf_grdara_rt' )
-      call check_form_and_file_path(fvrf%out_grdara_rt, fvrf%form, key())
-      call read_value(fvrf%out_grdara_rt, dir)
-
+      call read_value_fvrf_file(rtv%f%out_grdara_rt)
     case( 'fout_vrf_rerr_grdara' )
-      call check_form_and_file_path(fvrf%out_rerr_grdara, fvrf%form, key())
-      call read_value(fvrf%out_rerr_grdara, dir)
-
+      call read_value_fvrf_file(rtv%f%out_rerr_grdara)
     case( 'fout_vrf_grdnum' )
-      call check_form_and_file_path(fvrf%out_grdnum, fvrf%form, key())
-      call read_value(fvrf%out_grdnum, dir)
+      call read_value_fvrf_file(rtv%f%out_grdnum)
+
+    case( 'vrf_val_miss' )
+      call read_value(rtv%dval_miss)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -857,6 +824,43 @@ subroutine check_value_vrf_form(val, key)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_value_vrf_form
+!---------------------------------------------------------------
+subroutine read_value_fvrf_file(f)
+  implicit none
+  type(file_), intent(inout) :: f
+
+  call echo(code%bgn, '__IP__read_value_fvrf_file', '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( key() /= 'fout_vrf_grdidx'      .and. &
+      key() /= 'fout_vrf_grdara_true' .and. &
+      key() /= 'fout_vrf_grdara_rt'   .and. &
+      key() /= 'fout_vrf_rerr_grdara' .and. &
+      key() /= 'fout_vrf_grdnum'      )then
+    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+            '\nOnly the following keys can be used for the group of'//&
+              ' verification data:'//&
+            '\n  "fout_vrf_grdidx"'//&
+            '\n  "fout_vrf_grdara_true"'//&
+            '\n  "fout_vrf_grdara_rt"'//&
+            '\n  "fout_vrf_rerr_grdara"'//&
+            '\n  "fout_vrf_grdnum"')
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( f%path /= '' )then
+    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+            '\nDuplicated input of "'//str(key())//'".')
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call read_value(f, dir=dir)
+  !-------------------------------------------------------------
+  call echo(code%ret)
+end subroutine read_value_fvrf_file
 !---------------------------------------------------------------
 subroutine check_form_and_file_path(f, form, key)
   implicit none
@@ -1140,8 +1144,8 @@ subroutine echo_settings_output_rt(rt)
   !-------------------------------------------------------------
   rtm => rt%main
 
-  call edbg('grid_coef: '//str(rtm%grid_coef))
-  call edbg('grid_sort: '//str(rtm%grid_sort))
+  call edbg('mesh_coef: '//str(rtm%mesh_coef))
+  call edbg('mesh_sort: '//str(rtm%mesh_sort))
 
   call edbg('Files')
   call edbg('  sidx: '//str(fileinfo(rtm%f%sidx)))

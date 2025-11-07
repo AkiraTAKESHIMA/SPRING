@@ -29,7 +29,7 @@ def make_grid_data(cnf, update_data, gsName):
     print('config: '+f_conf)
     fp = open(f_conf,'w')
     fp.write(conf.head(dir_tmp))
-    fp.write(conf.make_grid_data.block_gs(
+    fp.write(conf.make_grid_data.block_mesh(
                c, c['dir'], '', 
                ['grdidx'], ['idx', 'ara', 'xyz', 'lonlat']))
     fp.write(conf.remap.block_options(cnf[k.opt]))

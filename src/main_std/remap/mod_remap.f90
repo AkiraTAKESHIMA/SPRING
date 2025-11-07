@@ -170,16 +170,16 @@ end subroutine remap
 !===============================================================
 !
 !===============================================================
-subroutine set_grdidx(u)
+subroutine set_grdidx(a)
   implicit none
-  type(gs_), intent(inout), target :: u
+  type(gs_), intent(inout), target :: a
 
-  type(gs_latlon_) , pointer :: ugl
-  type(gs_raster_) , pointer :: ugr
-  type(gs_polygon_), pointer :: ugp
-  type(gs_common_) , pointer :: ugc
-  type(file_grid_in_), pointer :: ufg
-  type(grid_), pointer :: ug
+  type(gs_latlon_) , pointer :: al
+  type(gs_raster_) , pointer :: ar
+  type(gs_polygon_), pointer :: ap
+  type(gs_common_) , pointer :: ac
+  type(file_grid_in_), pointer :: afg
+  type(grid_), pointer :: ag
 
   type(file_), pointer :: f
   integer(8), allocatable :: int8_2d(:,:)
@@ -190,30 +190,30 @@ subroutine set_grdidx(u)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  ugc => u%cmn
-  ufg => ugc%f_grid_in
-  ug  => ugc%grid
+  ac => a%cmn
+  afg => ac%f_grid_in
+  ag  => ac%grid
 
-  ug%nij = ufg%nij
-  call realloc(ug%idx, ug%nij)
-  call realloc(ug%idxarg, ug%nij)
+  ag%nij = afg%nij
+  call realloc(ag%idx, ag%nij)
+  call realloc(ag%idxarg, ag%nij)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( ugc%gs_type )
+  selectcase( ac%typ )
   !-------------------------------------------------------------
   ! Case: LatLon
-  case( gs_type_latlon )
-    ugl => u%latlon
+  case( MESHTYPE__LATLON )
+    al => a%latlon
 
-    allocate(int8_2d(ufg%nx,ufg%ny))
+    allocate(int8_2d(afg%nx,afg%ny))
 
-    f => ufg%idx
+    f => afg%idx
     if( f%path == '' )then
       call edbg('Setting grdidx')
       ij = 0_8
-      do iv = 1_8, ugl%nv
-        do ih = 1_8, ugl%nh
+      do iv = 1_8, al%nv
+        do ih = 1_8, al%nh
           call add(ij)
           int8_2d(ih,iv) = ij
         enddo  ! ih/
@@ -221,51 +221,51 @@ subroutine set_grdidx(u)
     else
       call edbg('Reading grdidx')
       call rbin(int8_2d, f%path, f%dtype, f%endian, f%rec, &
-                sz=ufg%sz(:2), lb=ufg%lb(:2))
+                sz=afg%sz(:2), lb=afg%lb(:2))
     endif
 
-    ug%idx = reshape(int8_2d,(/ug%nij/))
+    ag%idx = reshape(int8_2d,(/ag%nij/))
 
     deallocate(int8_2d)
   !-------------------------------------------------------------
   ! Case: Raster
-  case( gs_type_raster )
-    ugr => u%raster
+  case( MESHTYPE__RASTER )
+    ar => a%raster
 
-    allocate(int8_2d(ufg%nx,ufg%ny))
+    allocate(int8_2d(afg%nx,afg%ny))
 
-    f => ufg%idx
+    f => afg%idx
     if( f%path == '' )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  '//str(ufg%id)//'%idx%path == ""'//&
+              '\n  '//str(afg%id)//'%idx%path == ""'//&
               '\nInput file of grid index was not specified.')
     endif
     call edbg('Reading grdidx')
     call rbin(int8_2d, f%path, f%dtype, f%endian, f%rec, &
-              sz=ufg%sz(:2), lb=ufg%lb(:2))
-    ug%idx = reshape(int8_2d,(/ug%nij/))
+              sz=afg%sz(:2), lb=afg%lb(:2))
+    ag%idx = reshape(int8_2d,(/ag%nij/))
 
     deallocate(int8_2d)
   !-------------------------------------------------------------
   ! Case: Polygon
-  case( gs_type_polygon )
-    ugp => u%polygon
+  case( MESHTYPE__POLYGON )
+    ap => a%polygon
 
-    f => ufg%idx
+    f => afg%idx
     if( f%path == '' )then
-      do ij = 1_8, ugp%nij
-        ug%idx(ij) = ij
+      do ij = 1_8, ap%nij
+        ag%idx(ij) = ij
       enddo
     else
       call edbg('Reading grdidx')
-      call rbin(ug%idx, f%path, f%dtype, f%endian, f%rec, &
-                sz=ufg%sz(1), lb=ufg%lb(1))
+      call rbin(ag%idx, f%path, f%dtype, f%endian, f%rec, &
+                sz=afg%sz(1), lb=afg%lb(1))
     endif
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call argsort(ug%idx, ug%idxarg)
+  call argsort(ag%idx, ag%idxarg)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_grdidx

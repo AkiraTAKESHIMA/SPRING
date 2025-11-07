@@ -57,11 +57,11 @@ subroutine make_rt_raster_raster(s, t, rt)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  if( s%gs_type /= GS_TYPE_RASTER .or. &
-      t%gs_type /= GS_TYPE_RASTER )then
+  if( s%typ /= MESHTYPE__RASTER .or. &
+      t%typ /= MESHTYPE__RASTER )then
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type)//&
-            '\n  t%gs_type: '//str(t%gs_type))
+            '\n  s%typ: '//str(s%typ)//&
+            '\n  t%typ: '//str(t%typ))
   endif
 
   a => s

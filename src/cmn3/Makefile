@@ -22,9 +22,7 @@ cmn3_rt_raster_raster.o\
 cmn3_rt_raster_polygon.o\
 cmn3_rt_polygon_polygon_regions.o\
 cmn3_rt_polygon_polygon.o\
-cmn3_rt_driv.o\
-cmn3_type_rst.o\
-cmn3_rst_run.o
+cmn3_rt_driv.o
 
 OBJ_CMN = $(OBJ_F)
 

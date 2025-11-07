@@ -157,17 +157,17 @@ subroutine read_settings(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Detecting conflictions')
 
-  if( opt%earth%shp == earth_shape_ellips )then
-    selectcase( a%gs_type )
-    case( GS_TYPE_LATLON, &
-          GS_TYPE_RASTER )
+  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
+    selectcase( a%typ )
+    case( MESHTYPE__LATLON, &
+          MESHTYPE__RASTER )
       continue
-    case( GS_TYPE_POLYGON )
+    case( MESHTYPE__POLYGON )
       call eerr(str(msg_unexpected_condition())//&
               '\n  opt%earth%shp == '//str(opt%earth%shp)//&
-                ' .and. '//str(a%id)//'%gs_type == '//str(a%gs_type)//&
+                ' .and. '//str(a%id)//'%typ == '//str(a%typ)//&
               '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                ' for the grid type "'//str(a%gs_type)//'".')
+                ' for '//str(a%typ)//' meshes.')
     endselect
   endif
 
@@ -207,16 +207,16 @@ subroutine read_settings(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Printing the settings', '-p -x2')
 
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call echo_settings_gs_latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call echo_settings_gs_raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     call echo_settings_gs_polygon(a%polygon)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  '//str(a%id)//'%gs_type: '//str(a%gs_type))
+            '\n  '//str(a%id)//'%typ: '//str(a%typ))
   endselect
 
   call echo_settings_opt(opt)
@@ -256,7 +256,7 @@ subroutine update_counter(n, block_name)
     if( n > 1 )then
       call eerr(str(msg_invalid_input())//&
               '\n@ line '//str(line_number())//&
-              '\nBlocks of grid system appeared more than once.')
+              '\nBlocks of mesh appeared more than once.')
     endif
   case( BLOCK_NAME_OPT )
     call check_num_of_key(n, block_name, 0, 1)
@@ -275,7 +275,7 @@ subroutine check_number_of_blocks()
   !-------------------------------------------------------------
   if( counter%gs /= 1 )then
     call eerr(str(msg_invalid_input())//&
-            '\nBlocks of grid system appeared more than once.')
+            '\nBlocks of mesh appeared more than once.')
   endif
 
   call check_num_of_key(counter%opt, BLOCK_NAME_OPT, 0, 1)
@@ -384,7 +384,7 @@ subroutine read_settings_gs_latlon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_LATLON)
+  call alloc_gs_components(a, MESHTYPE__LATLON)
   call set_default_values_gs_latlon(a%latlon)
 
   al => a%latlon
@@ -650,9 +650,9 @@ subroutine check_keynum_relations()
        keynum('in_grid_lb') == 1 .or. &
        keynum('in_grid_ub') == 1) )then
     call eerr(str(msg_invalid_input())//&
-            '\nThere are inputs with the following keys:'//&
+            '\nThere are inputs for the following keys:'//&
             '\n  "in_grid_sz", "in_grid_lb", "in_grid_ub"'//&
-            '\nbut no input with:'//&
+            '\nbut no input for:'//&
             '\n  "in_grdidx", "in_grdara", "in_grdwgt".'//&
             '\nThe former inputs are ignored.')
   endif
@@ -683,9 +683,9 @@ subroutine check_keynum_relations()
        keynum('out_grid_lb') == 1 .or. &
        keynum('out_grid_ub') == 1) )then
     call eerr(str(msg_invalid_input())//&
-            '\nThere are inputs with any of the following keys:'//&
+            '\nThere are inputs for any of the following keys:'//&
             '\n  "in_grid_sz", "in_grid_lb", "in_grid_ub"'//&
-            '\nbut no input with:'//&
+            '\nbut no input for:'//&
             '\n  "in_grdidx", "in_grdara", "in_grdwgt".'//&
             '\nThe former inputs are ignored.')
   endif
@@ -825,7 +825,7 @@ subroutine read_settings_gs_raster(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_RASTER)
+  call alloc_gs_components(a, MESHTYPE__RASTER)
   call set_default_values_gs_raster(a%raster)
 
   ar => a%raster
@@ -1179,7 +1179,7 @@ subroutine read_settings_gs_polygon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_POLYGON)
+  call alloc_gs_components(a, MESHTYPE__POLYGON)
   call set_default_values_gs_polygon(a%polygon)
 
   ap => a%polygon
@@ -1653,17 +1653,17 @@ subroutine check_paths(a, opt_sys)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking input files')
 
-  selectcase( a%gs_type )
-  case( gs_type_latlon )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     fl => a%latlon%f_latlon_in
     call check_permission(fl%lon, allow_empty=.true.)
     call check_permission(fl%lat, allow_empty=.true.)
-  case( gs_type_raster )
+  case( MESHTYPE__RASTER )
     fr => a%raster%f_raster_in
     call check_permission(fr%idx, allow_empty=.false.)
     call check_permission(fr%ara, allow_empty=.true.)
     call check_permission(fr%wgt, allow_empty=.true.)
-  case( gs_type_polygon )
+  case( MESHTYPE__POLYGON )
     fp => a%polygon%f_polygon_in
     call check_permission(fp%x, allow_empty=.true.)
     call check_permission(fp%y, allow_empty=.true.)
@@ -1673,7 +1673,7 @@ subroutine check_paths(a, opt_sys)
     call check_permission(fp%arctyp, allow_empty=.true.)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  a%gs_type: '//str(a%gs_type))
+            '\n  a%typ: '//str(a%typ))
   endselect
 
   fg_in => a%cmn%f_grid_in
@@ -1781,7 +1781,7 @@ subroutine echo_settings_gs_latlon(al)
 
   call edbg('ID: '//str(al%id))
 
-  call edbg('Grid type: '//str(GS_TYPE_LATLON))
+  call edbg('Mesh type: '//str(MESHTYPE__LATLON))
 
   call edbg('nx: '//str(al%nx))
   call edbg('ny: '//str(al%ny))
@@ -1881,7 +1881,7 @@ subroutine echo_settings_gs_raster(ar)
 
   call edbg('ID: '//str(ar%id))
 
-  call edbg('Grid type: '//str(GS_TYPE_RASTER))
+  call edbg('Mesh type: '//str(MESHTYPE__RASTER))
 
   call edbg('nx: '//str(ar%nx,dgt_xy))
   call edbg('ny: '//str(ar%ny,dgt_xy))
@@ -1987,7 +1987,7 @@ subroutine echo_settings_gs_polygon(ap)
 
   call edbg('ID: '//str(ap%id))
 
-  call edbg('Grid type: '//str(GS_TYPE_POLYGON))
+  call edbg('Mesh type: '//str(MESHTYPE__POLYGON))
 
   call edbg('Polygon data')
   call edbg('  Size : '//str(fp%sz(2),dgt_xy))

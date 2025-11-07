@@ -25,7 +25,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine read_settings(gs_source, gs_target, rt)
+subroutine read_settings(s, t, rt)
   use cmn1_set, only: &
         open_setting_file      , &
         close_setting_file     , &
@@ -56,7 +56,7 @@ subroutine read_settings(gs_source, gs_target, rt)
         init_rt                    , &
         apply_oldfiles_rt_main_file
   implicit none
-  type(gs_) , intent(out), target :: gs_source, gs_target
+  type(gs_) , intent(out), target :: s, t
   type(rt_) , intent(out), target :: rt
 
   type counter_
@@ -72,12 +72,8 @@ subroutine read_settings(gs_source, gs_target, rt)
   type(gs_)         , pointer :: a
   type(gs_common_)  , pointer :: ac
   type(rt_main_)    , pointer :: rtm
-  type(rt_vrf_)     , pointer :: rtv
-  type(file_rt_vrf_), pointer :: fvrf
   type(opt_) :: opt
   integer :: iGs
-  integer :: iFile_vrf
-  character(CLEN_KEY) :: grid
 
   character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'mesh_latlon'
   character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'mesh_raster'
@@ -92,17 +88,17 @@ subroutine read_settings(gs_source, gs_target, rt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Initializing')
 
-  call init_gs(gs_source)
-  call init_gs(gs_target)
+  call init_gs(s)
+  call init_gs(t)
   call init_rt(rt)
 
-  gs_source%id = 'gs_source'
-  gs_source%nam = GRID_SOURCE
-  gs_source%is_source = .true.
+  s%id = 'mesh_src'
+  s%nam = MESH__SOURCE
+  s%is_source = .true.
 
-  gs_target%id = 'gs_target'
-  gs_target%nam = GRID_TARGET
-  gs_target%is_source = .false.
+  t%id = 'mesh_tgt'
+  t%nam = MESH__TARGET
+  t%is_source = .false.
 
   rt%id = 'rt'
 
@@ -139,25 +135,25 @@ subroutine read_settings(gs_source, gs_target, rt)
     ! Case: gs_latlon
     case( BLOCK_NAME_GS_LATLON )
       call update_counter(counter%gs, block_name)
-      call select_gs(counter%gs, gs_source, gs_target, a)
+      call select_gs(counter%gs, s, t, a)
       call read_settings_gs_latlon(a)
     !-----------------------------------------------------------
     ! Case: gs_raster
     case( BLOCK_NAME_GS_RASTER )
       call update_counter(counter%gs, block_name)
-      call select_gs(counter%gs, gs_source, gs_target, a)
+      call select_gs(counter%gs, s, t, a)
       call read_settings_gs_raster(a)
     !-----------------------------------------------------------
     ! Case: gs_polygon
     case( BLOCK_NAME_GS_POLYGON )
       call update_counter(counter%gs, block_name)
-      call select_gs(counter%gs, gs_source, gs_target, a)
+      call select_gs(counter%gs, s, t, a)
       call read_settings_gs_polygon(a)
     !-----------------------------------------------------------
     ! Case: rt
     case( BLOCK_NAME_REMAPPING )
       call update_counter(counter%rmp, block_name)
-      call read_settings_remapping(rt, gs_source, gs_target)
+      call read_settings_remapping(rt, s, t)
     !-----------------------------------------------------------
     ! Case: opt
     case( BLOCK_NAME_OPT )
@@ -193,64 +189,21 @@ subroutine read_settings(gs_source, gs_target, rt)
   !-------------------------------------------------------------
   if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
     do iGs = 1, 2
-      call select_gs(iGs, gs_source, gs_target, a)
+      call select_gs(iGs, s, t, a)
 
-      selectcase( a%gs_type )
-      case( GS_TYPE_LATLON, &
-            GS_TYPE_RASTER )
+      selectcase( a%typ )
+      case( MESHTYPE__LATLON, &
+            MESHTYPE__RASTER )
         continue
-      case( GS_TYPE_POLYGON )
+      case( MESHTYPE__POLYGON )
         call eerr(str(msg_unexpected_condition())//&
                 '\n  opt%earth%shp == '//str(opt%earth%shp)//&
-                  ' .and. '//str(a%id)//'%gs_type == '//str(a%gs_type)//&
+                  ' .and. '//str(a%id)//'%typ == '//str(a%typ)//&
                 '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                  ' for the mesh type "'//str(a%gs_type)//'".')
+                  ' for '//str(a%typ)//' meshes.')
       endselect
     enddo
   endif
-
-  ! Verification data and a file of grid index
-  !-------------------------------------------------------------
-  do iGs = 1, 2
-    call select_gs_rtv(iGs, gs_source, gs_target, rt, a, rtv, grid)
-    ac => a%cmn
-
-    do iFile_vrf = 1, rtv%nFiles
-      fvrf => rtv%f(iFile_vrf)
-
-      selectcase( fvrf%form )
-      !---------------------------------------------------------
-      ! Case: Auto
-      case( GRID_FORM_AUTO )
-        continue
-      !---------------------------------------------------------
-      ! Case: Index
-      case( GRID_FORM_INDEX )
-        if( ac%f_grid_in%idx%path == '' )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
-                    ' .and. '//str(ac%f_grid_in%idx%id)//'%path == ""'//&
-                  '\nForm of verification data for '//str(grid)//' grid is "'//&
-                    str(GRID_FORM_INDEX)//'", but file of grid index was not specified.')
-        endif
-      !---------------------------------------------------------
-      ! Case: Raster
-      case( GRID_FORM_RASTER )
-        if( ac%gs_type /= GS_TYPE_RASTER )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  '//str(fvrf%id)//'%form == '//str(fvrf%form)//&
-                    ' .and. '//str(ac%id)//'%gs_type /= '//str(GS_TYPE_RASTER)//&
-                  '\nForm of verification data for '//str(grid)//' grid is "'//&
-                    str(GRID_FORM_RASTER)//'", but mesh type is "'//str(ac%gs_type)//'".')
-        endif
-      !---------------------------------------------------------
-      ! Case: ERROR
-      case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  '//str(fvrf%id)//'%form: '//str(fvrf%form))
-      endselect
-    enddo  ! iFile_vrf/
-  enddo  ! iGs/
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -276,7 +229,7 @@ subroutine read_settings(gs_source, gs_target, rt)
   ! Path of intermediates of grid
   !-------------------------------------------------------------
   do iGs = 1, 2
-    call select_gs(iGs, gs_source, gs_target, a, grid)
+    call select_gs(iGs, s, t, a)
     ac => a%cmn
 
     call set_miss_file_grid_in(&
@@ -305,32 +258,34 @@ subroutine read_settings(gs_source, gs_target, rt)
   call echo(code%ent, 'Printing the settings', '-p -x2')
 
   do iGs = 1, 2
-    call select_gs(iGs, gs_source, gs_target, a)
+    call select_gs(iGs, s, t, a)
 
-    selectcase( a%gs_type )
-    case( GS_TYPE_LATLON )
+    selectcase( a%typ )
+    case( MESHTYPE__LATLON )
       call echo_settings_gs_latlon(a%latlon)
 
-    case( GS_TYPE_RASTER )
+    case( MESHTYPE__RASTER )
       call echo_settings_gs_raster(a%raster)
 
-    case( GS_TYPE_POLYGON )
+    case( MESHTYPE__POLYGON )
       call echo_settings_gs_polygon(a%polygon)
 
     case default
-      call eerr('Invalid value in '//str(a%id)//'%gs_type: '//str(a%gs_type))
+      call eerr('Invalid value in '//str(a%id)//'%typ: '//str(a%typ))
     endselect
   enddo
 
-  call echo_settings_remapping(rt, gs_source, gs_target)
+  call echo_settings_remapping(rt, s, t)
 
   call echo_settings_opt(opt)
+
+  call edbg(bar(''))
 
   call echo(code%ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_paths(gs_source, gs_target, rt, opt%sys)
+  call check_paths(s, t, rt, opt%sys)
   !-------------------------------------------------------------
   call echo(code%ret)
 !---------------------------------------------------------------
@@ -494,7 +449,7 @@ subroutine read_settings_gs_latlon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_LATLON)
+  call alloc_gs_components(a, MESHTYPE__LATLON)
   call set_default_values_gs_latlon(a%latlon)
   call set_gs_common(a)
 
@@ -836,7 +791,7 @@ subroutine read_settings_gs_raster(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_RASTER)
+  call alloc_gs_components(a, MESHTYPE__RASTER)
   call set_default_values_gs_raster(a%raster)
   call set_gs_common(a)
 
@@ -1139,7 +1094,7 @@ subroutine read_settings_gs_polygon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_POLYGON)
+  call alloc_gs_components(a, MESHTYPE__POLYGON)
   call set_default_values_gs_polygon(a%polygon)
   call set_gs_common(a)
 
@@ -1438,12 +1393,12 @@ subroutine read_settings_remapping(rt, s, t)
   type(rt_), intent(inout), target :: rt
   type(gs_), intent(inout), target :: s, t
 
-  type(rt_main_)    , pointer :: rtm
-  type(file_rt_vrf_), pointer :: fvrf
+  type(rt_main_), pointer :: rtm
+  type(rt_vrf_), pointer :: rtv
   type(gs_common_)  , pointer :: sc, tc
 
   character(CLEN_PATH) :: dir
-  character(CLEN_KEY) :: vrf_which
+  character(CLEN_KEY) :: mesh_vrf
 
   call echo(code%bgn, 'read_settings_remapping')
   !-------------------------------------------------------------
@@ -1481,25 +1436,21 @@ subroutine read_settings_remapping(rt, s, t)
   call set_keynum('opt_coef_error_excess'    , 0, 1)
   call set_keynum('opt_coef_sum_error_excess', 0, 1)
 
-  call set_keynum('vrf_source_form'     , 0, -1)
-  call set_keynum('vrf_target_form'     , 0, -1)
-  call set_keynum('fout_vrf_grdidx'     , 0, -1)
-  call set_keynum('fout_vrf_grdara_true', 0, -1)
-  call set_keynum('fout_vrf_grdara_rt'  , 0, -1)
-  call set_keynum('fout_vrf_rerr_grdara', 0, -1)
-  call set_keynum('fout_vrf_grdnum'     , 0, -1)
-  call set_keynum('fout_vrf_iarea_sum'  , 0, -1)
-  call set_keynum('fout_vrf_iratio_sum' , 0, -1)
-  call set_keynum('vrf_val_miss'        , 0, 1)
+  call set_keynum('mesh_vrf'            , 0, 2)
+  call set_keynum('fout_vrf_grdidx'     , 0, 2)
+  call set_keynum('fout_vrf_grdara_true', 0, 2)
+  call set_keynum('fout_vrf_grdara_rt'  , 0, 2)
+  call set_keynum('fout_vrf_rerr_grdara', 0, 2)
+  call set_keynum('fout_vrf_grdnum'     , 0, 2)
+  call set_keynum('fout_vrf_iarea_sum'  , 0, 2)
+  call set_keynum('fout_vrf_iratio_sum' , 0, 2)
+  call set_keynum('vrf_val_miss'        , 0, 2)
 
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Count the number of times each keyword is used
   !-------------------------------------------------------------
   call echo(code%ent, 'Counting the number of times each keyword is used')
-
-  rt%vrf_source%nFiles = 0
-  rt%vrf_target%nFiles = 0
 
   sc => s%cmn
   tc => t%cmn
@@ -1522,11 +1473,6 @@ subroutine read_settings_remapping(rt, s, t)
       call add(sc%f_grid_in%nFiles_val)
     case( 'fout_grdval' )
       call add(tc%f_grid_out%nFiles_val)
-
-    case( 'vrf_source_form' )
-      call add(rt%vrf_source%nFiles)
-    case( 'vrf_target_form' )
-      call add(rt%vrf_target%nFiles)
     !-----------------------------------------------------------
     !
     case default
@@ -1557,11 +1503,8 @@ subroutine read_settings_remapping(rt, s, t)
   call reset_keynum()
 
   dir = ''
-  rt%vrf_source%nFiles = 0
-  rt%vrf_target%nFiles = 0
   sc%f_grid_in%nFiles_val = 0
   tc%f_grid_out%nFiles_val = 0
-  vrf_which = ''
 
   do
     call read_input()
@@ -1611,10 +1554,10 @@ subroutine read_settings_remapping(rt, s, t)
     !-----------------------------------------------------------
     !
     case( 'mesh_coef' )
-      call read_value(rtm%grid_coef, is_keyword=.true.)
+      call read_value(rtm%mesh_coef, is_keyword=.true.)
 
     case( 'mesh_sort' )
-      call read_value(rtm%grid_sort, is_keyword=.true.)
+      call read_value(rtm%mesh_sort, is_keyword=.true.)
 
     case( 'allow_empty' )
       call read_value(rtm%allow_empty)
@@ -1639,29 +1582,35 @@ subroutine read_settings_remapping(rt, s, t)
       rtm%opt_coef%is_sum_error_excess_enabled = .true.
     !-----------------------------------------------------------
     !
-    case( 'vrf_source_form' )
-      call read_value_fvrfForm(rt%vrf_source, sc, GRID_SOURCE)
-    case( 'vrf_target_form' )
-      call read_value_fvrfForm(rt%vrf_target, tc, GRID_TARGET)
+    case( 'mesh_vrf' )
+      call read_value(mesh_vrf, is_keyword=.true.)
+      selectcase( mesh_vrf )
+      case( MESH__SOURCE )
+        rtv => rt%vrf_src
+      case( MESH__TARGET )
+        rtv => rt%vrf_tgt
+      case default
+        call eerr(str(msg_invalid_value())//&
+                '\n  Invalid value for "mesh_vrf": '//str(mesh_vrf))
+      endselect
 
     case( 'fout_vrf_grdidx' )
-      call read_value_fvrf_file(fvrf%out_grdidx)
+      call read_value_fvrf_file(rtv%f%out_grdidx)
     case( 'fout_vrf_grdara_true' )
-      call read_value_fvrf_file(fvrf%out_grdara_true)
+      call read_value_fvrf_file(rtv%f%out_grdara_true)
     case( 'fout_vrf_grdara_rt' )
-      call read_value_fvrf_file(fvrf%out_grdara_rt)
+      call read_value_fvrf_file(rtv%f%out_grdara_rt)
     case( 'fout_vrf_rerr_grdara' )
-      call read_value_fvrf_file(fvrf%out_rerr_grdara)
+      call read_value_fvrf_file(rtv%f%out_rerr_grdara)
     case( 'fout_vrf_grdnum' )
-      call read_value_fvrf_file(fvrf%out_grdnum)
+      call read_value_fvrf_file(rtv%f%out_grdnum)
     case( 'fout_vrf_iarea_sum' )
-      call read_value_fvrf_file(fvrf%out_iarea_sum)
+      call read_value_fvrf_file(rtv%f%out_iarea_sum)
     case( 'fout_vrf_iratio_sum' )
-      call read_value_fvrf_file(fvrf%out_iratio_sum)
+      call read_value_fvrf_file(rtv%f%out_iratio_sum)
 
     case( 'vrf_val_miss' )
-      call read_value(rt%vrf_source%dval_miss)
-      call read_value(rt%vrf_target%dval_miss)
+      call read_value(rtv%dval_miss)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -1704,168 +1653,78 @@ subroutine read_settings_remapping(rt, s, t)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
-subroutine assert_cst_vrfForm_gsType(gsType)
-  implicit none
-  character(*), intent(in) :: gsType
-
-  call echo(code%bgn, '__IP__assert_cst_vrfForm_gsType', '-p -x2')
-  !---------------------------------------------------------------
-  if( fvrf%form /= GRID_FORM_AUTO .and. &
-      fvrf%form /= GRID_FORM_INDEX .and. &
-      fvrf%form /= GRID_FORM_RASTER )then
-    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-            '\n"'//str(fvrf%form)//'" is invalid for the keyword "'//str(key())//'".')
-  endif
-
-  selectcase( gsType )
-  case( GS_TYPE_LATLON, &
-        GS_TYPE_POLYGON )
-    if( key() == GRID_FORM_RASTER )then
-      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-              '\n  key: '//str(key())//&
-              '\n  val: '//str(fvrf%form)//&
-              '\nThis value is invalid for mesh type "'//str(gsType)//'."')
-    endif
-  case( GS_TYPE_RASTER )
-    if( key() == GRID_FORM_AUTO )then
-      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-              '\n  key: '//str(key())//&
-              '\n  val: '//str(fvrf%form)//&
-              '\nThis value is invalid for mesh type "'//str(gsType)//'."')
-    endif
-  case default
-    call eerr('Invalid value in $gs_type: '//str(gsType))
-  endselect
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine assert_cst_vrfForm_gsType
-!----------------------------------------------------------------
-subroutine read_value_fvrfForm(rt_vrf, ac, grid)
-  implicit none
-  type(rt_vrf_), intent(inout), target :: rt_vrf
-  type(gs_common_), intent(in), target :: ac
-  character(*), intent(in) :: grid
-
-  call echo(code%bgn, '__IP__read_value_fvrfForm', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  vrf_which = grid
-  call add(rt_vrf%nFiles)
-  fvrf => rt_vrf%f(rt_vrf%nFiles)
-  call read_value(fvrf%form, is_keyword=.true.)
-  call assert_cst_vrfForm_gsType(ac%gs_type)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine read_value_fvrfForm
-!----------------------------------------------------------------
 subroutine read_value_fvrf_file(f)
   implicit none
   type(file_), intent(inout) :: f
 
+  type(gs_), pointer :: a
+
   call echo(code%bgn, '__IP__read_value_fvrf_file', '-p -x2')
   !-------------------------------------------------------------
-  call assert_cst_vrfForm_vrfData()
-  call assert_file_is_undefined(f)
+  !
+  !-------------------------------------------------------------
+  selectcase( mesh_vrf )
+  case( MESH__SOURCE )
+    a => s
+  case( MESH__TARGET )
+    a => t
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  mesh_vrf: '//str(mesh_vrf))
+  endselect
+
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON, MESHTYPE__POLYGON )
+    if( key() /= 'fout_vrf_grdidx'      .and. &
+        key() /= 'fout_vrf_grdara_true' .and. &
+        key() /= 'fout_vrf_grdara_rt'   .and. &
+        key() /= 'fout_vrf_rerr_grdara' .and. &
+        key() /= 'fout_vrf_grdnum'      )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nOnly the following keys can be used for the group of'//&
+                ' verification data of '//str(a%typ)//' meshes:'//&
+              '\n  "fout_vrf_grdidx"'//&
+              '\n  "fout_vrf_grdara_true"'//&
+              '\n  "fout_vrf_grdara_rt"'//&
+              '\n  "fout_vrf_rerr_grdara"'//&
+              '\n  "fout_vrf_grdnum"')
+    endif
+  case( MESHTYPE__RASTER )
+    if( key() /= 'fout_vrf_grdidx'      .and. &
+        key() /= 'fout_vrf_grdara_true' .and. &
+        key() /= 'fout_vrf_grdara_rt'   .and. &
+        key() /= 'fout_vrf_rerr_grdara' .and. &
+        key() /= 'fout_vrf_grdnum'      .and. &
+        key() /= 'fout_vrf_iarea_sum'   .and. &
+        key() /= 'fout_vrf_iratio_sum'  )then
+      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+              '\nOnly the following keys can be used for the group of'//&
+                ' verification data of '//str(a%typ)//' meshes:'//&
+              '\n  "fout_vrf_grdidx"'//&
+              '\n  "fout_vrf_grdara_true"'//&
+              '\n  "fout_vrf_grdara_rt"'//&
+              '\n  "fout_vrf_rerr_grdara"'//&
+              '\n  "fout_vrf_grdnum"'//&
+              '\n  "fout_vrf_iarea_sum"'//&
+              '\n  "fout_vrf_iratio_sum"')
+    endif
+  case default
+    call eerr('Invalid value in $a%typ: '//str(a%typ))
+  endselect
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( f%path /= '' )then
+    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
+            '\nDuplicated input of "'//str(key())//'".')
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   call read_value(f, dir=dir)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine read_value_fvrf_file
-!----------------------------------------------------------------
-subroutine assert_cst_vrfForm_vrfData()
-  implicit none
-
-  call echo(code%bgn, '__IP__assert_cst_vrfForm_vrfData', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  selectcase( fvrf%form )
-  case( '' )
-    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-            '\nNo value is given for the keyword "'//str(key())//'".')
-  !-------------------------------------------------------------
-  ! Auto
-  case( GRID_FORM_AUTO )
-    if( key() /= 'fout_vrf_grdidx'      .and. &
-        key() /= 'fout_vrf_grdara_true' .and. &
-        key() /= 'fout_vrf_grdara_rt'   .and. &
-        key() /= 'fout_vrf_rerr_grdara' .and. &
-        key() /= 'fout_vrf_grdnum'      )then
-      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-              '\nOnly the following keywords can be used for the group of'//&
-                ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
-              '\n  "fout_vrf_grdidx"'//&
-              '\n  "fout_vrf_grdara_true"'//&
-              '\n  "fout_vrf_grdara_rt"'//&
-              '\n  "fout_vrf_rerr_grdara"'//&
-              '\n  "fout_vrf_grdnum"')
-    endif
-  !-------------------------------------------------------------
-  ! Index
-  case( GRID_FORM_INDEX )
-    if( key() /= 'fout_vrf_grdidx'      .and. &
-        key() /= 'fout_vrf_grdara_true' .and. &
-        key() /= 'fout_vrf_grdara_rt'   .and. &
-        key() /= 'fout_vrf_rerr_grdara' .and. &
-        key() /= 'fout_vrf_grdnum'      )then
-      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-              '\nOnly the following keys can be used for the group of'//&
-                ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
-              '\n  "fout_vrf_grdidx"'//&
-              '\n  "fout_vrf_grdara_true"'//&
-              '\n  "fout_vrf_grdara_rt"'//&
-              '\n  "fout_vrf_rerr_grdara"'//&
-              '\n  "fout_vrf_grdnum"')
-    endif
-  !-------------------------------------------------------------
-  ! Raster
-  case( GRID_FORM_RASTER )
-    if( key() /= 'fout_vrf_iarea_sum' .and. &
-        key() /= 'fout_vrf_iratio_sum' )then
-      call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-              '\nOnly the following keys can be used for the group of'//&
-                ' verification data whose formatting mode is "'//str(fvrf%form)//'":'//&
-              '\n  fout_vrf_iarea_sum"'//&
-              '\n  fout_vrf_iratio_sum"')
-    endif
-  !-------------------------------------------------------------
-  ! ERROR
-  case default
-    call eerr('Invalid value in $fvrf%form: '//str(fvrf%form))
-  endselect
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine assert_cst_vrfForm_vrfData
-!----------------------------------------------------------------
-subroutine assert_file_is_undefined(f)
-  implicit none
-  type(file_), intent(in) :: f
-
-  character(CLEN_VAR) :: key_vrf_form
-  integer :: iFile
-
-  call echo(code%bgn, '__IP__assert_file_is_undefined', '-p -x2')
-  !-------------------------------------------------------------
-  if( f%path /= '' )then
-    selectcase( vrf_which )
-    case( GRID_SOURCE )
-      key_vrf_form = 'vrf_source_form'
-      iFile = rt%vrf_source%nFiles
-    case( GRID_TARGET )
-      key_vrf_form = 'vrf_target_form'
-      iFile = rt%vrf_target%nFiles
-    case default
-      call eerr('Invalid value in $vrf_which: '//str(vrf_which))
-    endselect
-
-    call eerr(str(msg_invalid_input())//&
-            '\n  @ line '//str(line_number())//&
-              '; duplicated input for "'//str(key())//'"'//&
-              ' in the '//str(iFile)//'th group of "'//str(key_vrf_form)//'".')
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine assert_file_is_undefined
 !----------------------------------------------------------------
 subroutine check_keynum_relations()
   implicit none
@@ -2086,12 +1945,12 @@ end subroutine skip_unused_block
 !===============================================================
 !
 !===============================================================
-subroutine check_paths(gs_source, gs_target, rt, opt_sys)
+subroutine check_paths(s, t, rt, opt_sys)
   use cmn1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none
-  type(gs_)     , intent(in), target :: gs_source, gs_target
+  type(gs_)     , intent(in), target :: s, t
   type(rt_)     , intent(in), target :: rt
   type(opt_sys_), intent(in)         :: opt_sys
 
@@ -2104,7 +1963,6 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   type(file_)           , pointer :: f
   type(rt_main_)     , pointer :: rtm
   type(rt_vrf_)      , pointer :: rtv
-  type(file_rt_vrf_) , pointer :: fvrf
 
   integer :: iGs
   integer :: iFile
@@ -2116,28 +1974,28 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   call echo(code%ent, 'Checking input files')
 
   !-------------------------------------------------------------
-  call echo(code%ent, 'Grid system')
+  call echo(code%ent, 'Meshes')
 
   do iGs = 1, 2
-    call select_gs(iGs, gs_source, gs_target, a)
+    call select_gs(iGs, s, t, a)
 
-    selectcase( a%gs_type )
+    selectcase( a%typ )
     !-----------------------------------------------------------
-    ! Case: Lattice
-    case( gs_type_latlon )
+    ! Case: Latlon
+    case( MESHTYPE__LATLON )
       fl => a%latlon%f_latlon_in
       call check_permission(fl%lon, allow_empty=.true.)
       call check_permission(fl%lat, allow_empty=.true.)
     !-----------------------------------------------------------
     ! Case: Raster
-    case( gs_type_raster )
+    case( MESHTYPE__RASTER )
       fr => a%raster%f_raster_in
       call check_permission(fr%idx, allow_empty=.true.)
       call check_permission(fr%ara, allow_empty=.true.)
       call check_permission(fr%wgt, allow_empty=.true.)
     !-----------------------------------------------------------
     ! Case: Polygon
-    case( gs_type_polygon )
+    case( MESHTYPE__POLYGON )
       fp => a%polygon%f_polygon_in
       call check_permission(fp%lon   , allow_empty=.true.)
       call check_permission(fp%lat   , allow_empty=.true.)
@@ -2149,7 +2007,7 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
     ! Case: ERROR
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  '//str(a%id)//'%gs_type: '//str(a%gs_type))
+              '\n  '//str(a%id)//'%typ: '//str(a%typ))
     endselect
     !-----------------------------------------------------------
     ! Fundamental grid data
@@ -2158,38 +2016,6 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
     call check_permission(fg_in%idx, allow_empty=.true.)
     call check_permission(fg_in%ara, allow_empty=.true.)
     call check_permission(fg_in%wgt, allow_empty=.true.)
-  enddo  ! iGs/
-
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  call echo(code%ent, 'Remapping table')
-
-  do iGs = 1, 2
-    call select_rt_vrf(iGs, rt, rtv)
-
-    do iFile = 1, rtv%nFiles
-      fvrf => rtv%f(iFile)
-
-      selectcase( fvrf%form )
-      !---------------------------------------------------------
-      ! Auto
-      case( grid_form_auto )
-        continue
-      !---------------------------------------------------------
-      ! Index
-      case( grid_form_index )
-        !call check_permission(fvrf%in_grdidx, allow_empty=.false.)
-      !---------------------------------------------------------
-      ! Raster
-      case( grid_form_raster )
-        continue
-      !---------------------------------------------------------
-      ! ERROR
-      case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  '//str(fvrf%id)//'%form: '//str(fvrf%form))
-      endselect
-    enddo  ! iFile/
   enddo  ! iGs/
 
   call echo(code%ext)
@@ -2212,20 +2038,16 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   do iGs = 1, 2
     call select_rt_vrf(iGs, rt, rtv)
 
-    do iFile = 1, rtv%nFiles
-      fvrf => rtv%f(iFile)
-
-      call handle_old_file(fvrf%out_grdidx)
-      call handle_old_file(fvrf%out_grdara_true)
-      call handle_old_file(fvrf%out_grdara_rt)
-      call handle_old_file(fvrf%out_rerr_grdara)
-      call handle_old_file(fvrf%out_grdnum)
-      call handle_old_file(fvrf%out_iarea_sum)
-      call handle_old_file(fvrf%out_iratio_sum)
-    enddo  ! iFile/
+    call handle_old_file(rtv%f%out_grdidx)
+    call handle_old_file(rtv%f%out_grdara_true)
+    call handle_old_file(rtv%f%out_grdara_rt)
+    call handle_old_file(rtv%f%out_rerr_grdara)
+    call handle_old_file(rtv%f%out_grdnum)
+    call handle_old_file(rtv%f%out_iarea_sum)
+    call handle_old_file(rtv%f%out_iratio_sum)
   enddo  ! iGs/
 
-  fg_out => gs_target%cmn%f_grid_out
+  fg_out => t%cmn%f_grid_out
   do iFile = 1, fg_out%nFiles_val
     call handle_old_file(fg_out%val(iFile))
   enddo
@@ -2256,51 +2078,32 @@ subroutine check_paths(gs_source, gs_target, rt, opt_sys)
   do iGs = 1, 2
     call select_rt_vrf(iGs, rt, rtv)
 
-    do iFile = 1, rtv%nFiles
-      fvrf => rtv%f(iFile)
+    call mkdir(dirname(rtv%f%out_grdidx%path))
+    call mkdir(dirname(rtv%f%out_grdara_true%path))
+    call mkdir(dirname(rtv%f%out_grdara_rt%path))
+    call mkdir(dirname(rtv%f%out_rerr_grdara%path))
+    call mkdir(dirname(rtv%f%out_grdnum%path))
+    call mkdir(dirname(rtv%f%out_iarea_sum%path))
+    call mkdir(dirname(rtv%f%out_iratio_sum%path))
 
-      selectcase( fvrf%form )
-      !---------------------------------------------------------
-      ! Auto, Index
-      case( grid_form_auto, &
-            grid_form_index )
-        call mkdir(dirname(fvrf%out_grdidx%path))
-        call mkdir(dirname(fvrf%out_grdara_true%path))
-        call mkdir(dirname(fvrf%out_grdara_rt%path))
-        call mkdir(dirname(fvrf%out_rerr_grdara%path))
-        call mkdir(dirname(fvrf%out_grdnum%path))
-
-        call check_permission(fvrf%out_grdidx     , allow_empty=.true.)
-        call check_permission(fvrf%out_grdara_true, allow_empty=.true.)
-        call check_permission(fvrf%out_grdara_rt  , allow_empty=.true.)
-        call check_permission(fvrf%out_rerr_grdara, allow_empty=.true.)
-        call check_permission(fvrf%out_grdnum     , allow_empty=.true.)
-      !---------------------------------------------------------
-      ! Raster
-      case( grid_form_raster )
-        call mkdir(dirname(fvrf%out_iarea_sum%path))
-        call mkdir(dirname(fvrf%out_iratio_sum%path))
-
-        call check_permission(fvrf%out_iarea_sum, allow_empty=.true.)
-        call check_permission(fvrf%out_iratio_sum, allow_empty=.true.)
-      !---------------------------------------------------------
-      ! ERROR
-      case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  '//str(fvrf%id)//'%form: '//str(fvrf%form))
-      endselect
-    enddo  ! iFile/
+    call check_permission(rtv%f%out_grdidx     , allow_empty=.true.)
+    call check_permission(rtv%f%out_grdara_true, allow_empty=.true.)
+    call check_permission(rtv%f%out_grdara_rt  , allow_empty=.true.)
+    call check_permission(rtv%f%out_rerr_grdara, allow_empty=.true.)
+    call check_permission(rtv%f%out_grdnum     , allow_empty=.true.)
+    call check_permission(rtv%f%out_iarea_sum  , allow_empty=.true.)
+    call check_permission(rtv%f%out_iratio_sum , allow_empty=.true.)
   enddo  ! iGs/
 
   ! Grid values for remapping
   !-------------------------------------------------------------
-  fg_in => gs_source%cmn%f_grid_in
+  fg_in => s%cmn%f_grid_in
   do iFile = 1, fg_in%nFiles_val
     f => fg_in%val(iFile)
     call check_permission(f, allow_empty=.true.)
   enddo
 
-  fg_out => gs_target%cmn%f_grid_out
+  fg_out => t%cmn%f_grid_out
   do iFile = 1, fg_out%nFiles_val
     f => fg_out%val(iFile)
     call mkdir(dirname(f%path))
@@ -2337,9 +2140,9 @@ subroutine echo_settings_gs_latlon(al)
   !
   !-------------------------------------------------------------
   if( al%is_source )then
-    call edbg(bar(str(str_bgn_sentence(grid_source))//' grid '))
+    call edbg(bar(str(str_bgn_sentence(MESH__SOURCE))//' mesh'))
   else
-    call edbg(bar(str(str_bgn_sentence(grid_target))//' grid '))
+    call edbg(bar(str(str_bgn_sentence(MESH__TARGET))//' mesh'))
   endif
 
   fl => al%f_latlon_in
@@ -2351,7 +2154,7 @@ subroutine echo_settings_gs_latlon(al)
 
   call edbg('Name: '//str(al%nam))
 
-  call edbg('Grid type: '//str(gs_type_latlon))
+  call edbg('Mesh type: '//str(MESHTYPE__LATLON))
 
   call edbg('The number of grids')
   call edbg('  X: '//str(al%nx,dgt_nxy))
@@ -2422,9 +2225,9 @@ subroutine echo_settings_gs_raster(ar)
   !
   !-------------------------------------------------------------
   if( ar%is_source )then
-    call edbg(bar(str(str_bgn_sentence(grid_source))//' grid '))
+    call edbg(bar(str(str_bgn_sentence(MESH__SOURCE))//' mesh'))
   else
-    call edbg(bar(str(str_bgn_sentence(grid_target))//' grid '))
+    call edbg(bar(str(str_bgn_sentence(MESH__TARGET))//' mesh'))
   endif
 
   fr => ar%f_raster_in
@@ -2436,11 +2239,11 @@ subroutine echo_settings_gs_raster(ar)
 
   call edbg('Name: '//str(ar%nam))
 
-  call edbg('Grid type: '//str(gs_type_raster))
+  call edbg('Mesh type: '//str(MESHTYPE__RASTER))
 
   call edbg('The number of grids')
-  call edbg('  X: '//str(ar%nx,dgt_nxy)//' ('//str((/ar%xi,ar%xf/),dgt_nxy,' - ')//')')
-  call edbg('  Y: '//str(ar%ny,dgt_nxy)//' ('//str((/ar%yi,ar%yf/),dgt_nxy,' - ')//')')
+  call edbg('  x: '//str(ar%nx,dgt_nxy)//' ('//str((/ar%xi,ar%xf/),dgt_nxy,' - ')//')')
+  call edbg('  y: '//str(ar%ny,dgt_nxy)//' ('//str((/ar%yi,ar%yf/),dgt_nxy,' - ')//')')
 
   call edbg('West : '//str(ar%west,'f12.5'))
   call edbg('East : '//str(ar%east,'f12.5'))
@@ -2479,7 +2282,7 @@ subroutine echo_settings_gs_raster(ar)
   call edbg('  Index : '//str(ar%idx_miss))
   call edbg('  Area  : '//str(ar%ara_miss))
   call edbg('  Weight: '//str(ar%wgt_miss))
-  call edbg('  XYZ   : '//str(ar%xyz_miss))
+  call edbg('  xyz   : '//str(ar%xyz_miss))
   call edbg('  LatLon: '//str(ar%lonlat_miss))
   call edbg('  Field : '//str(ar%val_miss))
   !-------------------------------------------------------------
@@ -2503,9 +2306,9 @@ subroutine echo_settings_gs_polygon(ap)
   !
   !-------------------------------------------------------------
   if( ap%is_source )then
-    call edbg(bar(str(str_bgn_sentence(grid_source))//' grid '))
+    call edbg(bar(str(str_bgn_sentence(MESH__SOURCE))//' mesh'))
   else
-    call edbg(bar(str(str_bgn_sentence(grid_target))//' grid '))
+    call edbg(bar(str(str_bgn_sentence(MESH__TARGET))//' mesh'))
   endif
 
   fp => ap%f_polygon_in
@@ -2517,7 +2320,7 @@ subroutine echo_settings_gs_polygon(ap)
 
   call edbg('Name: '//str(ap%nam))
 
-  call edbg('Grid type: '//str(gs_type_polygon))
+  call edbg('Mesh type: '//str(MESHTYPE__POLYGON))
 
   call edbg('Grid data')
   call edbg('  Size : '//str(fp%sz(2),dgt_ij))
@@ -2605,14 +2408,14 @@ subroutine echo_settings_remapping(rt, s, t)
   type(rt_main_), pointer :: rtm
   type(rt_vrf_) , pointer :: rtv
   type(file_rt_main_) , pointer :: f_main
-  type(file_rt_vrf_)  , pointer :: fvrf
   type(file_grid_in_) , pointer :: sfg
   type(file_grid_out_), pointer :: tfg
   type(file_)         , pointer :: sf, tf
 
   integer :: iGs
+  type(gs_), pointer :: a
+  character(CLEN_KEY) :: mesh
   integer :: iFile
-  character(CLEN_KEY) :: grid
 
   call echo(code%bgn, 'echo_settings_remapping', '-p -x2')
   !-------------------------------------------------------------
@@ -2632,17 +2435,28 @@ subroutine echo_settings_remapping(rt, s, t)
 
   call echo(code%ent, 'Main product')
 
-  call edbg('sidx: '//str(fileinfo(f_main%sidx)))
-  call edbg('tidx: '//str(fileinfo(f_main%tidx)))
-  call edbg('area: '//str(fileinfo(f_main%area)))
-  call edbg('coef: '//str(fileinfo(f_main%coef)))
+  selectcase( rt%status )
+  case( RT_STATUS__READ )
+    call edbg('sidx: '//str(fileinfo(f_main%sidx)))
+    call edbg('tidx: '//str(fileinfo(f_main%tidx)))
+    call edbg('area: '//str(fileinfo(f_main%area)))
+    call edbg('coef: '//str(fileinfo(f_main%coef)))
+  case( RT_STATUS__MAKE )
+    call edbg('sidx: '//str(fileinfo(f_main%sidx)))
+    call edbg('tidx: '//str(fileinfo(f_main%tidx)))
+    call edbg('area: '//str(fileinfo(f_main%area)))
+    call edbg('coef: '//str(fileinfo(f_main%coef)))
 
-  call edbg('Allow empty: '//str(rtm%allow_empty))
+    call edbg('Allow empty: '//str(rtm%allow_empty))
 
-  call edbg('Mesh to calc coef.: '//str(rtm%grid_coef))
-  call edbg('Mesh to sort by index: '//str(rtm%grid_sort))
+    call edbg('Mesh to calc coef.: '//str(rtm%mesh_coef))
+    call edbg('Mesh to sort by index: '//str(rtm%mesh_sort))
 
-  call echo_settings_opt_rt_coef(rtm%opt_coef, 0)
+    call echo_settings_opt_rt_coef(rtm%opt_coef, 0)
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  $rt%status: '//str(rt%status))
+  endselect
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -2651,63 +2465,33 @@ subroutine echo_settings_remapping(rt, s, t)
   call echo(code%ent, 'Verification data')
 
   do iGs = 1, 2
-    if( iGs == 1 )then
-      rtv => rt%vrf_source
-      grid = grid_source
-    else
-      rtv => rt%vrf_target
-      grid = grid_target
-    endif
+    call select_gs(iGs, s, t, a, mesh)
+    call select_rt_vrf(iGs, rt, rtv)
 
-    call echo(code%ent, 'For '//str(grid))
+    call echo(code%ent, 'For '//str(a%nam)//' ('//str(mesh)//')')
 
-    if( rtv%nFiles == 0 )then
-      call edbg('(Not specified)')
-    else
-      do iFile = 1, rtv%nFiles
-        call echo(code%ent, 'Group '//str(iFile)//' of '//str(rtv%nFiles))
+    selectcase( a%typ )
+    case( MESHTYPE__LATLON, &
+          MESHTYPE__POLYGON )
+      call edbg('(out) grdidx     : '//str(fileinfo(rtv%f%out_grdidx)))
+      call edbg('(out) grdara_true: '//str(fileinfo(rtv%f%out_grdara_true)))
+      call edbg('(out) grdara_rt  : '//str(fileinfo(rtv%f%out_grdara_rt)))
+      call edbg('(out) rerr_grdara: '//str(fileinfo(rtv%f%out_rerr_grdara)))
+      call edbg('(out) grdnum     : '//str(fileinfo(rtv%f%out_grdnum)))
+    case( MESHTYPE__RASTER )
+      call edbg('(out) grdidx     : '//str(fileinfo(rtv%f%out_grdidx)))
+      call edbg('(out) grdara_true: '//str(fileinfo(rtv%f%out_grdara_true)))
+      call edbg('(out) grdara_rt  : '//str(fileinfo(rtv%f%out_grdara_rt)))
+      call edbg('(out) rerr_grdara: '//str(fileinfo(rtv%f%out_rerr_grdara)))
+      call edbg('(out) grdnum     : '//str(fileinfo(rtv%f%out_grdnum)))
+      call edbg('(out) iarea_sum  : '//str(fileinfo(rtv%f%out_iarea_sum)))
+      call edbg('(out) iratio_sum : '//str(fileinfo(rtv%f%out_iratio_sum)))
+    endselect
 
-        fvrf => rtv%f(iFile)
-
-        call edbg('Form: '//str(fvrf%form))
-
-        selectcase( fvrf%form )
-        !-------------------------------------------------------
-        ! Index
-        case( grid_form_index )
-          call edbg('(out) grdidx     : '//str(fileinfo(fvrf%out_grdidx)))
-          call edbg('(out) grdara_true: '//str(fileinfo(fvrf%out_grdara_true)))
-          call edbg('(out) grdara_rt  : '//str(fileinfo(fvrf%out_grdara_rt)))
-          call edbg('(out) rerr_grdara: '//str(fileinfo(fvrf%out_rerr_grdara)))
-          call edbg('(out) grdnum     : '//str(fileinfo(fvrf%out_grdnum)))
-        !-------------------------------------------------------
-        ! Auto
-        case( grid_form_auto )
-          call edbg('(out) grdidx     : '//str(fileinfo(fvrf%out_grdidx)))
-          call edbg('(out) grdara_true: '//str(fileinfo(fvrf%out_grdara_true)))
-          call edbg('(out) grdara_rt  : '//str(fileinfo(fvrf%out_grdara_rt)))
-          call edbg('(out) rerr_grdara: '//str(fileinfo(fvrf%out_rerr_grdara)))
-          call edbg('(out) grdnum     : '//str(fileinfo(fvrf%out_grdnum)))
-        !-------------------------------------------------------
-        ! Raster
-        case( grid_form_raster )
-          call edbg('(out) iarea_sum : '//str(fileinfo(fvrf%out_iarea_sum)))
-          call edbg('(out) iratio_sum: '//str(fileinfo(fvrf%out_iratio_sum)))
-        !-------------------------------------------------------
-        ! ERROR
-        case default
-          call eerr(str(msg_invalid_value())//&
-                  '\n  '//trim(fvrf%id)//'%form: '//str(fvrf%form))
-        endselect
-
-        call echo(code%ext)
-      enddo  ! iFile/
-
-      call edbg('Missing values')
-      call edbg('  idx        : '//str(rtv%idx_miss))
-      call edbg('  val (float): '//str(rtv%dval_miss))
-      call edbg('  val (int)  : '//str(rtv%ival_miss))
-    endif
+    call edbg('Missing values')
+    call edbg('  idx        : '//str(rtv%idx_miss))
+    call edbg('  val (float): '//str(rtv%dval_miss))
+    call edbg('  val (int)  : '//str(rtv%ival_miss))
 
     call echo(code%ext)
   enddo  ! iGs/
@@ -2772,12 +2556,12 @@ end subroutine echo_settings_opt
 !===============================================================
 !
 !===============================================================
-subroutine select_gs(iGs, gs_source, gs_target, a, grid)
+subroutine select_gs(iGs, s, t, a, mesh)
   implicit none
   integer, intent(in) :: iGs
-  type(gs_)   , intent(in), target :: gs_source, gs_target
+  type(gs_)   , intent(in), target :: s, t
   type(gs_)   , pointer            :: a
-  character(*), intent(out), optional :: grid
+  character(*), intent(out), optional :: mesh
 
   call echo(code%bgn, 'select_gs', '-p -x2')
   !-------------------------------------------------------------
@@ -2785,11 +2569,11 @@ subroutine select_gs(iGs, gs_source, gs_target, a, grid)
   !-------------------------------------------------------------
   selectcase( iGs )
   case( 1 )
-    a => gs_source
-    if( present(grid) ) grid = grid_source
+    a => s
+    if( present(mesh) ) mesh = MESH__SOURCE
   case( 2 )
-    a => gs_target
-    if( present(grid) ) grid = grid_target
+    a => t
+    if( present(mesh) ) mesh = MESH__TARGET
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  iGs: '//str(iGs))
@@ -2812,9 +2596,9 @@ subroutine select_rt_vrf(iGs, rt, rtv)
   !-------------------------------------------------------------
   selectcase( iGs )
   case( 1 )
-    rtv => rt%vrf_source
+    rtv => rt%vrf_src
   case( 2 )
-    rtv => rt%vrf_target
+    rtv => rt%vrf_tgt
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  iGs: '//str(iGs))
@@ -2825,26 +2609,26 @@ end subroutine select_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine select_gs_rtv(iGs, gs_source, gs_target, rt, a, rtv, grid)
+subroutine select_gs_rtv(iGs, s, t, rt, a, rtv, mesh)
   implicit none
   integer, intent(in) :: iGs
-  type(gs_), intent(in), target :: gs_source, gs_target
+  type(gs_), intent(in), target :: s, t
   type(rt_), intent(in), target :: rt
   type(gs_), pointer :: a
   type(rt_vrf_), pointer :: rtv
-  character(*), intent(out) :: grid
+  character(*), intent(out) :: mesh
 
   call echo(code%bgn, 'select_gs_rtv', '-p -x2')
   !-------------------------------------------------------------
   selectcase( iGs )
   case( 1 )
-    rtv => rt%vrf_source
-    a => gs_source
-    grid = grid_source
+    rtv => rt%vrf_src
+    a => s
+    mesh = MESH__SOURCE
   case( 2 )
-    rtv => rt%vrf_target
-    a => gs_target
-    grid = grid_target
+    rtv => rt%vrf_tgt
+    a => t
+    mesh = MESH__TARGET
   case default
     call eerr(str(msg_invalid_value())//&
             '\n  iGs: '//str(iGs))

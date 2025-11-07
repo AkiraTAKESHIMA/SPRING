@@ -35,16 +35,16 @@ subroutine calc_rt_coef(rtm, grdidx, grdidxarg, grdara)
 
   call echo(code%bgn, 'calc_rt_coef')
   !-------------------------------------------------------------
-  ! Sort by grid_coef
+  ! Sort by mesh_coef
   !-------------------------------------------------------------
-  selectcase( rtm%grid_coef )
-  case( grid_source )
+  selectcase( rtm%mesh_coef )
+  case( MESH__SOURCE )
     coefidx => rtm%sidx
-  case( grid_target )
+  case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
+            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
   endselect
   !-----------------------------------------------------------
   ! Calc. coef.
@@ -81,17 +81,17 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
   !------------------------------------------------------------- 
   call echo(code%ent, 'Preparing', '-p -x2')
 
-  selectcase( rtm%grid_coef )
-  case( grid_source )
+  selectcase( rtm%mesh_coef )
+  case( MESH__SOURCE )
     coefidx => rtm%sidx
-  case( grid_target )
+  case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
+            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
   endselect
 
-  call sort_rt(rtm, rtm%grid_coef)
+  call sort_rt(rtm, rtm%mesh_coef)
 
   call echo(code%ext)
   !------------------------------------------------------------- 
@@ -231,17 +231,17 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
   !-------------------------------------------------------------
   call echo(code%ent, 'Preparing', '-p -x2')
 
-  selectcase( rtm%grid_coef )
-  case( grid_source )
+  selectcase( rtm%mesh_coef )
+  case( MESH__SOURCE )
     coefidx => rtm%sidx
-  case( grid_target )
+  case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
+            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
   endselect
 
-  call sort_rt(rtm, rtm%grid_coef)
+  call sort_rt(rtm, rtm%mesh_coef)
 
   call echo(code%ext)
   !-------------------------------------------------------------

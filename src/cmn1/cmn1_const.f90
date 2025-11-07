@@ -5,13 +5,13 @@ module cmn1_const
   !-------------------------------------------------------------
   ! Grid system
   !-------------------------------------------------------------
-  character(CLEN_KEY), parameter :: GS_TYPE_LATLON  = 'latlon'
-  character(CLEN_KEY), parameter :: GS_TYPE_RASTER  = 'raster'
-  character(CLEN_KEY), parameter :: GS_TYPE_POLYGON = 'polygon'
+  character(CLEN_KEY), parameter :: MESHTYPE__LATLON  = 'latlon'
+  character(CLEN_KEY), parameter :: MESHTYPE__RASTER  = 'raster'
+  character(CLEN_KEY), parameter :: MESHTYPE__POLYGON = 'polygon'
 
-  character(CLEN_KEY), parameter :: GRID_NONE   = 'none'
-  character(CLEN_KEY), parameter :: GRID_SOURCE = 'source'
-  character(CLEN_KEY), parameter :: GRID_TARGET = 'target'
+  character(CLEN_KEY), parameter :: MESH__NONE   = 'none'
+  character(CLEN_KEY), parameter :: MESH__SOURCE = 'source'
+  character(CLEN_KEY), parameter :: MESH__TARGET = 'target'
 
   integer(8), parameter :: IDX_MISS_DEFAULT    = -9999_8
   real(8)   , parameter :: UWA_MISS_DEFAULT    = -1d20

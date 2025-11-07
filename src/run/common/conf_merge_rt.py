@@ -46,8 +46,14 @@ def block_output(rmp, dir_out, rt):
     s = f'\
 \n\
 [output]\n\
-  grid_coef: {rt["grid_coef"]}\n\
-  grid_sort: {rt["grid_sort"]}\n'
+  dir: "{dir_out}"\n\
+  f_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
+  f_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
+  f_rt_area: "area.bin", dble, 1, {rmp["endian"]}\n\
+  f_rt_coef: "coef.bin", dble, 1, {rmp["endian"]}\n\
+\n\
+  mesh_coef: {rt["mesh_coef"]}\n\
+  mesh_sort: {rt["mesh_sort"]}\n'
 
     if 'opt_coef_sum_modify' in rt.keys():
         s += f'\
@@ -58,12 +64,6 @@ def block_output(rmp, dir_out, rt):
   opt_coef_sum_modify_ulim: {rt["opt_coef_sum_modify_ulim"]}\n'
 
     s += f'\
-\n\
-  dir: "{dir_out}"\n\
-  f_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
-  f_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
-  f_rt_area: "area.bin", dble, 1, {rmp["endian"]}\n\
-  f_rt_coef: "coef.bin", dble, 1, {rmp["endian"]}\n\
 [end]\n'
 
     return s

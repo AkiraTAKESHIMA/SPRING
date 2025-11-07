@@ -271,14 +271,14 @@ subroutine calc_rerr_grdara(&
   !
   !-------------------------------------------------------------
   uc => u%cmn
-  selectcase( u%gs_type )
-  case( GS_TYPE_RASTER )
+  selectcase( u%typ )
+  case( MESHTYPE__RASTER )
     ur => u%raster
     is_zero_grdara_true_allowed = &
       uc%f_grid_in%ara%path /= '' .or. &
       ur%idx_condition == IDX_CONDITION__RST_IN_GRD
-  case( GS_TYPE_LATLON, &
-        GS_TYPE_POLYGON )
+  case( MESHTYPE__LATLON, &
+        MESHTYPE__POLYGON )
     is_zero_grdara_true_allowed = uc%f_grid_in%ara%path /= ''
   endselect
 

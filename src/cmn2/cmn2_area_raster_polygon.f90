@@ -20,26 +20,18 @@ module cmn2_area_raster_polygon
   public :: get_dhv_polygon
 
   public :: calc_iarea
-  public :: update_iarea_sum
-  public :: fill_miss_vrf
-  public :: calc_iratio_sum
 
   public :: update_rt1d
   !-------------------------------------------------------------
-  ! Interfaces
-  !-------------------------------------------------------------
-  interface calc_iratio_sum
-    module procedure calc_iratio_sum__out
-    module procedure calc_iratio_sum__inout
-  end interface
-  !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_VAR) :: MODNAME = 'cmn2_area_raster_polygon'
+  character(CLEN_VAR) :: MSGMOD = 'MODULE cmn2_rasterize_polygon '
 
-  ! Initialization
+  ! Flags
   !-------------------------------------------------------------
-  logical :: self_is_initialized = .false.
+  logical :: is_initialized      = .false.
+  logical :: is_initialized_zone = .false.
+
   character(:), allocatable :: sname, tname
 
   ! For the whole area
@@ -58,7 +50,6 @@ module cmn2_area_raster_polygon
   integer(8) :: sidx_miss
   integer(8) :: tidx_miss
   real(8)    :: lonlat_miss
-  real(8), allocatable :: vrf_val_miss
 
   ! For updating a remapping table
   integer(8), allocatable :: sidx_prev(:)
@@ -110,24 +101,24 @@ integer function init_is_ok(stat)
   implicit none
   logical, intent(in) :: stat
 
-  call echo(code%bgn, trim(MODNAME)//' init_is_ok', '-p')
+  call echo(code%bgn, trim(MSGMOD)//' FUNCTION init_is_ok', '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   init_is_ok = 0
 
-  if( self_is_initialized .and. .not. stat )then
+  if( is_initialized .and. .not. stat )then
     init_is_ok = 1
     call eerr(str(msg_unexpected_condition())//&
-            '\nThe module "'//trim(MODNAME)//&
+            '\n'//trim(MSGMOD)//&
               '" has already been initialized by '//&
-              'grid system "'//sname//'" and "'//tname//'".')
+              'mesh "'//sname//'" and mesh "'//tname//'".')
     return
-  elseif( .not. self_is_initialized .and. stat )then
+  elseif( .not. is_initialized .and. stat )then
     init_is_ok = 1
     call eerr(str(msg_unexpected_condition())//&
-            '\nThe module "'//trim(MODNAME)//&
-              '" has not yet been initialized.')
+            '\n'//trim(MSGMOD)//&
+              '" has not been initialized.')
     return
   endif
   !-------------------------------------------------------------
@@ -136,23 +127,32 @@ end function init_is_ok
 !===============================================================
 !
 !===============================================================
-subroutine initialize(sr, tp, rt_vrf_val_miss)
+integer function initialize(sr, tp, make_rt) result(info)
   implicit none
   type(gs_raster_) , intent(in) :: sr
   type(gs_polygon_), intent(in) :: tp
-  real(8)          , intent(in), optional :: rt_vrf_val_miss
+  logical, intent(in), optional :: make_rt
 
-  call echo(code%bgn, trim(MODNAME)//' initialize')
+  logical :: make_rt_
+
+  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE initialize')
   !-------------------------------------------------------------
-  ! Initialization status
+  !
   !-------------------------------------------------------------
-  !info = 0
-  if( init_is_ok(.false.) /= 0 )then
-    !info = 1
+  info = 0
+  if( is_initialized )then
+    info = 1
     return
   endif
-  self_is_initialized = .true.
-
+  is_initialized = .true.
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  make_rt_ = .false.
+  if( present(make_rt) ) make_rt_ = make_rt
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   allocate(character(1) :: sname, tname)
   sname = trim(sr%nam)
   tname = trim(tp%nam)
@@ -178,7 +178,7 @@ subroutine initialize(sr, tp, rt_vrf_val_miss)
   dara(:) = dara_1rad(:) * dlon
 
   ! For updating a remapping table
-  if( present(rt_vrf_val_miss) )then
+  if( make_rt_ )then
     allocate(sidx_prev(tp%nij))
     sidx_prev(:) = sr%idx_miss
 
@@ -189,10 +189,6 @@ subroutine initialize(sr, tp, rt_vrf_val_miss)
   sidx_miss = sr%idx_miss
   tidx_miss = tp%idx_miss
   lonlat_miss = tp%coord_miss_s
-  if( present(rt_vrf_val_miss) )then
-    allocate(vrf_val_miss)
-    vrf_val_miss = rt_vrf_val_miss
-  endif
 
   ! For debugging
   debug_s = sr%debug
@@ -204,28 +200,28 @@ subroutine initialize(sr, tp, rt_vrf_val_miss)
   debug = debug_s .or. debug_t
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine initialize
+end function initialize
 !===============================================================
 !
 !===============================================================
-subroutine finalize()
+integer function finalize() result(info)
   implicit none
 
-  call echo(code%bgn, trim(MODNAME)//' finalize')
+  call echo(code%bgn, trim(MSGMOD)//' FUNCTION finalize')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  !info = 0
-  if( init_is_ok(.true.) /= 0 )then
-    !info = 1
+  info = 0
+  if( .not. is_initialized )then
+    info = 1
     return
   endif
-  self_is_initialized = .false.
-
-  deallocate(sname, tname)
+  is_initialized = .false.
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  deallocate(sname, tname)
+
   deallocate(dlons_all)
   deallocate(dlats_all)
 
@@ -234,19 +230,26 @@ subroutine finalize()
 
   if( allocated(sidx_prev) ) deallocate(sidx_prev)
   if( allocated(ij_prev) ) deallocate(ij_prev)
-
-  if( allocated(vrf_val_miss) ) deallocate(vrf_val_miss)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine finalize
+end function finalize
 !===============================================================
 !
 !===============================================================
-subroutine initialize_zone(srz)
+integer function initialize_zone(srz) result(info)
   implicit none
   type(raster_zone_), intent(in) :: srz
 
-  call echo(code%bgn, trim(MODNAME)//' initialize_zone')
+  call echo(code%bgn, trim(MSGMOD)//' FUNCTION initialize_zone')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  info = 0
+  if( is_initialized_zone )then
+    info = 1
+    return
+  endif
+  is_initialized_zone = .true.
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -314,14 +317,23 @@ subroutine initialize_zone(srz)
   sin_clons(:) = sin_dlons(:)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine initialize_zone
+end function initialize_zone
 !===============================================================
 !
 !===============================================================
-subroutine finalize_zone()
+integer function finalize_zone() result(info)
   implicit none
 
-  call echo(code%bgn, trim(MODNAME)//' finalize_zone')
+  call echo(code%bgn, trim(MSGMOD)//' FUNCTION finalize_zone')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  info = 0
+  if( .not. is_initialized_zone )then
+    info = 1
+    return
+  endif
+  is_initialized_zone = .false.
   !-------------------------------------------------------------
   deallocate(dlons)
   deallocate(dlats)
@@ -339,7 +351,7 @@ subroutine finalize_zone()
   deallocate(clats)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine finalize_zone
+end function finalize_zone
 !===============================================================
 !
 !===============================================================
@@ -373,7 +385,7 @@ subroutine calc_iarea(&
   logical       , intent(out) :: is_iarea_updated
   logical(1)    , pointer, optional :: smskmap(:,:)  ! in
 
-  call echo(code%bgn, trim(MODNAME)//' calc_iarea', '-p -x2')
+  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE calc_iarea', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -516,7 +528,7 @@ subroutine calc_iarea_core(iarea, tp)
 
   integer(4) :: n, nn
 
-  call echo(code%bgn, trim(MODNAME)//' calc_iarea_core', '-p -x2')
+  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE calc_iarea_core', '-p -x2')
   !-------------------------------------------------------------
   ! Update for all sides
   !-------------------------------------------------------------
@@ -605,137 +617,6 @@ subroutine calc_iarea_core(iarea, tp)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine calc_iarea_core
-!===============================================================
-!
-!===============================================================
-subroutine update_iarea_sum(iarea_sum, iarea)
-  implicit none
-  real(8), pointer :: iarea_sum(:,:)  ! inout
-  real(8), pointer :: iarea(:,:)      ! in
-
-  call echo(code%bgn, trim(MODNAME)//' update_iarea_sum', '-p -x2')
-  !-------------------------------------------------------------
-  if( init_is_ok(.true.) /= 0 )then
-    return
-  endif
-
-  iarea_sum(tdhi:tdhf,tdvi:tdvf) &
-    = iarea_sum(tdhi:tdhf,tdvi:tdvf) + iarea(tdhi:tdhf,tdvi:tdvf)
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine update_iarea_sum
-!===============================================================
-!
-!===============================================================
-subroutine fill_miss_vrf(dat, msk)
-  implicit none
-  real(8)   , pointer    :: dat(:,:)  ! inout
-  logical(1), pointer    :: msk(:,:)  ! in
-
-  integer(8) :: idh, idv
-
-  call echo(code%bgn, trim(MODNAME)//' fill_miss_vrf', '-p -x2')
-  !-------------------------------------------------------------
-  if( init_is_ok(.true.) /= 0 )then
-    return
-  endif
-
-  do idv = sdvi, sdvf
-    do idh = sdhi, sdhf
-      if( .not. msk(idh,idv) ) dat(idh,idv) = vrf_val_miss
-    enddo  ! idh/
-  enddo  ! idv/
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine fill_miss_vrf
-!===============================================================
-!
-!===============================================================
-subroutine calc_iratio_sum__out(ratio, area, mask)
-  implicit none
-  real(8)   , pointer           :: ratio(:,:)  ! out
-  real(8)   , pointer           :: area(:,:)   ! in
-  logical(1), pointer, optional :: mask(:,:)   ! in
-
-  integer(8) :: idh, idv
-  logical :: use_mask
-
-  call echo(code%bgn, trim(MODNAME)//' calc_iratio_sum__out', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( init_is_ok(.true.) /= 0 )then
-    return
-  endif
-
-  if( present(mask) )then
-    use_mask = associated(mask)
-  endif
-
-  if( use_mask )then
-    do idv = sdvi, sdvf
-      do idh = sdhi, sdhf
-        if( mask(idh,idv) )then
-          ratio(idh,idv) = area(idh,idv) / dara(idv)
-        else
-          ratio(idh,idv) = vrf_val_miss
-        endif
-      enddo
-    enddo
-  else
-    do idv = sdvi, sdvf
-      do idh = sdhi, sdhf
-        ratio(idh,idv) = area(idh,idv) / dara(idv)
-      enddo
-    enddo
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_iratio_sum__out
-!===============================================================
-!
-!===============================================================
-subroutine calc_iratio_sum__inout(area, mask)
-  implicit none
-  real(8)   , pointer              :: area(:,:)   ! inout
-  logical(1), pointer   , optional :: mask(:,:)   ! in
-
-  integer(8) :: idv, idh
-  logical :: use_mask
-
-  call echo(code%bgn, 'calc_iratio_sum__inout', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( init_is_ok(.true.) /= 0 )then
-    return
-  endif
-
-  use_mask = .false.
-  if( present(mask) )then
-    use_mask = associated(mask)
-  endif
-
-  if( use_mask )then
-    do idv = sdvi, sdvf
-      do idh = sdhi, sdhf
-        if( mask(idh,idv) )then
-          area(idh,idv) = area(idh,idv) / dara(idv)
-        else
-          area(idh,idv) = vrf_val_miss
-        endif
-      enddo
-    enddo
-  else
-    do idv = sdvi, sdvf
-      do idh = sdhi, sdhf
-        area(idh,idv) = area(idh,idv) / dara(idv)
-      enddo
-    enddo
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_iratio_sum__inout
 !===============================================================
 !
 !===============================================================

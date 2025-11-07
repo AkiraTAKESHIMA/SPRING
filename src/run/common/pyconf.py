@@ -91,11 +91,11 @@ def set_rt_default(cnf):
         if 'use_tgt_grdara' not in rt.keys():
             rt['use_tgt_grdara'] = False
 
-        if 'grid_coef' not in rt.keys():
-            rt['grid_coef'] = 'target'
+        if 'mesh_coef' not in rt.keys():
+            rt['mesh_coef'] = 'target'
 
-        if 'grid_sort' not in rt.keys():
-            rt['grid_sort'] = 'target'
+        if 'mesh_sort' not in rt.keys():
+            rt['mesh_sort'] = 'target'
 
         if 'opt_coef_sum_modify' not in rt.keys() and \
            'opt_coef_sum_modify_ulim' not in rt.keys():
@@ -114,11 +114,11 @@ def set_rt_default(cnf):
             if 'use_tgt_grdara' not in rt.keys():
                 rt['use_tgt_grdara'] = False
 
-        if 'grid_coef' not in rt.keys():
-            rt['grid_coef'] = 'target'
+        if 'mesh_coef' not in rt.keys():
+            rt['mesh_coef'] = 'target'
 
-        if 'grid_sort' not in rt.keys():
-            rt['grid_sort'] = 'target'
+        if 'mesh_sort' not in rt.keys():
+            rt['mesh_sort'] = 'target'
 
         if 'opt_coef_sum_modify' not in rt.keys() and \
            'opt_coef_sum_modify_ulim' not in rt.keys():

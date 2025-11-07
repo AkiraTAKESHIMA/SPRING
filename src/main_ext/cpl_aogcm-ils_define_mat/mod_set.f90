@@ -1827,8 +1827,8 @@ subroutine echo_settings_output_rt(rt)
   rtm => rt%main
 
   call edbg('id: '//str(rt%id))
-  call edbg('grid_coef: '//str(rtm%grid_coef))
-  call edbg('grid_sort: '//str(rtm%grid_sort))
+  call edbg('mesh_coef: '//str(rtm%mesh_coef))
+  call edbg('mesh_sort: '//str(rtm%mesh_sort))
   call edbg('sidx: '//str(fileinfo(rtm%f%sidx)))
   call edbg('tidx: '//str(fileinfo(rtm%f%tidx)))
   call edbg('area: '//str(fileinfo(rtm%f%area)))

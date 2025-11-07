@@ -72,40 +72,40 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
-  selectcase( trim(s%gs_type)//'_'//trim(t%gs_type) )
+  selectcase( trim(s%typ)//'_'//trim(t%typ) )
   !-------------------------------------------------------------
   ! Case: LatLon and LatLon
-  case( trim(GS_TYPE_LATLON)//'_'//trim(GS_TYPE_LATLON) )
+  case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__LATLON) )
     call make_rt_latlon_latlon(s, t, rt)
   !-------------------------------------------------------------
   ! Case: LatLon and Raster
-  case( trim(GS_TYPE_LATLON)//'_'//trim(GS_TYPE_RASTER), &
-        trim(GS_TYPE_RASTER)//'_'//trim(GS_TYPE_LATLON) )
+  case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__RASTER), &
+        trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__LATLON) )
     call make_rt_latlon_raster(s, t, rt)
   !-------------------------------------------------------------
   ! Case: LatLon and Polygon
-  case( trim(GS_TYPE_LATLON)//'_'//trim(GS_TYPE_POLYGON), &
-        trim(GS_TYPE_POLYGON)//'_'//trim(GS_TYPE_LATLON) )
+  case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__POLYGON), &
+        trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__LATLON) )
     call make_rt_latlon_polygon(s, t, rt)
   !-------------------------------------------------------------
   ! Case: Raster and Raster
-  case( trim(GS_TYPE_RASTER)//'_'//trim(GS_TYPE_RASTER) )
+  case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__RASTER) )
     call make_rt_raster_raster(s, t, rt)
   !-------------------------------------------------------------
   ! Case: Raster and Polygon
-  case( trim(GS_TYPE_RASTER)//'_'//trim(GS_TYPE_POLYGON), &
-        trim(GS_TYPE_POLYGON)//'_'//trim(GS_TYPE_RASTER) )
+  case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__POLYGON), &
+        trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__RASTER) )
     call make_rt_raster_polygon(s, t, rt)
   !-------------------------------------------------------------
   ! Case: Polygon and Polygon
-  case( trim(GS_TYPE_POLYGON)//'_'//trim(GS_TYPE_POLYGON) )
+  case( trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__POLYGON) )
     call make_rt_polygon_polygon(s, t, rt)
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type)//&
-            '\n  t%gs_type: '//str(t%gs_type))
+            '\n  s%typ: '//str(s%typ)//&
+            '\n  t%typ: '//str(t%typ))
   endselect
   !-------------------------------------------------------------
   !

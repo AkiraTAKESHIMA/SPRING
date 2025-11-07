@@ -13,17 +13,17 @@ path_report: "{dir_out}/report.txt"\n'
     return s
 
 
-def block_gs(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
+def block_mesh(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     if gs['type'] == 'latlon':
-        return block_gs_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out)
+        return block_mesh_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out)
     elif gs['type'] == 'raster':
-        return block_gs_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out)
+        return block_mesh_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out)
     elif gs['type'] == 'polygon':
-        return block_gs_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out)
+        return block_mesh_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out)
 
 
 
-def block_gs_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
+def block_mesh_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s = f'\
 \n\
 [mesh_latlon]\n\
@@ -75,7 +75,7 @@ def block_gs_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     return s
 
 
-def block_gs_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
+def block_mesh_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s = f'\
 \n\
 [mesh_raster]\n\
@@ -112,7 +112,7 @@ def block_gs_raster(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     return s
 
 
-def block_gs_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
+def block_mesh_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     s = f'\
 \n\
 [mesh_polygon]\n\

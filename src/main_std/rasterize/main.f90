@@ -1,7 +1,7 @@
 program main
   use lib_log
   use cmn1_type_gs
-  use cmn3_type_rst
+  use def_type
   use mod_set, only: &
         read_settings
   use mod_main, only: &

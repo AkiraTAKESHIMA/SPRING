@@ -184,7 +184,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   if( rtmi_ol_a%nij == 0_8 )then
     call calc_grdara_from_rt(&
            ocnara, & ! out
-           rtmi_oo_a, grid_target, & ! in
+           rtmi_oo_a, MESH__TARGET, & ! in
            agcm%grdidx, agcm%grdara) ! in
 
     do aij = 1_8, agcm%nij
@@ -196,12 +196,12 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   else
     call calc_grdara_from_rt(&
            lndara, & ! out
-           rtmi_ol_a, grid_target, & ! in
+           rtmi_ol_a, MESH__TARGET, & ! in
            agcm%grdidx, agcm%grdara) ! in
 
     call calc_grdara_from_rt(&
            ocnara, & ! out
-           rtmi_oo_a, grid_target, & ! in
+           rtmi_oo_a, MESH__TARGET, & ! in
            agcm%grdidx, agcm%grdara) ! in
 
     do aij = 1_8, agcm%nij
@@ -226,7 +226,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call calc_grdara_from_rt(&
          agcm%lndara_river, & ! out
-         rtmi_rr_a, grid_target, & ! in
+         rtmi_rr_a, MESH__TARGET, & ! in
          agcm%grdidx, agcm%grdara) ! in
 
   call echo(code%ext)
@@ -237,7 +237,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call calc_grdara_from_rt(&
          agcm%lndara_noriv_real, & ! out
-         rtmi_rn_a, grid_target, & ! in
+         rtmi_rn_a, MESH__TARGET, & ! in
          agcm%grdidx, agcm%grdara) ! in
 
   call echo(code%ext)
@@ -418,7 +418,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call calc_grdara_from_rt(&
          lsm%grdara_noriv_virt, &  ! out
-         rtmo_lnv_a, grid_source, &  ! in
+         rtmo_lnv_a, MESH__SOURCE, &  ! in
          rm%grdidx_ocean, rm%grdara_ocean)  ! in
 
   do lij = 1_8, lsm%nij
@@ -461,7 +461,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   call calc_grdara_from_rt(&
          lsm%grdara_ocean, & ! out
-         rtmo_lo_a, grid_source, & ! in
+         rtmo_lo_a, MESH__SOURCE, & ! in
          rm%grdidx_ocean, rm%grdara_ocean) ! in
 
   do lij = 1_8, lsm%nij
@@ -1300,11 +1300,11 @@ end subroutine define_mat
 !===============================================================
 subroutine calc_grdara_from_rt(&
     grdara, &
-    rtm, grid_which, grdidx, grdara_all)
+    rtm, mesh_which, grdidx, grdara_all)
   implicit none
   real(8)       , intent(out)           :: grdara(:)
   type(rt_main_), intent(inout), target :: rtm
-  character(*)  , intent(in)            :: grid_which
+  character(*)  , intent(in)            :: mesh_which
   integer(8)    , intent(in)            :: grdidx(:)
   real(8)       , intent(in)            :: grdara_all(:)
 
@@ -1333,14 +1333,14 @@ subroutine calc_grdara_from_rt(&
     call echo(code%ext)
   endif
 
-  selectcase( grid_which )
-  case( grid_source )
+  selectcase( mesh_which )
+  case( MESH__SOURCE )
     rtm_grid => rtm%sidx
-  case( grid_target )
+  case( MESH__TARGET )
     rtm_grid => rtm%tidx
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  grid_which: '//str(grid_which))
+            '\n  mesh_which: '//str(mesh_which))
   endselect
   !-------------------------------------------------------------
   ! Calc. grdara

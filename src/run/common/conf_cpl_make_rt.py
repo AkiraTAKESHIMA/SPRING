@@ -67,16 +67,16 @@ def block_rt(dir_out, rmp):
     s = f'\
 \n\
 [output_rt_lsm_to_agcm]\n\
-  grid_coef: none\n\
-  grid_sort: target\n\
-\n\
   dir: "{dir_out}"\n\
   fout_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
   fout_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
   fout_rt_area: "area.bin", dble, 1, {rmp["endian"]}\n\
   fout_rt_coef: "coef.bin", dble, 1, {rmp["endian"]}\n\
 \n\
-  vrf_target_form: auto\n\
+  mesh_coef: none\n\
+  mesh_sort: target\n\
+\n\
+  mesh_vrf: target\n\
   fout_vrf_grdnum: "vrf/tgt_grdnum.bin"\n\
 [end]\n'
 

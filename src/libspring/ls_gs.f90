@@ -606,7 +606,7 @@ subroutine define_grdsys_latlon_core(&
   a%id = 'gs'//str(i_gs)
   a%nam = trim(name)
 
-  call alloc_gs_components(a, GS_TYPE_LATLON)
+  call alloc_gs_components(a, MESHTYPE__LATLON)
   call set_default_values_gs_latlon(a%latlon)
   call set_gs_common(a)
 
@@ -1058,7 +1058,7 @@ subroutine define_grdsys_raster_core(&
   !-------------------------------------------------------------
   ! Set the default values and pointers
   !-------------------------------------------------------------
-  call alloc_gs_components(a, GS_TYPE_RASTER)
+  call alloc_gs_components(a, MESHTYPE__RASTER)
   call set_default_values_gs_raster(a%raster)
   call set_gs_common(a)
 
@@ -1224,21 +1224,21 @@ subroutine spring_print_grdsys(name)
   !-------------------------------------------------------------
   call point_grdsys(name, a)
 
-  call edbg('gs_type: '//str(a%gs_type))
+  call edbg('type: '//str(a%typ))
 
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     al => a%latlon
     call edbg('  nx: '//str(al%nx)//', ny: '//str(al%ny))
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     ar => a%raster
     call edbg('  nx: '//str(ar%nx)//', ny: '//str(ar%ny))
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     ap => a%polygon
     call edbg('  np: '//str(ap%np)//', nij: '//str(ap%nij))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  a%gs_type: '//str(a%gs_type))
+            '\n  a%typ: '//str(a%typ))
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)

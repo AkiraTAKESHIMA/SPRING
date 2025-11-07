@@ -31,7 +31,7 @@ def make_grid_data(cnf, update_data, meshNameFmt, lst_landType):
         print('config: '+f_conf)
         fp = open(f_conf, 'w')
         fp.write(conf.make_grid_data.head(dir_tmp))
-        fp.write(conf.make_grid_data.block_gs(
+        fp.write(conf.make_grid_data.block_mesh(
                    c, c['dir'], dir_tmp,
                    ['rstidx', 'grdidx'],
                    ['ara']))

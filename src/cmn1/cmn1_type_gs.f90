@@ -372,7 +372,7 @@ module cmn1_type_gs
     character(:), allocatable :: id
     character(:)       , pointer :: nam
     logical(4)         , pointer :: is_valid
-    character(CLEN_KEY), pointer :: gs_type
+    character(CLEN_KEY), pointer :: typ
     logical(4)         , pointer :: is_source
     type(file_grid_in_) , pointer :: f_grid_in
     type(file_grid_out_), pointer :: f_grid_out
@@ -391,7 +391,7 @@ module cmn1_type_gs
     character(:), allocatable :: id
     character(:), allocatable :: nam
     logical(4)          :: is_valid
-    character(CLEN_KEY) :: gs_type
+    character(CLEN_KEY) :: typ
     logical(4)          :: is_source
     type(gs_latlon_) , pointer :: latlon
     type(gs_raster_) , pointer :: raster

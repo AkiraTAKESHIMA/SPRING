@@ -8,7 +8,6 @@ module mod_set
   use cmn1_const
   use cmn1_type_opt
   use cmn1_type_gs
-  use cmn3_type_rst
   use def_type
   implicit none
   private
@@ -83,11 +82,11 @@ subroutine read_settings(s, t, dout)
   call init_gs(t)
 
   s%id = 's'
-  s%nam = GRID_SOURCE
+  s%nam = MESH__SOURCE
   s%is_source = .true.
 
   t%id = 't'
-  t%nam = 'raster'
+  t%nam = MESHTYPE__RASTER
   t%is_source = .false.
 
   call set_default_values_opt_sys(opt%sys)
@@ -169,12 +168,11 @@ subroutine read_settings(s, t, dout)
   !-------------------------------------------------------------
   call echo(code%ent, 'Detecting conflictions')
 
-  if( opt%earth%shp == earth_shape_ellips )then
-    if( s%gs_type == GS_TYPE_POLYGON )then
+  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
+    if( s%typ == MESHTYPE__POLYGON )then
       call eerr(str(msg_unexpected_condition())//&
-              '\n  opt%earth%shp == earth_shape_ellips .and. s%cmn%gs_type == gs_type_polygon'//&
-              '\n  opt%earth%shp: '//str(opt%earth%shp)//&
-              '\n  s%cmn%gs_type: '//str(s%cmn%gs_type))
+              '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
+                ' for '//str(s%typ)//' meshes.')
     endif
   endif
 
@@ -229,16 +227,16 @@ subroutine read_settings(s, t, dout)
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
-  selectcase( s%gs_type )
-  case( gs_type_latlon )
+  selectcase( s%typ )
+  case( MESHTYPE__LATLON )
     call echo_settings_gs_latlon(s%latlon)
-  case( gs_type_raster )
+  case( MESHTYPE__RASTER )
     call echo_settings_gs_raster(s%raster)
-  case( gs_type_polygon )
+  case( MESHTYPE__POLYGON )
     call echo_settings_gs_polygon(s%polygon)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type))
+            '\n  s%typ: '//str(s%typ))
   endselect
 
   call echo_settings_raster(t%raster)
@@ -425,7 +423,7 @@ subroutine read_settings_gs_latlon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, GS_TYPE_LATLON)
+  call alloc_gs_components(u, MESHTYPE__LATLON)
   call set_default_values_gs_latlon(u%latlon)
   call set_gs_common(u)
 
@@ -786,7 +784,7 @@ subroutine read_settings_gs_polygon(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, gs_type_polygon)
+  call alloc_gs_components(u, MESHTYPE__POLYGON)
   call set_default_values_gs_polygon(u%polygon)
   call set_gs_common(u)
 
@@ -1142,7 +1140,7 @@ subroutine read_settings_raster(u)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(u, gs_type_raster)
+  call alloc_gs_components(u, MESHTYPE__RASTER)
   call set_default_values_gs_raster(u%raster)
   call set_gs_common(u)
 
@@ -1265,12 +1263,12 @@ subroutine read_settings_output(dout)
   call set_keynum('ratio_max', 0, 1)
   call set_keynum('include_min', 0, 1)
   call set_keynum('include_max', 0, 1)
-  call set_keynum('thresh_ratio_zero_positive'    , 0, 1)
-  call set_keynum('thresh_ratio_sum_zero_positive', 0, 1)
+  call set_keynum('ratio_ignored', 0, 1)
+  call set_keynum('ratio_min_idx', 0, 1)
   call set_keynum('dir', 0, -1)
-  call set_keynum('f_area_sum' , 0, 1)
-  call set_keynum('f_ratio_sum', 0, 1)
   call set_keynum('f_mask'     , 0, 1)
+  call set_keynum('f_ratio_sum', 0, 1)
+  call set_keynum('f_area_sum' , 0, 1)
   call set_keynum('f_idx'      , 0, 1)
   call set_keynum('val_miss', 0, 1)
 
@@ -1281,13 +1279,13 @@ subroutine read_settings_output(dout)
   call echo(code%ent, 'Setting the default values')
 
   ! [0.5, 1.0] in default
-  dout%iratio_min = 0.5d0
-  dout%iratio_max = 1.d0
+  dout%thresh%iratio_min = 0.5d0
+  dout%thresh%iratio_max = 1.d0
   include_min = .true.
   include_max = .true.
 
-  dout%thresh_iratio_zero_positive     = 0.d0
-  dout%thresh_iratio_sum_zero_positive = 0.d0
+  dout%thresh%iratio_ignored = 0.d0
+  dout%thresh%iratio_min_idx = 0.d0
 
   call set_file_default(action=ACTION_WRITE)
   dout%f_iarea_sum  = file('', DTYPE_DBLE, id='output%f_iarea_sum')
@@ -1316,34 +1314,36 @@ subroutine read_settings_output(dout)
     case( '' )
       exit
     !-----------------------------------------------------------
-    ! Thresholds
+    ! Range for the mask
     case( 'ratio_min' )
-      call read_value(dout%iratio_min)
+      call read_value(dout%thresh%iratio_min)
     case( 'ratio_max' )
-      call read_value(dout%iratio_max)
+      call read_value(dout%thresh%iratio_max)
 
     case( 'include_min' )
       call read_value(include_min)
     case( 'include_max' )
       call read_value(include_max)
     !-----------------------------------------------------------
-    ! Thresholds for validation
-    case( 'thresh_ratio_zero_positive' )
-      call read_value(dout%thresh_iratio_zero_positive)
-    case( 'thresh_ratio_sum_zero_positive' )
-      call read_value(dout%thresh_iratio_sum_zero_positive)
+    !
+    case( 'ratio_min_idx' )
+      call read_value(dout%thresh%iratio_min_idx)
+    !-----------------------------------------------------------
+    ! Range for the index data
+    case( 'ratio_ignored' )
+      call read_value(dout%thresh%iratio_ignored)
     !-----------------------------------------------------------
     ! Parent directory
     case( 'dir' )
       call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Output files
-    case( 'f_area_sum' )
-      call read_value(dout%f_iarea_sum, dir)
-    case( 'f_ratio_sum' )
-      call read_value(dout%f_iratio_sum, dir)
     case( 'f_mask' )
       call read_value(dout%f_mask, dir)
+    case( 'f_ratio_sum' )
+      call read_value(dout%f_iratio_sum, dir)
+    case( 'f_area_sum' )
+      call read_value(dout%f_iarea_sum, dir)
     case( 'f_idx' )
       call read_value(dout%f_idx, dir)
     !-----------------------------------------------------------
@@ -1367,22 +1367,22 @@ subroutine read_settings_output(dout)
   call echo(code%ent, 'Setting the related values')
 
   if( keynum('ratio_min') == 0 )then
-    dout%ineq_iratio_min = INEQ_NONE
+    dout%thresh%ineq_iratio_min = INEQ_NONE
   else
     if( include_min )then
-      dout%ineq_iratio_min = INEQ_GE
+      dout%thresh%ineq_iratio_min = INEQ_GE
     else
-      dout%ineq_iratio_min = INEQ_GT
+      dout%thresh%ineq_iratio_min = INEQ_GT
     endif
   endif
 
   if( keynum('ratio_max') == 0 )then
-    dout%ineq_iratio_max = INEQ_NONE
+    dout%thresh%ineq_iratio_max = INEQ_NONE
   else
     if( include_max )then
-      dout%ineq_iratio_max = INEQ_LE
+      dout%thresh%ineq_iratio_max = INEQ_LE
     else
-      dout%ineq_iratio_max = INEQ_LT
+      dout%thresh%ineq_iratio_max = INEQ_LT
     endif
   endif
 
@@ -1393,8 +1393,8 @@ subroutine read_settings_output(dout)
   call echo(code%ent, 'Checking the values')
 
   call check_values_iratio_minmax(&
-         dout%ineq_iratio_min, dout%ineq_iratio_max, &
-         dout%iratio_min     , dout%iratio_max)
+         dout%thresh%ineq_iratio_min, dout%thresh%ineq_iratio_max, &
+         dout%thresh%iratio_min     , dout%thresh%iratio_max)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1589,10 +1589,10 @@ subroutine check_paths(s, t, dout, opt_sys)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking input files')
 
-  selectcase( s%gs_type )
+  selectcase( s%typ )
   !-------------------------------------------------------------
-  ! Case: Lattice
-  case( gs_type_latlon )
+  ! Case: Latlon
+  case( MESHTYPE__LATLON )
     sfl => s%latlon%f_latlon_in
     sfg_in => s%latlon%f_grid_in
 
@@ -1604,16 +1604,16 @@ subroutine check_paths(s, t, dout, opt_sys)
     enddo
   !-------------------------------------------------------------
   ! Case: Raster
-  case( gs_type_raster )
+  case( MESHTYPE__RASTER )
     sfr => s%raster%f_raster_in
     sfg_in => s%raster%f_grid_in
 
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type)//&
+            '\n  s%typ: '//str(s%typ)//&
             '\nNot implemented yet.')
   !-------------------------------------------------------------
   ! Case: Polygon
-  case( gs_type_polygon )
+  case( MESHTYPE__POLYGON )
     sfp => s%polygon%f_polygon_in
     sfg_in => s%polygon%f_grid_in
 
@@ -1631,7 +1631,7 @@ subroutine check_paths(s, t, dout, opt_sys)
   ! Case: ERROR
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type))
+            '\n  s%typ: '//str(s%typ))
   endselect
 
   call echo(code%ext)
@@ -1642,9 +1642,9 @@ subroutine check_paths(s, t, dout, opt_sys)
 
   call set_opt_old_files(opt_sys%old_files)
 
-  call handle_old_file(dout%f_iarea_sum)
-  call handle_old_file(dout%f_iratio_sum)
   call handle_old_file(dout%f_mask)
+  call handle_old_file(dout%f_iratio_sum)
+  call handle_old_file(dout%f_iarea_sum)
   call handle_old_file(dout%f_idx)
 
   call echo(code%ext)
@@ -1655,14 +1655,14 @@ subroutine check_paths(s, t, dout, opt_sys)
 
   call set_opt_mkdir(output=.true., hut=hut_command)
 
-  call mkdir(dirname(dout%f_iarea_sum%path))
-  call mkdir(dirname(dout%f_iratio_sum%path))
   call mkdir(dirname(dout%f_mask%path))
+  call mkdir(dirname(dout%f_iratio_sum%path))
+  call mkdir(dirname(dout%f_iarea_sum%path))
   call mkdir(dirname(dout%f_idx%path))
 
-  call check_permission(dout%f_iarea_sum , allow_empty=.true.)
-  call check_permission(dout%f_iratio_sum, allow_empty=.true.)
   call check_permission(dout%f_mask      , allow_empty=.true.)
+  call check_permission(dout%f_iratio_sum, allow_empty=.true.)
+  call check_permission(dout%f_iarea_sum , allow_empty=.true.)
   call check_permission(dout%f_idx       , allow_empty=.true.)
 
   call echo(code%ext)
@@ -1705,7 +1705,7 @@ subroutine echo_settings_gs_latlon(ul)
 
   call edbg('Name: '//str(ul%nam))
 
-  call edbg('Grid type: '//str(gs_type_latlon))
+  call edbg('Mesh type: '//str(MESHTYPE__LATLON))
 
   call edbg('nx: '//str(ul%nx))
   call edbg('ny: '//str(ul%ny))
@@ -1807,7 +1807,7 @@ subroutine echo_settings_gs_polygon(up)
 
   call edbg('Name: '//str(up%nam))
 
-  call edbg('Grid type: '//str(gs_type_polygon))
+  call edbg('Mesh type: '//str(MESHTYPE__POLYGON))
 
   call edbg('Grid data')
   call edbg('  Size : '//str(fp%sz(2),dgt_ij))
@@ -1919,51 +1919,51 @@ subroutine echo_settings_output(dout)
   !-------------------------------------------------------------
   ! Make a string of range of the ratio
   !-------------------------------------------------------------
-  selectcase( dout%ineq_iratio_min )
+  selectcase( dout%thresh%ineq_iratio_min )
   case( INEQ_NONE )
     range_left = '(-inf'
   case( INEQ_GT )
-    range_left = '('//str(dout%iratio_min)
+    range_left = '('//str(dout%thresh%iratio_min)
   case( INEQ_GE )
-    range_left = '['//str(dout%iratio_min)
+    range_left = '['//str(dout%thresh%iratio_min)
   case( INEQ_LT, &
         INEQ_LE )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
+            '\n  dout%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
+            '\n  dout%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
   endselect
 
-  selectcase( dout%ineq_iratio_max )
+  selectcase( dout%thresh%ineq_iratio_max )
   case( INEQ_NONE )
     range_right = '+inf)'
   case( INEQ_LT )
-    range_right = str(dout%iratio_min)//')'
+    range_right = str(dout%thresh%iratio_min)//')'
   case( INEQ_LE )
-    range_right = str(dout%iratio_min)//']'
+    range_right = str(dout%thresh%iratio_min)//']'
   case( INEQ_GT, &
         INEQ_GE )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
+            '\n  dout%thresh%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  dout%ineq_iratio_min: '//str(dout%ineq_iratio_min))
+            '\n  dout%thresh%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Range of intersection ratio: '//str(range_left)//', '//str(range_right))
   call edbg('Files')
   call edbg('  area_sum : '//str(fileinfo(dout%f_iarea_sum)))
   call edbg('  ratio_sum: '//str(fileinfo(dout%f_iratio_sum)))
   call edbg('  mask     : '//str(fileinfo(dout%f_mask)))
   call edbg('  idx      : '//str(fileinfo(dout%f_idx)))
   call edbg('Missing value: '//str(dout%val_miss))
-  call edbg('Raster is considered to be missing when sum. of ratio <= '//&
-            str(dout%thresh_iratio_sum_zero_positive))
-  call edbg('Intersection is ignored when ratio <= '//&
-            str(dout%thresh_iratio_zero_positive))
+  call edbg('Range of intersection ratio: '//str(range_left)//', '//str(range_right))
+  call edbg('Missing index is applied when sum. of ratio <= '//&
+            str(dout%thresh%iratio_min_idx))
+  call edbg('Intersection is ignored when its ratio <= '//&
+            str(dout%thresh%iratio_ignored))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_output

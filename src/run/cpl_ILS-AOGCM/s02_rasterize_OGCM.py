@@ -16,7 +16,7 @@ def rasterize(cnf, update_data):
     print('config: '+f_conf)
     fp = open(f_conf,'w')
     fp.write(conf.remap.head(env.dir_tmp))
-    fp.write(conf.remap.block_gs(cnf[k.m]['OGCM_land']))
+    fp.write(conf.remap.block_mesh(cnf[k.m]['OGCM_land']))
     fp.write(conf.rasterize.block_raster(cnf[k.m]['RM']))
     fp.write(conf.rasterize.block_output(env.dir_tmp))
     fp.write(conf.remap.block_options(cnf[k.opt]))

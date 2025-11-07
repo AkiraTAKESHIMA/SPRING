@@ -54,14 +54,14 @@ subroutine finish_rt_main(rt, s, t, output)
 
   rtm => rt%main
 
-  selectcase( rtm%grid_coef )
-  case( GRID_SOURCE )
+  selectcase( rtm%mesh_coef )
+  case( MESH__SOURCE )
     a => s
-  case( GRID_TARGET )
+  case( MESH__TARGET )
     a => t
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
+            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
   endselect
 
   ac => a%cmn

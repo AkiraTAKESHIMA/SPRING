@@ -68,8 +68,8 @@ module cmn2_type_rt
     character(CLEN_VAR) :: id
 
     character(CLEN_VAR) :: mode
-    character(CLEN_KEY) :: grid_coef
-    character(CLEN_KEY) :: grid_sort
+    character(CLEN_KEY) :: mesh_coef
+    character(CLEN_KEY) :: mesh_sort
     logical :: allow_empty
 
     logical :: is_sorted_by_sidx
@@ -94,9 +94,6 @@ module cmn2_type_rt
 
   type file_rt_vrf_
     character(CLEN_VAR) :: id
-
-    character(CLEN_KEY) :: form
-
     type(file_) :: out_grdidx     , &
                    out_grdara_true, &
                    out_grdara_rt  , &
@@ -113,8 +110,7 @@ module cmn2_type_rt
     real(8)    :: dval_miss
     integer(8) :: ival_miss
 
-    integer :: nFiles
-    type(file_rt_vrf_), pointer :: f(:) !(nFiles)
+    type(file_rt_vrf_) :: f
 
     integer(8), pointer :: grdidx(:)
     real(8)   , pointer :: grdara_true(:)
@@ -138,8 +134,8 @@ module cmn2_type_rt
     character(CLEN_VAR*2+4) :: nam
     character(CLEN_VAR)     :: snam, tnam
     type(rt_main_) :: main
-    type(rt_vrf_)  :: vrf_source
-    type(rt_vrf_)  :: vrf_target
+    type(rt_vrf_)  :: vrf_src
+    type(rt_vrf_)  :: vrf_tgt
     character(CLEN_KEY) :: status  !cmn1 RT_STATUS__*
   end type
 

@@ -26,47 +26,20 @@ subroutine make_rt_vrf(rt, a)
   type(rt_)       , intent(inout), target :: rt
   type(gs_)       , intent(inout)         :: a
 
-  type(rt_vrf_)     , pointer :: rtv
-  type(file_rt_vrf_), pointer :: frtv
-  integer :: iFile
-
   call echo(code%bgn, 'make_rt_vrf')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( a%is_source )then
-    rtv => rt%vrf_source
-  else
-    rtv => rt%vrf_target
-  endif
+  call edbg('mesh: '//str(a%nam))
 
-  if( rtv%nFiles == 0 )then
-    call echo(code%ret)
-    return
-  endif
-
-  call edbg('grid system: '//str(a%nam))
-
-  do iFile = 1, rtv%nFiles
-    frtv => rtv%f(iFile)
-
-    selectcase( frtv%form )
-    case( GRID_FORM_AUTO, GRID_FORM_INDEX )
-      call make_rt_vrf_grid(rt, iFile, a)
-    case( GRID_FORM_RASTER )
-      continue
-    case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  '//str(frtv%id)//'%form: '//str(frtv%form))
-    endselect
-  enddo  ! iFile/
+  call make_rt_vrf_grid(rt, a)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine make_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_vrf_grid(rt, iFile, a)
+subroutine make_rt_vrf_grid(rt, a)
   ! common1
   use cmn1_opt_ctrl, only: &
         get_opt_log
@@ -84,11 +57,9 @@ subroutine make_rt_vrf_grid(rt, iFile, a)
   implicit none
   type(rt_), intent(inout), target :: rt
   type(gs_), intent(in)   , target :: a
-  integer  , intent(in)            :: iFile
 
   type(gs_common_)    , pointer :: ac
   type(rt_vrf_)       , pointer :: rtv
-  type(file_rt_vrf_)  , pointer :: frtv
   type(file_grid_out_), pointer :: fg_out
   type(grid_)         , pointer :: g
 
@@ -111,22 +82,21 @@ subroutine make_rt_vrf_grid(rt, iFile, a)
   endif
 
   if( ac%is_source )then
-    rtv => rt%vrf_source
+    rtv => rt%vrf_src
   else
-    rtv => rt%vrf_target
+    rtv => rt%vrf_tgt
   endif
-  frtv => rtv%f(iFile)
 
   fg_out => ac%f_grid_out
   g => ac%grid
 
   call free_rt_vrf_grid(rtv)
 
-  make_vrf_grdidx      = frtv%out_grdidx%path      /= ''
-  make_vrf_grdara_true = frtv%out_grdara_true%path /= ''
-  make_vrf_grdara_rt   = frtv%out_grdara_rt%path   /= ''
-  make_vrf_rerr_grdara = frtv%out_rerr_grdara%path /= ''
-  make_vrf_grdnum      = frtv%out_grdnum%path      /= ''
+  make_vrf_grdidx      = rtv%f%out_grdidx%path      /= ''
+  make_vrf_grdara_true = rtv%f%out_grdara_true%path /= ''
+  make_vrf_grdara_rt   = rtv%f%out_grdara_rt%path   /= ''
+  make_vrf_rerr_grdara = rtv%f%out_rerr_grdara%path /= ''
+  make_vrf_grdnum      = rtv%f%out_grdnum%path      /= ''
 
   make_vrf_grdara_true = make_vrf_grdara_true .or. make_vrf_rerr_grdara
   make_vrf_grdara_rt   = make_vrf_grdara_rt   .or. make_vrf_rerr_grdara
@@ -272,7 +242,6 @@ subroutine make_rt_vrf_grid(rt, iFile, a)
   !
   !-------------------------------------------------------------
   nullify(rtv)
-  nullify(frtv)
   nullify(fg_out)
   !-------------------------------------------------------------
   call echo(code%ret)

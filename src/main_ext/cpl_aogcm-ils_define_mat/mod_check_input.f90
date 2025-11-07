@@ -36,7 +36,7 @@ subroutine check_relations_input(rt_in, rm)
   call echo(code%ent, 'Checking relations of rt_rm_river_to_agcm and grid_rm_river')
 
   call check_relations_rt_grid(&
-         rt_in%rm_river_to_agcm%main, grid_source, &
+         rt_in%rm_river_to_agcm%main, MESH__SOURCE, &
          rm%fin_grdidx_river, rm%fin_grdara_river, rm%nij, rm%idx_miss, &
          mode_rerr_tiny)
 
@@ -47,7 +47,7 @@ subroutine check_relations_input(rt_in, rm)
   call echo(code%ent, 'Checking relations of rt_rm_noriv_to_agcm and grid_rm_noriv')
 
   call check_relations_rt_grid(&
-         rt_in%rm_noriv_to_agcm%main, grid_source, &
+         rt_in%rm_noriv_to_agcm%main, MESH__SOURCE, &
          rm%fin_grdidx_noriv, rm%fin_grdara_noriv, rm%nij, rm%idx_miss, &
          mode_rerr_tiny)
 
@@ -58,7 +58,7 @@ subroutine check_relations_input(rt_in, rm)
   call echo(code%ent, 'Checking relations of rt_rm_ocean_to_agcm and grid_rm_ocean')
 
   call check_relations_rt_grid(&
-         rt_in%rm_ocean_to_agcm%main, grid_source, &
+         rt_in%rm_ocean_to_agcm%main, MESH__SOURCE, &
          rm%fin_grdidx_ocean, rm%fin_grdara_ocean, rm%nij, rm%idx_miss, &
          mode_rerr_tiny)
 
@@ -70,12 +70,12 @@ end subroutine check_relations_input
 !
 !===============================================================
 subroutine check_relations_rt_grid(&
-    rtm, grid_which, &
+    rtm, mesh_which, &
     f_grdidx, f_grdara, ngij, idx_miss, &
     mode_rerr_grdara)
   implicit none
   type(rt_main_), intent(in), target :: rtm
-  character(*)  , intent(in)         :: grid_which
+  character(*)  , intent(in)         :: mesh_which
   type(file_)   , intent(in), target :: f_grdidx, f_grdara
   integer(8)    , intent(in)         :: ngij
   integer(8)    , intent(in)         :: idx_miss
@@ -152,18 +152,18 @@ subroutine check_relations_rt_grid(&
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating grdara from rt')
 
-  selectcase( grid_which )
-  case( grid_source )
+  selectcase( mesh_which )
+  case( MESH__SOURCE )
     f => rtm%f%sidx
     call edbg('Reading rt_sidx')
     call rbin(rt_grid, f%path, f%dtype, f%endian, f%rec)
-  case( grid_target )
+  case( MESH__TARGET )
     f => rtm%f%tidx
     call edbg('Reading rt_tidx')
     call rbin(rt_grid, f%path, f%dtype, f%endian, f%rec)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  grid_which: '//str(grid_which))
+            '\n  mesh_which: '//str(mesh_which))
   endselect
 
   f => rtm%f%area
