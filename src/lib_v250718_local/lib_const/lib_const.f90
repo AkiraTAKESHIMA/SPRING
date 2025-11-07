@@ -97,6 +97,19 @@ module lib_const
 !  real(4), parameter :: ninf4 = transfer(Z'FF800000', 0.e0)
 !  real(8), parameter :: pinf8 = transfer(Z'7FF0000000000000', 0.d0)
 !  real(8), parameter :: ninf8 = transfer(Z'FFF0000000000000', 0.d0)
+
+  integer(1), parameter :: INT1_TRUE  = 1_1
+  integer(1), parameter :: INT1_FALSE = 0_1
+  integer(2), parameter :: INT2_TRUE  = 1_2
+  integer(2), parameter :: INT2_FALSE = 0_2
+  integer(4), parameter :: INT4_TRUE  = 1_4
+  integer(4), parameter :: INT4_FALSE = 0_4
+  integer(8), parameter :: INT8_TRUE  = 1_8
+  integer(8), parameter :: INT8_FALSE = 0_8
+  real(4)   , parameter :: REAL_TRUE  = 1.0
+  real(4)   , parameter :: REAL_FALSE = 0.0
+  real(8)   , parameter :: DBLE_TRUE  = 1.d0
+  real(8)   , parameter :: DBLE_FALSE = 0.d0
   !=============================================================
   ! Physical constants
   !=============================================================

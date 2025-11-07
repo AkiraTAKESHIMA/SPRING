@@ -15,19 +15,19 @@ path_report: "{dir_out}/{fname_report}.txt"\n'
     return s
 
 
-def block_gs(gs, use_grdara=False):
+def block_mesh(gs, use_grdara=False):
     if gs['type'] == 'latlon':
-        return block_gs_latlon(gs, use_grdara)
+        return block_mesh_latlon(gs, use_grdara)
     elif gs['type'] == 'raster':
-        return block_gs_raster(gs, use_grdara)
+        return block_mesh_raster(gs, use_grdara)
     elif gs['type'] == 'polygon':
-        return block_gs_polygon(gs, use_grdara)
+        return block_mesh_polygon(gs, use_grdara)
 
 
-def block_gs_latlon(gs, use_grdara):
+def block_mesh_latlon(gs, use_grdara):
     s = f'\
 \n\
-[grid_system_latlon]\n\
+[mesh_latlon]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx"]}\n\
   ny: {gs["ny"]}\n'
@@ -82,10 +82,10 @@ def block_gs_latlon(gs, use_grdara):
     return s
 
 
-def block_gs_raster(gs, use_grdara):
+def block_mesh_raster(gs, use_grdara):
     s = f'\
 \n\
-[grid_system_raster]\n\
+[mesh_raster]\n\
   name: "{gs["name"]}"\n\
   nx: {gs["nx_raster"]}\n\
   ny: {gs["ny_raster"]}\n\
@@ -122,9 +122,9 @@ def block_gs_raster(gs, use_grdara):
     s += f'\
   in_grid_sz: {gs["nx_grid"]}, {gs["ny_grid"]}\n'
 
-    if util.key_val_exist(gs, 'grdidx_condition'):
+    if util.key_val_exist(gs, 'idx_condition'):
         s += f'\
-  grdidx_condition: {gs["grdidx_condition"]}\n'
+  idx_condition: {gs["idx_condition"]}\n'
 
     if util.key_val_exist(gs, 'idx_miss'):
         s += f'\
@@ -136,10 +136,10 @@ def block_gs_raster(gs, use_grdara):
     return s
 
 
-def block_gs_polygon(gs, use_grdara):
+def block_mesh_polygon(gs, use_grdara):
     s = f'\
 \n\
-[grid_system_polygon]\n\
+[mesh_polygon]\n\
   name: "{gs["name"]}"\n\
   np: {gs["np"]}\n\
   nij: {gs["nij"]}\n'
@@ -197,34 +197,33 @@ def block_remapping(
         fname_rt_grid='grid', fname_rt_area='area', fname_rt_coef='coef'):
     s = f'\
 \n\
-[remapping]\n'
-
-    for key in ['opt_coef_sum_modify',
-                'opt_coef_sum_modify_ulim',
-                'grid_coef',
-                'grid_sort',
-                'allow_empty']:
-        if util.key_val_exist(rmp, key):
-            s += f'\
-  {key}: {rmp[key]}\n'
-
-    s += f'\
+[remapping]\n\
   dir: "{dir_out}"\n\
   fout_rt_sidx: "{fname_rt_grid}.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
   fout_rt_tidx: "{fname_rt_grid}.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
   fout_rt_area: "{fname_rt_area}.bin", endian={rmp["endian"]}\n\
   fout_rt_coef: "{fname_rt_coef}.bin", endian={rmp["endian"]}\n'
 
+    for key in ['mesh_coef', 
+                'mesh_sort', 
+                'allow_empty', 
+                'opt_coef_sum_modify',
+                'opt_coef_sum_modify_ulim',
+               ]:
+        if util.key_val_exist(rmp, key):
+            s += f'\
+  {key}: {rmp[key]}\n'
+
     if rmp['make_verification_data']:
         s += '\
 \n\
-  vrf_source_form: auto\n\
+  mesh_vrf: source\n\
   fout_vrf_grdidx     : "vrf/src_idx.bin"\n\
   fout_vrf_grdara_true: "vrf/src_val.bin", rec=1\n\
   fout_vrf_grdara_rt  : "vrf/src_val.bin", rec=2\n\
   fout_vrf_rerr_grdara: "vrf/src_val.bin", rec=3\n\
 \n\
-  vrf_target_form: auto\n\
+  mesh_vrf: target\n\
   fout_vrf_grdidx     : "vrf/tgt_idx.bin"\n\
   fout_vrf_grdara_true: "vrf/tgt_val.bin", rec=1\n\
   fout_vrf_grdara_rt  : "vrf/tgt_val.bin", rec=2\n\

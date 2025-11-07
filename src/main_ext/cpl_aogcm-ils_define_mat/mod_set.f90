@@ -45,8 +45,11 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
         set_default_values_opt_sys, &
         set_default_values_opt_log
   use cmn2_rt_base, only: &
-        init_rt, &
-        set_default_values_rt
+        init_rt                    , &
+        set_default_values_rt      , &
+        set_status_rt_main_file    , &
+        set_action_rt_main_file    , &
+        apply_oldfiles_rt_main_file
   implicit none
   type(rt_in_) , intent(out) :: rt_in
   type(rt_out_), intent(out) :: rt_out
@@ -142,11 +145,11 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   rt_in%rm_river_to_agcm%id   = 'rt_in%rm_river_to_agcm'
   rt_in%rm_noriv_to_agcm%id   = 'rt_in%rm_noriv_to_agcm'
   rt_in%rm_ocean_to_agcm%id   = 'rt_in%rm_ocean_to_agcm'
-  call set_default_values_rt(rt_in%ogcm_ocean_to_agcm)
-  call set_default_values_rt(rt_in%ogcm_land_to_agcm )
-  call set_default_values_rt(rt_in%rm_river_to_agcm  )
-  call set_default_values_rt(rt_in%rm_noriv_to_agcm  )
-  call set_default_values_rt(rt_in%rm_ocean_to_agcm  )
+  call set_default_values_rt(rt_in%ogcm_ocean_to_agcm, status=RT_STATUS__READ)
+  call set_default_values_rt(rt_in%ogcm_land_to_agcm , status=RT_STATUS__READ)
+  call set_default_values_rt(rt_in%rm_river_to_agcm  , status=RT_STATUS__READ)
+  call set_default_values_rt(rt_in%rm_noriv_to_agcm  , status=RT_STATUS__READ)
+  call set_default_values_rt(rt_in%rm_ocean_to_agcm  , status=RT_STATUS__READ)
 
   rt_out%lsm_river_to_agcm%id      = 'rt_out%lsm_river_to_agcm'
   rt_out%lsm_noriv_to_agcm%id      = 'rt_out%lsm_noriv_to_agcm'
@@ -155,13 +158,13 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   rt_out%agcm_to_lsm_river%id      = 'rt_out%agcm_to_lsm_river'
   rt_out%agcm_to_lsm_noriv%id      = 'rt_out%agcm_to_lsm_noriv'
   rt_out%agcm_to_lsm_ocean%id      = 'rt_out%agcm_to_lsm_ocean'
-  call set_default_values_rt(rt_out%lsm_river_to_agcm)
-  call set_default_values_rt(rt_out%lsm_noriv_to_agcm)
-  call set_default_values_rt(rt_out%lsm_noriv_virt_to_agcm)
-  call set_default_values_rt(rt_out%lsm_ocean_to_agcm)
-  call set_default_values_rt(rt_out%agcm_to_lsm_river)
-  call set_default_values_rt(rt_out%agcm_to_lsm_noriv)
-  call set_default_values_rt(rt_out%agcm_to_lsm_ocean)
+  call set_default_values_rt(rt_out%lsm_river_to_agcm     , status=RT_STATUS__MAKE)
+  call set_default_values_rt(rt_out%lsm_noriv_to_agcm     , status=RT_STATUS__MAKE)
+  call set_default_values_rt(rt_out%lsm_noriv_virt_to_agcm, status=RT_STATUS__MAKE)
+  call set_default_values_rt(rt_out%lsm_ocean_to_agcm     , status=RT_STATUS__MAKE)
+  call set_default_values_rt(rt_out%agcm_to_lsm_river     , status=RT_STATUS__MAKE)
+  call set_default_values_rt(rt_out%agcm_to_lsm_noriv     , status=RT_STATUS__MAKE)
+  call set_default_values_rt(rt_out%agcm_to_lsm_ocean     , status=RT_STATUS__MAKE)
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -286,6 +289,20 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   lsm%ncy = rm%ncy
   lsm%nkx = rm%nkx
   lsm%nky = rm%nky
+
+  call apply_oldfiles_rt_main_file(rt_in%ogcm_ocean_to_agcm)
+  call apply_oldfiles_rt_main_file(rt_in%rm_ocean_to_agcm  )
+  call apply_oldfiles_rt_main_file(rt_in%rm_river_to_agcm  )
+  call apply_oldfiles_rt_main_file(rt_in%rm_noriv_to_agcm  )
+  call apply_oldfiles_rt_main_file(rt_in%rm_ocean_to_agcm  )
+
+  call apply_oldfiles_rt_main_file(rt_out%lsm_river_to_agcm     , opt%sys%old_files)
+  call apply_oldfiles_rt_main_file(rt_out%lsm_noriv_to_agcm     , opt%sys%old_files)
+  call apply_oldfiles_rt_main_file(rt_out%lsm_noriv_virt_to_agcm, opt%sys%old_files)
+  call apply_oldfiles_rt_main_file(rt_out%lsm_ocean_to_agcm     , opt%sys%old_files)
+  call apply_oldfiles_rt_main_file(rt_out%agcm_to_lsm_river     , opt%sys%old_files)
+  call apply_oldfiles_rt_main_file(rt_out%agcm_to_lsm_noriv     , opt%sys%old_files)
+  call apply_oldfiles_rt_main_file(rt_out%agcm_to_lsm_ocean     , opt%sys%old_files)
 
   if( opt_rt_coef%is_sum_modify_enabled )then
     call put_opt_coef_sum_modify(opt_rt_coef%sum_modify, rt_out%lsm_river_to_agcm)
@@ -598,7 +615,8 @@ subroutine read_settings_input_rt(rt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(5)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
   call set_keynum('length', 1, 1)
   call set_keynum('f_sidx', 1, 1)
@@ -609,13 +627,11 @@ subroutine read_settings_input_rt(rt)
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  !call echo(code%ent, 'Setting the default values')
 
   rtm => rt%main
 
-  call set_default_values_rt_main(rtm, status=STATUS_OLD)
-
-  call echo(code%ext)
+  !call echo(code%ext)
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
@@ -642,13 +658,13 @@ subroutine read_settings_input_rt(rt)
       call read_value(rtm%nij)
 
     case( 'f_sidx' )
-      call read_value(rtm%f%sidx%path, is_path=.true., dir=dir)
+      call read_value(rtm%f%sidx, dir)
 
     case( 'f_tidx' )
-      call read_value(rtm%f%tidx%path, is_path=.true., dir=dir)
+      call read_value(rtm%f%tidx, dir)
 
     case( 'f_area' )
-      call read_value(rtm%f%area%path, is_path=.true., dir=dir)
+      call read_value(rtm%f%area, dir)
     !-----------------------------------------------------------
     ! ERROR
     case default
@@ -708,12 +724,14 @@ subroutine read_settings_input_agcm(agcm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(9)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
   call set_keynum('nij', 1, 1)
   call set_keynum('f_grdidx', 0, 1)
   call set_keynum('f_grdara', 1, 1)
   call set_keynum('idx_miss', 0, 1)
+
   call set_keynum('opt_thresh_lndfrc_noriv_virt_min'   , 0, 1)
   call set_keynum('opt_thresh_lndfrc_excess'           , 0, 1)
   call set_keynum('opt_thresh_lndfrc_noriv_virt_excess', 0, 1)
@@ -841,12 +859,15 @@ subroutine read_settings_input_rm(rm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(16)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
+
   call set_keynum('nx_grid', 1, 1)
   call set_keynum('ny_grid', 1, 1)
   call set_keynum('nx_raster', 1, 1)
   call set_keynum('ny_raster', 1, 1)
+
   call set_keynum('f_grdidx_river', 1, 1)
   call set_keynum('f_grdidx_noriv', 1, 1)
   call set_keynum('f_grdidx_ocean', 1, 1)
@@ -856,6 +877,7 @@ subroutine read_settings_input_rm(rm)
   call set_keynum('f_rstidx_river', 1, 1)
   call set_keynum('f_rstidx_noriv', 1, 1)
   call set_keynum('f_rstidx_ocean', 1, 1)
+
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('ara_miss', 0, 1)
 
@@ -1024,7 +1046,8 @@ subroutine read_settings_rt_coef_options(opt_coef)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(6)
+  call alloc_keynum()
+
   call set_keynum('opt_coef_sum_modify'      , 0, 1)
   call set_keynum('opt_coef_sum_modify_ulim' , 0, 1)
   call set_keynum('opt_coef_zero_positive'   , 0, 1)
@@ -1132,7 +1155,8 @@ subroutine read_settings_output_rt(rt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(5)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
   call set_keynum('f_sidx', 1, 1)
   call set_keynum('f_tidx', 1, 1)
@@ -1143,13 +1167,11 @@ subroutine read_settings_output_rt(rt)
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  !call echo(code%ent, 'Setting the default values')
 
   rtm => rt%main
 
-  call set_default_values_rt_main(rtm, id=rt%id, status=STATUS_REPLACE)
-
-  call echo(code%ext)
+  !call echo(code%ext)
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
@@ -1228,7 +1250,7 @@ subroutine read_settings_output_agcm(agcm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(6)
+  call alloc_keynum()
   call set_keynum('dir', 0, -1)
   call set_keynum('f_lndara_ogcm'      , 0, 1)
   call set_keynum('f_lndara_river'     , 0, 1)
@@ -1331,8 +1353,10 @@ subroutine read_settings_output_lsm(lsm)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(38)
+  call alloc_keynum()
+
   call set_keynum('dir', 0, -1)
+
   call set_keynum('f_grdmsk_river'     , 0, 1)
   call set_keynum('f_grdmsk_noriv'     , 0, 1)
   call set_keynum('f_grdmsk_noriv_real', 0, 1)
@@ -1357,6 +1381,7 @@ subroutine read_settings_output_lsm(lsm)
   call set_keynum('f_grdwgt_noriv_real', 0, 1)
   call set_keynum('f_grdwgt_noriv_virt', 0, 1)
   call set_keynum('f_grdwgt_ocean'     , 0, 1)
+
   call set_keynum('f_rstidx_river'     , 0, 1)
   call set_keynum('f_rstidx_noriv'     , 0, 1)
   call set_keynum('f_rstidx_noriv_real', 0, 1)
@@ -1366,9 +1391,11 @@ subroutine read_settings_output_lsm(lsm)
   call set_keynum('f_rstidx_bnd_noriv'     , 0, 1)
   call set_keynum('f_rstidx_bnd_noriv_real', 0, 1)
   call set_keynum('f_rstidx_bnd_noriv_virt', 0, 1)
+
   call set_keynum('idx_miss', 0, 1)
   call set_keynum('ara_miss', 0, 1)
   call set_keynum('wgt_miss', 0, 1)
+
   call set_keynum('opt_thresh_grdwgt_noriv_virt_excess', 0, 1)
 
   call echo(code%ext)
@@ -1600,7 +1627,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(4)
+  call alloc_keynum()
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
@@ -1800,8 +1827,8 @@ subroutine echo_settings_output_rt(rt)
   rtm => rt%main
 
   call edbg('id: '//str(rt%id))
-  call edbg('grid_coef: '//str(rtm%grid_coef))
-  call edbg('grid_sort: '//str(rtm%grid_sort))
+  call edbg('mesh_coef: '//str(rtm%mesh_coef))
+  call edbg('mesh_sort: '//str(rtm%mesh_sort))
   call edbg('sidx: '//str(fileinfo(rtm%f%sidx)))
   call edbg('tidx: '//str(fileinfo(rtm%f%tidx)))
   call edbg('area: '//str(fileinfo(rtm%f%area)))

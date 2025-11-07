@@ -62,18 +62,18 @@ subroutine make_rt_latlon_raster(s, t, rt)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  if( s%gs_type == GS_TYPE_LATLON .and. &
-      t%gs_type == GS_TYPE_RASTER )then
+  if( s%typ == MESHTYPE__LATLON .and. &
+      t%typ == MESHTYPE__RASTER )then
     a => s
     b => t
-  elseif( s%gs_type == GS_TYPE_RASTER .and. &
-          t%gs_type == GS_TYPE_LATLON )then
+  elseif( s%typ == MESHTYPE__RASTER .and. &
+          t%typ == MESHTYPE__LATLON )then
     a => t
     b => s
   else
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type)//&
-            '\n  t%gs_type: '//str(t%gs_type))
+            '\n  s%typ: '//str(s%typ)//&
+            '\n  t%typ: '//str(t%typ))
   endif
 
   al => a%latlon

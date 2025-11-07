@@ -6,26 +6,21 @@ module lib_log_proc
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public module variables
+  !-------------------------------------------------------------
+  public :: CODE
+  !-------------------------------------------------------------
+  ! Public procedures
   !-------------------------------------------------------------
   public :: echo
   public :: edbg
   public :: ewrn
   public :: eerr
   public :: elog
-
-  public :: get_echo_indent
   !-------------------------------------------------------------
-  ! Public variables
+  ! Private module variables
   !-------------------------------------------------------------
-  public :: CODE
-  !-------------------------------------------------------------
-  ! Interfaces
-  !-------------------------------------------------------------
-  !-------------------------------------------------------------
-  ! Module Variables
-  !-------------------------------------------------------------
-  integer, parameter :: CODE_DBG = -1
+  integer, parameter :: CODE_MSG = -1
   integer, parameter :: CODE_WRN = -98
   integer, parameter :: CODE_ERR = -99
   integer, parameter :: CODE_BGN = -10
@@ -34,9 +29,11 @@ module lib_log_proc
   integer, parameter :: CODE_EXT = -13
   integer, parameter :: CODE_SET = -21
   integer, parameter :: CODE_STA = -22
-
+  !-------------------------------------------------------------
+  ! Public module variables
+  !-------------------------------------------------------------
   type code_
-    integer :: DBG = CODE_DBG
+    integer :: MSG = CODE_MSG
     integer :: WRN = CODE_WRN
     integer :: ERR = CODE_ERR
     integer :: BGN = CODE_BGN
@@ -47,221 +44,216 @@ module lib_log_proc
     integer :: STA = CODE_STA
   end type code_
   type(code_), save :: CODE
-
-  type time_val_
-    integer :: bgn(8)
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  type currentCmd_
+    logical :: tf     ! Command [true|false]
+    integer :: depth  ! Where this command was given
   end type
 
-  type log_stat_comp_
-    logical :: is_updated
-    logical :: is_recursive
-    integer :: nCommand
-    logical, pointer :: tf(:)
+  type cmdHist_
+    integer :: nCmd               ! The number of recursive commands
+    integer, pointer :: depth(:)  ! Depth where each recursive command was given
+    logical, pointer :: tf(:)  ! Command [true|false]
   end type
 
-  type log_stat_
-    integer :: depth
-    integer :: indent
-    type(log_stat_comp_), pointer :: echoProcess(:)
-    type(log_stat_comp_), pointer :: echoContent(:)
-    type(log_stat_comp_), pointer :: echoWarning(:)
-    type(log_stat_comp_), pointer :: echoProcBar(:)
-    type(log_stat_comp_), pointer :: quitAtError(:)
-    type(log_stat_comp_), pointer :: measureTime(:)
+  type cmdDict_
+    type(currentCmd_) :: currentCmd
+    type(cmdHist_)    :: cmdHist
+  end type
+
+  type cmd_
+    type(cmdDict_) :: echoPrc  ! Process (self)
+    type(cmdDict_) :: echoPcc  ! Process (child)
+    type(cmdDict_) :: echoMsg  ! Message
+    type(cmdDict_) :: echoWrn  ! Warning
+    type(cmdDict_) :: echoErr
+    type(cmdDict_) :: echoBar
+    type(cmdDict_) :: stopErr
+    type(cmdDict_) :: msrTime
+  end type
+
+  type set_
+    logical, pointer :: echoPrc(:), &!(0:DEPTH_MAX)
+                        echoPcc(:), &
+                        echoMsg(:), &
+                        echoWrn(:), &
+                        echoErr(:), &
+                        echoBar(:), &
+                        stopErr(:), &
+                        msrTime(:)
+    integer, pointer :: indent(:)
     integer, pointer :: indentInc(:)
-    character(CLEN_VAR), pointer :: proc(:)
-    logical, pointer :: is_proc(:)
-    type(time_val_), pointer :: time(:)
+    integer, pointer :: time_bgn(:,:)  !(0:DEPTH_MAX,8)
+    character(CLEN_PROC), pointer :: proc(:)
+    logical             , pointer :: is_proc(:)
   end type
 
-  type(log_stat_), target, save :: ls
+  type(cmd_) :: cmd
+  type(set_) :: set
 
-  integer, parameter :: tf_true  = 0
-  integer, parameter :: tf_false = 1
-  integer, parameter :: tf_miss = -9
+  integer :: depth
 
-  integer, parameter :: indent_miss = -9999
+  logical :: makeNewLine_prev
 
-  logical, parameter :: echoProcess_default = .true.
-  logical, parameter :: echoContent_default = .true.
-  logical, parameter :: echoWarning_default = .true.
-  logical, parameter :: echoError_default   = .true.
-  logical, parameter :: echoProcBar_default = .true.
-  logical, parameter :: quitAtError_default = .true.
-  logical, parameter :: measureTime_default = .false.
+  integer, parameter :: LTRUE = 0
+  integer, parameter :: LFALS = 1
+  integer, parameter :: LMISS = -1
+
+  integer, parameter :: ECHOPRC_DEF = LTRUE
+  integer, parameter :: ECHOPCC_DEF = LTRUE
+  integer, parameter :: ECHOMSG_DEF = LTRUE
+  integer, parameter :: ECHOWRN_DEF = LTRUE
+  integer, parameter :: ECHOERR_DEF = LTRUE
+  integer, parameter :: ECHOBAR_DEF = LTRUE
+  integer, parameter :: STOPERR_DEF = LTRUE
+  integer, parameter :: MSRTIME_DEF = LTRUE
+
+  integer, parameter :: INDENTINC_PRC = 2
+  integer, parameter :: INDENT_MISS = -9999
+
+  integer, parameter :: DEPTH_MAX = 20
 
   integer, parameter :: STOP_CODE_ERROR = 1
 
-  character(clen_wfmt), parameter :: WFMT_REAL_DEFAULT = 'es12.5'
-!---------------------------------------------------------------
+  character(CLEN_PROC), parameter :: modprc = 'MODULE lib_log_proc'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 ! <Options>
-!   +p: Echo process.
-!   -p: Mute process.
+!   +p: Echo process (default)
+!   -p: Mute process
 !
-!   +c: Echo contents.
-!   -c: Mute contents.
+!   +c: Echo contents (default)
+!   -c: Mute contents
 !
-!   +w: Echo warnings.
-!   -w: Mute warnings.
+!   +w: Echo warnings (default)
+!   -w: Mute warnings
 !
-!   +e: Echo error message.
-!   -e: Mute error message.
+!   +e: Echo error message (default)
+!   -e: Mute error message
 !
-!   +a: Echo all. (exept error message)
-!   -a: Mute all. (exept error message)
+!   +a: Echo all (exept error message) (default)
+!   -a: Mute all (exept error message)
 !
-!   f: Force output ignoring any settings of muting.
-!      This is active only for that message.
+!   f: Force output ignoring any settings of muting
+!      This is active only for that message
 !
-!   +t: Measure the time.
-!   -t: Not measure the time.
+!   +t: Measure the time (default)
+!   -t: Not measure the time
 !
-!   +x[?]: Increase indent by [?] (integer).
-!   -x[?]: Decrease indent by [?] (integer).
-!    x[?]: Set indent to [?] (integer).
+!   +x[?]: Increase indent by [?] (integer)
+!   -x[?]: Decrease indent by [?] (integer)
+!    x[?]: Set indent to [?] (integer)
 !
-!   +n: Make a new line.
-!   -n: Do not make a new line.
+!   +n: Make a new line (default)
+!   -n: Do not make a new line
 !
-!   +q: Quit when error occured.
-!   -q: Not quit when error occured.
+!   +q: Quit when error occured (default)
+!   -q: Not quit when error occured
 !
-!   +b: Echo the bar.
-!   -b: Mute the bar.
+!   +b: Echo a bar (default)
+!   -b: Mute a bar
 !===============================================================
-recursive subroutine echo(cd, msg, opt)
+subroutine echo(cd, msg, opt)
   implicit none
-  integer     , intent(in) :: cd
+  integer, intent(in) :: cd
   character(*), intent(in), optional :: msg
   character(*), intent(in), optional :: opt
 
-  character(32) :: opt_, opt1
-  integer :: tf_echoProcess
-  integer :: tf_echoContent
-  integer :: tf_echoWarning
-  integer :: tf_echoError
-  integer :: tf_echoProcBar
-  integer :: tf_quitAtError
-  integer :: tf_measureTime
-  logical :: is_echoProcess_recursive
-  logical :: is_echoContent_recursive
-  logical :: is_echoWarning_recursive
-  logical :: is_echoProcBar_recursive
-  logical :: is_quitAtError_recursive
-  logical :: is_measureTime_recursive
-  integer :: tf_forceEcho
-  integer :: tf_makeNewLine
-  integer, save :: tf_makeNewLine_prev = tf_true
-  integer :: indent, indentInc, indentDec
+  integer :: val_echoPrc
+  integer :: val_echoPcc
+  integer :: val_echoMsg
+  integer :: val_echoWrn
+  integer :: val_echoErr
+  integer :: val_echoBar
+  integer :: val_stopErr
+  integer :: val_msrTime
 
-  type(log_stat_comp_), pointer :: lsc
-  type(log_stat_comp_), pointer :: lsc_time
-  integer :: iDepth
-  character(:), allocatable :: c
-  character(:), allocatable :: c_  ! for avoiding warning of maybe-uninitialized
-  character(:), allocatable :: bar
-  integer :: i
+  logical :: isRec_echoPrc
+  logical :: isRec_echoPcc
+  logical :: isRec_echoMsg
+  logical :: isRec_echoWrn
+  logical :: isRec_echoErr
+  logical :: isRec_echoBar
+  logical :: isRec_stopErr
+  logical :: isRec_msrTime
 
+  logical :: forceEcho
+  logical :: makeNewLine
+
+  integer :: indent
+  integer :: indentInc
+
+  logical :: tf_echoPrc, &
+             tf_echoWrn, &
+             tf_echoErr, &
+             tf_echoBar, &
+             tf_stopErr
+
+  logical :: makeNewLine_
+  integer :: indent_
+  character(16) :: opt_, opt1
+  character(:), allocatable :: c, c_, bar
+  integer :: idp, i
   integer :: ios
 
-  logical, save :: is_init = .true.
+  logical, save :: is_first = .true.
+
+  character(CLEN_PROC), parameter :: prcprc = 'SUBROUTINE echo'
   !-------------------------------------------------------------
-  ! Initialize
+  !
   !-------------------------------------------------------------
-  if( is_init )then
-    is_init = .false.
+  if( is_first )then
+    is_first = .false.
 
-    ls%depth = 0
-    ls%indent = 1
+    call init_cmd(cmd%echoPrc, set%echoPrc, ECHOPRC_DEF)
+    call init_cmd(cmd%echoPcc, set%echoPcc, ECHOPCC_DEF)
+    call init_cmd(cmd%echoMsg, set%echoMsg, ECHOMSG_DEF)
+    call init_cmd(cmd%echoWrn, set%echoWrn, ECHOWRN_DEF)
+    call init_cmd(cmd%echoErr, set%echoErr, ECHOERR_DEF)
+    call init_cmd(cmd%echoBar, set%echoBar, ECHOBAR_DEF)
+    call init_cmd(cmd%stopErr, set%stopErr, STOPERR_DEF)
+    call init_cmd(cmd%msrTime, set%msrTime, MSRTIME_DEF)
 
-    allocate(ls%echoProcess(0:PROCDEPTH))
-    allocate(ls%echoContent(0:PROCDEPTH))
-    allocate(ls%echoWarning(0:PROCDEPTH))
-    allocate(ls%echoProcBar(0:PROCDEPTH))
-    allocate(ls%quitAtError(0:PROCDEPTH))
-    allocate(ls%measureTime(0:PROCDEPTH))
+    allocate(set%indent(0:DEPTH_MAX))
+    allocate(set%indentInc(1:DEPTH_MAX))
+    set%indent(0) = 1
 
-    ls%echoProcess(:)%is_updated = .false.
-    ls%echoContent(:)%is_updated = .false.
-    ls%echoWarning(:)%is_updated = .false.
-    ls%echoProcBar(:)%is_updated = .false.
-    ls%quitAtError(:)%is_updated = .false.
-    ls%measureTime(:)%is_updated = .false.
+    allocate(set%time_bgn(0:DEPTH_MAX,8))
 
-    ls%echoProcess(:)%is_recursive = .false.
-    ls%echoContent(:)%is_recursive = .false.
-    ls%echoWarning(:)%is_recursive = .false.
-    ls%echoProcBar(:)%is_recursive = .false.
-    ls%quitAtError(:)%is_recursive = .false.
-    ls%measureTime(:)%is_recursive = .false.
+    allocate(set%proc(0:DEPTH_MAX))
+    allocate(set%is_proc(0:DEPTH_MAX))
 
-    ls%echoProcess(:)%nCommand = 0
-    ls%echoContent(:)%nCommand = 0
-    ls%echoWarning(:)%nCommand = 0
-    ls%echoProcBar(:)%nCommand = 0
-    ls%quitAtError(:)%nCommand = 0
-    ls%measureTime(:)%nCommand = 0
+    depth = 0
 
-    do iDepth = 0, PROCDEPTH
-      lsc => ls%echoProcess(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(:) = echoProcess_default
-
-      lsc => ls%echoContent(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(:) = echoContent_default
-
-      lsc => ls%echoWarning(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(:) = echoWarning_default
-
-      lsc => ls%echoProcBar(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(:) = echoProcBar_default
-
-      lsc => ls%quitAtError(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(:) = quitAtError_default
-
-      lsc => ls%measureTime(iDepth)
-      allocate(lsc%tf(0:PROCDEPTH))
-      lsc%tf(:) = measureTime_default
-    enddo
-
-    allocate(ls%indentInc(0:PROCDEPTH))
-    allocate(ls%proc(0:PROCDEPTH))
-    allocate(ls%is_proc(0:PROCDEPTH))
-    allocate(ls%time(0:PROCDEPTH))
-
-    ls%indentInc(:) = 0
-    ls%proc(:) = ''
+    makeNewLine_prev = .true.
   endif
-  !-------------------------------------------------------------
-  ! Read options
-  !-------------------------------------------------------------
-  tf_echoProcess = tf_miss
-  tf_echoContent = tf_miss
-  tf_echoWarning = tf_miss
-  tf_echoError   = tf_miss
-  tf_echoProcBar = tf_miss
-  tf_quitAtError = tf_miss
-  tf_measureTime = tf_miss
 
-  is_echoProcess_recursive = .false.
-  is_echoContent_recursive = .false.
-  is_echoWarning_recursive = .false.
-  is_echoProcBar_recursive = .false.
-  is_quitAtError_recursive = .false.
-  is_measureTime_recursive = .false.
+  val_echoPrc = LMISS
+  val_echoPcc = LMISS
+  val_echoMsg = LMISS
+  val_echoWrn = LMISS
+  val_echoErr = LMISS
+  val_echoBar = LMISS
+  val_stopErr = LMISS
+  val_msrTime = LMISS
 
-  tf_forceEcho   = tf_miss
-  tf_makeNewLine = tf_miss
+  isRec_echoPrc = .false.
+  isRec_echoPcc = .false.
+  isRec_echoMsg = .false.
+  isRec_echoWrn = .false.
+  isRec_echoErr = .false.
+  isRec_echoBar = .false.
+  isRec_stopErr = .false.
+  isRec_msrTime = .false.
 
-  indent = indent_miss
+  forceEcho   = .false.
+  makeNewLine = .true.
+
+  indent = INDENT_MISS
   indentInc = 0
-  indentDec = 0
 
   if( cd == CODE_SET )then
     opt_ = msg
@@ -273,105 +265,131 @@ recursive subroutine echo(cd, msg, opt)
 
   do while( len_trim(opt_) > 0 )
     read(opt_,*) opt1
-
     selectcase( opt1 )
     case( '+p' )
-      tf_echoProcess = tf_true
+      val_echoPrc = LTRUE
     case( '-p' )
-      tf_echoProcess = tf_false
+      val_echoPrc = LFALS
     case( '+pr' )
-      tf_echoProcess = tf_true
-      is_echoProcess_recursive = .true.
+      val_echoPrc = LTRUE
+      val_echoPcc = LTRUE
+      isRec_echoPrc = .true.
+      isRec_echoPcc = .true.
     case( '-pr' )
-      tf_echoProcess = tf_false
-      is_echoProcess_recursive = .true.
+      val_echoPrc = LFALS
+      val_echoPcc = LFALS
+      isRec_echoPrc = .true.
+      isRec_echoPcc = .true.
+    case( '+pc' )
+      val_echoPcc = LTRUE
+    case( '-pc' )
+      val_echoPcc = LFALS
+    case( '+pcr' )
+      val_echoPcc = LTRUE
+      isRec_echoPcc = .true.
+    case( '-pcr' )
+      val_echoPcc = LFALS
+      isRec_echoPcc = .true.
     case( '+c' )
-      tf_echoContent = tf_true
+      val_echoMsg = LTRUE
     case( '-c' )
-      tf_echoContent = tf_false
+      val_echoMsg = LFALS
     case( '+cr' )
-      tf_echoContent = tf_true
-      is_echoContent_recursive = .true.
+      val_echoMsg = LTRUE
+      isRec_echoMsg = .true.
     case( '-cr' )
-      tf_echoContent = tf_false
-      is_echoContent_recursive = .true.
+      val_echoMsg = LFALS
+      isRec_echoMsg = .true.
     case( '+w' )
-      tf_echoWarning = tf_true
+      val_echoWrn = LTRUE
     case( '-w' )
-      tf_echoWarning = tf_false
+      val_echoWrn = LFALS
     case( '+wr' )
-      tf_echoWarning = tf_true
-      is_echoWarning_recursive = .true.
+      val_echoWrn = LTRUE
+      isRec_echoWrn = .true.
     case( '-wr' )
-      tf_echoWarning = tf_false
-      is_echoWarning_recursive = .true.
-    case( '+e' )
-      tf_echoError = tf_true
-    case( '-e' )
-      tf_echoError = tf_false
+      val_echoWrn = LFALS
+      isRec_echoWrn = .true.
     case( '+a' )
-      tf_echoProcess = tf_true
-      tf_echoContent = tf_true
-      tf_echoWarning = tf_true
+      val_echoPrc = LTRUE
+      val_echoPcc = LTRUE
+      val_echoMsg = LTRUE
+      val_echoWrn = LTRUE
     case( '-a' )
-      tf_echoProcess = tf_false
-      tf_echoContent = tf_false
-      tf_echoWarning = tf_false
+      val_echoPrc = LFALS
+      val_echoPcc = LFALS
+      val_echoMsg = LFALS
+      val_echoWrn = LFALS
     case( '+ar' )
-      tf_echoProcess = tf_true
-      tf_echoContent = tf_true
-      tf_echoWarning = tf_true
-      is_echoProcess_recursive = .true.
-      is_echoContent_recursive = .true.
-      is_echoWarning_recursive = .true.
+      val_echoPrc = LTRUE
+      val_echoPcc = LTRUE
+      val_echoMsg = LTRUE
+      val_echoWrn = LTRUE
+      isRec_echoPrc = .true.
+      isRec_echoPcc = .true.
+      isRec_echoMsg = .true.
+      isRec_echoWrn = .true.
     case( '-ar' )
-      tf_echoProcess = tf_false
-      tf_echoContent = tf_false
-      tf_echoWarning = tf_false
-      is_echoProcess_recursive = .true.
-      is_echoContent_recursive = .true.
-      is_echoWarning_recursive = .true.
+      val_echoPrc = LFALS
+      val_echoPcc = LFALS
+      val_echoMsg = LFALS
+      val_echoWrn = LFALS
+      isRec_echoPrc = .true.
+      isRec_echoPcc = .true.
+      isRec_echoMsg = .true.
+      isRec_echoWrn = .true.
+    case( '+e' )
+      val_echoErr = LTRUE
+    case( '-e' )
+      val_echoErr = LFALS
+    case( '+er' )
+      val_echoErr = LTRUE
+      isRec_echoErr = .true.
+    case( '-er' )
+      val_echoErr = LFALS
+      isRec_echoErr = .true.
     case( '+b' )
-      tf_echoProcBar = tf_true
+      val_echoBar = LTRUE
     case( '-b' )
-      tf_echoProcBar = tf_false
+      val_echoBar = LFALS
     case( '+br' )
-      tf_echoProcBar = tf_true
-      is_echoProcBar_recursive = .true.
+      val_echoBar = LTRUE
+      isRec_echoBar = .true.
     case( '-br' )
-      tf_echoProcBar = tf_false
-      is_echoProcBar_recursive = .true.
+      val_echoBar = LFALS
+      isRec_echoBar = .true.
     case( '+q' )
-      tf_quitAtError = tf_true
+      val_stopErr = LTRUE
     case( '-q' )
-      tf_quitAtError = tf_false
+      val_stopErr = LFALS
     case( '+qr' )
-      tf_quitAtError = tf_true
-      is_quitAtError_recursive = .true.
+      val_stopErr = LTRUE
+      isRec_stopErr = .true.
     case( '-qr' )
-      tf_quitAtError = tf_false
-      is_quitAtError_recursive = .true.
+      val_stopErr = LFALS
+      isRec_stopErr = .true.
     case( '+t' )
-      tf_measureTime = tf_true
+      val_msrTime = LTRUE
     case( '-t' )
-      tf_measureTime = tf_false
+      val_msrTime = LFALS
     case( '+tr' )
-      tf_measureTime = tf_true
-      is_measureTime_recursive = .true.
+      val_msrTime = LTRUE
+      isRec_msrTime = .true.
     case( '-tr' )
-      tf_measureTime = tf_false
-      is_measureTime_recursive = .true.
+      val_msrTime = LFALS
+      isRec_msrTime = .true.
     case( 'f' )
-      tf_forceEcho = tf_true
+      forceEcho = .true.
     case( '+n' )
-      tf_makeNewLine = tf_true
+      makeNewLine = .true.
     case( '-n' )
-      tf_makeNewLine = tf_false
+      makeNewLine = .false.
     case default
       if( opt1(:1) == 'x' )then
         read(opt1(2:),*,iostat=ios) indent
       elseif( opt1(:2) == '-x' )then
-        read(opt1(3:),*,iostat=ios) indentDec
+        read(opt1(3:),*,iostat=ios) indentInc
+        indentInc = -indentInc
       elseif( opt1(:2) == '+x' )then
         read(opt1(3:),*,iostat=ios) indentInc
       else
@@ -385,14 +403,12 @@ recursive subroutine echo(cd, msg, opt)
     endselect
     opt_ = adjustl(opt_(len_trim(opt1)+1:))
   enddo
-
-  indentInc = indentInc - indentDec
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( cd )
   !-------------------------------------------------------------
-  ! Case: Unit number
+  ! Case: Output to the unit number
   case( 0: )
     if( .not. present(msg) )then
       call eerr('Output string was not specified.')
@@ -401,146 +417,157 @@ recursive subroutine echo(cd, msg, opt)
     ! Set indent
     !-----------------------------------------------------------
     if( indent == indent_miss ) indent = 0
-    indent = indent + indentInc
     !-----------------------------------------------------------
-    ! Write
+    ! Output
     !-----------------------------------------------------------
     call echo_lines(msg, cd, indent, .true.)
   !-------------------------------------------------------------
-  !
+  ! Case: Enter the procedure or step (BGN or ENT)
   case( CODE_BGN, CODE_ENT )
     !-----------------------------------------------------------
-    ! Update commands
+    ! Update the depth
     !-----------------------------------------------------------
-    ls%depth = ls%depth + 1
+    depth = depth + 1
+    !-----------------------------------------------------------
+    ! Update the settings
+    !-----------------------------------------------------------
+    call fwrd_dict(cmd%echoPrc, set%echoPrc, &
+                   depth, val_echoPrc, isRec_echoPrc)
+    call fwrd_dict(cmd%echoPcc, set%echoPcc, &
+                   depth, val_echoPcc, isRec_echoPcc)
+    call fwrd_dict(cmd%echoMsg, set%echoMsg, &
+                   depth, val_echoMsg, isRec_echoMsg)
+    call fwrd_dict(cmd%echoWrn, set%echoWrn, &
+                   depth, val_echoWrn, isRec_echoWrn)
+    call fwrd_dict(cmd%echoErr, set%echoErr, &
+                   depth, val_echoErr, isRec_echoErr)
+    call fwrd_dict(cmd%echoBar, set%echoBar, &
+                   depth, val_echoBar, isRec_echoBar)
+    call fwrd_dict(cmd%stopErr, set%stopErr, &
+                   depth, val_stopErr, isRec_stopErr)
+    call fwrd_dict(cmd%msrTime, set%msrTime, &
+                   depth, val_msrTime, isRec_msrTime)
 
-    selectcase( cd )
-    case( CODE_BGN )
-      ls%is_proc(ls%depth) = .true.
-    case( CODE_ENT )
-      ls%is_proc(ls%depth) = .false.
-    endselect
+    set%proc(depth) = msg
+    set%is_proc(depth) = cd == CODE_BGN
 
-    call update_commands_in(tf_echoProcess, ls%echoProcess, ls%depth, is_echoProcess_recursive)
-    call update_commands_in(tf_echoContent, ls%echoContent, ls%depth, is_echoContent_recursive)
-    call update_commands_in(tf_echoWarning, ls%echoWarning, ls%depth, is_echoWarning_recursive)
-    call update_commands_in(tf_echoProcBar, ls%echoProcBar, ls%depth, is_echoProcBar_recursive)
-    call update_commands_in(tf_quitAtError, ls%quitAtError, ls%depth, is_quitAtError_recursive)
-    call update_commands_in(tf_measureTime, ls%measureTime, ls%depth, is_measureTime_recursive)
+    set%indent(depth) = set%indent(depth-1) + indentInc
+    set%indentInc(depth) = indentInc
     !-----------------------------------------------------------
-    ! Set indent
+    ! Print the message
     !-----------------------------------------------------------
-    if( indent == indent_miss ) indent = ls%indent
-    indent = indent + indentInc
-    !-----------------------------------------------------------
-    ! Echo message
-    !-----------------------------------------------------------
-    lsc => ls%echoProcess(ls%depth)
+    set%echoPrc(depth) = get_tf(val_echoPrc, set%echoPcc(depth-1))
 
-    if( lsc%tf(lsc%nCommand) )then
-      selectcase( cd )
-      case( CODE_BGN )
-        call echo_lines('[+ '//trim(msg)//']', STDOUT, indent, .true.)
-      case( CODE_ENT )
-        call echo_lines(trim(msg), STDOUT, indent, .true.)
-      endselect
+    if( set%echoPrc(depth) )then
+      allocate(character(1) :: c)
+      if( cd == CODE_BGN )then
+        c = '[+ '//trim(msg)//']'
+      else
+        c = trim(msg)
+      endif
+      call echo_lines(c, STDOUT, set%indent(depth), .true.)
     endif
     !-----------------------------------------------------------
-    ! Save proc name
+    ! Start the timer
     !-----------------------------------------------------------
-    ls%proc(ls%depth) = msg
-    !-----------------------------------------------------------
-    ! Update indent
-    !-----------------------------------------------------------
-    ls%indentInc(ls%depth) = indentInc
-    ls%indent = ls%indent + 2 + ls%indentInc(ls%depth)
-    !-----------------------------------------------------------
-    ! Save time
-    !-----------------------------------------------------------
-    lsc_time => ls%measureTime(ls%depth)
-    if( lsc_time%tf(lsc_time%nCommand) )then
-      ls%time(ls%depth)%bgn = date_and_time_values()
+    if( set%msrTime(depth) )then
+      set%time_bgn(depth,:) = date_and_time_values()
     endif
+    !-----------------------------------------------------------
+    ! Update the indent
+    !-----------------------------------------------------------
+    set%indent(depth) = set%indent(depth) + INDENTINC_PRC
   !-------------------------------------------------------------
-  ! Echo log
-  !-------------------------------------------------------------
-  !
+  ! Case: Exit the procedure or end of the step (RET or EXT)
   case( CODE_RET, CODE_EXT )
     !-----------------------------------------------------------
-    ! Update indent
+    ! Update the indent
     !-----------------------------------------------------------
-    ls%indent = ls%indent - 2 - ls%indentInc(ls%depth)
-    ls%indentInc(ls%depth) = 0
+    set%indent(depth) = set%indent(depth) - set%indentInc(depth) - INDENTINC_PRC
     !-----------------------------------------------------------
-    ! Echo message
+    ! Print the message
     !-----------------------------------------------------------
-    lsc => ls%echoProcess(ls%depth)
-
-    if( lsc%tf(lsc%nCommand) )then
-      selectcase( cd )
-      case( CODE_RET )
-        lsc_time => ls%measureTime(ls%depth)
-        if( lsc_time%tf(lsc_time%nCommand) )then
-          allocate(character(8) :: c)
-          write(c,"(f8.3)") timediff(ls%time(ls%depth)%bgn, date_and_time_values())
-          allocate(character(1) :: c_)
-          c_ = c
-          c = '[- '//trim(ls%proc(ls%depth))//' ('//trim(c_)//' sec)]'
+    if( set%echoPrc(depth) )then
+      if( cd == CODE_RET )then
+        if( set%msrTime(depth) )then
+          allocate(character(8) :: c_)
+          write(c_,"(f8.3)") timediff(set%time_bgn(depth,:), date_and_time_values())
+          allocate(character(1) :: c)
+          c = '[- '//trim(set%proc(depth))//' ('//trim(c_)//' sec)]'
         else
           allocate(character(1) :: c)
-          c = '[- '//trim(ls%proc(ls%depth))//']'
+          c = '[- '//trim(set%proc(depth))//']'
         endif
-        call echo_lines(c, STDOUT, ls%indent, .true.)
-      case( CODE_EXT )
-        continue
-      endselect
+        call echo_lines(c, STDOUT, set%indent(depth), .true.)
+      endif
     endif
     !-----------------------------------------------------------
-    ! Update commands
+    ! Update the depth
     !-----------------------------------------------------------
-    call update_commands_out(ls%echoProcess, ls%depth)
-    call update_commands_out(ls%echoContent, ls%depth)
-    call update_commands_out(ls%echoWarning, ls%depth)
-    call update_commands_out(ls%echoProcBar, ls%depth)
-    call update_commands_out(ls%quitAtError, ls%depth)
-    call update_commands_out(ls%measureTime, ls%depth)
-
-    ls%depth = ls%depth - 1
+    depth = depth - 1
+    !-----------------------------------------------------------
+    ! Update the settings
+    !-----------------------------------------------------------
+    call back_dict(cmd%echoPrc, set%echoPrc, depth)
+    call back_dict(cmd%echoPcc, set%echoPcc, depth)
+    call back_dict(cmd%echoMsg, set%echoMsg, depth)
+    call back_dict(cmd%echoWrn, set%echoWrn, depth)
+    call back_dict(cmd%echoErr, set%echoErr, depth)
+    call back_dict(cmd%echoBar, set%echoBar, depth)
+    call back_dict(cmd%stopErr, set%stopErr, depth)
+    call back_dict(cmd%msrTime, set%msrTime, depth)
   !-------------------------------------------------------------
-  !
-  case( CODE_DBG )
-    if( indent == indent_miss )then
-      indent = ls%indent + indentInc
+  ! Case: Message (MSG)
+  case( CODE_MSG )
+    if( indent == INDENT_MISS )then
+      indent = set%indent(depth) + indentInc
     endif
 
-    lsc => ls%echoContent(ls%depth)
-    if( lsc%tf(lsc%nCommand) .or. tf_forceEcho == tf_true )then
-      call echo_lines(msg, STDOUT, indent, tf_makeNewLine/=tf_false)
+    if( set%echoMsg(depth) .or. forceEcho )then
+      call echo_lines(msg, STDOUT, indent, makeNewLine)
     endif
   !-------------------------------------------------------------
-  !
+  ! Case: Warning (WRN)
   case( CODE_WRN )
-    if( indent == indent_miss ) indent = ls%indent
-    indent = indent + indentInc
+    tf_echoWrn = get_tf(val_echoWrn, set%echoWrn(depth) .or. forceEcho)
 
-    lsc => ls%echoWarning(ls%depth)
-    if( lsc%tf(lsc%nCommand) .or. tf_forceEcho == tf_true )then
+    if( tf_echoWrn )then
+      tf_echoPrc = get_tf(val_echoPrc, set%echoPrc(depth))
+      tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
+
+      if( indent == INDENT_MISS )then
+        indent = set%indent(depth) + indentInc
+      endif
+
       allocate(character(1) :: c)
-      c = '****** WARNING @ '//trim(ls%proc(ls%depth))//' ******'
+      c = '****** WARNING @ '//trim(set%proc(depth))//' ******'
 
-      if( tf_makeNewLine_prev == tf_false ) write(STDOUT,*)
+      if( .not. makeNewLine_prev )then
+        if( tf_echoPrc .or. (tf_echoBar .and. msg == ''))then
+          write(STDOUT,*)
+        endif
+      endif
 
-      if( tf_echoProcess /= tf_false )then
+      if( tf_echoPrc )then
         call echo_lines(trim(c), STDOUT, indent, .true.)
       endif
 
       if( msg /= '' )then
-        call echo_lines(msg, STDOUT, indent, tf_makeNewLine/=tf_false)
+        makeNewLine_ = makeNewLine
+        if( .not. makeNewLine .and. tf_echoBar )then
+          makeNewLine_ = .true.
+        endif
+
+        indent_ = indent
+        if( .not. makeNewLine_prev .and. .not. tf_echoPrc )then
+          indent_ = 0
+        endif
+
+        call echo_lines(msg, STDOUT, indent_, makeNewLine_)
       endif
 
-      if( tf_echoProcBar /= tf_false )then
-        allocate(character(1) :: bar)
-        bar = trim(c)
+      if( tf_echoBar )then
+        allocate(character(len_trim(c)) :: bar)
         do i = 1, len_trim(c)
           bar(i:i) = '*'
         enddo
@@ -548,38 +575,58 @@ recursive subroutine echo(cd, msg, opt)
       endif
     endif
   !-------------------------------------------------------------
-  !
+  ! Case: Error (ERR)
   case( CODE_ERR )
-    if( indent == indent_miss ) indent = 0
-    indent = indent + indentInc
+    tf_echoErr = get_tf(val_echoErr, set%echoErr(depth) .or. forceEcho)
+    tf_stopErr = get_tf(val_stopErr, set%stopErr(depth))
 
-    if( tf_echoError /= tf_false )then
+    if( tf_echoErr )then
+      !tf_echoPrc = get_tf(val_echoPrc, set%echoPrc(depth))
+      tf_echoPrc = get_tf(LTRUE      , set%echoPrc(depth))
+      tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
+
+      if( indent == INDENT_MISS )then
+        indent = max(0, indentInc)
+      endif
+
       allocate(character(1) :: c)
-      c = '****** ERROR @ '//trim(ls%proc(ls%depth))//' ******'
+      c = '****** ERROR @ '//trim(set%proc(depth))//' ******'
 
-      call update_tf_miss(tf_quitAtError, ls%quitAtError(ls%depth))
+      if( .not. makeNewLine_prev )then
+        if( tf_echoPrc .or. (tf_echoBar .and. msg == ''))then
+          write(STDOUT,*)
+        endif
+      endif
 
-      if( tf_makeNewLine_prev == tf_false ) write(STDOUT,*)
-
-      if( tf_echoProcess /= tf_false )then
+      if( tf_echoPrc )then
         call echo_lines(trim(c), STDOUT, indent, .true.)
-
-        do iDepth = ls%depth, 1, -1
-          if( ls%is_proc(iDepth) )then
-            call echo_lines('[- '//trim(ls%proc(iDepth))//']', STDOUT, indent, .true.)
+        do idp = depth, 1, -1
+          if( set%is_proc(idp) )then
+            call echo_lines('[proc] '//trim(set%proc(idp)), &
+                            STDOUT, indent, .true.)
           else
-            call echo_lines('(- '//trim(ls%proc(iDepth))//')', STDOUT, indent, .true.)
+            call echo_lines('[step] '//trim(set%proc(idp)), &
+                            STDOUT, indent, .true.)
           endif
         enddo
       endif
 
       if( msg /= '' )then
-        call echo_lines(msg, STDOUT, indent, .true.)
+        makeNewLine_ = makeNewLine
+        if( .not. makeNewLine .and. tf_echoBar )then
+          makeNewLine_ = .true.
+        endif
+
+        indent_ = indent
+        if( .not. makeNewLine_prev .and. .not. tf_echoPrc )then
+          indent_ = 0
+        endif
+
+        call echo_lines(msg, STDOUT, indent_, makeNewLine_)
       endif
 
-      if( tf_echoProcBar /= tf_false )then
-        allocate(character(1) :: bar)
-        bar = trim(c)
+      if( tf_echoBar )then
+        allocate(character(len_trim(c)) :: bar)
         do i = 1, len_trim(c)
           bar(i:i) = '*'
         enddo
@@ -587,102 +634,140 @@ recursive subroutine echo(cd, msg, opt)
       endif
     endif
 
-    if( tf_quitAtError /= tf_false )then
+    if( tf_stopErr )then
       stop STOP_CODE_ERROR
     endif
   !-------------------------------------------------------------
-  !
+  ! Case: Set
   case( CODE_SET )
-    if( tf_forceEcho /= tf_miss )then
-      call eerr("Option 'f' is invalid for the mode 'SET'.")
-    endif
+    !call fwrd_dict(cmd%echoPrc, set%echoPrc, &
+    !               depth, val_echoPrc, isRec_echoPrc)
+    call fwrd_dict(cmd%echoPcc, set%echoPcc, &
+                   depth, val_echoPcc, isRec_echoPcc)
+    call fwrd_dict(cmd%echoMsg, set%echoMsg, &
+                   depth, val_echoMsg, isRec_echoMsg)
+    call fwrd_dict(cmd%echoWrn, set%echoWrn, &
+                   depth, val_echoWrn, isRec_echoWrn)
+    call fwrd_dict(cmd%echoErr, set%echoErr, &
+                   depth, val_echoErr, isRec_echoErr)
+    call fwrd_dict(cmd%echoBar, set%echoBar, &
+                   depth, val_echoBar, isRec_echoBar)
+    call fwrd_dict(cmd%stopErr, set%stopErr, &
+                   depth, val_stopErr, isRec_stopErr)
+    call fwrd_dict(cmd%msrTime, set%msrTime, &
+                   depth, val_msrTime, isRec_msrTime)
 
-    if( indent /= indent_miss )then
-      call eerr("Option 'x' is invalid for the mode 'SET'.")
-    endif
-    !-----------------------------------------------------------
-    ! Set %echoProcess
-    !-----------------------------------------------------------
-    call update_commands_in(tf_echoProcess, ls%echoProcess, ls%depth, is_echoProcess_recursive)
-    call update_commands_in(tf_echoContent, ls%echoContent, ls%depth, is_echoContent_recursive)
-    call update_commands_in(tf_echoWarning, ls%echoWarning, ls%depth, is_echoWarning_recursive)
-    call update_commands_in(tf_echoProcBar, ls%echoProcBar, ls%depth, is_echoProcBar_recursive)
-    call update_commands_in(tf_quitAtError, ls%quitAtError, ls%depth, is_quitAtError_recursive)
-    call update_commands_in(tf_measureTime, ls%measureTime, ls%depth, is_measureTime_recursive)
-    !-----------------------------------------------------------
-    ! Update indent
-    !-----------------------------------------------------------
-    ls%indent = ls%indent + indentInc
-    ls%indentInc(ls%depth) = ls%indentInc(ls%depth) + indentInc
+!print*, 'depth', depth, 'indentInc(depth)', set%indentInc(depth)
+    set%indent(depth) = set%indent(depth) + indentInc
+    set%indentInc(depth) = set%indentInc(depth) + indentInc
   !-------------------------------------------------------------
-  !
+  ! Case: ERROR
   case default
-
+    write(STDOUT,"(a)") '****** ERROR @ '//trim(modprc)//' '//trim(prcprc)
+    write(STDOUT,"(a,i0)") 'Invalid value in `cd`: ', cd
+    stop STOP_CODE_ERROR
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  tf_makeNewLine_prev = tf_makeNewLine
+  makeNewLine_prev = makeNewLine
+  !-------------------------------------------------------------
 end subroutine echo
 !===============================================================
 !
 !===============================================================
-subroutine update_commands_in(cmd, ls_comp, depth, is_recursive)
+subroutine init_cmd(cmd, set, val_def)
   implicit none
-  integer             , intent(in) :: cmd
-  type(log_stat_comp_), pointer    :: ls_comp(:)
-  integer             , intent(in) :: depth
-  logical             , intent(in) :: is_recursive
+  type(cmdDict_), intent(inout) :: cmd
+  logical       , pointer       :: set(:)
+  integer       , intent(in)    :: val_def
 
-  integer :: iDepth
-  type(log_stat_comp_), pointer :: lsc
+  cmd%currentCmd%depth = 0
+  cmd%currentCmd%tf = val_def == LTRUE
 
-  if( cmd == tf_miss ) return
+  allocate(cmd%cmdHist%depth(0:DEPTH_MAX), &
+           cmd%cmdHist%tf(0:DEPTH_MAX))
+  cmd%cmdHist%nCmd = 0
+  cmd%cmdHist%depth(0) = 0
+  cmd%cmdHist%tf(0) = val_def == LTRUE
 
-  ls_comp(depth)%is_updated = .true.
-  ls_comp(depth)%is_recursive = is_recursive
-
-  if( is_recursive )then
-    do iDepth = depth, PROCDEPTH
-      lsc => ls_comp(iDepth)
-      lsc%nCommand = lsc%nCommand + 1
-      lsc%tf(lsc%nCommand) = cmd == tf_true
-    enddo
-  else
-    lsc => ls_comp(depth)
-    lsc%nCommand = lsc%nCommand + 1
-    lsc%tf(lsc%nCommand) = cmd == tf_true
-  endif
-
-  nullify(lsc)
-end subroutine update_commands_in
+  allocate(set(0:DEPTH_MAX))
+  set(0) = val_def == LTRUE
+end subroutine init_cmd
 !===============================================================
 !
 !===============================================================
-subroutine update_commands_out(ls_comp, depth)
+subroutine fwrd_dict(cmd, set, depth, val, isRec)
   implicit none
-  type(log_stat_comp_), pointer :: ls_comp(:)
-  integer, intent(in) :: depth
+  type(cmdDict_), intent(inout) :: cmd
+  logical       , intent(inout) :: set(0:)
+  integer       , intent(in)    :: depth
+  integer       , intent(in)    :: val
+  logical       , intent(in)    :: isRec
 
-  integer :: iDepth
-  type(log_stat_comp_), pointer :: lsc
+  integer :: idp
 
-  if( ls_comp(depth)%is_updated )then
-    if( ls_comp(depth)%is_recursive )then
-      do iDepth = depth, PROCDEPTH
-        lsc => ls_comp(iDepth)
-        lsc%nCommand = lsc%nCommand - 1
-      enddo
-    else
-      lsc => ls_comp(depth)
-      lsc%nCommand = lsc%nCommand - 1
-    endif
+  if( isRec )then
+    cmd%currentCmd%depth = depth
+    cmd%currentCmd%tf = val == LTRUE
+    cmd%cmdHist%nCmd = cmd%cmdHist%nCmd + 1
+    cmd%cmdHist%depth(cmd%cmdHist%nCmd) = depth
+    cmd%cmdHist%tf(cmd%cmdHist%nCmd) = val == LTRUE
+    do idp = depth, DEPTH_MAX
+      set(idp) = val == LTRUE
+    enddo
+  else
+    selectcase( val )
+    case( LTRUE, LFALS )
+      set(depth) = val == LTRUE
+    case( LMISS )
+      set(depth) = cmd%cmdHist%tf(cmd%cmdHist%nCmd)
+    endselect
+  endif
+end subroutine fwrd_dict
+!===============================================================
+!
+!===============================================================
+subroutine back_dict(cmd, set, depth)
+  implicit none
+  type(cmdDict_), intent(inout) :: cmd
+  logical       , intent(inout) :: set(0:)
+  integer       , intent(in)    :: depth
 
-    ls_comp(depth)%is_updated = .false.
+  integer :: idp
+
+  if( depth < cmd%currentCmd%depth )then
+    cmd%cmdHist%nCmd = cmd%cmdHist%nCmd - 1
+    idp = cmd%cmdHist%depth(cmd%cmdHist%nCmd)
+    cmd%currentCmd%depth = idp
+    cmd%currentCmd%tf = cmd%cmdHist%tf(idp)
   endif
 
-  nullify(lsc)
-end subroutine update_commands_out
+  do idp = depth+1, DEPTH_MAX
+    set(idp) = cmd%currentCmd%tf
+  enddo
+end subroutine back_dict
+!===============================================================
+!
+!===============================================================
+logical function get_tf(val, tf_def) result(tf)
+  implicit none
+  integer, intent(in) :: val
+  logical, intent(in) :: tf_def
+
+  selectcase( val )
+  case( LTRUE )
+    tf = .true.
+  case( LFALS )
+    tf = .false.
+  case( LMISS )
+    tf = tf_def
+  case default
+    write(STDOUT,"(a)") '*** ERROR @ '//trim(modprc)//' function get_tf ******'
+    write(STDOUT,"(a,i0)") 'Invalid value in `val`: ',val
+    stop STOP_CODE_ERROR
+  endselect
+end function get_tf
 !===============================================================
 !
 !===============================================================
@@ -698,7 +783,7 @@ subroutine echo_lines(msg, un, idt, adv)
   integer :: leng
   integer :: loc
   !-------------------------------------------------------------
-  ! Start a new line after writing the message if $adv is true.
+  ! Start a new line after writing the message if $adv is true
   !-------------------------------------------------------------
   if( adv )then
     advance = 'yes'
@@ -706,7 +791,7 @@ subroutine echo_lines(msg, un, idt, adv)
     advance = 'no'
   endif
   !-------------------------------------------------------------
-  ! Modify indent.
+  ! Modify indent
   !-------------------------------------------------------------
   if( idt == 0 )then
     wfmt = "(a)"
@@ -714,13 +799,12 @@ subroutine echo_lines(msg, un, idt, adv)
     write(wfmt,"(a,i0,a)") '(',idt,'x,a)'
   endif
   !-------------------------------------------------------------
-  ! Write the message.
+  ! Write the message
   !-------------------------------------------------------------
   if( index(msg,'\n') == 0 )then
     write(un, wfmt, advance=advance) trim(msg)
 
   else
-
     msg_ = msg
     leng = len_trim(msg)
 
@@ -750,39 +834,23 @@ subroutine echo_lines(msg, un, idt, adv)
 
   endif
 end subroutine echo_lines
-!==============================================================
+!===============================================================
 !
-!==============================================================
-subroutine update_tf_miss(tf, lsc)
-  implicit none
-  integer, intent(inout) :: tf
-  type(log_stat_comp_), intent(in) :: lsc
-
-  if( tf /= tf_miss ) return
-
-  if( lsc%tf(lsc%nCommand) )then
-    tf = tf_true
-  else
-    tf = tf_false
-  endif
-end subroutine update_tf_miss
-!==============================================================
-!
-!==============================================================
+!===============================================================
 subroutine edbg(msg, opt)
   implicit none
   character(*), intent(in) :: msg
   character(*), intent(in), optional :: opt
 
   if( present(opt) )then
-    call echo(CODE%DBG, msg, opt)
+    call echo(CODE%MSG, msg, opt)
   else
-    call echo(CODE%DBG, msg)
+    call echo(CODE%MSG, msg)
   endif
 end subroutine edbg
-!==============================================================
+!===============================================================
 !
-!==============================================================
+!===============================================================
 subroutine ewrn(msg, opt)
   implicit none
   character(*), intent(in) :: msg
@@ -818,16 +886,7 @@ subroutine elog(un, msg)
 
   write(un, "(a)") msg
 end subroutine elog
-!==============================================================
+!===============================================================
 !
-!==============================================================
-subroutine get_echo_indent(res)
-  implicit none
-  integer, intent(out) :: res
-
-  res = ls%indent
-end subroutine get_echo_indent
-!==============================================================
-!
-!==============================================================
+!===============================================================
 end module lib_log_proc

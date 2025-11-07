@@ -15,7 +15,9 @@ TARGET = cmn2.a
 
 OBJ_F = \
 cmn2_type_rt.o\
+cmn2_type_rst.o\
 cmn2_rt1d.o\
+cmn2_area_raster.o\
 cmn2_area_raster_polygon.o\
 cmn2_rt_base.o\
 cmn2_rt_set.o\

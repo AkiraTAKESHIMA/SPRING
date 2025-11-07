@@ -10,7 +10,6 @@ TARGET = lib_log.a
 
 OBJ_ALL = \
   lib_log_proc.o\
-  lib_log_proc2.o\
   lib_log_str.o\
   lib_log_array.o\
   lib_log.o

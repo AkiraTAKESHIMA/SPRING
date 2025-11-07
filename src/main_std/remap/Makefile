@@ -16,7 +16,7 @@ include $(TOPSRCDIR)/Mkinclude
 
 TARGET = main
 TARGETLIB = remap.a
-BINDIR = $(TOPSRCDIR)/../bin/main_std
+BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/remap.exe
 PY = $(BINDIR)/remap_mkfig.py
 

@@ -30,9 +30,9 @@ contains
 !
 !===============================================================
 subroutine merge_elems_same_index(&
-    grid_sort, ijsize, nij, sidx, tidx, area)
+    mesh_sort, ijsize, nij, sidx, tidx, area)
   implicit none
-  character(*), intent(in)    :: grid_sort
+  character(*), intent(in)    :: mesh_sort
   integer(8)  , intent(inout) :: ijsize
   integer(8)  , intent(inout) :: nij
   integer(8)  , pointer       :: sidx(:), tidx(:) ! inout
@@ -48,16 +48,16 @@ subroutine merge_elems_same_index(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( grid_sort )
-  case( grid_source )
+  selectcase( mesh_sort )
+  case( MESH__SOURCE )
     sortidx    => sidx
     notsortidx => tidx
-  case( grid_target )
+  case( MESH__TARGET )
     sortidx    => tidx
     notsortidx => sidx
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  grid_sort: '//str(grid_sort))
+            '\n  mesh_sort: '//str(mesh_sort))
   endselect
 
   allocate(arg(nij))
@@ -146,14 +146,14 @@ subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( rtm%grid_coef )
-  case( GRID_SOURCE )
+  selectcase( rtm%mesh_coef )
+  case( MESH__SOURCE )
     coefidx => rtm%sidx
-  case( GRID_TARGET )
+  case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
+            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
   endselect
   !-------------------------------------------------------------
   !
@@ -409,12 +409,12 @@ end subroutine remove_zero_coef
 !===============================================================
 !
 !===============================================================
-subroutine sort_rt(rtm, grid_sort)
+subroutine sort_rt(rtm, mesh_sort)
   implicit none
   type(rt_main_), intent(inout), target :: rtm
-  character(*)  , intent(in), optional :: grid_sort
+  character(*)  , intent(in), optional :: mesh_sort
 
-  character(clen_key) :: grid_sort_
+  character(clen_key) :: mesh_sort_
   integer(8), pointer :: sortidx(:), notsortidx(:)
   integer(8), allocatable :: arg(:)
   integer(8) :: ijs, ije
@@ -424,11 +424,11 @@ subroutine sort_rt(rtm, grid_sort)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  grid_sort_ = rtm%grid_sort
-  if( present(grid_sort) ) grid_sort_ = grid_sort
+  mesh_sort_ = rtm%mesh_sort
+  if( present(mesh_sort) ) mesh_sort_ = mesh_sort
 
-  selectcase( grid_sort_ )
-  case( grid_source )
+  selectcase( mesh_sort_ )
+  case( MESH__SOURCE )
     sortidx    => rtm%sidx
     notsortidx => rtm%tidx
     if( rtm%is_sorted_by_sidx )then
@@ -438,7 +438,7 @@ subroutine sort_rt(rtm, grid_sort)
     endif
     rtm%is_sorted_by_sidx = .true.
     rtm%is_sorted_by_tidx = .false.
-  case( grid_target )
+  case( MESH__TARGET )
     sortidx    => rtm%tidx
     notsortidx => rtm%sidx
     if( rtm%is_sorted_by_tidx )then
@@ -450,7 +450,7 @@ subroutine sort_rt(rtm, grid_sort)
     rtm%is_sorted_by_tidx = .true.
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_sort: '//str(rtm%grid_sort))
+            '\n  rtm%mesh_sort: '//str(rtm%mesh_sort))
   endselect
 
   is_area_valid = associated(rtm%area)

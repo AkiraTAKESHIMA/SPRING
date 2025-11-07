@@ -10,7 +10,7 @@ mod_finalize.o\
 main.o
 
 TARGET = main
-BINDIR = $(TOPSRCDIR)/../bin/main_std
+BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/make_grid_data.exe
 
 all:

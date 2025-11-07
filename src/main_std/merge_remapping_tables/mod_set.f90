@@ -146,12 +146,38 @@ subroutine read_settings(input, output, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Detecting conflictions')
 
-  if( input%nFiles_grid > 0 .and. output%rt%main%opt_coef%is_sum_modify_enabled )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  input%nFiles_grid > 0 .and. output%rt%main%opt_coef%is_sum_modify_enabled'//&
-            '\nInput grid data must not be enabled in the block "'//str(block_name_input)//&
-              '" when coef_sum is enabled in the block "'//str(block_name_output)//'".')
-  endif
+  selectcase( output%rt%main%mesh_coef )
+  case( MESH__SOURCE, &
+        MESH__TARGET )
+    if( output%rt%main%opt_coef%is_sum_modify_enabled )then
+      if( input%nFiles_grid > 0 )then
+        call ewrn(str(msg_unexpected_condition())//&
+                '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//'" is active and grid data are input.'//&
+                '\nInterpolation coefficients are computed using intersection area data '//&
+                  'of the remapping tables and modified so that the summuation of the '//&
+                  'coefficients of each grid (specified by the key "mesh_coef" in the block "'//&
+                  str(BLOCK_NAME_OUTPUT)//'" and is "target" by default) is equal to the '//&
+                  'value specified by the key "'//str(KEY_OPT_COEF_SUM_MODIFY)//'". '//&
+                  'Inputs of grid area data and index data are ignored because they '//&
+                  'are not used with the current settings.')
+      endif
+    else
+      if( input%nFiles_grid == 0 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//'" is inactive and grid data are not input.'//&
+                '\nInterpolation coefficients are computed using intersection area '//&
+                  'data of the remapping tables and grid area data, but now grid area data '//&
+                  'are missing. Specify the files of grid area data and correspondant '//&
+                  'grid index data by the keys "fin_grdara" and "fin_grdidx", respectively, '//&
+                  'in the block "'//str(BLOCK_NAME_INPUT)//'".')
+      endif
+    endif
+  case( MESH__NONE )
+    continue
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  output%rt%main%mesh_coef: '//str(output%rt%main%mesh_coef))
+  endselect
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -280,7 +306,7 @@ subroutine read_settings_input(input)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(11)
+  call alloc_keynum()
   call set_keynum('dir', 0, -1)
   call set_keynum('length_rt', 1, -1)
   call set_keynum('f_rt_sidx', 1, -1)
@@ -608,10 +634,10 @@ subroutine read_settings_output(output)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(30)
+  call alloc_keynum()
   call set_keynum('dir', 0, -1)
-  call set_keynum('grid_coef', 0, 1)
-  call set_keynum('grid_sort', 0, 1)
+  call set_keynum('mesh_coef', 0, 1)
+  call set_keynum('mesh_sort', 0, 1)
   call set_keynum('f_rt_sidx', 1, 1)
   call set_keynum('f_rt_tidx', 1, 1)
   call set_keynum('f_rt_area', 1, 1)
@@ -636,25 +662,6 @@ subroutine read_settings_output(output)
   rtm => rt%main
 
   call set_default_values_rt(rt)
-
-!!!
-!
-!  rtm%id = trim(rt%id)//'%main'
-!
-!  rtm%grid_coef = grid_target
-!  rtm%grid_sort = grid_target
-!
-!  rtm%f%sidx = file('', dtype_int4, 1, endian_default, action=action_write, &
-!                    id=trim(rtm%id)//'f%sidx')
-!  rtm%f%tidx = file('', dtype_int4, 1, endian_default, action=action_write, &
-!                    id=trim(rtm%id)//'f%tidx')
-!  rtm%f%area = file('', dtype_dble, 1, endian_default, action=action_write, &
-!                    id=trim(rtm%id)//'f%area')
-!  rtm%f%coef = file('', dtype_dble, 1, endian_default, action=action_write, &
-!                    id=trim(rtm%id)//'f%coef')
-!
-!  call init_opt_rt_coef(rtm%opt_coef)
-!!!
 
   output%f_grid%f_idx = file(dtype=DTYPE_INT4, action=ACTION_WRITE, id='output%f_grid%f_idx')
   output%f_grid%f_ara = file(dtype=DTYPE_DBLE, action=ACTION_WRITE, id='output%f_grid%f_ara')
@@ -682,11 +689,11 @@ subroutine read_settings_output(output)
       call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
     ! Remapping table
-    case( 'grid_coef' )
-      call read_value(rtm%grid_coef, is_keyword=.true.)
+    case( 'mesh_coef' )
+      call read_value(rtm%mesh_coef, is_keyword=.true.)
 
-    case( 'grid_sort' )
-      call read_value(rtm%grid_sort, is_keyword=.true.)
+    case( 'mesh_sort' )
+      call read_value(rtm%mesh_sort, is_keyword=.true.)
 
     case( 'f_rt_sidx' )
       call read_value(rtm%f%sidx, dir)
@@ -740,26 +747,26 @@ subroutine read_settings_output(output)
 
   call check_values_opt_rt_coef(rtm%opt_coef)
 
-  selectcase( rtm%grid_coef )
-  case( grid_source, &
-        grid_target, &
-        grid_none )
+  selectcase( rtm%mesh_coef )
+  case( MESH__SOURCE, &
+        MESH__TARGET, &
+        MESH__NONE )
     continue
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef)//&
-            '\nCheck value of "grid_coef".')
+            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef)//&
+            '\nCheck value of "mesh_coef".')
   endselect
 
-  selectcase( rtm%grid_sort )
-  case( grid_source, &
-        grid_target, &
-        grid_none )
+  selectcase( rtm%mesh_sort )
+  case( MESH__SOURCE, &
+        MESH__TARGET, &
+        MESH__NONE )
     continue
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_sort: '//str(rtm%grid_sort)//&
-            '\nCheck the value of "grid_sort".')
+            '\n  rtm%mesh_sort: '//str(rtm%mesh_sort)//&
+            '\nCheck the value of "mesh_sort".')
   endselect
 
   call echo(code%ext)
@@ -820,7 +827,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
@@ -1094,8 +1101,8 @@ subroutine echo_settings_output(output)
   rtm => output%rt%main
 
   call edbg('Remapping table')
-  call edbg('  Grid to calc. coef.: '//str(rtm%grid_coef))
-  call edbg('  Grid to sort by    : '//str(rtm%grid_sort))
+  call edbg('  Mesh to calc. coef.: '//str(rtm%mesh_coef))
+  call edbg('  Mesh to sort by    : '//str(rtm%mesh_sort))
 
   call edbg('  Src idx: '//str(fileinfo(rtm%f%sidx)))
   call edbg('  Tgt idx: '//str(fileinfo(rtm%f%tidx)))

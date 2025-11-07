@@ -60,11 +60,11 @@ subroutine make_rt_polygon_polygon(s, t, rt)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
-  if( s%gs_type /= GS_TYPE_POLYGON .or. &
-      t%gs_type /= GS_TYPE_POLYGON )then
+  if( s%typ /= MESHTYPE__POLYGON .or. &
+      t%typ /= MESHTYPE__POLYGON )then
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type)//&
-            '\n  t%gs_type: '//str(t%gs_type))
+            '\n  s%typ: '//str(s%typ)//&
+            '\n  t%typ: '//str(t%typ))
   endif
 
   a => s

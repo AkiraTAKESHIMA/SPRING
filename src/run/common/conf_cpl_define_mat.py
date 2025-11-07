@@ -2,6 +2,7 @@ import os
 import sys
 
 import util
+from util import str_file_bin
 
 from conf_make_grid_data import head
 
@@ -35,35 +36,32 @@ def block_in_agcm(gs, dir_in):
     return s
 
 
-def block_in_rm(gs, dir_in=None, dir_in_grdidx=None, dir_in_rstidx=None, dir_in_grdara=None):
-    if dir_in_grdidx is None: dir_in_grdidx = dir_in
-    if dir_in_rstidx is None: dir_in_rstidx = dir_in
-    if dir_in_grdara is None: dir_in_grdara = dir_in
+"""
+Keys of dct_gs can take any of "river", "noriv" and "ocean"
+"""
+def block_in_rm(dct_gs):
+    gs_river = dct_gs['river']
 
     s = f'\
 \n\
 [input_rm]\n\
-  nx_raster: {gs["nx_raster"]}\n\
-  ny_raster: {gs["ny_raster"]}\n\
-  nx_grid: {gs["nx_grid"]}\n\
-  ny_grid: {gs["ny_grid"]}\n\
+  nx_raster: {gs_river["nx_raster"]}\n\
+  ny_raster: {gs_river["ny_raster"]}\n\
+  nx_grid: {gs_river["nx_grid"]}\n\
+  ny_grid: {gs_river["ny_grid"]}\n'
+
+    for landType in dct_gs.keys():
+        gs = dct_gs[landType]
+        s += f'\
 \n\
-  dir: "{dir_in_grdidx}"\n\
-  f_grdidx_river: "grdidx_river.bin"\n\
-  f_grdidx_noriv: "grdidx_noriv.bin"\n\
-  f_grdidx_ocean: "grdidx_ocean.bin"\n\
+  dir: "{gs["dir"]}"\n\
+  f_grdidx_{landType}: {str_file_bin(gs["fin_grdidx"])}\n\
+  f_rstidx_{landType}: {str_file_bin(gs["fin_rstidx"])}\n\
+  f_grdara_{landType}: {str_file_bin(gs["fin_grdara"])}\n'
+
+    s += f'\
 \n\
-  dir: "{dir_in_rstidx}"\n\
-  f_rstidx_river: "rstidx_river.bin"\n\
-  f_rstidx_noriv: "rstidx_noriv.bin"\n\
-  f_rstidx_ocean: "rstidx_ocean.bin"\n\
-\n\
-  dir: "{dir_in_grdara}"\n\
-  f_grdara_river: "grdara_river.bin"\n\
-  f_grdara_noriv: "grdara_noriv.bin"\n\
-  f_grdara_ocean: "grdara_ocean.bin"\n\
-\n\
-  idx_miss: {gs["idx_miss"]}\n\
+  idx_miss: {gs_river["idx_miss"]}\n\
 [end]\n'
 
     return s
@@ -87,7 +85,7 @@ def block_out_agcm(dir_out):
     s = f'\
 \n\
 [output_agcm]\n\
-  dir: "dir_out"\n\
+  dir: "{dir_out}"\n\
   f_lndara_ogcm      : "lndara_ogcm.bin"\n\
   f_lndara_river     : "lndara_river.bin"\n\
   f_lndara_noriv_real: "lndara_noriv_real.bin"\n\
@@ -98,46 +96,27 @@ def block_out_agcm(dir_out):
     return s
 
 
-def block_out_lsm(dir_out):
+"""
+Keys of dct_gs can take any of "river", "noriv", "noriv_real" and "noriv_virt"
+"""
+def block_out_lsm(dct_gs, dir_out):
     s = f'\
 \n\
 [output_lsm]\n\
-  dir: "{dir_out}"\n\
-\n\
-  f_grdmsk_river     : "grdmsk_river.bin", real, 1, big\n\
-  f_grdmsk_noriv     : "grdmsk_noriv.bin", real, 1, big\n\
-  f_grdmsk_noriv_real: "grdmsk_noriv-real.bin", real, 1, big\n\
-  f_grdmsk_noriv_virt: "grdmsk_noriv-virt.bin", real, 1, big\n\
-\n\
-  f_grdidx_bnd_river     : "grdidx_bnd_river.bin"\n\
-  f_grdidx_bnd_noriv     : "grdidx_bnd_noriv.bin"\n\
-  f_grdidx_bnd_noriv_real: "grdidx_bnd_noriv-real.bin"\n\
-  f_grdidx_bnd_noriv_virt: "grdidx_bnd_noriv-virt.bin"\n\
-\n\
-  f_grdidx_river     : "grdidx_river.bin"\n\
-  f_grdidx_noriv     : "grdidx_noriv.bin"\n\
-  f_grdidx_noriv_real: "grdidx_noriv-real.bin"\n\
-  f_grdidx_noriv_virt: "grdidx_noriv-virt.bin"\n\
-\n\
-  f_grdara_river     : "grdara_river.bin"\n\
-  f_grdara_noriv     : "grdara_noriv.bin"\n\
-  f_grdara_noriv_real: "grdara_noriv-real.bin"\n\
-  f_grdara_noriv_virt: "grdara_noriv-virt.bin"\n\
-\n\
-  f_grdwgt_river     : "grdwgt_river.bin"\n\
-  f_grdwgt_noriv     : "grdwgt_noriv.bin"\n\
-  f_grdwgt_noriv_virt: "grdwgt_noriv-virt.bin"\n\
-  f_grdwgt_noriv_real: "grdwgt_noriv-real.bin"\n\
-\n\
-  f_rstidx_river     : "rstidx_river.bin"\n\
-  f_rstidx_noriv     : "rstidx_noriv.bin"\n\
-  f_rstidx_noriv_real: "rstidx_noriv-real.bin"\n\
-  f_rstidx_noriv_virt: "rstidx_noriv-virt.bin"\n\
-\n\
-  f_rstidx_bnd_river     : "rstidx_bnd_river.bin"\n\
-  f_rstidx_bnd_noriv     : "rstidx_bnd_noriv.bin"\n\
-  f_rstidx_bnd_noriv_real: "rstidx_bnd_noriv-real.bin"\n\
-  f_rstidx_bnd_noriv_virt: "rstidx_bnd_noriv-virt.bin"\n\
+  dir: "{dir_out}"\n'
+
+    for landType in dct_gs.keys():
+        s += f'\
+\n'
+        gs = dct_gs[landType]
+        for dname in ['grdmsk', 'grdidx', 'grdidx_bnd', 'grdara', 'grdwgt', 
+                      'rstidx', 'rstidx_bnd']:
+            key = f'fout_{dname}'
+            if util.key_val_exist(gs, key):
+                s += f'\
+  f_{dname}_{landType}: {str_file_bin(gs[f"{key}"])}\n'
+
+    s += f'\
 [end]\n'
 
     return s

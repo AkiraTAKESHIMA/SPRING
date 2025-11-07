@@ -1099,15 +1099,15 @@ end subroutine read_value__fbin
 !===============================================================
 !
 !===============================================================
-subroutine alloc_keynum(n)
+subroutine alloc_keynum()
   implicit none
-  integer, intent(in) :: n
 
   type(keydict_), pointer :: kd
   integer :: ikey
+  integer, parameter :: nkey_init = 16
 
-  allocate(keydict(n))
-  nkey = n
+  allocate(keydict(nkey_init))
+  nkey = nkey_init
 
   do ikey = 1, nkey
     kd => keydict(ikey)
@@ -1136,6 +1136,7 @@ subroutine set_keynum(key, llim, ulim)
   integer     , intent(in) :: llim, ulim
 
   type(keydict_), pointer :: kd
+  type(keydict_), allocatable :: keydict_copy(:)
   integer :: ikey
 
   call echo(code%bgn, 'set_keynum', '-p -x2')
@@ -1151,19 +1152,36 @@ subroutine set_keynum(key, llim, ulim)
               '\n  key: '//str(key))
     endif
 
-    if( kd%key == '' )then
-      kd%key = trim(key)
-      kd%n_llim = llim
-      kd%n_ulim = ulim
-      nullify(kd)
-      call echo(code%ret)
-      return
-    endif
+    if( kd%key == '' ) exit
   enddo
 
-  call eerr('!!! INTERNAL ERROR !!!'//&
-          '\n  ikey == nkey+1'//&
-          '\n  block_name: '//str(block_name))
+  if( ikey == nkey+1 )then
+    allocate(keydict_copy(nkey))
+    do ikey = 1, nkey
+      keydict_copy(ikey) = keydict(ikey)
+    enddo
+    deallocate(keydict)
+    allocate(keydict(nkey*2))
+    do ikey = 1, nkey
+      keydict(ikey) = keydict_copy(ikey)
+    enddo
+    deallocate(keydict_copy)
+
+    do ikey = nkey+1, size(keydict)
+      kd => keydict(ikey)
+      kd%key = ''
+      kd%n = 0
+      kd%n_llim = 0
+      kd%n_ulim = 0
+    enddo
+    kd => keydict(nkey+1)
+    nkey = size(keydict)
+  endif
+
+  kd%key = trim(key)
+  kd%n_llim = llim
+  kd%n_ulim = ulim
+  nullify(kd)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_keynum

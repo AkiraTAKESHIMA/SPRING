@@ -55,7 +55,7 @@ subroutine init_gs(u)
   allocate(character(1) :: u%nam)
   u%id = ''
   u%nam = ''
-  u%gs_type = ''
+  u%typ = ''
   u%is_source = .true.
 
   nullify(u%latlon)
@@ -83,10 +83,10 @@ end subroutine init_gs_raster_zone
 ! Requirements:
 !   1. That SUBROUTINE init_gs has been called.
 !===============================================================
-subroutine alloc_gs_components(a, gs_type)
+subroutine alloc_gs_components(a, meshtype)
   implicit none
   type(gs_)   , intent(inout), target :: a
-  character(*), intent(in) :: gs_type
+  character(*), intent(in) :: meshtype
 
   type(gs_common_) , pointer :: ac
   type(gs_latlon_) , pointer :: al
@@ -100,13 +100,13 @@ subroutine alloc_gs_components(a, gs_type)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  a%gs_type = gs_type
+  a%typ = meshtype
 
   allocate(character(1) :: s)
   s = a%id
 
-  selectcase( gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( meshtype )
+  case( MESHTYPE__LATLON )
     allocate(a%latlon)
     al => a%latlon
     al%id = s//'%latlon'
@@ -125,7 +125,7 @@ subroutine alloc_gs_components(a, gs_type)
     nullify(al%idxmap, al%wgtmap)
     nullify(al%hrel, al%vrel)
     nullify(al)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     allocate(a%raster)
     ar => a%raster
     ar%id = s//'%raster'
@@ -144,7 +144,7 @@ subroutine alloc_gs_components(a, gs_type)
     ar%status_wgtmap = GRID_STATUS__UNDEF
     nullify(ar%hrel, ar%vrel)
     nullify(ar)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     allocate(a%polygon)
     ap => a%polygon
     ap%id = s//'%polygon'
@@ -158,7 +158,7 @@ subroutine alloc_gs_components(a, gs_type)
     nullify(ap)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  gs_type: '//str(gs_type))
+            '\n  $meshtype: '//str(meshtype))
   endselect
 
   allocate(a%cmn)
@@ -166,7 +166,7 @@ subroutine alloc_gs_components(a, gs_type)
   ac%id = s//'%cmn'
   ac%nam       => a%nam
   ac%is_valid  => a%is_valid
-  ac%gs_type   => a%gs_type
+  ac%typ       => a%typ
   ac%is_source => a%is_source
   nullify(ac%f_grid_in)
   nullify(ac%f_grid_out)
@@ -179,67 +179,67 @@ end subroutine alloc_gs_components
 ! Requirements:
 !   1. That SUBROUTINE set_default_values_gs_? has been called.
 !===============================================================
-subroutine set_gs_common(u)
+subroutine set_gs_common(a)
   implicit none
-  type(gs_), intent(inout), target :: u
+  type(gs_), intent(inout), target :: a
 
-  type(gs_common_), pointer :: uc
-  type(gs_latlon_) , pointer :: ul
-  type(gs_raster_) , pointer :: ur
-  type(gs_polygon_), pointer :: up
+  type(gs_common_), pointer :: ac
+  type(gs_latlon_) , pointer :: al
+  type(gs_raster_) , pointer :: ar
+  type(gs_polygon_), pointer :: ap
 
   call echo(code%bgn, 'set_gs_common', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  uc => u%cmn
+  ac => a%cmn
 
-  selectcase( u%gs_type )
-  case( GS_TYPE_LATLON )
-    ul => u%latlon
-    uc%f_grid_in   => ul%f_grid_in
-    uc%f_grid_out  => ul%f_grid_out
-    uc%grid        => ul%grid
-    uc%idx_miss    => ul%idx_miss
-    uc%ara_miss    => ul%ara_miss
-    uc%wgt_miss    => ul%wgt_miss
-    uc%xyz_miss    => ul%xyz_miss
-    uc%lonlat_miss => ul%lonlat_miss
-    uc%val_miss    => ul%val_miss
-    uc%debug       => ul%debug
-    uc%idx_debug   => ul%idx_debug
-  case( GS_TYPE_RASTER )
-    ur => u%raster
-    uc%f_grid_in   => ur%f_grid_in
-    uc%f_grid_out  => ur%f_grid_out
-    uc%grid        => ur%grid
-    uc%idx_miss    => ur%idx_miss
-    uc%ara_miss    => ur%ara_miss
-    uc%wgt_miss    => ur%wgt_miss
-    uc%xyz_miss    => ur%xyz_miss
-    uc%lonlat_miss => ur%lonlat_miss
-    uc%val_miss    => ur%val_miss
-    uc%debug       => ur%debug
-    uc%idx_debug   => ur%idx_debug
-  case( GS_TYPE_POLYGON )
-    up => u%polygon
-    uc%f_grid_in   => up%f_grid_in
-    uc%f_grid_out  => up%f_grid_out
-    uc%grid        => up%grid
-    uc%idx_miss    => up%idx_miss
-    uc%ara_miss    => up%ara_miss
-    uc%wgt_miss    => up%wgt_miss
-    uc%xyz_miss    => up%xyz_miss
-    uc%lonlat_miss => up%lonlat_miss
-    uc%val_miss    => up%val_miss
-    uc%debug       => up%debug
-    uc%idx_debug   => up%idx_debug
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
+    al => a%latlon
+    ac%f_grid_in   => al%f_grid_in
+    ac%f_grid_out  => al%f_grid_out
+    ac%grid        => al%grid
+    ac%idx_miss    => al%idx_miss
+    ac%ara_miss    => al%ara_miss
+    ac%wgt_miss    => al%wgt_miss
+    ac%xyz_miss    => al%xyz_miss
+    ac%lonlat_miss => al%lonlat_miss
+    ac%val_miss    => al%val_miss
+    ac%debug       => al%debug
+    ac%idx_debug   => al%idx_debug
+  case( MESHTYPE__RASTER )
+    ar => a%raster
+    ac%f_grid_in   => ar%f_grid_in
+    ac%f_grid_out  => ar%f_grid_out
+    ac%grid        => ar%grid
+    ac%idx_miss    => ar%idx_miss
+    ac%ara_miss    => ar%ara_miss
+    ac%wgt_miss    => ar%wgt_miss
+    ac%xyz_miss    => ar%xyz_miss
+    ac%lonlat_miss => ar%lonlat_miss
+    ac%val_miss    => ar%val_miss
+    ac%debug       => ar%debug
+    ac%idx_debug   => ar%idx_debug
+  case( MESHTYPE__POLYGON )
+    ap => a%polygon
+    ac%f_grid_in   => ap%f_grid_in
+    ac%f_grid_out  => ap%f_grid_out
+    ac%grid        => ap%grid
+    ac%idx_miss    => ap%idx_miss
+    ac%ara_miss    => ap%ara_miss
+    ac%wgt_miss    => ap%wgt_miss
+    ac%xyz_miss    => ap%xyz_miss
+    ac%lonlat_miss => ap%lonlat_miss
+    ac%val_miss    => ap%val_miss
+    ac%debug       => ap%debug
+    ac%idx_debug   => ap%idx_debug
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  gs_type: '//str(u%gs_type))
+            '\n  meshtype: '//str(a%typ))
   endselect
 
-  nullify(uc)
+  nullify(ac)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine set_gs_common
@@ -420,7 +420,7 @@ subroutine set_default_values_gs_raster(ur)
   ur%status_wgtmap = GRID_STATUS__TO_BE_PREPARED
   ur%idxmin = 0_8
   ur%idxmax = 0_8
-  ur%grdidx_condition = GRDIDX_CONDITION__MATCH
+  ur%idx_condition = IDX_CONDITION__MATCH
 
   ur%idx_miss    = IDX_MISS_DEFAULT
   ur%uwa_miss    = UWA_MISS_DEFAULT
@@ -572,7 +572,7 @@ subroutine set_default_values_file_grid_out(fg)
 
   call echo(code%bgn, 'set_default_values_file_grid_out', '-p -x2')
   !-------------------------------------------------------------
-  fg%form = ''
+  fg%form = GRID_FORM_AUTO
 
   fg%save_idx    = .false.
   fg%save_msk    = .false.
@@ -1160,10 +1160,10 @@ subroutine free_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
+  selectcase( a%typ )
   !-------------------------------------------------------------
   ! Case: LatLon
-  case( GS_TYPE_LATLON )
+  case( MESHTYPE__LATLON )
     al => a%latlon
 
     if( associated(al%f_latlon_in) )then
@@ -1201,7 +1201,7 @@ subroutine free_gs(a)
     nullify(a%latlon)
   !-------------------------------------------------------------
   ! Case: Raster
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     ar => a%raster
 
     if( associated(ar%f_raster_in) )then
@@ -1242,7 +1242,7 @@ subroutine free_gs(a)
     nullify(a%raster)
   !-------------------------------------------------------------
   ! Case: Polygon
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     ap => a%polygon
 
     if( associated(ap%f_polygon_in) )then
@@ -1272,7 +1272,7 @@ subroutine free_gs(a)
   !
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  a%gs_type: '//str(a%gs_type))
+            '\n  a%typ: '//str(a%typ))
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)

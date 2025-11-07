@@ -7,41 +7,41 @@ module cmn1_const_util
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: checkval_grdidx_condition
+  public :: checkval_idx_condition
   public :: checkval_opt_old_files
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine checkval_grdidx_condition(s, id)
+subroutine checkval_idx_condition(s, id)
   implicit none
   character(*), intent(in) :: s
   character(*), intent(in), optional :: id
 
   character(:), allocatable :: id_
 
-  call echo(code%bgn, 'checkval_grdidx_condition', '-p -x2')
+  call echo(code%bgn, 'checkval_idx_condition', '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   allocate(character(1) :: id_)
-  id_ = 'grdidx_condition'
+  id_ = 'idx_condition'
   if( present(id) ) id_ = trim(id)
 
   selectcase( s )
-  case( GRDIDX_CONDITION__UNDEF     , &
-        GRDIDX_CONDITION__MATCH     , &
-        GRDIDX_CONDITION__GRD_IN_RST, &
-        GRDIDX_CONDITION__RST_IN_GRD, &
-        GRDIDX_CONDITION__NONE )
+  case( IDX_CONDITION__UNDEF     , &
+        IDX_CONDITION__MATCH     , &
+        IDX_CONDITION__GRD_IN_RST, &
+        IDX_CONDITION__RST_IN_GRD, &
+        IDX_CONDITION__NONE )
     continue
   case default
     call eerr('Invalid value for '//id_//': '//str(s))
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine checkval_grdidx_condition
+end subroutine checkval_idx_condition
 !===============================================================
 !
 !===============================================================

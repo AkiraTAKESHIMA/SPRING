@@ -93,12 +93,12 @@ subroutine make_idxmap_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_idxmap__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_idxmap__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
@@ -115,12 +115,12 @@ subroutine make_wgtmap_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_wgtmap__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_wgtmap__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
@@ -137,12 +137,12 @@ subroutine make_grdidx_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_grdidx__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_grdidx__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
@@ -159,12 +159,12 @@ subroutine make_grdara_gs(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call make_grdara__latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call make_grdara__raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     call make_grdara__polygon(a%polygon)
   endselect
   !-------------------------------------------------------------
@@ -301,11 +301,16 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   call get_stats(al%idxmap, vmin=al%idxmin, vmax=al%idxmax, miss=al%idx_miss, stat=stat)
   al%is_valid = stat == 0
 
-  do iv = al%vi, al%vf
-    do ih = al%hi, al%hf
-      al%mskmap(ih,iv) = al%idxmap(ih,iv) /= al%idx_miss
-    enddo
-  enddo
+!  do iv = al%vi, al%vf
+!    do ih = al%hi, al%hf
+!      al%mskmap(ih,iv) = al%idxmap(ih,iv) /= al%idx_miss
+!    enddo
+!  enddo
+  where( al%idxmap /= al%idx_miss )
+    al%mskmap = .true.
+  elsewhere
+    al%mskmap = .false.
+  endwhere
 
   if( al%is_valid )then
     call edbg('The number of grids        : '//str(size(al%idxmap))//&
@@ -316,11 +321,16 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   endif
 
   if( al%debug )then
-    do iv = al%vi, al%vf
-      do ih = al%hi, al%hf
-        al%mskmap(ih,iv) = al%idxmap(ih,iv) == al%idx_debug
-      enddo
-    enddo
+!    do iv = al%vi, al%vf
+!      do ih = al%hi, al%hf
+!        al%mskmap(ih,iv) = al%idxmap(ih,iv) == al%idx_debug
+!      enddo
+!    enddo
+    where( al%idxmap == al%idx_debug )
+      al%mskmap = .true.
+    elsewhere
+      al%mskmap = .false.
+    endwhere
   endif
   !-------------------------------------------------------------
   call echo(code%ret)
@@ -1510,12 +1520,10 @@ subroutine make_grdidx__raster(ar)
               f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
     call argsort(g%idx, g%idxarg)
 
-    allocate(is_valid(ar%idxmin:ar%idxmax))
-
-    selectcase( ar%grdidx_condition )
+    selectcase( ar%idx_condition )
     !-----------------------------------------------------------
     ! Case: Set of indices from grdidx and that from rstidx must match
-    case( GRDIDX_CONDITION__MATCH )
+    case( IDX_CONDITION__MATCH )
       call echo(code%ent, 'Case: Set of indices from grdidx and that from rstidx must match')
       !---------------------------------------------------------
       ! Check if the ranges match
@@ -1545,6 +1553,8 @@ subroutine make_grdidx__raster(ar)
       !---------------------------------------------------------
       ! Check if the sets are identical
       !---------------------------------------------------------
+      allocate(is_valid(ar%idxmin:ar%idxmax))
+
       is_valid(:) = .false.
       idx_prev = ar%idx_miss
       ij_prev = 0_8
@@ -1577,15 +1587,17 @@ subroutine make_grdidx__raster(ar)
                     'was not found in the raster map.')
         endif
       enddo  ! ij/
+
+      deallocate(is_valid)
       !---------------------------------------------------------
-      ! Make the grid mask
+      ! Make a grid mask
       !---------------------------------------------------------
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: Set of indices from rstidx must be an element of that from grdidx
-    case( GRDIDX_CONDITION__RST_IN_GRD )
+    case( IDX_CONDITION__RST_IN_GRD )
       call echo(code%ent, 'Case: Set of indices of rstidx '//&
                 'must be an element of that of grdidx')
       !---------------------------------------------------------
@@ -1607,10 +1619,12 @@ subroutine make_grdidx__raster(ar)
                   '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - '))
         endif
       endif
+      ar%idxmin = g%idxmin
+      ar%idxmax = g%idxmax
       !---------------------------------------------------------
       ! Check if the sets fulfill the condition
       !---------------------------------------------------------
-      is_valid(:) = .false.
+!      is_valid(:) = .false.
       idx_prev = ar%idx_miss
       ij_prev = 0_8
       do iz = 1, ar%nZone
@@ -1626,27 +1640,28 @@ subroutine make_grdidx__raster(ar)
                       '\nIndex '//str(arz%idxmap(ih,iv))//', that is in the raster map, '//&
                         'was not found in the given set.')
             endif
-            is_valid(arz%idxmap(ih,iv)) = .true.
+!            is_valid(arz%idxmap(ih,iv)) = .true.
           enddo  ! ih/
         enddo  ! iv/
       enddo  ! iz/
       !---------------------------------------------------------
-      ! Make the grid mask
+      ! Make a grid mask
       !---------------------------------------------------------
-      do ij = 1_8, g%nij
-        if( g%idx(ij) == ar%idx_miss )then
-          g%msk(ij) = .false.
-        elseif( g%idx(ij) < ar%idxmin .or. ar%idxmax < g%idx(ij) )then
-          g%msk(ij) = .false.
-        else
-          g%msk(ij) = is_valid(g%idx(ij))
-        endif
-      enddo
+!      do ij = 1_8, g%nij
+!        if( g%idx(ij) == ar%idx_miss )then
+!          g%msk(ij) = .false.
+!        elseif( g%idx(ij) < ar%idxmin .or. ar%idxmax < g%idx(ij) )then
+!          g%msk(ij) = .false.
+!        else
+!          g%msk(ij) = is_valid(g%idx(ij))
+!        endif
+!      enddo
+      g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: Set of indices from grdidx must be an element of that from rstidx
-    case( GRDIDX_CONDITION__GRD_IN_RST )
+    case( IDX_CONDITION__GRD_IN_RST )
       call echo(code%ent, 'Case: Set of indices of grdidx '//&
                 'must be an element of that of rstidx')
       !---------------------------------------------------------
@@ -1675,6 +1690,9 @@ subroutine make_grdidx__raster(ar)
       !---------------------------------------------------------
       ! Check if the sets fulfills the condition
       !---------------------------------------------------------
+      allocate(is_valid(ar%idxmin:ar%idxmax))
+
+      is_valid(:) = .false.
       idx_prev = ar%idx_miss
       ij_prev = 0_8
       do iz = 1, ar%nZone
@@ -1702,15 +1720,17 @@ subroutine make_grdidx__raster(ar)
                     'was not found in the raster map.')
         endif
       enddo
+
+      deallocate(is_valid)
       !---------------------------------------------------------
-      ! Make the grid mask
+      ! Make a grid mask
       !---------------------------------------------------------
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: No condition
-    case( GRDIDX_CONDITION__NONE )
+    case( IDX_CONDITION__NONE )
       call echo(code%ent, 'No condition')
 
       g%msk(:) = g%idx(:) /= ar%idx_miss
@@ -1718,19 +1738,19 @@ subroutine make_grdidx__raster(ar)
       call echo(code%ext)
     !-----------------------------------------------------------
     ! Case: ERROR (undef)
-    case( GRDIDX_CONDITION__UNDEF )
+    case( IDX_CONDITION__UNDEF )
       call eerr(str(msg_unexpected_condition())//&
-              '\n  ar%condition_grdidx: '//str(ar%grdidx_condition))
+              '\n  ar%idx_condition: '//str(ar%idx_condition))
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  ar%condition_grdidx: '//str(ar%grdidx_condition))
+              '\n  ar%idx_condition: '//str(ar%idx_condition))
     endselect
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    deallocate(is_valid)
+    !deallocate(is_valid)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -1877,20 +1897,41 @@ subroutine make_grduwa__raster(ar)
     enddo  ! iv/
   enddo  ! iz/
 
-  do ij = 1_8, g%nij
-    if( g%msk(ij) )then
-      if( g%uwa(ij) <= 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%uwa(ij) <= 0.0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  uwa: '//str(g%uwa(ij)))
+  selectcase( ar%idx_condition )
+  case( IDX_CONDITION__MATCH, IDX_CONDITION__GRD_IN_RST )
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        if( g%uwa(ij) <= 0.d0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  g%uwa(ij) <= 0.0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  uwa: '//str(g%uwa(ij)))
+        endif
+        g%uwa(ij) = g%uwa(ij) * earth%r**2
+      else
+        g%uwa(ij) = ar%uwa_miss
       endif
-      g%uwa(ij) = g%uwa(ij) * earth%r**2
-    else
-      g%uwa(ij) = ar%uwa_miss
-    endif
-  enddo
+    enddo
+  case( IDX_CONDITION__RST_IN_GRD, IDX_CONDITION__NONE )
+    do ij = 1_8, g%nij
+      if( g%msk(ij) )then
+        if( g%uwa(ij) < 0.d0 )then
+          call eerr(str(msg_unexpected_condition())//&
+                  '\n  g%uwa(ij) < 0.0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  uwa: '//str(g%uwa(ij)))
+        endif
+        g%uwa(ij) = g%uwa(ij) * earth%r**2
+      else
+        g%uwa(ij) = ar%uwa_miss
+      endif
+    enddo
+  case default
+    call eerr(str(msg_invalid_value())//&
+           '\n  ar%idx_condition: '//str(ar%idx_condition))
+  endselect
 
   deallocate(rstuwa_col)
   !-----------------------------------------------------------
@@ -1964,6 +2005,7 @@ subroutine make_grdara__raster(ar)
   elseif( fg_in%wgt%path /= '' )then
     call echo(code%ent, 'Case: Grid weight data were given')
 
+    call make_grduwa__raster(ar)
     call make_grdwgt__raster(ar)
 
     do ij = 1_8, g%nij

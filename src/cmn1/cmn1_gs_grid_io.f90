@@ -39,61 +39,61 @@ subroutine write_grid_data(uc)
   if( uc%is_valid )then
     f => fg_out%idx
     if( f%path /= '' )then
-      call edbg('Writing idx')
+      call edbg('Writing idx '//str(fileinfo(f)))
       call wbin(g%idx, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%msk
     if( f%path /= '' )then
-      call edbg('Writing msk')
+      call edbg('Writing msk '//str(fileinfo(f)))
       call wbin(g%msk, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%uwa
     if( f%path /= '' )then
-      call edbg('Writing uwa')
+      call edbg('Writing uwa '//str(fileinfo(f)))
       call wbin(g%uwa, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%ara
     if( f%path /= '' )then
-      call edbg('Writing ara')
+      call edbg('Writing ara '//str(fileinfo(f)))
       call wbin(g%ara, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%wgt
     if( f%path /= '' )then
-      call edbg('Writing wgt')
+      call edbg('Writing wgt '//str(fileinfo(f)))
       call wbin(g%wgt, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%x
     if( f%path /= '' )then
-      call edbg('Writing x')
+      call edbg('Writing x   '//str(fileinfo(f)))
       call wbin(g%x, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%y
     if( f%path /= '' )then
-      call edbg('Writing y')
+      call edbg('Writing y   '//str(fileinfo(f)))
       call wbin(g%y, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%z
     if( f%path /= '' )then
-      call edbg('Writing z')
+      call edbg('Writing z   '//str(fileinfo(f)))
       call wbin(g%z, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%lon
     if( f%path /= '' )then
-      call edbg('Writing lon')
+      call edbg('Writing lon '//str(fileinfo(f)))
       call wbin(g%lon, f%path, f%dtype, f%endian, f%rec)
     endif
 
     f => fg_out%lat
     if( f%path /= '' )then
-      call edbg('Writing lat')
+      call edbg('Writing lat '//str(fileinfo(f)))
       call wbin(g%lat, f%path, f%dtype, f%endian, f%rec)
     endif
   !-------------------------------------------------------------

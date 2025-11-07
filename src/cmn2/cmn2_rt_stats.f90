@@ -152,7 +152,7 @@ subroutine get_rt_main_stats(rtm, ijs, ije, echo_msg)
   !-------------------------------------------------------------
   if( echo_msg_ )then
     call edbg('id: '//str(rtm%id))
-    call edbg('  grid_sort: '//str(rtm%grid_sort))
+    call edbg('  mesh_sort: '//str(rtm%mesh_sort))
     call edbg('  is_sorted_by_sidx: '//str(rtm%is_sorted_by_sidx))
     call edbg('  is_sorted_by_tidx: '//str(rtm%is_sorted_by_tidx))
     call edbg('  ijsize: '//str(rtm%ijsize,dgt_ij))
@@ -342,15 +342,15 @@ subroutine report_rt_main_summary(&
   ! Check if sorted
   !-------------------------------------------------------------
   is_ok = .true.
-  selectcase( rtm%grid_sort )
-  case( grid_source )
+  selectcase( rtm%mesh_sort )
+  case( MESH__SOURCE )
     do ij = 1_8, rtm%nij-1_8
       if( rtm%sidx(ij+1_8) < rtm%sidx(ij) )then
         is_ok = .false.
         exit
       endif
     enddo
-  case( grid_target )
+  case( MESH__TARGET )
     do ij = 1_8, rtm%nij-1_8
       if( rtm%tidx(ij+1_8) < rtm%tidx(ij) )then
         is_ok = .false.
@@ -359,12 +359,12 @@ subroutine report_rt_main_summary(&
     enddo
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_sort: '//str(rtm%grid_sort))
+            '\n  rtm%mesh_sort: '//str(rtm%mesh_sort))
   endselect
 
   if( .not. is_ok )then
     call eerr(str(msg_unexpected_condition())//&
-            '\nArray is not sorted. grid_sort: '//str(rtm%grid_sort))
+            '\nArray is not sorted. mesh_sort: '//str(rtm%mesh_sort))
   endif
   !-------------------------------------------------------------
   ! Set format
@@ -387,8 +387,8 @@ subroutine report_rt_main_summary(&
   call echo(code%set, '+x2')
 
   if( print_summary_ )then
-    call edbg('grid_coef: '//str(rtm%grid_coef))
-    call edbg('grid_sort: '//str(rtm%grid_sort))
+    call edbg('mesh_coef: '//str(rtm%mesh_coef))
+    call edbg('mesh_sort: '//str(rtm%mesh_sort))
 
     call edbg('coef_sum_modify     : '//str(str_rt_opt_coef(&
               rtm%opt_coef%is_sum_modify_enabled, rtm%opt_coef%sum_modify)))

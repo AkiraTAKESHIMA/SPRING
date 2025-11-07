@@ -230,7 +230,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 
   call read_rt_main(rtim_a_o)
 
-  rtim_a_o%grid_sort = grid_target
+  rtim_a_o%mesh_sort = MESH__TARGET
   call sort_rt(rtim_a_o)
 
   call get_rt_main_stats(rtim_a_o)
@@ -588,7 +588,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   call echo(code%ent, 'Merging elements of same index')
 
   call merge_elems_same_index(&
-         rtom_l_a%grid_sort, rtom_l_a%ijsize, rtom_l_a%nij, &
+         rtom_l_a%mesh_sort, rtom_l_a%ijsize, rtom_l_a%nij, &
          rtom_l_a%sidx, rtom_l_a%tidx, rtom_l_a%area)
   call realloc(rtom_l_a%coef, rtom_l_a%ijsize, clear=.true.)
 
@@ -600,26 +600,26 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   !-------------------------------------------------------------
   call echo(code%ent, 'Calculating coef.')
 
-  selectcase( rtom_l_a%grid_coef )
-  case( grid_source )
+  selectcase( rtom_l_a%mesh_coef )
+  case( MESH__SOURCE )
     if( rtom_l_a%opt_coef%is_sum_modify_enabled )then
       call calc_rt_coef_sum_modify_enabled(rtom_l_a)
     else
       call calc_rt_coef_sum_modify_not_enabled(&
              rtom_l_a, lsm%idx, lsm%idxarg, lsm%ara)
     endif
-  case( grid_target )
+  case( MESH__TARGET )
     if( rtom_l_a%opt_coef%is_sum_modify_enabled )then
       call calc_rt_coef_sum_modify_enabled(rtom_l_a)
     else
       call calc_rt_coef_sum_modify_not_enabled(&
              rtom_l_a, agcm%idx, agcm%idxarg, agcm%ara)
     endif
-  case( grid_none )
+  case( MESH__NONE )
     rtom_l_a%coef(:) = rtom_l_a%area(:)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  rtom_l_a%grid_coef: '//str(rtom_l_a%grid_coef))
+            '\n  rtom_l_a%mesh_coef: '//str(rtom_l_a%mesh_coef))
   endselect
 
   call echo(code%ext)

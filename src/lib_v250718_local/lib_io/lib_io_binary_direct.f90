@@ -8722,6 +8722,12 @@ subroutine write_block__log1(&
   integer(8)  , intent(in) :: n
 
   logical(4), allocatable, save :: tmpl4(:)
+  integer(1), allocatable, save :: tmpi1(:)
+  integer(2), allocatable, save :: tmpi2(:)
+  integer(4), allocatable, save :: tmpi4(:)
+  integer(8), allocatable, save :: tmpi8(:)
+  real(4)   , allocatable, save :: tmpr4(:)
+  real(8)   , allocatable, save :: tmpr8(:)
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__log1 ***\n'
@@ -8733,6 +8739,12 @@ subroutine write_block__log1(&
     selectcase( dtype )
     case( DTYPE_LOG1 ); continue
     case( DTYPE_LOG4 ); allocate(tmpl4(n))
+    case( DTYPE_INT1 ); allocate(tmpi1(n))
+    case( DTYPE_INT2 ); allocate(tmpi2(n))
+    case( DTYPE_INT4 ); allocate(tmpi4(n))
+    case( DTYPE_INT8 ); allocate(tmpi8(n))
+    case( DTYPE_REAL ); allocate(tmpr4(n))
+    case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -8745,6 +8757,36 @@ subroutine write_block__log1(&
     case( DTYPE_LOG4 )
       call cpval(dat(:n), tmpl4(:n))
       write(un,pos=pos) tmpl4(:n)
+    case( DTYPE_INT1 )
+      where( dat(:n) ); tmpi1(:n) = INT1_TRUE
+      elsewhere       ; tmpi1(:n) = INT1_FALSE
+      endwhere
+      write(un,pos=pos) tmpi1(:n)
+    case( DTYPE_INT2 )
+      where( dat(:n) ); tmpi2(:n) = INT2_TRUE
+      elsewhere       ; tmpi2(:n) = INT2_FALSE
+      endwhere
+      write(un,pos=pos) tmpi2(:n)
+    case( DTYPE_INT4 )
+      where( dat(:n) ); tmpi4(:n) = INT4_TRUE
+      elsewhere       ; tmpi4(:n) = INT4_FALSE
+      endwhere
+      write(un,pos=pos) tmpi4(:n)
+    case( DTYPE_INT8 )
+      where( dat(:n) ); tmpi8(:n) = INT8_TRUE
+      elsewhere       ; tmpi8(:n) = INT8_FALSE
+      endwhere
+      write(un,pos=pos) tmpi8(:n)
+    case( DTYPE_REAL )
+      where( dat(:n) ); tmpr4(:n) = REAL_TRUE
+      elsewhere       ; tmpr4(:n) = REAL_FALSE
+      endwhere
+      write(un,pos=pos) tmpr4(:n)
+    case( DTYPE_DBLE )
+      where( dat(:n) ); tmpr8(:n) = DBLE_TRUE
+      elsewhere       ; tmpr8(:n) = DBLE_FALSE
+      endwhere
+      write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -8754,6 +8796,12 @@ subroutine write_block__log1(&
     selectcase( dtype )
     case( DTYPE_LOG1 ); continue
     case( DTYPE_LOG4 ); deallocate(tmpl4)
+    case( DTYPE_INT1 ); deallocate(tmpi1)
+    case( DTYPE_INT2 ); deallocate(tmpi2)
+    case( DTYPE_INT4 ); deallocate(tmpi4)
+    case( DTYPE_INT8 ); deallocate(tmpi8)
+    case( DTYPE_REAL ); deallocate(tmpr4)
+    case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -8777,6 +8825,12 @@ subroutine write_block__log4(&
   integer(8)  , intent(in) :: n
 
   logical(1), allocatable, save :: tmpl1(:)
+  integer(1), allocatable, save :: tmpi1(:)
+  integer(2), allocatable, save :: tmpi2(:)
+  integer(4), allocatable, save :: tmpi4(:)
+  integer(8), allocatable, save :: tmpi8(:)
+  real(4)   , allocatable, save :: tmpr4(:)
+  real(8)   , allocatable, save :: tmpr8(:)
 
   character(128), parameter :: msg_proc = &
     '*** @ '//trim(NAME_LIB)//' SUBROUTINE write_block__log4 ***\n'
@@ -8788,6 +8842,12 @@ subroutine write_block__log4(&
     selectcase( dtype )
     case( DTYPE_LOG1 ); allocate(tmpl1(n))
     case( DTYPE_LOG4 ); continue
+    case( DTYPE_INT1 ); allocate(tmpi1(n))
+    case( DTYPE_INT2 ); allocate(tmpi2(n))
+    case( DTYPE_INT4 ); allocate(tmpi4(n))
+    case( DTYPE_INT8 ); allocate(tmpi8(n))
+    case( DTYPE_REAL ); allocate(tmpr4(n))
+    case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -8800,6 +8860,36 @@ subroutine write_block__log4(&
       write(un,pos=pos) tmpl1(:n)
     case( DTYPE_LOG4 )
       write(un,pos=pos) dat(:n)
+    case( DTYPE_INT1 )
+      where( dat(:n) ); tmpi1(:n) = INT1_TRUE
+      elsewhere       ; tmpi1(:n) = INT1_FALSE
+      endwhere
+      write(un,pos=pos) tmpi1(:n)
+    case( DTYPE_INT2 )
+      where( dat(:n) ); tmpi2(:n) = INT2_TRUE
+      elsewhere       ; tmpi2(:n) = INT2_FALSE
+      endwhere
+      write(un,pos=pos) tmpi2(:n)
+    case( DTYPE_INT4 )
+      where( dat(:n) ); tmpi4(:n) = INT4_TRUE
+      elsewhere       ; tmpi4(:n) = INT4_FALSE
+      endwhere
+      write(un,pos=pos) tmpi4(:n)
+    case( DTYPE_INT8 )
+      where( dat(:n) ); tmpi8(:n) = INT8_TRUE
+      elsewhere       ; tmpi8(:n) = INT8_FALSE
+      endwhere
+      write(un,pos=pos) tmpi8(:n)
+    case( DTYPE_REAL )
+      where( dat(:n) ); tmpr4(:n) = REAL_TRUE
+      elsewhere       ; tmpr4(:n) = REAL_FALSE
+      endwhere
+      write(un,pos=pos) tmpr4(:n)
+    case( DTYPE_DBLE )
+      where( dat(:n) ); tmpr8(:n) = DBLE_TRUE
+      elsewhere       ; tmpr8(:n) = DBLE_FALSE
+      endwhere
+      write(un,pos=pos) tmpr8(:n)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect
@@ -8809,6 +8899,12 @@ subroutine write_block__log4(&
     selectcase( dtype )
     case( DTYPE_LOG1 ); deallocate(tmpl1)
     case( DTYPE_LOG4 ); continue
+    case( DTYPE_INT1 ); deallocate(tmpi1)
+    case( DTYPE_INT2 ); deallocate(tmpi2)
+    case( DTYPE_INT4 ); deallocate(tmpi4)
+    case( DTYPE_INT8 ); deallocate(tmpi8)
+    case( DTYPE_REAL ); deallocate(tmpr4)
+    case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       call eerr(trim(msg_proc)//'Invalid value in $dtype: '//str(dtype))
     endselect

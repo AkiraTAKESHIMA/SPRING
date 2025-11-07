@@ -69,9 +69,9 @@ subroutine read_settings(a)
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'grid_system_latlon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'grid_system_raster'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'grid_system_polygon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'mesh_polygon'
   character(CLEN_VAR), parameter :: BLOCK_NAME_OPT        = 'options'
 
   character(CLEN_VAR) :: block_name
@@ -87,7 +87,7 @@ subroutine read_settings(a)
 
   call init_gs(a)
   a%id = 'a'
-  a%nam = 'grid'
+  a%nam = 'mesh'
 
   call set_default_values_opt_sys(opt%sys)
   call set_default_values_opt_log(opt%log)
@@ -157,17 +157,17 @@ subroutine read_settings(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Detecting conflictions')
 
-  if( opt%earth%shp == earth_shape_ellips )then
-    selectcase( a%gs_type )
-    case( GS_TYPE_LATLON, &
-          GS_TYPE_RASTER )
+  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
+    selectcase( a%typ )
+    case( MESHTYPE__LATLON, &
+          MESHTYPE__RASTER )
       continue
-    case( GS_TYPE_POLYGON )
+    case( MESHTYPE__POLYGON )
       call eerr(str(msg_unexpected_condition())//&
               '\n  opt%earth%shp == '//str(opt%earth%shp)//&
-                ' .and. '//str(a%id)//'%gs_type == '//str(a%gs_type)//&
+                ' .and. '//str(a%id)//'%typ == '//str(a%typ)//&
               '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                ' for the grid type "'//str(a%gs_type)//'".')
+                ' for '//str(a%typ)//' meshes.')
     endselect
   endif
 
@@ -207,16 +207,16 @@ subroutine read_settings(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Printing the settings', '-p -x2')
 
-  selectcase( a%gs_type )
-  case( GS_TYPE_LATLON )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     call echo_settings_gs_latlon(a%latlon)
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call echo_settings_gs_raster(a%raster)
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     call echo_settings_gs_polygon(a%polygon)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  '//str(a%id)//'%gs_type: '//str(a%gs_type))
+            '\n  '//str(a%id)//'%typ: '//str(a%typ))
   endselect
 
   call echo_settings_opt(opt)
@@ -256,7 +256,7 @@ subroutine update_counter(n, block_name)
     if( n > 1 )then
       call eerr(str(msg_invalid_input())//&
               '\n@ line '//str(line_number())//&
-              '\nBlocks of grid system appeared more than once.')
+              '\nBlocks of mesh appeared more than once.')
     endif
   case( BLOCK_NAME_OPT )
     call check_num_of_key(n, block_name, 0, 1)
@@ -275,7 +275,7 @@ subroutine check_number_of_blocks()
   !-------------------------------------------------------------
   if( counter%gs /= 1 )then
     call eerr(str(msg_invalid_input())//&
-            '\nBlocks of grid system appeared more than once.')
+            '\nBlocks of mesh appeared more than once.')
   endif
 
   call check_num_of_key(counter%opt, BLOCK_NAME_OPT, 0, 1)
@@ -335,7 +335,7 @@ subroutine read_settings_gs_latlon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(41)
+  call alloc_keynum()
   call set_keynum('name', 0, 1)
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
@@ -384,7 +384,7 @@ subroutine read_settings_gs_latlon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_LATLON)
+  call alloc_gs_components(a, MESHTYPE__LATLON)
   call set_default_values_gs_latlon(a%latlon)
 
   al => a%latlon
@@ -650,12 +650,26 @@ subroutine check_keynum_relations()
        keynum('in_grid_lb') == 1 .or. &
        keynum('in_grid_ub') == 1) )then
     call eerr(str(msg_invalid_input())//&
-            '\nThere are inputs with the following keys:'//&
+            '\nThere are inputs for the following keys:'//&
             '\n  "in_grid_sz", "in_grid_lb", "in_grid_ub"'//&
-            '\nbut no input with:'//&
+            '\nbut no input for:'//&
             '\n  "in_grdidx", "in_grdara", "in_grdwgt".'//&
             '\nThe former inputs are ignored.')
   endif
+
+  selectcase( fg_out%form )
+  case( GRID_FORM_AUTO )
+    continue
+  case( GRID_FORM_INDEX )
+    if( keynum('fin_grdidx') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n  "fin_grdidx" must be given when '//&
+                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
+    endif
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in "out_form": '//str(fg_out%form))
+  endselect
 
   if( keynum('fout_grdidx') == 0 .and. &
       keynum('fout_grdara') == 0 .and. &
@@ -669,9 +683,9 @@ subroutine check_keynum_relations()
        keynum('out_grid_lb') == 1 .or. &
        keynum('out_grid_ub') == 1) )then
     call eerr(str(msg_invalid_input())//&
-            '\nThere are inputs with any of the following keys:'//&
+            '\nThere are inputs for any of the following keys:'//&
             '\n  "in_grid_sz", "in_grid_lb", "in_grid_ub"'//&
-            '\nbut no input with:'//&
+            '\nbut no input for:'//&
             '\n  "in_grdidx", "in_grdara", "in_grdwgt".'//&
             '\nThe former inputs are ignored.')
   endif
@@ -720,7 +734,7 @@ end subroutine read_settings_gs_latlon
 !===============================================================
 subroutine read_settings_gs_raster(a)
   use cmn1_const_util, only: &
-        checkval_grdidx_condition
+        checkval_idx_condition
   use cmn1_set, only: &
         key                    , &
         keynum                 , &
@@ -760,7 +774,7 @@ subroutine read_settings_gs_raster(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(43)
+  call alloc_keynum()
   call set_keynum('name',0,1)
   call set_keynum('nx', 1, 1)
   call set_keynum('ny', 1, 1)
@@ -782,7 +796,7 @@ subroutine read_settings_gs_raster(a)
   call set_keynum('in_grid_lb', 0, 1)
   call set_keynum('in_grid_ub', 0, 1)
   call set_keynum('in_unit_ara', 0, 1)
-  call set_keynum('grdidx_condition', 0, 1)
+  call set_keynum('idx_condition', 0, 1)
   call set_keynum('out_form', 1, 1)
   call set_keynum('fout_grdmsk', 0, 1)
   call set_keynum('fout_grdidx', 0, 1)
@@ -811,7 +825,7 @@ subroutine read_settings_gs_raster(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_RASTER)
+  call alloc_gs_components(a, MESHTYPE__RASTER)
   call set_default_values_gs_raster(a%raster)
 
   ar => a%raster
@@ -908,8 +922,8 @@ subroutine read_settings_gs_raster(a)
     case( 'in_unit_ara' )
       call read_value(fg_in%unit_ara, is_keyword=.true.)
 
-    case( 'grdidx_condition' )
-      call read_value(ar%grdidx_condition, is_keyword=.true.)
+    case( 'idx_condition' )
+      call read_value(ar%idx_condition, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Grid data (out)
     case( 'out_form' )
@@ -995,7 +1009,7 @@ subroutine read_settings_gs_raster(a)
 
   call check_bounds_lon(ar%west , ar%east )
   call check_bounds_lat(ar%south, ar%north)
-  call checkval_grdidx_condition(ar%grdidx_condition, 'ar%grdidx_condition')
+  call checkval_idx_condition(ar%idx_condition, 'ar%idx_condition')
 
   call echo(code%ext)
   !-------------------------------------------------------------
@@ -1030,17 +1044,6 @@ subroutine check_keynum_relations()
   !-------------------------------------------------------------
   ! 
   !-------------------------------------------------------------
-  selectcase( fg_out%form )
-  case( GRID_FORM_AUTO )
-    continue
-  case( GRID_FORM_INDEX )
-    if( keynum('fin_grdidx') == 0 )then
-      call eerr(str(msg_invalid_input())//&
-              '\n  "fin_grdidx" must be given when '//&
-                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
-    endif
-  endselect
-
   if( keynum('fin_grdidx') == 0 )then
     if( keynum('fin_grdara') == 1 .or. keynum('fin_grdwgt') == 1 )then
       call eerr(str(msg_invalid_input())//&
@@ -1066,6 +1069,20 @@ subroutine check_keynum_relations()
     call eerr(str(msg_invalid_input())//&
             '\n  "fin_grdara" and "fin_grdwgt" cannot be given at the same time.')
   endif
+
+  selectcase( fg_out%form )
+  case( GRID_FORM_AUTO )
+    continue
+  case( GRID_FORM_INDEX )
+    if( keynum('fin_grdidx') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n  "fin_grdidx" must be given when '//&
+                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
+    endif
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in "out_form": '//str(fg_out%form))
+  endselect
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_keynum_relations
@@ -1113,7 +1130,7 @@ subroutine read_settings_gs_polygon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(41)
+  call alloc_keynum()
   call set_keynum('name', 0, 1)
   call set_keynum('np', 1, 1)
   call set_keynum('nij', 1, 1)
@@ -1162,7 +1179,7 @@ subroutine read_settings_gs_polygon(a)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the default values')
 
-  call alloc_gs_components(a, GS_TYPE_POLYGON)
+  call alloc_gs_components(a, MESHTYPE__POLYGON)
   call set_default_values_gs_polygon(a%polygon)
 
   ap => a%polygon
@@ -1395,17 +1412,6 @@ subroutine check_keynum_relations()
   !-------------------------------------------------------------
   ! Relations
   !-------------------------------------------------------------
-  selectcase( fg_out%form )
-  case( GRID_FORM_AUTO )
-    continue
-  case( GRID_FORM_INDEX )
-    if( keynum('fin_grdidx') == 0 )then
-      call eerr(str(msg_invalid_input())//&
-              '\n  "fin_grdidx" must be given when '//&
-                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
-    endif
-  endselect
-
   if( keynum('f_lon_vertex') == 1 .neqv. keynum('f_lat_vertex') == 1 )then
     call eerr(str(msg_invalid_input())//&
             '\n  Both "f_lon_vertex" and "f_lat_vertex" must be given'//&
@@ -1453,6 +1459,20 @@ subroutine check_keynum_relations()
     call eerr(str(msg_invalid_input())//&
             '\n  "fin_grdara" and "fin_grdwgt" must not be given at the same time.')
   endif
+
+  selectcase( fg_out%form )
+  case( GRID_FORM_AUTO )
+    continue
+  case( GRID_FORM_INDEX )
+    if( keynum('fin_grdidx') == 0 )then
+      call eerr(str(msg_invalid_input())//&
+              '\n  "fin_grdidx" must be given when '//&
+                'the value of "out_form" is "'//str(GRID_FORM_INDEX)//'".')
+    endif
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in "out_form": '//str(fg_out%form))
+  endselect
   !--------------------------------------------------------------
   call echo(code%ret)
 end subroutine check_keynum_relations
@@ -1489,7 +1509,7 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Setting the limits. of the number of each keyword')
 
-  call alloc_keynum(7)
+  call alloc_keynum()
   call set_keynum('old_files'           , 0, 1)
   call set_keynum('dir_intermediates'   , 0, 1)
   call set_keynum('remove_intermediates', 0, 1)
@@ -1633,17 +1653,17 @@ subroutine check_paths(a, opt_sys)
   !-------------------------------------------------------------
   call echo(code%ent, 'Checking input files')
 
-  selectcase( a%gs_type )
-  case( gs_type_latlon )
+  selectcase( a%typ )
+  case( MESHTYPE__LATLON )
     fl => a%latlon%f_latlon_in
     call check_permission(fl%lon, allow_empty=.true.)
     call check_permission(fl%lat, allow_empty=.true.)
-  case( gs_type_raster )
+  case( MESHTYPE__RASTER )
     fr => a%raster%f_raster_in
     call check_permission(fr%idx, allow_empty=.false.)
     call check_permission(fr%ara, allow_empty=.true.)
     call check_permission(fr%wgt, allow_empty=.true.)
-  case( gs_type_polygon )
+  case( MESHTYPE__POLYGON )
     fp => a%polygon%f_polygon_in
     call check_permission(fp%x, allow_empty=.true.)
     call check_permission(fp%y, allow_empty=.true.)
@@ -1653,16 +1673,16 @@ subroutine check_paths(a, opt_sys)
     call check_permission(fp%arctyp, allow_empty=.true.)
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  a%gs_type: '//str(a%gs_type))
+            '\n  a%typ: '//str(a%typ))
   endselect
 
   fg_in => a%cmn%f_grid_in
   fg_out => a%cmn%f_grid_out
 
   selectcase( fg_out%form )
-  case( grid_form_auto )
+  case( GRID_FORM_AUTO )
     allow_empty = .true.
-  case( grid_form_index )
+  case( GRID_FORM_INDEX )
     allow_empty = .false.
   case default
     call eerr(str(msg_invalid_value())//&
@@ -1761,7 +1781,7 @@ subroutine echo_settings_gs_latlon(al)
 
   call edbg('ID: '//str(al%id))
 
-  call edbg('Grid type: '//str(GS_TYPE_LATLON))
+  call edbg('Mesh type: '//str(MESHTYPE__LATLON))
 
   call edbg('nx: '//str(al%nx))
   call edbg('ny: '//str(al%ny))
@@ -1796,9 +1816,12 @@ subroutine echo_settings_gs_latlon(al)
   endif
 
   call edbg('Grid data (out)')
-  if( fg_out%form /= '' )then
+  if( fg_out%save_idx .or. fg_out%save_ara .or. &
+      fg_out%save_wgt .or. &
+      fg_out%save_xyz .or. fg_out%save_lonlat )then
     call edbg('  Form: '//str(fg_out%form))
     call edbg('  File of index  : '//str(fileinfo(fg_out%idx)))
+    call edbg('          mask   : '//str(fileinfo(fg_out%msk)))
     call edbg('          area   : '//str(fileinfo(fg_out%ara)))
     call edbg('          weight : '//str(fileinfo(fg_out%wgt)))
     call edbg('          x      : '//str(fileinfo(fg_out%x)))
@@ -1823,8 +1846,8 @@ subroutine echo_settings_gs_latlon(al)
   call edbg('  Index : '//str(al%idx_miss))
   call edbg('  Area  : '//str(al%ara_miss))
   call edbg('  Weight: '//str(al%wgt_miss))
-  call edbg('  XYZ   : '//str(al%xyz_miss))
-  call edbg('  LonLat: '//str(al%lonlat_miss))
+  call edbg('  xyz   : '//str(al%xyz_miss))
+  call edbg('  lonlat: '//str(al%lonlat_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_latlon
@@ -1858,7 +1881,7 @@ subroutine echo_settings_gs_raster(ar)
 
   call edbg('ID: '//str(ar%id))
 
-  call edbg('Grid type: '//str(GS_TYPE_RASTER))
+  call edbg('Mesh type: '//str(MESHTYPE__RASTER))
 
   call edbg('nx: '//str(ar%nx,dgt_xy))
   call edbg('ny: '//str(ar%ny,dgt_xy))
@@ -1888,7 +1911,7 @@ subroutine echo_settings_gs_raster(ar)
                      ', '//str((/fg_in%lb(2),fg_in%ub(2)/),dgt_xy,':')//')')
     call edbg('  Length: '//str(fg_in%nij))
     if( fg_in%idx%path /= '' )then
-      call edbg('  Condition for index: '//str(ar%grdidx_condition))
+      call edbg('  Condition for index: '//str(ar%idx_condition))
     endif
     if( fg_in%ara%path /= '' )then
       call edbg('  Unit of area: '//str(fg_in%unit_ara))
@@ -1896,9 +1919,12 @@ subroutine echo_settings_gs_raster(ar)
   endif
 
   call edbg('Grid data (out)')
-  if( fg_out%form /= '' )then
+  if( fg_out%save_idx .or. fg_out%save_ara .or. &
+      fg_out%save_wgt .or. &
+      fg_out%save_xyz .or. fg_out%save_lonlat )then
     call edbg('  Form: '//str(fg_out%form))
     call edbg('  File of index  : '//str(fileinfo(fg_out%idx)))
+    call edbg('          mask   : '//str(fileinfo(fg_out%msk)))
     call edbg('          area   : '//str(fileinfo(fg_out%ara)))
     call edbg('          weight : '//str(fileinfo(fg_out%wgt)))
     call edbg('          x      : '//str(fileinfo(fg_out%x)))
@@ -1926,8 +1952,8 @@ subroutine echo_settings_gs_raster(ar)
   call edbg('  Index : '//str(ar%idx_miss))
   call edbg('  Area  : '//str(ar%ara_miss))
   call edbg('  Weight: '//str(ar%wgt_miss))
-  call edbg('  XYZ   : '//str(ar%xyz_miss))
-  call edbg('  LonLat: '//str(ar%lonlat_miss))
+  call edbg('  xyz   : '//str(ar%xyz_miss))
+  call edbg('  lonlat: '//str(ar%lonlat_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_raster
@@ -1961,7 +1987,7 @@ subroutine echo_settings_gs_polygon(ap)
 
   call edbg('ID: '//str(ap%id))
 
-  call edbg('Grid type: '//str(GS_TYPE_POLYGON))
+  call edbg('Mesh type: '//str(MESHTYPE__POLYGON))
 
   call edbg('Polygon data')
   call edbg('  Size : '//str(fp%sz(2),dgt_xy))
@@ -1977,9 +2003,9 @@ subroutine echo_settings_gs_polygon(ap)
     call edbg('    Longit.: '//str(fileinfo(fp%lon)))
     call edbg('    Latit. : '//str(fileinfo(fp%lat)))
   case( COORD_SYS_CARTESIAN )
-    call edbg('    X: '//str(fileinfo(fp%x)))
-    call edbg('    Y: '//str(fileinfo(fp%y)))
-    call edbg('    Z: '//str(fileinfo(fp%z)))
+    call edbg('    x: '//str(fileinfo(fp%x)))
+    call edbg('    y: '//str(fileinfo(fp%y)))
+    call edbg('    z: '//str(fileinfo(fp%z)))
   case default
     call eerr(str(msg_invalid_value())//&
            '\n  ap%coord_sys: '//str(ap%coord_sys))
@@ -2014,9 +2040,12 @@ subroutine echo_settings_gs_polygon(ap)
   endif
 
   call edbg('Grid data (out)')
-  if( fg_out%form /= '' )then
+  if( fg_out%save_idx .or. fg_out%save_ara .or. &
+      fg_out%save_wgt .or. &
+      fg_out%save_xyz .or. fg_out%save_lonlat )then
     call edbg('  Form: '//str(fg_out%form))
     call edbg('  File of index  : '//str(fileinfo(fg_out%idx)))
+    call edbg('          mask   : '//str(fileinfo(fg_out%msk)))
     call edbg('          area   : '//str(fileinfo(fg_out%ara)))
     call edbg('          weight : '//str(fileinfo(fg_out%wgt)))
     call edbg('          x      : '//str(fileinfo(fg_out%x)))
@@ -2041,8 +2070,8 @@ subroutine echo_settings_gs_polygon(ap)
   call edbg('  Index : '//str(ap%idx_miss))
   call edbg('  Area  : '//str(ap%ara_miss))
   call edbg('  Weight: '//str(ap%wgt_miss))
-  call edbg('  XYZ   : '//str(ap%xyz_miss))
-  call edbg('  LonLat: '//str(ap%lonlat_miss))
+  call edbg('  xyz   : '//str(ap%xyz_miss))
+  call edbg('  lonlat: '//str(ap%lonlat_miss))
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine echo_settings_gs_polygon

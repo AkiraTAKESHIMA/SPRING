@@ -1,11 +1,15 @@
 program main
   use lib_const
+  use lib_base
   use lib_log
+  use cmn1_const
   use cmn1_type_opt
   use cmn1_type_gs
   use cmn1_gs_driv, only: &
         set_gs_all
   use cmn2_type_rt
+  use cmn2_rt_main_io, only: &
+        read_rt_main
   use cmn3_rt_driv, only: &
         make_rt
   use def_type
@@ -32,7 +36,17 @@ program main
   call set_gs_all(s)
   call set_gs_all(t)
 
-  call make_rt(s, t, rt, calc_coef, calc_vrf, output)
+  selectcase( rt%status )
+  case( RT_STATUS__MAKE )
+    call make_rt(s, t, rt, calc_coef, calc_vrf, output)
+  case( RT_STATUS__READ )
+    call read_rt_main(rt%main)
+  case( RT_STATUS__NONE )
+    continue
+  case default
+    call eerr(str(msg_invalid_value())//&
+            '\n  Invalid value in $rt%status: '//str(rt%status))
+  endselect
 
   call remap(s, t, rt)
 

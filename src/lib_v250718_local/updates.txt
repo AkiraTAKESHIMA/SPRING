@@ -1,0 +1,6 @@
+2025/11/01
+lib_const/lib_const.f90
+lib_io/lib_io_binary_direct.f90
+
++ Added parameters INT1_TRUE, INT1_FALSE, ..., DBLE_FALSE
++ Added schemes to output boolean as int or float.

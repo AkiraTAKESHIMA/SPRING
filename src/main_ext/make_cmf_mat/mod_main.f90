@@ -87,10 +87,12 @@ subroutine make_cmf(cmn, cmf, opt)
                 nkij_ocean
   integer :: west, east, south, north
   integer :: iTile
+  logical :: make_anyriv
   character(clen_path), pointer :: path
   type(file_), pointer :: f
 
   integer :: dgt_cgxy, dgt_kgxy, dgt_idx, dgt_kij
+  character(:), allocatable :: list_landTypes_river
 
   call echo(code%bgn, 'make_cmf')
   !-------------------------------------------------------------
@@ -164,6 +166,39 @@ subroutine make_cmf(cmn, cmf, opt)
     call realloc(arg_grdidx_river_1d, cmn%ncgx*cmn%ncgy)
   endif
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  make_anyriv = .false.
+  allocate(character(1) :: list_landTypes_river)
+  if( cmf%make_river_inland )then
+    list_landTypes_river = 'and `river_inland`'
+    make_anyriv = .true.
+  endif
+  if( cmf%make_river_mouth )then
+    if( make_anyriv )then
+      list_landTypes_river = ', `river_mouth` '//trim(list_landTypes_river)
+    else
+      list_landTypes_river = 'and `river_mouth`'
+    endif
+    make_anyriv = .true.
+  endif
+  if( cmf%make_river_end )then
+    if( make_anyriv )then
+      list_landTypes_river = ', `river_end` '//trim(list_landTypes_river)
+    else
+      list_landTypes_river = 'and `river_end`'
+    endif
+    make_anyriv = .true.
+  endif
+  if( cmf%make_river )then
+    if( make_anyriv )then
+      list_landTypes_river = '`river` '//trim(list_landTypes_river)
+    else
+      list_landTypes_river = '`river`'
+    endif
+    make_anyriv = .true.
+  endif
+  !-------------------------------------------------------------
   ! Read nextxy
   !-------------------------------------------------------------
   call echo(code%ent, 'Reading nextxy')
@@ -172,7 +207,6 @@ subroutine make_cmf(cmn, cmf, opt)
   allocate(nextyy(cmn%ncgx,cmn%ncgy))
 
   f => cmf%f_nextxy
-  call edbg('Reading '//str(fileinfo(f)))
   call rbin(nextxx, f%path, f%dtype, f%endian, 1)
   call rbin(nextyy, f%path, f%dtype, f%endian, 2)
 
@@ -195,48 +229,52 @@ subroutine make_cmf(cmn, cmf, opt)
 
   call echo(code%ext)
   !-------------------------------------------------------------
-  ! Make grid of river, river_end, river_mouth, river_inland
+  ! Make grdidx of river, river_end, river_mouth, river_inland
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making grid of river, river_end, river_mouth, river_inland')
+  if( make_anyriv )then
+    call echo(code%ent, 'Making grid maps of grid indices of '//&
+              list_landTypes_river)
 
-  call make_grdidx_river(grdidx_river)
+    call make_grdidx_river(grdidx_river)
 
-  if( cmf%make_river_end )then
-    call make_grdidx_river_end(grdidx_river_end)
-  endif
+    if( cmf%make_river_end )then
+      call make_grdidx_river_end(grdidx_river_end)
+    endif
 
-  if( cmf%make_river_mouth )then
-    call make_grdidx_river_mouth(grdidx_river_mouth)
-  endif
+    if( cmf%make_river_mouth )then
+      call make_grdidx_river_mouth(grdidx_river_mouth)
+    endif
 
-  if( cmf%make_river_inland )then
-    call make_grdidx_river_inland(grdidx_river_inland)
-  endif
+    if( cmf%make_river_inland )then
+      call make_grdidx_river_inland(grdidx_river_inland)
+    endif
 
-  call echo(code%ext)
-  !-------------------------------------------------------------
-  ! Check consistency between grids of river, river_end, river_mouth, river_inland
-  !-------------------------------------------------------------
-  if( cmf%make_river_end .or. cmf%make_river_mouth .or. cmf%make_river_inland )then
-    call echo(code%ent, 'Checking consistency of grids of '//&
-                        'river, river_end, river_mouth, river_inland')
+    if( cmf%make_river_end .or. cmf%make_river_mouth .or. cmf%make_river_inland )then
+      call echo(code%ent, 'Checking consistency')
 
-    call check_consistency_grdidx_river(&
-           cmn, cmf%idx_miss, &
-           grdidx_river, grdidx_river_end, grdidx_river_mouth, grdidx_river_inland)
+      call check_consistency_grdidx_river(&
+             cmn, cmf%idx_miss, &
+             grdidx_river      , grdidx_river_end, &
+             grdidx_river_mouth, grdidx_river_inland)
+
+      call echo(code%ext)
+    endif
 
     call echo(code%ext)
   endif
   !-------------------------------------------------------------
-  !
+  ! Read basin ID
   !-------------------------------------------------------------
   if( cmf%make_rstbsn )then
+    call echo(code%ent, 'Reading basin ID')
+
     f => cmf%f_basin
-    call edbg('Reading '//str(fileinfo(f)))
     call rbin(grdbsn_1d, f%path, f%dtype, f%endian, f%rec)
 
     grdidx_river_1d(:) = reshape(grdidx_river,(/cmn%ncgx*cmn%ncgy/))
     call argsort(grdidx_river_1d, arg_grdidx_river_1d)
+
+    call echo(code%ext)
   endif
   !-------------------------------------------------------------
   ! Make raster data or grid data that requires raster data
@@ -302,158 +340,170 @@ subroutine make_cmf(cmn, cmf, opt)
       enddo
 
       call echo(code%ext)
-      !-----------------------------------------------------------
-      ! Make rasters of index of river, river_end, river_mouth, river_inland
-      !-----------------------------------------------------------
-      call echo(code%ent, 'Making rasters of index of river, river_end, river_mouth, river_inland')
+      !---------------------------------------------------------
+      ! Make rstidx of river, river_end, river_mouth, river_inland
+      !---------------------------------------------------------
+      if( make_anyriv )then
+        call echo(code%ent, 'Making raster maps of grid indices of '//&
+                  list_landTypes_river)
 
-      call realloc_dat(cmf%make_river       , rstidx_river       , cmn%nklx, cmn%nkly)
-      call realloc_dat(cmf%make_river_end   , rstidx_river_end   , cmn%nklx, cmn%nkly)
-      call realloc_dat(cmf%make_river_mouth , rstidx_river_mouth , cmn%nklx, cmn%nkly)
-      call realloc_dat(cmf%make_river_inland, rstidx_river_inland, cmn%nklx, cmn%nkly)
+        call realloc_dat(cmf%make_river       , rstidx_river       , cmn%nklx, cmn%nkly)
+        call realloc_dat(cmf%make_river_end   , rstidx_river_end   , cmn%nklx, cmn%nkly)
+        call realloc_dat(cmf%make_river_mouth , rstidx_river_mouth , cmn%nklx, cmn%nkly)
+        call realloc_dat(cmf%make_river_inland, rstidx_river_inland, cmn%nklx, cmn%nkly)
 
-      if( cmf%make_river )then
-        call make_rstidx_river_from_grdidx(&
-               nkij_river, rstidx_river,     & ! out
-               cmn,                          & ! in
-               catmxx, catmyy, grdidx_river, &
-               cmf%idx_miss, .true., 'river')  ! in
-      endif
+        if( cmf%make_river )then
+          call make_rstidx_river_from_grdidx(&
+                 nkij_river, rstidx_river,     & ! out
+                 cmn,                          & ! in
+                 catmxx, catmyy, grdidx_river, &
+                 cmf%idx_miss, .true., 'river')  ! in
+        endif
 
-      if( cmf%make_river_end )then
-        call make_rstidx_river_from_grdidx(&
-               nkij_river_end, rstidx_river_end, & ! out
-               cmn,                              & ! in
-               catmxx, catmyy, grdidx_river_end, &
-               cmf%idx_miss, .false., 'river_end') ! in
-      endif
+        if( cmf%make_river_end )then
+          call make_rstidx_river_from_grdidx(&
+                 nkij_river_end, rstidx_river_end, & ! out
+                 cmn,                              & ! in
+                 catmxx, catmyy, grdidx_river_end, &
+                 cmf%idx_miss, .false., 'river_end') ! in
+        endif
 
-      if( cmf%make_river_mouth )then
-        call make_rstidx_river_from_grdidx(&
-               nkij_river_mouth, rstidx_river_mouth, & ! out
-               cmn,                                  & ! in
-               catmxx, catmyy, grdidx_river_mouth,   & ! in
-               cmf%idx_miss, .false., 'river_mouth')   ! in
-      endif
+        if( cmf%make_river_mouth )then
+          call make_rstidx_river_from_grdidx(&
+                 nkij_river_mouth, rstidx_river_mouth, & ! out
+                 cmn,                                  & ! in
+                 catmxx, catmyy, grdidx_river_mouth,   & ! in
+                 cmf%idx_miss, .false., 'river_mouth')   ! in
+        endif
 
-      if( cmf%make_river_inland )then
-        call make_rstidx_river_from_grdidx(&
-               nkij_river_inland, rstidx_river_inland, & ! out
-               cmn,                                    & ! in
-               catmxx, catmyy, grdidx_river_inland,    & ! in
-               cmf%idx_miss, .false., 'river_inland')    ! in
-      endif
-
-      call echo(code%ext)
-      !-----------------------------------------------------------
-      ! Check consistency among rasters of index of river, river_end, river_mouth, river_inland
-      !-----------------------------------------------------------
-      call echo(code%ent, 'Checking consistency among rasters of '//&
-                          'river, river_end, river_mouth, river_inland')
-
-      call check_consistency_rstidx_river(&
-             cmn, cmf%idx_miss, &
-             rstidx_river, rstidx_river_end, rstidx_river_mouth, rstidx_river_inland)
-
-      call echo(code%ext)
-      !-----------------------------------------------------------
-      ! Update river grid status
-      !-----------------------------------------------------------
-      if( cmf%make_river )then
-        ! Check if the set of indices of raster are in that of grid
-        call echo(code%ent, 'Updating `river` grid status referring raster map')
-
-        call update_grdstat_rstidx_river(&
-               cmn, cmf%idx_miss, &
-               grdidx_river, rstidx_river, &
-               grdstat_river)
+        if( cmf%make_river_inland )then
+          call make_rstidx_river_from_grdidx(&
+                 nkij_river_inland, rstidx_river_inland, & ! out
+                 cmn,                                    & ! in
+                 catmxx, catmyy, grdidx_river_inland,    & ! in
+                 cmf%idx_miss, .false., 'river_inland')    ! in
+        endif
 
         call echo(code%ext)
-
-        ! Check if the set of indices of grid are in that of raster
-        if( .not. cmn%is_tiled )then
-          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
-          call check_if_grdidx_in_rstidx(&
-                 'river', cmf%idx_miss, &
-                 grdidx_river, grdstat_river, &
-                 cmf%grdidx_condition)
-          call echo(code%ext)
-        endif
       endif
-      !-----------------------------------------------------------
-      ! Update river_end grid status
-      !-----------------------------------------------------------
-      if( cmf%make_river_end )then
-        call echo(code%ent, 'Updating `river_end` grid status referring raster map')
+      !---------------------------------------------------------
+      ! Check consistency among rstidx of 
+      ! river, river_end, river_mouth and river_inland
+      !---------------------------------------------------------
+      if( make_anyriv )then
+        call echo(code%ent, 'Checking consistency among raster '//&
+                  'maps of grid indices of '//list_landTypes_river)
 
-        call update_grdstat_rstidx_river(&
+        call check_consistency_rstidx_river(&
                cmn, cmf%idx_miss, &
-               grdidx_river_end, rstidx_river_end, &
-               grdstat_river_end)
+               rstidx_river      , rstidx_river_end, &
+               rstidx_river_mouth, rstidx_river_inland)
 
         call echo(code%ext)
+      endif
+      !---------------------------------------------------------
+      ! Check consistency of indices between raster and grid
+      ! Update grid status
+      !---------------------------------------------------------
+      if( make_anyriv )then
+        call echo(code%ent, 'Checking consistency of grid '//&
+                  'indices between raster map and grid map')
 
-        ! Check if the set of indices of grid are in that of raster
-        if( .not. cmn%is_tiled )then
-          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
-          call check_if_grdidx_in_rstidx(&
-                 'river_end', cmf%idx_miss, &
-                 grdidx_river_end, grdstat_river_end, &
-                 cmf%grdidx_condition)
+        ! river
+        !-------------------------------------------------------
+        if( cmf%make_river )then
+          call echo(code%ent, '`river`')
+
+          ! Check if the set of indices of raster are in that of grid
+          call check_if_rstidx_in_grdidx(&
+                 cmn, cmf%idx_miss, &
+                 grdidx_river, rstidx_river, &
+                 grdstat_river)
+
+          ! Check if the set of indices of grid are in that of raster
+          if( .not. cmn%is_tiled )then
+            call check_if_grdidx_in_rstidx(&
+                   'river', cmf%idx_miss, &
+                   grdidx_river, grdstat_river, &
+                   cmf%idx_condition)
+          endif
+
           call echo(code%ext)
         endif
-      endif
-      !-----------------------------------------------------------
-      ! Update river_mouth grid status
-      !-----------------------------------------------------------
-      if( cmf%make_river_mouth )then
-        call echo(code%ent, 'Updating `river_mouth` grid status referring raster map')
 
-        call update_grdstat_rstidx_river(&
-               cmn, cmf%idx_miss, &
-               grdidx_river_mouth, rstidx_river_mouth, &
-               grdstat_river_mouth)
+        ! river_end
+        !-------------------------------------------------------
+        if( cmf%make_river_end )then
+          call echo(code%ent, '`river_end`')
+
+          ! Check if the set of indices of raster are in that of grid
+          call check_if_rstidx_in_grdidx(&
+                 cmn, cmf%idx_miss, &
+                 grdidx_river_end, rstidx_river_end, &
+                 grdstat_river_end)
+
+          ! Check if the set of indices of grid are in that of raster
+          if( .not. cmn%is_tiled )then
+            call check_if_grdidx_in_rstidx(&
+                   'river_end', cmf%idx_miss, &
+                   grdidx_river_end, grdstat_river_end, &
+                   cmf%idx_condition)
+          endif
+
+          call echo(code%ext)
+        endif
+
+        ! river_mouth
+        !-------------------------------------------------------
+        if( cmf%make_river_mouth )then
+          call echo(code%ent, '`river_mouth`')
+
+          ! Check if the set of indices of raster are in that of grid
+          call check_if_rstidx_in_grdidx(&
+                 cmn, cmf%idx_miss, &
+                 grdidx_river_mouth, rstidx_river_mouth, &
+                 grdstat_river_mouth)
+
+          ! Check if the set of indices of grid are in that of raster
+          if( .not. cmn%is_tiled )then
+            call check_if_grdidx_in_rstidx(&
+                   'river_mouth', cmf%idx_miss, &
+                   grdidx_river_mouth, grdstat_river_mouth, &
+                   cmf%idx_condition)
+          endif
+
+          call echo(code%ext)
+        endif
+
+        ! river_inland
+        !-------------------------------------------------------
+        if( cmf%make_river_inland )then
+          call echo(code%ent, '`river_inland`')
+
+          ! Check if the set of indices of raster are in that of grid
+          call check_if_rstidx_in_grdidx(&
+                 cmn, cmf%idx_miss, &
+                 grdidx_river_inland, rstidx_river_inland, &
+                 grdstat_river_inland)
+
+          ! Check if the set of indices of grid are in that of raster
+          if( .not. cmn%is_tiled )then
+            call check_if_grdidx_in_rstidx(&
+                   'river_inland', cmf%idx_miss, &
+                   grdidx_river_inland, grdstat_river_inland, &
+                   cmf%idx_condition)
+          endif
+
+          call echo(code%ext)
+        endif
 
         call echo(code%ext)
-
-        ! Check if the set of indices of grid are in that of raster
-        if( .not. cmn%is_tiled )then
-          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
-          call check_if_grdidx_in_rstidx(&
-                 'river_mouth', cmf%idx_miss, &
-                 grdidx_river_mouth, grdstat_river_mouth, &
-                 cmf%grdidx_condition)
-          call echo(code%ext)
-        endif
       endif
       !-----------------------------------------------------------
-      ! Update river_inland grid status
-      !-----------------------------------------------------------
-      if( cmf%make_river_inland )then
-        call echo(code%ent, 'Updating `river_inland` grid status referring raster map')
-
-        call update_grdstat_rstidx_river(&
-               cmn, cmf%idx_miss, &
-               grdidx_river_inland, rstidx_river_inland, &
-               grdstat_river_inland)
-
-        call echo(code%ext)
-
-        ! Check if the set of indices of grid are in that of raster
-        if( .not. cmn%is_tiled )then
-          call echo(code%ent, 'Checking if the set of indices of grid are in that of raster')
-          call check_if_grdidx_in_rstidx(&
-                 'river_inland', cmf%idx_miss, &
-                 grdidx_river_inland, grdstat_river_inland, &
-                 cmf%grdidx_condition)
-          call echo(code%ext)
-        endif
-      endif
-      !-----------------------------------------------------------
-      ! Make a raster basin map
+      ! Make rstbsn
       !-----------------------------------------------------------
       if( cmf%f_rstbsn%path /= '' .or. cmf%dir_rstbsn /= '' )then
-        call echo(code%ent, 'Making raster of basin')
+        call echo(code%ent, 'Making a raster map of basin ID')
 
         call make_rstbsn(&
                rstbsn, & ! out
@@ -462,55 +512,59 @@ subroutine make_cmf(cmn, cmf, opt)
         call echo(code%ext)
       endif
       !-----------------------------------------------------------
-      ! Output river_end, river_mouth, river_inland
+      ! Output rstidx of river_end, river_mouth, river_inland
       !-----------------------------------------------------------
-      call echo(code%ent, 'Outputting river_end, river_mouth, river_inland')
+      if( cmf%make_river_end .or. cmf%make_river_mouth .or. &
+          cmf%make_river_inland )then
+        call echo(code%ent, 'Outputting raster index maps of '//&
+                  '`river_end`, `river_mouth` and `river_inland`')
 
-      if( .not. cmn%is_tiled )then
-        f => cmf%f_rstidx_river_end
-        if( f%path /= '' )then
-          call edbg('Writing rstidx_river_end')
-          call wbin(rstidx_river_end, f%path, f%dtype, f%endian, f%rec)
-        endif
-
-        f => cmf%f_rstidx_river_mouth
-        if( f%path /= '' )then
-          call edbg('Writing rstidx_river_mouth')
-          call wbin(rstidx_river_mouth, f%path, f%dtype, f%endian, f%rec)
-        endif
-
-        f => cmf%f_rstidx_river_inland
-        if( f%path /= '' )then
-          call edbg('Writing rstidx_river_inland')
-          call wbin(rstidx_river_inland, f%path, f%dtype, f%endian, f%rec)
-        endif
-      else
-        if( cmf%dir_rstidx_river_end /= '' )then
-          path => cmf%list_path_rstidx_river_end(iTile)
-          if( path /= '' )then
+        if( .not. cmn%is_tiled )then
+          f => cmf%f_rstidx_river_end
+          if( f%path /= '' )then
             call edbg('Writing rstidx_river_end')
-            call wbin(rstidx_river_end, path, cmf%dtype_rstidx, cmf%endian_rstidx, 1)
+            call wbin(rstidx_river_end, f%path, f%dtype, f%endian, f%rec)
           endif
-        endif
 
-        if( cmf%dir_rstidx_river_mouth /= '' )then
-          path => cmf%list_path_rstidx_river_mouth(iTile)
-          if( path /= '' )then
+          f => cmf%f_rstidx_river_mouth
+          if( f%path /= '' )then
             call edbg('Writing rstidx_river_mouth')
-            call wbin(rstidx_river_mouth, path, cmf%dtype_rstidx, cmf%endian_rstidx, 1)
+            call wbin(rstidx_river_mouth, f%path, f%dtype, f%endian, f%rec)
           endif
-        endif
 
-        if( cmf%dir_rstidx_river_inland /= '' )then
-          path => cmf%list_path_rstidx_river_inland(iTile)
-          if( path /= '' )then
+          f => cmf%f_rstidx_river_inland
+          if( f%path /= '' )then
             call edbg('Writing rstidx_river_inland')
-            call wbin(rstidx_river_inland, path, cmf%dtype_rstidx, cmf%endian_rstidx, 1)
+            call wbin(rstidx_river_inland, f%path, f%dtype, f%endian, f%rec)
+          endif
+        else
+          if( cmf%dir_rstidx_river_end /= '' )then
+            path => cmf%list_path_rstidx_river_end(iTile)
+            if( path /= '' )then
+              call edbg('Writing rstidx_river_end')
+              call wbin(rstidx_river_end, path, cmf%dtype_rstidx, cmf%endian_rstidx, 1)
+            endif
+          endif
+
+          if( cmf%dir_rstidx_river_mouth /= '' )then
+            path => cmf%list_path_rstidx_river_mouth(iTile)
+            if( path /= '' )then
+              call edbg('Writing rstidx_river_mouth')
+              call wbin(rstidx_river_mouth, path, cmf%dtype_rstidx, cmf%endian_rstidx, 1)
+            endif
+          endif
+
+          if( cmf%dir_rstidx_river_inland /= '' )then
+            path => cmf%list_path_rstidx_river_inland(iTile)
+            if( path /= '' )then
+              call edbg('Writing rstidx_river_inland')
+              call wbin(rstidx_river_inland, path, cmf%dtype_rstidx, cmf%endian_rstidx, 1)
+            endif
           endif
         endif
-      endif
 
-      call echo(code%ext)
+        call echo(code%ext)
+      endif
       !---------------------------------------------------------
       if( opt%save_memory )then
         call realloc(rstidx_river_end   , 0)
@@ -518,10 +572,11 @@ subroutine make_cmf(cmn, cmf, opt)
         call realloc(rstidx_river_inland, 0)
       endif
       !---------------------------------------------------------
-      ! Make grid and raster of noriv
+      ! Make grdidx and rstidx of noriv
       !---------------------------------------------------------
       if( cmf%make_noriv )then
-        call echo(code%ent, 'Making grid and raster of noriv')
+        call echo(code%ent, 'Making grid and raster maps of '//&
+                  'grid indices of `noriv`')
 
         call realloc(rstidx_noriv, (/1_8,1_8/), (/cmn%nklx,cmn%nkly/))
 
@@ -529,17 +584,12 @@ subroutine make_cmf(cmn, cmf, opt)
                nkij_noriv, grdidx_noriv, & ! inout
                rstidx_noriv) ! in
 
-        call echo(code%ext)
-      endif
-      !---------------------------------------------------------
-      ! Check consistency between grid and raster of noriv
-      !---------------------------------------------------------
-      if( cmf%make_noriv )then
-        call echo(code%ent, 'Checking consistency between grid and raster of noriv')
-
+        ! Check if the set of indices of raster are in that of grid
+        call echo(code%ent, 'Checking consistency with the grid data')
         call check_consistency_grdidx_rstidx_rect(&
                cmn, cmf%idx_miss, cgxi, cgxf, cgyi, cgyf, &
                grdidx_noriv, rstidx_noriv)
+        call echo(code%ext)
 
         call echo(code%ext)
       endif
@@ -547,7 +597,8 @@ subroutine make_cmf(cmn, cmf, opt)
       ! Make grid and raster of ocean
       !---------------------------------------------------------
       if( cmf%make_ocean )then
-        call echo(code%ent, 'Making grid and raster of ocean')
+        call echo(code%ent, 'Making grid and raster maps of '//&
+                  'grid indices of `ocean`')
 
         call realloc(rstidx_ocean, (/1_8,1_8/), (/cmn%nklx,cmn%nkly/))
 
@@ -555,24 +606,20 @@ subroutine make_cmf(cmn, cmf, opt)
                nkij_ocean, & ! out
                grdidx_ocean, rstidx_ocean) ! out
 
-        call echo(code%ext)
-      endif
-      !---------------------------------------------------------
-      ! Check consistency between grid and raster of ocean
-      !---------------------------------------------------------
-      if( cmf%make_ocean )then
-        call echo(code%ent, 'Checking consistency between grid and raster of ocean')
-
+        ! Check if the set of indices of raster are in that of grid
+        call echo(code%ent, 'Checking consistency with the grid data')
         call check_consistency_grdidx_rstidx_rect(&
                cmn, cmf%idx_miss, cgxi, cgxf, cgyi, cgyf, &
                grdidx_ocean, rstidx_ocean)
+        call echo(code%ext)
 
         call echo(code%ext)
       endif
       !---------------------------------------------------------
-      ! Check consistency between rasters of river, noriv, ocean
+      ! Check consistency among rstidx of river, noriv, ocean
       !---------------------------------------------------------
-      call echo(code%ent, 'Checking consistency between rasters of river, noriv, ocean')
+      call echo(code%ent, 'Checking consistency among raster maps '//&
+                'of grid indices of `river`, `noriv` and `ocean`')
 
       call check_consistency_rstidx_validity(&
              cmn, cmf%idx_miss, &
@@ -580,9 +627,10 @@ subroutine make_cmf(cmn, cmf, opt)
 
       call echo(code%ext)
       !---------------------------------------------------------
-      ! Output rasters of river, noriv, ocean
+      ! Output rstidx of river, noriv, ocean
       !---------------------------------------------------------
-      call echo(code%ent, 'Outputting river, noriv, ocean')
+      call echo(code%ent, 'Outputting raster index maps of '//&
+                '`river`, `noriv` and `ocean`')
 
       if( .not. cmn%is_tiled )then
         f => cmf%f_rstidx_river
@@ -630,10 +678,10 @@ subroutine make_cmf(cmn, cmf, opt)
 
       call echo(code%ext)
       !---------------------------------------------------------
-      ! Output raster of basin
+      ! Output rstbsn
       !---------------------------------------------------------
       if( cmf%make_rstbsn )then
-        call echo(code%ent, 'Outputting raster of basin')
+        call echo(code%ent, 'Outputting a raster map of basin ID')
 
         if( .not. cmn%is_tiled )then
           f => cmf%f_rstbsn
@@ -677,12 +725,9 @@ subroutine make_cmf(cmn, cmf, opt)
   if( cmn%is_tiled )then
     call echo(code%ent, 'Checking consistency of status and grid of river')
 
-    !call check_consistency_cmf_grdstat_river(&
-    !     cmf%idx_miss, grdidx_river, grdstat_river, &
-    !     nextxx, nextyy, cmf%opt_invalid_grdidx_catmxy)
     call check_if_grdidx_in_rstidx(&
            'river', cmf%idx_miss, grdidx_river, grdstat_river, &
-           cmf%grdidx_condition)
+           cmf%idx_condition)
 
     call echo(code%ext)
   endif
@@ -1314,72 +1359,84 @@ subroutine make_mat_grid(&
   !-------------------------------------------------------------
   ! Make river
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making river')
+  if( mat%make_grdmsk_river .or. &
+      mat%make_grdidx_river .or. &
+      mat%make_grdidx_bnd_river .or. &
+      mat%make_grdidx_mkbnd_river )then
+    call echo(code%ent, 'Making `river`')
 
-  if( mat%make_grdmsk_river )then
-    call make_grdmsk(&
-           grdmsk_river, & ! out
-           ngij_river, & ! out
-           cmf%f_grdidx_river, 'cmf_grdidx_river', cmf%idx_miss) ! in
+    if( mat%make_grdmsk_river )then
+      call make_grdmsk(&
+             grdmsk_river, & ! out
+             ngij_river  , & ! out
+             cmf%f_grdidx_river, 'cmf_grdidx_river', & ! in
+             cmf%idx_miss) ! in
+    endif
+
+    if( mat%make_grdidx_river )then
+      call make_grdidx_model(&
+             grdidx_river, & ! out
+             0_8, & ! in
+             grdmsk_river, mat%idx_miss) ! in
+    endif
+
+    if( mat%make_grdidx_bnd_river )then
+      call make_grdidx_bnd(&
+             grdidx_bnd_river, & ! out
+             grdmsk_river, layer1, mat%idx_miss) ! in
+    endif
+
+    if( mat%make_grdidx_mkbnd_river )then
+      call make_grdidx_bnd(&
+             grdidx_mkbnd_river, & ! out
+             grdmsk_river, layer1, mat%idx_miss) ! in
+    endif
+
+    call echo(code%ext)
   endif
-
-  if( mat%make_grdidx_river )then
-    call make_grdidx_model(&
-           grdidx_river, & ! out
-           0_8, & ! in
-           grdmsk_river, mat%idx_miss) ! in
-  endif
-
-  if( mat%make_grdidx_bnd_river )then
-    call make_grdidx_bnd(&
-           grdidx_bnd_river, & ! out
-           grdmsk_river, layer1, mat%idx_miss) ! in
-  endif
-
-  if( mat%make_grdidx_mkbnd_river )then
-    call make_grdidx_bnd(&
-           grdidx_mkbnd_river, & ! out
-           grdmsk_river, layer1, mat%idx_miss) ! in
-  endif
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   ! Make noriv
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making noriv')
+  if( mat%make_grdmsk_noriv .or. &
+      mat%make_grdidx_noriv .or. &
+      mat%make_grdidx_bnd_noriv .or. &
+      mat%make_grdidx_mkbnd_noriv )then
+    call echo(code%ent, 'Making `noriv`')
 
-  if( mat%make_grdmsk_noriv )then
-    call make_grdmsk(&
-           grdmsk_noriv, & ! out
-           ngij_noriv, & ! out
-           cmf%f_grdidx_noriv, 'cmf_grdidx_noriv', cmf%idx_miss) ! in
-  endif
-
-  if( mat%make_grdidx_noriv )then
-    if( ngij_river < 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  $mat%make_grdidx_noriv is True but $ngij_river < 0')
+    if( mat%make_grdmsk_noriv )then
+      call make_grdmsk(&
+             grdmsk_noriv, & ! out
+             ngij_noriv, & ! out
+             cmf%f_grdidx_noriv, 'cmf_grdidx_noriv', & ! in
+             cmf%idx_miss) ! in
     endif
 
-    call make_grdidx_model(&
-           grdidx_noriv, & ! out
-           ngij_river, & ! in
-           grdmsk_noriv, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_noriv )then
+      if( ngij_river < 0_8 )then
+        call eerr(str(msg_unexpected_condition())//&
+                '\n  $mat%make_grdidx_noriv is True but $ngij_river < 0')
+      endif
 
-  if( mat%make_grdidx_bnd_noriv )then
-    call make_grdidx_bnd(&
-           grdidx_bnd_noriv, & ! out
-           grdmsk_noriv, layer2, mat%idx_miss) ! in
-  endif
+      call make_grdidx_model(&
+             grdidx_noriv, & ! out
+             ngij_river, & ! in
+             grdmsk_noriv, mat%idx_miss) ! in
+    endif
 
-  if( mat%make_grdidx_mkbnd_noriv )then
-    call make_grdidx_bnd(&
-           grdidx_mkbnd_noriv, & ! out
-           grdmsk_noriv, layer1, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_bnd_noriv )then
+      call make_grdidx_bnd(&
+             grdidx_bnd_noriv, & ! out
+             grdmsk_noriv, layer2, mat%idx_miss) ! in
+    endif
 
-  call echo(code%ext)
+    if( mat%make_grdidx_mkbnd_noriv )then
+      call make_grdidx_bnd(&
+             grdidx_mkbnd_noriv, & ! out
+             grdmsk_noriv, layer1, mat%idx_miss) ! in
+    endif
+
+    call echo(code%ext)
+  endif
   !-------------------------------------------------------------
   ! Make river_end, river_mouth, river_inland
   !-------------------------------------------------------------
@@ -1391,93 +1448,104 @@ subroutine make_mat_grid(&
 
   ! river_end
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making river_end')
-
   if( mat%make_grdidx_river_end .or. &
       mat%make_grdidx_bnd_river_end )then
+    call echo(code%ent, 'Making `river_end`')
+
     call make_grdmsk_river_end(&
            grdmsk_river_end, & ! out
            nextxx, & ! in
-           cmf%nextxy_ocean, cmf%nextxy_river_mouth, cmf%nextxy_river_inland) ! in
-  endif
+           cmf%nextxy_ocean, cmf%nextxy_river_mouth, & ! in
+           cmf%nextxy_river_inland) ! in
 
-  if( mat%make_grdidx_river_end )then
-    call mask_grdidx(&
-           grdidx_river_end, & ! out
-           grdmsk_river_end, grdidx_river, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_river_end )then
+      call mask_grdidx(&
+             grdidx_river_end, & ! out
+             grdmsk_river_end, grdidx_river, & ! in
+             mat%idx_miss) ! in
+    endif
 
-  if( mat%make_grdidx_bnd_river_end )then
-    call mask_grdidx(&
-           grdidx_bnd_river_end, & ! out
-           grdmsk_river_end, grdidx_bnd_river, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_bnd_river_end )then
+      call mask_grdidx(&
+             grdidx_bnd_river_end, & ! out
+             grdmsk_river_end, grdidx_bnd_river, & ! in
+             mat%idx_miss) ! in
+    endif
 
-  call echo(code%ext)
+    call echo(code%ext)
+  endif
 
   ! river_mouth
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making river_mouth')
-
   if( mat%make_grdidx_river_mouth .or. &
       mat%make_grdidx_bnd_river_mouth )then
+    call echo(code%ent, 'Making `river_mouth`')
+
     call make_grdmsk_river_mouth(&
            grdmsk_river_mouth, & ! out
            nextxx, & ! in
-           cmf%nextxy_ocean, cmf%nextxy_river_mouth, cmf%nextxy_river_inland) ! in
-  endif
+           cmf%nextxy_ocean, cmf%nextxy_river_mouth, & ! in
+           cmf%nextxy_river_inland) ! in
 
-  if( mat%make_grdidx_river_mouth )then
-    call mask_grdidx(&
-           grdidx_river_mouth, & ! out
-           grdmsk_river_mouth, grdidx_river, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_river_mouth )then
+      call mask_grdidx(&
+             grdidx_river_mouth, & ! out
+             grdmsk_river_mouth, grdidx_river, & ! in
+             mat%idx_miss) ! in
+    endif
 
-  if( mat%make_grdidx_bnd_river_mouth )then
-    call mask_grdidx(&
-           grdidx_bnd_river_mouth, & ! out
-           grdmsk_river_mouth, grdidx_bnd_river, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_bnd_river_mouth )then
+      call mask_grdidx(&
+             grdidx_bnd_river_mouth, & ! out
+             grdmsk_river_mouth, grdidx_bnd_river, & ! in
+             mat%idx_miss) ! in
+    endif
 
-  call echo(code%ext)
+    call echo(code%ext)
+  endif
 
   ! river_inland
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making river_inland')
-
   if( mat%make_grdidx_river_inland .or. &
       mat%make_grdidx_bnd_river_inland )then
+    call echo(code%ent, 'Making `river_inland`')
+
     call make_grdmsk_river_inland(&
            grdmsk_river_inland, & ! out
            nextxx, & ! in
-           cmf%nextxy_ocean, cmf%nextxy_river_mouth, cmf%nextxy_river_inland) ! in
-  endif
+           cmf%nextxy_ocean, cmf%nextxy_river_mouth, & ! in
+           cmf%nextxy_river_inland) ! in
 
-  if( mat%make_grdidx_river_inland )then
-    call mask_grdidx(&
-           grdidx_river_inland, & ! out
-           grdmsk_river_inland, grdidx_river, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_river_inland )then
+      call mask_grdidx(&
+             grdidx_river_inland, & ! out
+             grdmsk_river_inland, grdidx_river, & ! in
+             mat%idx_miss) ! in
+    endif
 
-  if( mat%make_grdidx_bnd_river_inland )then
-    call mask_grdidx(&
-           grdidx_bnd_river_inland, & ! out
-           grdmsk_river_inland, grdidx_bnd_river, mat%idx_miss) ! in
-  endif
+    if( mat%make_grdidx_bnd_river_inland )then
+      call mask_grdidx(&
+             grdidx_bnd_river_inland, & ! out
+             grdmsk_river_inland, grdidx_bnd_river, & ! in
+             mat%idx_miss) ! in
+    endif
 
-  call echo(code%ext)
+    call echo(code%ext)
+  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   deallocate(nextxx)
   !-------------------------------------------------------------
-  ! Check consistency among grids of river, river_end, river_mouth, river_inland
+  ! Check consistency among grdidx of 
+  ! river, river_end, river_mouth and river_inland
   !-------------------------------------------------------------
   if( mat%make_grdidx_river_end .or. &
       mat%make_grdidx_river_mouth .or. &
       mat%make_grdidx_river_inland )then
-    call echo(code%ent, 'Checking consistency of grids of '//&
-                        'river, river_end, river_mouth, river_inland')
+    call echo(code%ent, 'Checking consistency among grid maps of '//&
+              'grid indices of `river`, `river_end`, '//&
+              '`river_mouth` and `river_inland`')
 
     call check_consistency_grdidx_river(&
            cmn, mat%idx_miss, &
@@ -1872,7 +1940,8 @@ subroutine make_mat_rstidx(&
   !-------------------------------------------------------------
   ! Make river, river_end, river_mouth, river_inland
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making river, river_end, river_mouth and river_inland')
+  call echo(code%ent, 'Making `river`, `river_end`, '//&
+            '`river_mouth` and `river_inland`')
 
   if( mat%make_rstidx_river )then
     call make_rstidx_river_from_grdidx(&
@@ -1910,12 +1979,12 @@ subroutine make_mat_rstidx(&
   !-------------------------------------------------------------
   ! Update grdstat
   !-------------------------------------------------------------
-  call echo(code%ent, 'Updating grdstat')
+  call echo(code%ent, 'Updating grid status')
 
   if( mat%make_rstidx_river )then
     call echo(code%ent, 'river')
 
-    call update_grdstat_rstidx_river(&
+    call check_if_rstidx_in_grdidx(&
            cmn, mat%idx_miss, & ! in
            grdidx_river, rstidx_river, & ! in
            grdstat_river) ! inout
@@ -1926,7 +1995,7 @@ subroutine make_mat_rstidx(&
   if( mat%make_rstidx_river_end )then
     call echo(code%ent, 'river_end')
 
-    call update_grdstat_rstidx_river(&
+    call check_if_rstidx_in_grdidx(&
            cmn, mat%idx_miss, & ! in
            grdidx_river_end, rstidx_river_end, & ! in
            grdstat_river_end) ! inout
@@ -1937,7 +2006,7 @@ subroutine make_mat_rstidx(&
   if( mat%make_rstidx_river_mouth )then
     call echo(code%ent, 'river_mouth')
 
-    call update_grdstat_rstidx_river(&
+    call check_if_rstidx_in_grdidx(&
            cmn, mat%idx_miss, & ! in
            grdidx_river_mouth, rstidx_river_mouth, & ! in
            grdstat_river_mouth) ! inout
@@ -1948,7 +2017,7 @@ subroutine make_mat_rstidx(&
   if( mat%make_rstidx_river_inland )then
     call echo(code%ent, 'river_inland')
 
-    call update_grdstat_rstidx_river(&
+    call check_if_rstidx_in_grdidx(&
            cmn, mat%idx_miss, & ! in
            grdidx_river_inland, rstidx_river_inland, & ! in
            grdstat_river_inland) ! inout
@@ -1963,8 +2032,9 @@ subroutine make_mat_rstidx(&
 
   !   among river, river_end, river_mouth, river_inland
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking consistency among rasters of '//&
-                      'river, river_end, river_mouth, river_inland')
+  call echo(code%ent, 'Checking consistency among raster maps of '//&
+            'grid indices of `river`, `river_end`, '//&
+            '`river_mouth` and `river_inland`')
 
   call check_consistency_rstidx_river(&
          cmn, mat%idx_miss, &
@@ -1975,7 +2045,8 @@ subroutine make_mat_rstidx(&
   ! grdstat
   !-------------------------------------------------------------
   if( iTile == cmn%nTiles )then
-    call echo(code%ent, 'Checking consistency of grdstat')
+    call echo(code%ent, 'Checking consistency between '//&
+              'grid statuses and grid indices')
 
     if( mat%make_rstidx_river )then
       call check_consistency_mat_grdstat_river(&
@@ -2083,6 +2154,7 @@ subroutine make_mat_rstidx(&
            mat%idx_miss) ! in
   endif
 
+  ! TODO
   if( mat%make_rstidx_ocean )then
 
   endif
@@ -3414,7 +3486,7 @@ end subroutine check_consistency_grdidx_rstidx_rect
 !===============================================================
 !
 !===============================================================
-subroutine update_grdstat_rstidx_river(&
+subroutine check_if_rstidx_in_grdidx(&
     cmn, idx_miss, &
     grdidx, rstidx, grdstat)
   implicit none
@@ -3431,7 +3503,7 @@ subroutine update_grdstat_rstidx_river(&
   integer(8) :: idx, idx_prev
   integer(8) :: loc
 
-  call echo(code%bgn, 'update_grdstat_rstidx_river', '-p -x2')
+  call echo(code%bgn, 'check_if_rstidx_in_grdidx', '-p -x2')
   !-------------------------------------------------------------
   ! Check if the set of indices of rstidx is in that of grdidx
   !-------------------------------------------------------------
@@ -3475,20 +3547,20 @@ subroutine update_grdstat_rstidx_river(&
   call echo(code%ext)
   !-------------------------------------------------------------
   call echo(code%ret)
-end subroutine update_grdstat_rstidx_river
+end subroutine check_if_rstidx_in_grdidx
 !===============================================================
 !
 !===============================================================
 subroutine check_if_grdidx_in_rstidx(&
     landType, idx_miss, grdidx, grdstat, &
-    grdidx_condition)
+    idx_condition)
   use cmn1_const
   implicit none
-  character(*), intent(in) :: landType
+  character(*), intent(in)    :: landType
   integer(8)  , intent(in)    :: idx_miss
   integer(8)  , intent(in)    :: grdidx(:,:)
   integer(1)  , intent(inout) :: grdstat(:,:)
-  character(*), intent(in) :: grdidx_condition
+  character(*), intent(in)    :: idx_condition
 
   integer :: icgx, icgy, cgx, cgy
   integer :: num_invalid
@@ -3517,8 +3589,8 @@ subroutine check_if_grdidx_in_rstidx(&
     return
   endif
 
-  selectcase( grdidx_condition )
-  case( GRDIDX_CONDITION__MATCH, GRDIDX_CONDITION__GRD_IN_RST )
+  selectcase( idx_condition )
+  case( IDX_CONDITION__MATCH, IDX_CONDITION__GRD_IN_RST )
     call eerr(str(msg_unexpected_condition())//&
             '\n  '//str(num_invalid)//' grids are defined but'//&
               ' not found in the raster map.'//&
@@ -3531,9 +3603,9 @@ subroutine check_if_grdidx_in_rstidx(&
              ' original one. For example, the case that you are using'//&
              ' `rstidx` of 1min resolution and CaMa-Flood map is'//&
              ' generated from 3sec map. You can ignore this error '//&
-             ' by setting an option "grdidx_condition: raster_in_grid"'//&
+             ' by setting an option "idx_condition: raster_in_grid"'//&
              ' in the block "cama-flood".')
-  case( GRDIDX_CONDITION__RST_IN_GRD )
+  case( IDX_CONDITION__RST_IN_GRD )
     call edbg(str(num_invalid)//' grids are defined but'//&
               ' not found in the raster map.')
   endselect

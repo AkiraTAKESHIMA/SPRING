@@ -42,24 +42,28 @@ def block_input_end(opt_idx_duplication='stop'):
 
     return s
 
-def block_output(rmp, dir_out, grid_coef, opt_coef_sum_modify=None):
+def block_output(rmp, dir_out, rt):
     s = f'\
 \n\
 [output]\n\
-  grid_coef: {grid_coef}\n\
-  grid_sort: target\n'
-
-    if opt_coef_sum_modify is not None:
-        s += f'\
-  opt_coef_sum_modify: {opt_coef_sum_modify}\n'
-
-    s += f'\
-\n\
   dir: "{dir_out}"\n\
   f_rt_sidx: "grid.bin", {rmp["dtype_idx"]}, 1, {rmp["endian"]}\n\
   f_rt_tidx: "grid.bin", {rmp["dtype_idx"]}, 2, {rmp["endian"]}\n\
   f_rt_area: "area.bin", dble, 1, {rmp["endian"]}\n\
   f_rt_coef: "coef.bin", dble, 1, {rmp["endian"]}\n\
+\n\
+  mesh_coef: {rt["mesh_coef"]}\n\
+  mesh_sort: {rt["mesh_sort"]}\n'
+
+    if 'opt_coef_sum_modify' in rt.keys():
+        s += f'\
+  opt_coef_sum_modify: {rt["opt_coef_sum_modify"]}\n'
+
+    if 'opt_coef_sum_modify_ulim' in rt.keys():
+        s += f'\
+  opt_coef_sum_modify_ulim: {rt["opt_coef_sum_modify_ulim"]}\n'
+
+    s += f'\
 [end]\n'
 
     return s

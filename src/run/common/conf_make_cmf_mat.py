@@ -58,34 +58,40 @@ def block_cmf(cmf, dir_in, dir_out):
                 s += f'\
   {key}: {util.str_file_bin(cmf[key])}\n'
 
-    s += f'\
+    if util.key_val_exist(cmf, 'idx_miss'):
+        s += f'\
   idx_miss: {cmf["idx_miss"]}\n'
 
-    if 'grdidx_condition' in cmf.keys():
+    if 'idx_condition' in cmf.keys():
         s += f'\
-  grdidx_condition: {cmf["grdidx_condition"]}\n\
-[end]\n\
-'
+  idx_condition: {cmf["idx_condition"]}\n'
+
+    s += f'\
+[end]\n'
 
     return s
 
 
-def block_matsiro(mat, dir_out):
+def block_matsiro(mat_river, mat_noriv, dir_out):
     s = f'\
 \n\
 [matsiro]\n\
   dir: "{dir_out}"\n'
 
     for gridName in ['rst', 'grd']:
-        for varName in ['msk', 'idx', 'idx_bnd', 'idx_mkbnd']:
-            for landType in ['river', 'noriv']:
-                key = f'fout_{gridName}{varName}_{landType}'
-                if key in mat.keys():
+        for varName_cnf, varName_dct in zip(
+          ['msk', 'idx', 'idx_bnd', 'idx_mkbnd'],
+          ['msk', 'idx', 'bndidx', 'mkbndidx']):
+            for landType, mat in zip(['river', 'noriv'], [mat_river, mat_noriv]):
+                if mat is None: continue
+                key_dct = f'fout_{gridName}{varName_dct}'
+                key_cnf = f'fout_{gridName}{varName_cnf}_{landType}'
+                if key_dct in mat.keys():
                     s += f'\
-  {key}: {util.str_file_bin(mat[key])}\n'
+  {key_cnf}: {util.str_file_bin(mat[key_dct])}\n'
 
     s += f'\
-  idx_miss: {mat["idx_miss"]}\n\
+  idx_miss: {mat_river["idx_miss"]}\n\
 [end]\n'
 
     return s

@@ -7,7 +7,7 @@ module mod_main
   use cmn1_const
   use cmn1_type_opt
   use cmn1_type_gs
-  use cmn3_type_rst
+  use def_type
   implicit none
   private
   !-------------------------------------------------------------
@@ -55,10 +55,10 @@ subroutine run(s, t, output)
 
   fg_in => s%cmn%f_grid_in
 
-  selectcase( s%gs_type )
+  selectcase( s%typ )
   !-------------------------------------------------------------
   ! Case: LatLon
-  case( GS_TYPE_LATLON )
+  case( MESHTYPE__LATLON )
     sl => s%latlon
 
     call set_gs(sl)
@@ -74,12 +74,12 @@ subroutine run(s, t, output)
     call rasterize_latlon(s, t, output)
   !-------------------------------------------------------------
   ! Case: Raster
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     call eerr(str(msg_unexpected_condition())//&
-            '\n  s%gs_type: '//str(s%gs_type))
+            '\n  s%typ: '//str(s%typ))
   !-------------------------------------------------------------
   ! Case: Polygon
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     sp => s%polygon
     call make_grdidx(sp)
     call set_gs(sp)
@@ -94,7 +94,7 @@ subroutine run(s, t, output)
   ! Case: ERROR
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  s%gs_type: '//str(s%gs_type))
+            '\n  s%typ: '//str(s%typ))
   endselect
   !-------------------------------------------------------------
   !

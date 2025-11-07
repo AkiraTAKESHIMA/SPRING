@@ -3,6 +3,39 @@
 
 - Shapefile input
 #===============================================================
+#
+#===============================================================
+#---------------------------------------------------------------
+[2025/11/07]
+#---------------------------------------------------------------
+Changed keys for remapping:
+vrf_source_form, vrf_target_form -> mesh_vrf
+
+#===============================================================
+# v02.03.03
+#===============================================================
+#---------------------------------------------------------------
+[2025/09/09]
+#---------------------------------------------------------------
+src/cmn1/cmn1_gs_grid_coef.f90 subroutine make_grdara__raster
+
+Added make_grdara__raster() for the case that grid weight data were given.
+#---------------------------------------------------------------
+[2025/09/09]
+#---------------------------------------------------------------
+src/run
+run/
+
+Modified the structure.
+Copy run_all.py into the working directory when running the script.
+#---------------------------------------------------------------
+[2025/08/09]
+#---------------------------------------------------------------
+src/cmn2/cmn2_rt_vrf_core.f90 subroutine calc_rerr_grdara
+
+Added branches for the case that `grdara_true` is zero
+due to relation between indices of raster data and grid data.
+#===============================================================
 # v02.02.01
 #===============================================================
 #---------------------------------------------------------------
@@ -19,6 +52,20 @@ Related script and JSON file were also updated.
 #---------------------------------------------------------------
 [2025/07/21]
 #---------------------------------------------------------------
+Made a directory `src/run` to manage scripts that was originally
+under `run`.
+And now all the scripts are executed with `python run_all.py`.
+
+run/ILS_bnd/sample/script        => src/run/ILS_bnd
+run/rt_ILS_default/sample/script => src/run/rt_ILS_default
+run/cpl_ILS-AOGCM/sample/script  => src/run/cpl_ILS-AOGCM
+
+run/rt_ILS_default/sample/run_all.py
+run/rt_ILS_default/sample/conf.json
+run/rt_ILS_default/sample/script --> src/run/rt_ILS_default
+#---------------------------------------------------------------
+[2025/07/21]
+#---------------------------------------------------------------
 src/main_ext/cpl_aogcm-ils_define_mat/mod_set.f90 read_settings_input_rt
 
 Fixed a bug that the subroutine `read_value` was called for
@@ -31,8 +78,7 @@ src/cmn1, src/cmn3
 Fixed a bug for rempping between RLL regional grid that has
 a grid line on the zero-longit line and other RLL or raster grid.
 #---------------------------------------------------------------
-#[2025/07/20]
-#---------------------------------------------------------------
+[2025/07/20]
 run/ILS_bnd/sample/script/conf.json
 (and related scripts)
 

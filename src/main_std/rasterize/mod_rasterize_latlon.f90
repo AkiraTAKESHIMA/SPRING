@@ -6,7 +6,8 @@ module mod_rasterize_latlon
   use cmn1_const
   use cmn1_type_opt
   use cmn1_type_gs
-  use cmn3_type_rst
+  use cmn2_type_rst
+  use def_type
   implicit none
   private
   !-------------------------------------------------------------
@@ -19,17 +20,18 @@ contains
 !
 !===============================================================
 subroutine rasterize_latlon(a, b, output)
-  use cmn3_rt_llbnds, only: &
-        calc_relations_llbnds
-  use cmn3_rst_run, only: &
-        get_tasks, &
+  use cmn2_area_raster, only: &
         initialize, &
         finalize, &
         initialize_zone, &
+        finalize_zone, &
         alloc_map, &
         update_iarea_sum, &
         update_iarea_max
+  use cmn3_rt_llbnds, only: &
+        calc_relations_llbnds
   use mod_data, only: &
+        get_tasks, &
         make_data
   implicit none
   type(gs_)       , intent(in) :: a  ! latlon
@@ -94,7 +96,7 @@ subroutine rasterize_latlon(a, b, output)
             '\n  al%status_wgtmap == '//str(al%status_wgtmap))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  al%status_wgtmap == '//str(al%status_wgtmap))
+            '\n  al%status_wgtmap: '//str(al%status_wgtmap))
   endselect
   selectcase( br%status_wgtmap )
   case( GRID_STATUS__PREPARED )
@@ -107,17 +109,17 @@ subroutine rasterize_latlon(a, b, output)
             '\n  br%status_wgtmap == '//str(br%status_wgtmap))
   case default
     call eerr(str(msg_invalid_value())//&
-            '\n  br%status_wgtmap == '//str(br%status_wgtmap))
+            '\n  br%status_wgtmap: '//str(br%status_wgtmap))
   endselect
 
   case_wgtmap = case_wgtmap_a*10 + case_wgtmap_b
 
-  info = initialize(a, b, output)
+  !info = initialize(a, b, output)
+  info = initialize(br)
   !-------------------------------------------------------------
   ! Calc. relationships among grid lines and pixel lines
   !-------------------------------------------------------------
   call calc_relations_llbnds(al, br)
-  !call calc_relations_llbnds(al, br)
   !-------------------------------------------------------------
   ! Rasterize
   !-------------------------------------------------------------
@@ -135,17 +137,14 @@ subroutine rasterize_latlon(a, b, output)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call initialize_zone(&
-           brz%hi, brz%hf, brz%vi, brz%vf, &
-           brz%xi, brz%xf, brz%yi, brz%yf, &
-           fill_miss)
+    info = initialize_zone(brz)
 
-    if( do_make_iarea_max ) call alloc_map(iarea_max)
-    if( do_make_iarea_sum ) call alloc_map(iarea_sum)
+    if( do_make_iarea_max ) info = alloc_map(iarea_max)
+    if( do_make_iarea_sum ) info = alloc_map(iarea_sum)
     !-----------------------------------------------------------
     ! Calc. intersection areas
     !-----------------------------------------------------------
-    call alloc_map(iarea)
+    info = alloc_map(iarea)
 
     do iav = al%vi, al%vf
       avr => al%vrel(iav)
@@ -242,20 +241,20 @@ subroutine rasterize_latlon(a, b, output)
         !-------------------------------------------------------
         if( do_make_iarea_max )then
           do ibr = 1, ahr%nr
-            call update_iarea_max(&
-                   iarea_max,                  & ! inout
-                   iarea,                      & ! in
-                   al%idxmap(iah,iav),         & ! in
-                   bhi(ibr), bhf(ibr), bvi, bvf) ! in
+            info = update_iarea_max(&
+                     iarea_max,                  & ! inout
+                     iarea,                      & ! in
+                     al%idxmap(iah,iav),         & ! in
+                     bhi(ibr), bhf(ibr), bvi, bvf) ! in
           enddo
         endif
 
         if( do_make_iarea_sum )then
           do ibr = 1, ahr%nr
-            call update_iarea_sum(&
-                   iarea_sum,                  & ! inout
-                   iarea,                      & ! in
-                   bhi(ibr), bhf(ibr), bvi, bvf) ! in
+            info = update_iarea_sum(&
+                     iarea_sum,                  & ! inout
+                     iarea,                      & ! in
+                     bhi(ibr), bhf(ibr), bvi, bvf) ! in
           enddo
         endif
         !-------------------------------------------------------
@@ -270,7 +269,11 @@ subroutine rasterize_latlon(a, b, output)
     call make_data(&
            iarea_max, iarea_sum,             & ! inout
            brz%mskmap, br%is_south_to_north, & ! in
-           output)                             ! in
+           output, fill_miss)                  ! in
+    !-----------------------------------------------------------
+    !
+    !-----------------------------------------------------------
+    info = finalize_zone()
     !-----------------------------------------------------------
     ! Kill the flag
     !-----------------------------------------------------------

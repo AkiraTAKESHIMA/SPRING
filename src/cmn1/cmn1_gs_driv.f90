@@ -66,10 +66,10 @@ subroutine set_gs_all(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( a%gs_type )
+  selectcase( a%typ )
   !-------------------------------------------------------------
   ! Case: LatLon
-  case( GS_TYPE_LATLON )
+  case( MESHTYPE__LATLON )
     al => a%latlon
 
     call set_gs(al)
@@ -85,7 +85,7 @@ subroutine set_gs_all(&
     if( grdlonlat_ ) call make_grdlonlat(al)
   !-------------------------------------------------------------
   ! Case: Raster
-  case( GS_TYPE_RASTER )
+  case( MESHTYPE__RASTER )
     ar => a%raster
 
     call set_gs(ar)
@@ -101,7 +101,7 @@ subroutine set_gs_all(&
     if( grdlonlat_ ) call make_grdlonlat(ar)
   !-------------------------------------------------------------
   ! Case: Polygon
-  case( GS_TYPE_POLYGON )
+  case( MESHTYPE__POLYGON )
     ap => a%polygon
 
     call make_grdidx(ap)
@@ -116,7 +116,7 @@ subroutine set_gs_all(&
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr('Invalid value in $a%gs_type: '//str(a%gs_type))
+    call eerr('Invalid value in $a%typ: '//str(a%typ))
   endselect
   !-------------------------------------------------------------
   call echo(code%ret)

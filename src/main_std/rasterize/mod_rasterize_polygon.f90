@@ -8,7 +8,8 @@ module mod_rasterize_polygon
   use cmn1_const
   use cmn1_type_opt
   use cmn1_type_gs
-  use cmn3_type_rst
+  use cmn2_type_rst
+  use def_type
   implicit none
   private
   !-------------------------------------------------------------
@@ -22,22 +23,24 @@ module mod_rasterize_polygon
 !===============================================================
 subroutine rasterize_polygon(a, b, output)
   use cmn2_area_raster_polygon, only: &
-        initialize_area_rp      => initialize     , &
-        finalize_area_rp        => finalize       , &
-        initialize_zone_area_rp => initialize_zone, &
-        finalize_zone_area_rp   => finalize_zone  , &
-        calc_iarea                                , &
+        c2arp_initialize      => initialize     , &
+        c2arp_finalize        => finalize       , &
+        c2arp_initialize_zone => initialize_zone, &
+        c2arp_finalize_zone   => finalize_zone  , &
+        calc_iarea     , &
         get_dhv_polygon
-  use cmn3_rst_run, only: &
-        get_tasks                             , &
-        initialize_cmn      => initialize     , &
-        finalize_cmn        => finalize       , &
-        initialize_zone_cmn => initialize_zone, &
-        alloc_map                             , &
-        update_iarea_sum                      , &
+  use cmn2_area_raster, only: &
+        c2ar_initialize        => initialize       , &
+        c2ar_finalize          => finalize         , &
+        c2ar_initialize_thresh => initialize_thresh, &
+        c2ar_finalize_thresh   => finalize_thresh  , &
+        c2ar_initialize_zone   => initialize_zone  , &
+        c2ar_finalize_zone     => finalize_zone    , &
+        alloc_map       , &
+        update_iarea_sum, &
         update_iarea_max
-  ! this
   use mod_data, only: &
+        get_tasks, &
         make_data
   implicit none
   type(gs_)    , intent(in) :: a
@@ -84,9 +87,9 @@ subroutine rasterize_polygon(a, b, output)
 
   fill_miss = .true.
 
-  info = initialize_cmn(a, b, output)
-
-  call initialize_area_rp(br, ap)
+  info = c2ar_initialize(br)
+  info = c2ar_initialize_thresh(output%thresh)
+  info = c2arp_initialize(br, ap, make_rt=.true.)
   !-------------------------------------------------------------
   ! Rasterize
   !-------------------------------------------------------------
@@ -102,15 +105,12 @@ subroutine rasterize_polygon(a, b, output)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call initialize_zone_area_rp(brz)
-    call initialize_zone_cmn(&
-           brz%hi, brz%hf, brz%vi, brz%vf, &
-           brz%xi, brz%xf, brz%yi, brz%yf, &
-           fill_miss)
+    info = c2ar_initialize_zone(brz)
+    info = c2arp_initialize_zone(brz)
 
-    call alloc_map(iarea, 1)
-    if( do_make_iarea_max ) call alloc_map(iarea_max)
-    if( do_make_iarea_sum ) call alloc_map(iarea_sum)
+    info = alloc_map(iarea, buffer=1)
+    if( do_make_iarea_max ) info = alloc_map(iarea_max)
+    if( do_make_iarea_sum ) info = alloc_map(iarea_sum)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -130,18 +130,18 @@ subroutine rasterize_polygon(a, b, output)
       call get_dhv_polygon(dhi, dhf, dvi, dvf)
 
       if( do_make_iarea_max )then
-          call update_iarea_max(&
-                 iarea_max,        & ! inout
-                 iarea,            & ! in
-                 ap0%idx,          & ! in
-                 dhi, dhf, dvi, dvf) ! in
+          info = update_iarea_max(&
+                   iarea_max,        & ! inout
+                   iarea,            & ! in
+                   ap0%idx,          & ! in
+                   dhi, dhf, dvi, dvf) ! in
       endif
 
       if( do_make_iarea_sum )then
-        call update_iarea_sum(&
-               iarea_sum,        & ! inout
-               iarea,            & ! in
-               dhi, dhf, dvi, dvf) ! in
+        info = update_iarea_sum(&
+                 iarea_sum,        & ! inout
+                 iarea,            & ! in
+                 dhi, dhf, dvi, dvf) ! in
       endif
       !---------------------------------------------------------
     enddo  ! aij/
@@ -152,11 +152,12 @@ subroutine rasterize_polygon(a, b, output)
     call make_data(&
            iarea_max, iarea_sum,             & ! inout
            brz%mskmap, br%is_south_to_north, & ! in
-           output)                             ! in
+           output, fill_miss)                  ! in
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call finalize_zone_area_rp()
+    info = c2ar_finalize_zone()
+    info = c2arp_finalize_zone()
     !-----------------------------------------------------------
     ! Kill the flag
     !-----------------------------------------------------------
@@ -167,9 +168,9 @@ subroutine rasterize_polygon(a, b, output)
   !-------------------------------------------------------------
   ! Postprocess
   !-------------------------------------------------------------
-  info = finalize_cmn()
-
-  call finalize_area_rp()
+  info = c2ar_finalize()
+  info = c2ar_finalize_thresh()
+  info = c2arp_finalize()
 
   nullify(ap0)
   nullify(brz)

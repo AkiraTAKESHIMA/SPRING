@@ -78,29 +78,6 @@ subroutine merge_rt(input, output, opt)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( rtm%grid_coef )
-  case( grid_source, &
-        grid_target )
-    if( rtm%opt_coef%is_sum_modify_enabled )then
-      if( input%nFiles_grid > 0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rtm%opt_coef%is_sum_modify_speicified .and. input%nFiles_grid > 0')
-      endif
-    else
-      if( input%nFiles_grid == 0 )then
-        call eerr(str(msg_unexpected_condition())//&
-               '\n  .not. rtm%opt_coef%is_sum_modify_enabled .and. input%nFiles_grid == 0')
-      endif
-    endif
-  case( grid_none )
-    continue
-  case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%grid_coef: '//str(rtm%grid_coef))
-  endselect
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
   if( opt%sys%memory_ulim == 0.d0 )then
     nmax_ulim = 0_8
   else
@@ -158,7 +135,7 @@ subroutine merge_rt(input, output, opt)
     call echo(code%ent, 'Merging the elements that have same pair of indices')
 
     call merge_elems_same_index(&
-           rtm%grid_sort, rtm%ijsize, rtm%nij, rtm%sidx, rtm%tidx, rtm%area)
+           rtm%mesh_sort, rtm%ijsize, rtm%nij, rtm%sidx, rtm%tidx, rtm%area)
     allocate(rtm%coef(rtm%ijsize))
 
     call echo(code%ext)
@@ -167,13 +144,13 @@ subroutine merge_rt(input, output, opt)
     !-----------------------------------------------------------
     call echo(code%ent, 'Calculating coef.')
 
-    selectcase( rtm%grid_coef )
+    selectcase( rtm%mesh_coef )
     !-----------------------------------------------------------
     ! 
-    case( grid_source, &
-          grid_target )
+    case( MESH__SOURCE, &
+          MESH__TARGET )
       !---------------------------------------------------------
-      ! Case: Sum. of coef. is enabled
+      ! Case: Sum. of coef. is modified
       if( rtm%opt_coef%is_sum_modify_enabled )then
         call echo(code%ent, 'Case: coef_sum_modify is enabled')
         !-------------------------------------------------------
@@ -185,7 +162,7 @@ subroutine merge_rt(input, output, opt)
         !-------------------------------------------------------
         call echo(code%ext)
       !---------------------------------------------------------
-      ! Case: Sum. of coef. is not enabled
+      ! Case: Sum. of coef. is not modified
       else
         call echo(code%ent, 'Case: coef_sum_modify is not enabled')
         !-------------------------------------------------------
@@ -240,14 +217,14 @@ subroutine merge_rt(input, output, opt)
      endif
     !-----------------------------------------------------------
     ! 
-    case( grid_none )
+    case( MESH__NONE )
       call realloc(rtm%coef, rtm%ijsize, clear=.true.)
       rtm%coef(:) = rtm%area(:)
     !-----------------------------------------------------------
     !
     case default
       call eerr(str(msg_invalid_value())//&
-              '\n  rtm%grid_coef: '//str(rtm%grid_coef))
+              '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
     endselect
 
     call echo(code%ext)
