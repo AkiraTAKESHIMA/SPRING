@@ -1,1 +1,1 @@
-../run_all.py
+../../../src/run/cpl_ILS-AOGCM/run_all.py

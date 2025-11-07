@@ -15,8 +15,47 @@ import s___util as lutil
 def preprocess(cnf):
     CMF = cnf[k.m]['CMF']
 
+    # Check which of catmxy or idxmap is input or CMF
+    keylst_catmxy = ['fin_catmxy', 'fin_nextxy', 'catmxy_index', 'nextxy_index']
+    nkey_catmxy = 0
+    for key in keylst_catmxy:
+        if key in CMF.keys(): nkey_catmxy += 1
+
+    if nkey_catmxy == 0:
+        is_catmxy_used = False
+    elif nkey_catmxy == len(keylst_catmxy):
+        is_catmxy_used = True
+    else:
+        raise Exception(f'Missing keys for catmxy: {keylst_catmxy}')
+
+    keylst_idxmap = ['fin_rstidx_river', 'fin_grdidx_river']
+    nkey_idxmap = 0
+    for key in keylst_idxmap:
+        if key in CMF.keys(): nkey_idxmap += 1
+
+    if nkey_idxmap == 0:
+        is_idxmap_used = False
+    elif nkey_idxmap == len(keylst_idxmap):
+        is_idxmap_used = True
+    else:
+        raise Exception(f'Missing keys for idxmap: {keylst_idxmap}')
+
+    if is_catmxy_used and is_idxmap_used:
+        raise Exception('Both inputs for catmxy and inputs for idxmap were specified.\n'\
+                        f'For catmxy: {keylst_catmxy}\n'\
+                        f'For idxmap: {keylst_idxmap}')
+    elif not is_catmxy_used and not is_idxmap_used:
+        raise Exception('Neither inputs for catmxy and inputs for idxmap was specified.\n'\
+                        f'For catmxy: {keylst_catmxy}\n'\
+                        f'For idxmap: {keylst_idxmap}')
+
     meshName = 'CMF_pre'
     cnf[k.m][meshName] = copy.deepcopy(CMF)
+
+    if is_catmxy_used:
+        cnf[k.m][meshName]['inputType'] = 'catmxy'
+    elif is_idxmap_used:
+        cnf[k.m][meshName]['inputType'] = 'idxmap'
 
     for layer, landType in enumerate(cnf[k.lt]):
         meshName = f'CMF_{landType}'

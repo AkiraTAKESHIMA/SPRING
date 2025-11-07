@@ -12,8 +12,8 @@ import s___const as lconst
 import s___util as lutil
 
 
-def make_links_cmf(cnf):
-    for landType in ['river']:
+def make_links_cmf(cnf, lst_landType):
+    for landType in lst_landType:
         dir_out = lutil.get_outdir_grid('CMF', landType)
         os.makedirs(dir_out, exist_ok=True)
         CMF = cnf[k.m][f'CMF_{landType}']
@@ -22,8 +22,8 @@ def make_links_cmf(cnf):
                             f'{dir_out}/{dname}.bin')
 
 
-def make_links_mat(cnf):
-    for landType in ['river']:
+def make_links_mat(cnf, lst_landType):
+    for landType in lst_landType:
         dir_out = lutil.get_outdir_grid('MATSIRO', landType)
         os.makedirs(dir_out, exist_ok=True)
         MAT = cnf[k.m][f'MATSIRO_{landType}']
@@ -36,8 +36,8 @@ def make_cmf_mat(cnf, update_data):
     dir_tmp_cmf = f'{env.dir_tmp}/CMF'
     dir_tmp_mat = f'{env.dir_tmp}/MATSIRO'
 
-    dir_out_cmf = f'{env.dir_out}/CMF'
-    dir_out_mat = f'{env.dir_out}/MATSIRO'
+    dir_out_cmf = f'{env.dir_out}/grid/CMF'
+    dir_out_mat = f'{env.dir_out}/grid/MATSIRO'
 
     MAT_river, MAT_noriv = None, None
     if 'river' in cnf[k.lt]: MAT_river = cnf[k.m]['MATSIRO_river']
@@ -45,25 +45,40 @@ def make_cmf_mat(cnf, update_data):
 
     CMF_pre = cnf[k.m]['CMF_pre']
 
-    is_ok = True
-    for landType in cnf[k.lt]:
-        is_ok = is_ok and\
-        util.key_val_exist(CMF_pre, f'fin_rstidx_{landType}') and\
-        util.key_val_exist(CMF_pre, f'fin_grdidx_{landType}') and\
-        util.key_val_exist(cnf[k.m][f'MATSIRO_{landType}'], 'fin_rstidx') and\
-        util.key_val_exist(cnf[k.m][f'MATSIRO_{landType}'], 'fin_grdidx') and\
-        util.key_val_exist(cnf[k.m][f'MATSIRO_{landType}'], 'fin_grdbndidx')
+    if CMF_pre['inputType'] == 'idxmap':
+        landType = 'river'
+        MAT = cnf[k.m][f'MATSIRO_{landType}']
+        for path in [
+          util.filepath(CMF_pre, f'fin_rstidx_{landType}'),
+          util.filepath(CMF_pre, f'fin_grdidx_{landType}'),
+          util.filepath(MAT, 'fin_rstidx'),
+          util.filepath(MAT, 'fin_grdidx'),
+          util.filepath(MAT, 'fin_grdbndidx'),
+        ]:
+            if not os.path.isfile(path):
+                raise Exception(f'File not found: {path}')
 
-    if is_ok:
-        print('CMF and MATSIRO grid data already exist.')
+        landType = 'noriv'
+        MAT = cnf[k.m][f'MATSIRO_{landType}']
+        for path in [
+          util.filepath(MAT, 'fin_rstidx'),
+          util.filepath(MAT, 'fin_grdidx'),
+          util.filepath(MAT, 'fin_grdbndidx'),
+        ]:
+            if not os.path.isfile(path):
+                raise Exception(f'File not found: {path}')
+
+        print('Mesh data of CMF and MATSIRO already exist.')
         if not update_data:
             return
 
-        for landType in cnf[k.lt]:
+        # Make links
+        for landType in ['river']:
             for dname in ['rstidx', 'grdidx']:
                 util.make_slink(
                   os.path.join(CMF_pre['dir'], CMF_pre[f'fin_{dname}_{landType}']['path']),
-                  f'{dir_out_cmf}/{landType}/rstidx.bin')
+                  f'{dir_out_cmf}/{landType}/{dname}.bin')
+        for landType in cnf[k.lt]:
             MAT = cnf[k.m][f'MATSIRO_{landType}']
             for dname in ['rstidx', 'grdidx', 'grdbndidx']:
                 util.make_slink(os.path.join(MAT['dir'], MAT[f'fin_{dname}']['path']),
@@ -107,6 +122,10 @@ def make_cmf_mat(cnf, update_data):
             util.copy_dict_elem(MAT, MAT, f'fin_{dname}', f'fout_{dname}')
             MAT[key]['path'] = os.path.join(os.getcwd(), dir_tmp_mat, MAT[key]['path'])
             del(MAT[f'fout_{dname}'])
+
+    make_links_cmf(cnf, ['river'])
+    make_links_mat(cnf, cnf[k.lt])
+
     del(cnf[k.m]['CMF_pre'])
 
 

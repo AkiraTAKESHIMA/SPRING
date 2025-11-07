@@ -19,12 +19,6 @@ def make_grid_data(cnf, update_data, meshNameFmt, lst_landType):
 
         c = cnf[k.m][meshName]
 
-        if 'fin_grdara' in c.keys():
-            print(f'{meshName} grid data already exist.')
-            util.make_slink(os.path.join(c['dir'], c['fin_grdara']['path']),
-              os.path.join(lutil.get_outdir_grid(meshBaseName, landType), 'grdara.bin'))
-            return
-
         c['fout_grdara'] = file_bin('grdara.bin')
 
         f_conf = f'{env.dir_set}/{meshName}.conf'
