@@ -54,25 +54,26 @@ LDFLAGS = $(FCFLAGS)
 #==============================================================
 #
 #==============================================================
-TOPLIBDIR     = $(TOPSRCDIR)/lib
-LIB           = $(TOPLIBDIR)/lib.a
-LIBDIR_CONST  = $(TOPLIBDIR)/lib_const
-LIBDIR_BASE   = $(TOPLIBDIR)/lib_base
-LIBDIR_TIME   = $(TOPLIBDIR)/lib_time
-LIBDIR_LOG    = $(TOPLIBDIR)/lib_log
-LIBDIR_UTIL   = $(TOPLIBDIR)/lib_util
-LIBDIR_RANDOM = $(TOPLIBDIR)/lib_random
-LIBDIR_ARRAY  = $(TOPLIBDIR)/lib_array
-LIBDIR_MATH   = $(TOPLIBDIR)/lib_math
-LIBDIR_STATS  = $(TOPLIBDIR)/lib_stats
-LIBDIR_PROJ   = $(TOPLIBDIR)/lib_proj
-LIBDIR_IO     = $(TOPLIBDIR)/lib_io
-LIBDIR_PNG    = $(TOPLIBDIR)/lib_png
-MODDIR = $(TOPLIBDIR)/mod
+LIBDIR        = $(TOPSRCDIR)/lib
+LIB           = $(LIBDIR)/lib.a
+LIBDIR_CONST  = $(LIBDIR)/lib_const
+LIBDIR_BASE   = $(LIBDIR)/lib_base
+LIBDIR_TIME   = $(LIBDIR)/lib_time
+LIBDIR_LOG    = $(LIBDIR)/lib_log
+LIBDIR_UTIL   = $(LIBDIR)/lib_util
+LIBDIR_RANDOM = $(LIBDIR)/lib_random
+LIBDIR_ARRAY  = $(LIBDIR)/lib_array
+LIBDIR_MATH   = $(LIBDIR)/lib_math
+LIBDIR_STATS  = $(LIBDIR)/lib_stats
+LIBDIR_PROJ   = $(LIBDIR)/lib_proj
+LIBDIR_IO     = $(LIBDIR)/lib_io
+LIBDIR_PNG    = $(LIBDIR)/lib_png
+MODDIR = $(LIBDIR)/mod
 
-CMNDIR1 = $(TOPSRCDIR)/cmn1
-CMNDIR2 = $(TOPSRCDIR)/cmn2
-CMNDIR3 = $(TOPSRCDIR)/cmn3
+CMNDIR = $(TOPSRCDIR)/common
+CMNDIR1 = $(CMNDIR)/1
+CMNDIR2 = $(CMNDIR)/2
+CMNDIR3 = $(CMNDIR)/3
 
 ifeq ($(ILS),T)
   include $(TOPSRCDIR)/../../../Mkinclude
