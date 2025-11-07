@@ -11,6 +11,21 @@
 Changed keys for remapping:
 vrf_source_form, vrf_target_form -> mesh_vrf
 
+#---------------------------------------------------------------
+[2025/11/07]
+#---------------------------------------------------------------
+Changed structure of directories of the source code
+Updated main/std/remap/mkfig.py
+
+#---------------------------------------------------------------
+[2025/11/07]
+#---------------------------------------------------------------
+Fixed a bug of remapping.
+
+src/main/std/remap/mod_set.f90
+
+Fixed the way of setting the size of output grid data of raster 
+mesh, a%fg_out%sz.
 #===============================================================
 # v02.03.03
 #===============================================================
