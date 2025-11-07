@@ -55,16 +55,6 @@
       "is_south_to_north": false,
       "idx_miss": -9999
     },
-    "IO_met": {
-      "type": "latlon",
-      "nx": 720,
-      "ny": 360,
-      "west": -180,
-      "east":  180,
-      "south": -90,
-      "north":  90,
-      "is_south_to_north": false
-    },
     "IO_metnc": {
       "type": "latlon",
       "nx": 720,
@@ -75,20 +65,24 @@
       "north":  90,
       "is_south_to_north": true
     },
-    "IO_LSM_bnd_{landType}": {
-      "landTypes": ["river", "noriv"],
+    "IO_met": {
+      "type": "latlon",
       "nx": 720,
-      "ny": 360
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": false
+    },
+    "IO_LSM_bnd_{landType}": {
+      "landTypes": ["river", "noriv"]
     },
     "IO_LSM_row_{landType}": {
-      "landTypes": ["river", "noriv", "noriv_real", "noriv_virt"],
-      "nx": 720,
-      "ny": 360
+      "landTypes": ["river", "noriv", "noriv_real", "noriv_virt"]
     },
     "IO_RM_row_{landType}": {
-      "landTypes": ["river", "river_end", "noriv", "ocean"],
-      "nx": 720,
-      "ny": 360
+      "landTypes": ["river", "river_end", "noriv", "ocean"]
     },
     "IO_latlon": {
       "type": "latlon",

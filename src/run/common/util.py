@@ -152,6 +152,9 @@ def key_val_exist(dct, key):
     else:
         return True
 
+def filepath(dct, key_file):
+    return os.path.join(dct['dir'], dct[key_file]['path'])
+
 
 def add_mesh(cnf_gs, meshName):
     if meshName not in cnf_gs.keys():

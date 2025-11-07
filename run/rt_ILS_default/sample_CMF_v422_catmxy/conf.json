@@ -13,7 +13,7 @@
       "east":  180,
       "south": -90,
       "north":  90,
-      "is_south_to_north": "false",
+      "is_south_to_north": false,
       "dir": "dat/mesh/CaMa-Flood/cmf_v422/glb_15min/1min/CMF",
       "fin_catmxy": {
         "path": "raster/1min.catmxy.bin", 
@@ -35,16 +35,6 @@
       },
       "idx_miss": -9999
     },
-    "IO_met": {
-      "type": "latlon",
-      "nx": 720,
-      "ny": 360,
-      "west": -180,
-      "east":  180,
-      "south": -90,
-      "north":  90,
-      "is_south_to_north": "false"
-    },
     "IO_metnc": {
       "type": "latlon",
       "nx": 720,
@@ -53,7 +43,17 @@
       "east":  180,
       "south": -90,
       "north":  90,
-      "is_south_to_north": "true"
+      "is_south_to_north": true
+    },
+    "IO_met": {
+      "type": "latlon",
+      "nx": 720,
+      "ny": 360,
+      "west": -180,
+      "east":  180,
+      "south": -90,
+      "north":  90,
+      "is_south_to_north": false
     },
     "IO_latlon": {
       "type": "latlon",
@@ -63,16 +63,16 @@
       "east":  180,
       "south": -90,
       "north":  90,
-      "is_south_to_north": "false"
+      "is_south_to_north": false
+    },
+    "MATSIRO_bnd_simple_{landType}": {
+      "desc": "Simplified MATSIRO grid for BC"
     },
     "MATSIRO_{landType}": {
       "desc": "MATSIRO grid"
     },
     "MATSIRO_simple_{landType}": {
       "desc": "Simplified MATSIRO grid"
-    },
-    "MATSIRO_bnd_simple_{landType}": {
-      "desc": "Simplified MATSIRO grid for BC"
     },
     "IO_MATSIRO_bnd_simple_{landType}": {
       "desc": "IO grid for MATSIRO BC"
@@ -96,31 +96,35 @@
     "make_verification_data": false
   },
   "remappingTables": {
-    "IO_met_to_MATSIRO": {
-      "sourceTables": "IO_met_to_MATSIRO_{landType}",
-      "landTypes": ["river", "noriv"]
-    },
-    "IO_metnc_to_MATSIRO": {
-      "sourceTables": "IO_metnc_to_MATSIRO_{landType}",
-      "landTypes": ["river", "noriv"]
-    },
-    "IO_bnd_to_MATSIRO": {
+    "IO_bnd_to_MAT": {
       "sourceTables": "IO_MATSIRO_bnd_simple_{landType}_to_MATSIRO_bnd_simple_{landType}",
       "landTypes": ["river", "noriv"]
     },
-    "MATSIRO_to_CMF": {
+    "IO_metnc_to_MAT": {
+      "sourceTables": "IO_metnc_to_MATSIRO_{landType}",
+      "landTypes": ["river", "noriv"]
+    },
+    "IO_met_to_MAT": {
+      "sourceTables": "IO_met_to_MATSIRO_{landType}",
+      "landTypes": ["river", "noriv"]
+    },
+    "MAT_to_CMF": {
       "sourceTables": "MATSIRO_simple_{landType}_to_CMF_simple_{landType}",
       "landTypes": ["river"]
     },
-    "MATSIRO_to_IO_row": {
+    "MAT_to_IO_matrow": {
       "sourceTables": "MATSIRO_simple_{landType}_to_IO_MATSIRO_row_{landType}",
       "landTypes": ["river", "noriv"]
     },
-    "MATSIRO_to_IO_latlon": {
+    "MAT_to_IO_latlon": {
       "sourceTables": "MATSIRO_{landType}_to_IO_latlon",
       "landTypes": ["river", "noriv"]
     },
-    "CMF_to_IO_row": {
+    "CMF_to_MAT": {
+      "sourceTables": "CMF_simple_{landType}_to_MATSIRO_simple_{landType}",
+      "landTypes": ["river"]
+    },
+    "CMF_to_IO_cmfrow": {
       "sourceTables": "CMF_simple_{landType}_to_IO_CMF_row_{landType}",
       "landTypes": ["river"]
     },
@@ -130,13 +134,13 @@
     }
   },
   "intermediateRemappingTables": {
-    "IO_met_to_MATSIRO_{landType}": {
+    "IO_MATSIRO_bnd_simple_{landType}_to_MATSIRO_bnd_simple_{landType}": {
       "landTypes": ["river", "noriv"]
     },
     "IO_metnc_to_MATSIRO_{landType}": {
       "landTypes": ["river", "noriv"]
     },
-    "IO_MATSIRO_bnd_simple_{landType}_to_MATSIRO_bnd_simple_{landType}": {
+    "IO_met_to_MATSIRO_{landType}": {
       "landTypes": ["river", "noriv"]
     },
     "MATSIRO_simple_{landType}_to_CMF_simple_{landType}": {
@@ -150,9 +154,11 @@
     "MATSIRO_{landType}_to_IO_latlon": {
       "landTypes": ["river", "noriv"]
     },
+    "CMF_simple_{landType}_to_MATSIRO_simple_{landType}": {
+      "landTypes": ["river"]
+    },
     "CMF_simple_{landType}_to_IO_CMF_row_{landType}": {
-      "landTypes": ["river"],
-      "use_tgt_grdara": true
+      "landTypes": ["river"]
     },
     "CMF_{landType}_to_IO_latlon": {
       "landTypes": ["river"]
