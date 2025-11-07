@@ -17,7 +17,7 @@ all:
 	$(MAKE) $(OBJ_F)
 	$(MAKE) $(SPRINGLIB)
 
-$(SPRINGLIB): $(OBJS) $(CMNDIR1)/cmn1.a $(CMNDIR2)/cmn2.a $(CMNDIR3)/cmn3.a $(LIB)
+$(SPRINGLIB): $(OBJS) $(CMNDIR1)/c1.a $(CMNDIR2)/c2.a $(CMNDIR3)/c3.a $(LIB)
 	$(RM) $(RMFLAGS) $@
 	$(AR) cqT $@ $^
 	printf "create $@\naddlib $@\nsave\nend\n" | ar -M

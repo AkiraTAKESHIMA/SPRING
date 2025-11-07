@@ -5,9 +5,9 @@ module ls_gs
   use lib_array
   use lib_math
   use lib_io
-  use cmn1_const
-  use cmn1_type_opt
-  use cmn1_type_gs
+  use c1_const
+  use c1_type_opt
+  use c1_type_gs
   implicit none
   private
   !-------------------------------------------------------------
@@ -45,11 +45,11 @@ contains
 !
 !===============================================================
 subroutine initialize(size_lst_gs)
-  use cmn1_opt_ctrl, only: &
+  use c1_opt_ctrl, only: &
         set_opt_sys, &
         set_opt_log, &
         set_opt_earth
-  use cmn1_opt_set, only: &
+  use c1_opt_set, only: &
         set_default_values_opt_sys, &
         set_default_values_opt_log, &
         set_default_values_opt_earth
@@ -94,7 +94,7 @@ end subroutine initialize
 !
 !===============================================================
 subroutine finalize()
-  use cmn1_gs_base, only: &
+  use c1_gs_base, only: &
         free_gs
   use ls_base, only: &
         logopt, &
@@ -507,16 +507,16 @@ subroutine define_grdsys_latlon_core(&
     path_idx, dtype_idx, endian_idx, rec_idx, &
     idx_miss, &
     origin)
-  use cmn1_gs_base, only: &
+  use c1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_latlon, &
         set_bounds_file_latlon_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use cmn1_gs_define, only: &
+  use c1_gs_define, only: &
         set_gs
-  use cmn1_gs_grid_core, only: &
+  use c1_gs_grid_core, only: &
         make_idxmap, &
         make_grdidx
   use ls_base, only: &
@@ -980,16 +980,16 @@ subroutine define_grdsys_raster_core(&
     path_idx, dtype_idx, endian_idx, rec_idx, &
     idx_miss, &
     origin)
-  use cmn1_gs_base, only: &
+  use c1_gs_base, only: &
         alloc_gs_components         , &
         set_gs_common               , &
         set_default_values_gs_raster, &
         set_bounds_file_raster_in   , &
         set_bounds_file_grid_in     , &
         set_bounds_file_grid_out
-  use cmn1_gs_define, only: &
+  use c1_gs_define, only: &
         set_gs
-  use cmn1_gs_grid_core, only: &
+  use c1_gs_grid_core, only: &
         make_idxmap, &
         make_grdidx
   use ls_base, only: &
@@ -1151,7 +1151,7 @@ end subroutine define_grdsys_raster_core
 !
 !===============================================================
 subroutine spring_clear_grdsys(name)
-  use cmn1_gs_base, only: &
+  use c1_gs_base, only: &
         clear_gs
   use ls_base, only: &
         logopt

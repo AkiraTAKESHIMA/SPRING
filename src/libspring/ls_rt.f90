@@ -3,10 +3,10 @@ module ls_rt
   use lib_log
   use lib_array
   use lib_io
-  use cmn1_const
-  use cmn1_type_opt
-  use cmn1_type_gs
-  use cmn2_type_rt
+  use c1_const
+  use c1_type_opt
+  use c1_type_gs
+  use c2_type_rt
   use ls_base, only: &
         logopt, &
         assert_initialized
@@ -64,7 +64,7 @@ end subroutine initialize
 !
 !===============================================================
 subroutine finalize()
-  use cmn2_rt_base, only: &
+  use c2_rt_base, only: &
         free_rt
   implicit none
 
@@ -131,10 +131,10 @@ end subroutine point_rt
 !
 !===============================================================
 subroutine spring_make_rmptbl(name, sname, tname)
-  use cmn2_rt_base, only: &
+  use c2_rt_base, only: &
         init_rt, &
         set_default_values_rt
-  use cmn3_rt_driv, only: &
+  use c3_rt_driv, only: &
         make_rt
   use ls_gs, only: &
         point_grdsys
@@ -209,7 +209,7 @@ end subroutine spring_make_rmptbl
 !
 !===============================================================
 subroutine spring_clear_rmptbl(name)
-  use cmn2_rt_base, only: &
+  use c2_rt_base, only: &
         free_rt
   implicit none
   character(*), intent(in) :: name

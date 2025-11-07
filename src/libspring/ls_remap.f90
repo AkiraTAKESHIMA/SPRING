@@ -3,10 +3,10 @@ module ls_remap
   use lib_log
   use lib_array
   use lib_io
-  use cmn1_const
-  use cmn1_type_opt
-  use cmn1_type_gs
-  use cmn2_type_rt
+  use c1_const
+  use c1_type_opt
+  use c1_type_gs
+  use c2_type_rt
   use ls_base, only: &
         logopt, &
         assert_initialized
