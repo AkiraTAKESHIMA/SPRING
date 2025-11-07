@@ -112,7 +112,7 @@ subroutine remap(s, t, rt)
 
       sval(:) = reshape(sval_2d, (/sfg%nij/))
       !---------------------------------------------------------
-      ! Regrid
+      ! Remap
       !---------------------------------------------------------
       tval(:) = 0.d0
       tval_mask(:) = 0_1
@@ -121,14 +121,14 @@ subroutine remap(s, t, rt)
         call search(rtm%sidx(rtij), sg%idx, sg%idxarg, loc)
         if( loc == 0_8 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(rtm%sidx(rtij))//' of source grid was not found.')
+                  '\n  Index '//str(rtm%sidx(rtij))//' of the source mesh was not found.')
         endif
         sij = sg%idxarg(loc)
 
         call search(rtm%tidx(rtij), tg%idx, tg%idxarg, loc)
         if( loc == 0_8 )then
           call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(rtm%tidx(rtij))//' of target grid was not found.')
+                  '\n  Index '//str(rtm%tidx(rtij))//' of the target mesh was not found.')
         endif
         tij = tg%idxarg(loc)
 
