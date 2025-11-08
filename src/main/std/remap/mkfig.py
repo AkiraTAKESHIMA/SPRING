@@ -120,11 +120,9 @@ def draw_latlon(lon, lat, val, is_south_to_north, cfg):
         ax = fig.add_subplot(111)
         xticks = np.arange(-180,181,30)
         yticks = np.arange(-90,91,30)
-        ax.axis([-180,180,-90,90])
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(xticks)
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticks)
+        ax.axis([-180, 180, -90, 90])
+        ax.set_xticks(xticks, xticks)
+        ax.set_yticks(yticks, yticks)
         ax.set_aspect('equal')
         ax.set_title('(min,max): ({:9.2e},{:9.2e})'.format(np.nanmin(val), np.nanmax(val)))
 
@@ -183,12 +181,13 @@ def draw_raster(west, east, south, north, is_south_to_north,
     ax = fig.add_subplot(111)
     xticks = np.arange(-180,181,30)
     yticks = np.arange(-90,91,30)
-    ax.axis([west,east,south,north])
+    ax.axis([west, east, south, north])
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticks)
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticks)
     ax.set_aspect('equal')
+    ax.set_title('(min,max): ({:9.2e},{:9.2e})'.format(np.nanmin(val), np.nanmax(val)))
 
     if is_south_to_north:
         ydir = -1
@@ -210,7 +209,7 @@ def draw_raster(west, east, south, north, is_south_to_north,
 
     # Set the title
     if cfg['title'] != '':
-      ax.set_title(cfg['title'])
+        ax.set_title(cfg['title'])
 
     # Save the figure
     if cfg['path'] != '':
@@ -328,12 +327,11 @@ def draw_polygon(lon, lat, coord_miss, val, cfg):
     # Modify region, aspect and labels
     xticks = np.arange(-180,181,30)
     yticks = np.arange(-90,91,30)
-    ax.axis([-180,180,-90,90])
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks)
-    ax.set_yticks(yticks)
-    ax.set_yticklabels(yticks)
+    ax.axis([-180, 180, -90, 90])
+    ax.set_xticks(xticks, xticks)
+    ax.set_yticks(yticks, yticks)
     ax.set_aspect('equal')
+    ax.set_title('(min,max): ({:9.2e},{:9.2e})'.format(np.nanmin(val), np.nanmax(val)))
 
     # Set the title
     if cfg['title'] != '':
@@ -1137,6 +1135,21 @@ def read_cfg(f_set):
                 lst_cfg.append(cfg_each_init.copy())
                 lst_cfg[-1]['mesh'] = mesh
 
+            elif is_key(line, 'path_fig'):
+                is_default = False
+                path = remove_quotes(read_value_char(line, iLine))
+                if path != "":
+                    path = os.path.join(directory, path)
+                lst_cfg[-1]['path'] = path
+
+            elif is_key(line, 'f_grdval'): 
+                f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
+                f_val = read_value_file(line, iLine, f_default)
+                f_val['path'] = os.path.join(directory, f_val['path'])
+                lst_cfg[-1]['f_val'] = f_val
+                if not os.path.isfile(f_val['path']):
+                    raise Exception(f'File not found: {f_val["path"]} @ line {iLine+1}')
+
             elif is_key(line, 'figsize'):
                 val = read_value_tuple_int(line, iLine)
                 put_value('figsize', val, cfg_default, lst_cfg)
@@ -1160,7 +1173,8 @@ def read_cfg(f_set):
             elif is_key(line, 'cmap'):
                 val = read_value_char(line, iLine)
                 if val not in plt.colormaps() and val != 'none':
-                    raise Exception(f'Invalid name of colormap: {val} @ line {iLine+1}')
+                    raise Exception(f'Invalid name of colormap: {val} @ line {iLine+1}\n'\
+                                    f'Valid values: {plt.colormaps()}')
                 put_value('cmap', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'color_miss'):
@@ -1185,22 +1199,6 @@ def read_cfg(f_set):
 
             elif is_key(line, 'dir'):
                 directory = remove_quotes(read_value_char(line, iLine))
-
-            elif is_key(line, 'path_fig'):
-                is_default = False
-                path = remove_quotes(read_value_char(line, iLine))
-                if path != "":
-                    path = os.path.join(directory, path)
-                #list_cfg_each.append(cfg_each_init.copy())
-                lst_cfg[-1]['path'] = path
-
-            elif is_key(line, 'f_grdval'): 
-                f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
-                f_val = read_value_file(line, iLine, f_default)
-                f_val['path'] = os.path.join(directory, f_val['path'])
-                lst_cfg[-1]['f_val'] = f_val
-                if not os.path.isfile(f_val['path']):
-                    raise Exception(f'File not found: {f_val["path"]} @ line {iLine+1}')
 
             elif is_key(line, 'show'):
                 val = read_value_char(line, iLine) == 'True'
