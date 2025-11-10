@@ -1,0 +1,5 @@
+720  ! nXX
+360  ! nYY
+sphere  ! earth's shape
+6371.d3  ! earth's diameter [m]
+0.d0     ! square of the earth's eccentricity
