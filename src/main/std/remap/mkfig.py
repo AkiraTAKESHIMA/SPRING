@@ -709,10 +709,11 @@ def read_cfg(f_set):
         return res
 
     def remove_quotes(comp):
+        comp = comp.strip()
         if comp[0] == comp[-1] == "'" or comp[0] == comp[-1] == '"':
             res = comp[1:-1]
         else:
-            res = comp.strip()
+            res = comp
         return res
 
     def read_value_int(line, iLine):
@@ -721,17 +722,25 @@ def read_cfg(f_set):
     def read_value_float(line, iLine):
         return float(line[line.index(':')+1:].replace('d','e'))
 
-    def read_value_logical(line, iLine):
-        val = line[line.index(':')+1:].strip()
-        if val == '.true.':
+    def read_value_bool(line, iLine):
+        val = line[line.index(':')+1:].strip().lower()
+        if val in ['.true.', 'true']:
             return True
-        elif val == '.false.':
+        elif val in ['.false.', 'false']:
             return False
         else:
             raise Exception(f'Invalid value @ line {iLine+1}: {line}')
 
-    def read_value_char(line, iLine):
-        return remove_quotes(line[line.index(':')+1:])
+    def read_value_str(line, iLine):
+        line = line.strip()
+        return remove_quotes(line.strip()[line.strip().index(':')+1:])
+
+    def read_value_path(line, iLine):
+        val = line[line.index(':')+1:].strip()
+        if not (val[0] == val[-1] == '"' or val[0] == val[-1] == "'"):
+            raise Exception(f'Invalid format @ line {iLine+1}: {line}\n'
+                            f'Path must be enclosed in single quotes or double quotes.')
+        return val[1:-1]
 
     def read_value_file(line, iLine, f_default):
         res = f_default.copy()
@@ -801,9 +810,9 @@ def read_cfg(f_set):
             elif is_key(line, 'north'):
                 cfg['north'] = read_value_float(line, iLine)
             elif is_key(line,'is_south_to_north'):
-                cfg['is_south_to_north'] = read_value_logical(line, iLine)
+                cfg['is_south_to_north'] = read_value_bool(line, iLine)
             elif is_key(line,'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
             elif is_key(line,'f_lon_bound'):
                 f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 cfg['f_lon_bound'] = read_value_file(line, iLine, f_default)
@@ -904,9 +913,9 @@ def read_cfg(f_set):
             elif is_key(line,'north'):
                 cfg['north'] = read_value_float(line, iLine)
             elif is_key(line,'is_south_to_north'):
-                cfg['is_south_to_north'] = read_value_logical(line, iLine)
+                cfg['is_south_to_north'] = read_value_bool(line, iLine)
             elif is_key(line,'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
             elif is_key(line,'fin_rstidx'):
                 f_default = {'path':'', 'dtype':DTYPE_INT4, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 cfg['fin_rstidx'] = read_value_file(line, iLine, f_default)
@@ -996,7 +1005,7 @@ def read_cfg(f_set):
             elif is_key(line, 'nij'):
                 cfg['nij'] = read_value_int(line, iLine)
             elif is_key(line, 'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
             elif is_key(line, 'f_lon_vertex'):
                 f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 cfg['f_lon_vertex'] = read_value_file(line, iLine, f_default)
@@ -1018,7 +1027,7 @@ def read_cfg(f_set):
                 cfg['f_z_vertex'] = read_value_file(line, iLine, f_default)
                 cfg['f_z_vertex']['path'] = os.path.join(directory, cfg['f_z_vertex']['path'])
             elif is_key(line, 'coord_unit'):
-                cfg['coord_unit'] = read_value_char(line, iLine)
+                cfg['coord_unit'] = read_value_str(line, iLine)
             elif is_key(line, 'coord_miss'):
                 coord_miss = read_value_float(line, iLine)
             elif is_key(line, 'f_arctyp'):
@@ -1027,7 +1036,7 @@ def read_cfg(f_set):
                 f_arctyp['path'] = os.path.join(directory, f_arctyp['path'])
                 cfg['f_arctyp'] = f_arctyp
             elif is_key(line, 'arc_parallel'):
-                cfg['arc_parallel'] = read_value_logical(line, iLine)
+                cfg['arc_parallel'] = read_value_bool(line, iLine)
             elif is_key(line, 'fin_grdidx'):
                 continue
             elif is_key(line, 'fin_grdara'):
@@ -1128,16 +1137,18 @@ def read_cfg(f_set):
             if len(line) == 0: continue
             if line[0] == '#': continue
 
+            # Each figure starts with "mesh"
             if is_key(line, 'mesh'):
-                mesh = read_value_char(line, iLine)
+                mesh = read_value_str(line, iLine)
                 if mesh not in [MESH__SOURCE, MESH__TARGET]:
                     raise Exception(f'Invalid value in $mesh: {mesh} @ line {iLine+1}')
                 lst_cfg.append(cfg_each_init.copy())
                 lst_cfg[-1]['mesh'] = mesh
 
+            # Unsucceeded variables
             elif is_key(line, 'path_fig'):
                 is_default = False
-                path = remove_quotes(read_value_char(line, iLine))
+                path = read_value_path(line, iLine)
                 if path != "":
                     path = os.path.join(directory, path)
                 lst_cfg[-1]['path'] = path
@@ -1150,6 +1161,7 @@ def read_cfg(f_set):
                 if not os.path.isfile(f_val['path']):
                     raise Exception(f'File not found: {f_val["path"]} @ line {iLine+1}')
 
+            # Succeeded variables
             elif is_key(line, 'figsize'):
                 val = read_value_tuple_int(line, iLine)
                 put_value('figsize', val, cfg_default, lst_cfg)
@@ -1167,18 +1179,18 @@ def read_cfg(f_set):
                 put_value('linewidth_fill', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'edgecolor'):
-                val = read_value_char(line, iLine)
+                val = read_value_str(line, iLine)
                 put_value('edgecolor', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'cmap'):
-                val = read_value_char(line, iLine)
+                val = read_value_str(line, iLine)
                 if val not in plt.colormaps() and val != 'none':
                     raise Exception(f'Invalid name of colormap: {val} @ line {iLine+1}\n'\
                                     f'Valid values: {plt.colormaps()}')
                 put_value('cmap', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'color_miss'):
-                val = read_value_char(line, iLine)
+                val = read_value_str(line, iLine)
                 put_value('color_miss', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'vmin'):
@@ -1194,14 +1206,14 @@ def read_cfg(f_set):
                 put_value('val_miss', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'title'):
-                val = read_value_char(line, iLine)
+                val = read_value_str(line, iLine)
                 put_value('title', val, cfg_default, lst_cfg)
 
             elif is_key(line, 'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
 
             elif is_key(line, 'show'):
-                val = read_value_char(line, iLine) == 'True'
+                val = read_value_bool(line, iLine)
                 put_value('show', val, cfg_default, lst_cfg)
 
             else:

@@ -581,8 +581,7 @@ subroutine echo(cd, msg, opt)
     tf_stopErr = get_tf(val_stopErr, set%stopErr(depth))
 
     if( tf_echoErr )then
-      !tf_echoPrc = get_tf(val_echoPrc, set%echoPrc(depth))
-      tf_echoPrc = get_tf(LTRUE      , set%echoPrc(depth))
+      tf_echoPrc = get_tf(val_echoPrc, LTRUE)
       tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
 
       if( indent == INDENT_MISS )then
