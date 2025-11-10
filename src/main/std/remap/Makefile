@@ -18,7 +18,7 @@ TARGET = main
 TARGETLIB = remap.a
 BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/remap.exe
-PY = $(BINDIR)/remap_mkfig.py
+PY = $(BINDIR)/mkfig_remap.py
 
 OBJ_F = \
 def_type.o\
@@ -51,5 +51,5 @@ install:
 
 .PHONY: clean
 clean:
-	$(RM) $(RMFLAGS) *.o *.mod *.a core *~ *trace temp* $(TARGET) $(PY)
+	$(RM) $(RMFLAGS) *.o *.mod *.a core *~ *trace temp* $(TARGET)
 
