@@ -97,29 +97,33 @@
     "make_verification_data": false
   },
   "remappingTables": {
-    "IO_bnd_to_MATSIRO": {
+    "IO_bnd_to_MAT": {
       "sourceTables": "IO_MATSIRO_bnd_simple_{landType}_to_MATSIRO_bnd_simple_{landType}",
       "landTypes": ["river", "noriv"]
     },
-    "IO_metnc_to_MATSIRO": {
+    "IO_metnc_to_MAT": {
       "sourceTables": "IO_metnc_to_MATSIRO_{landType}",
       "landTypes": ["river", "noriv"]
     },
-    "IO_met_to_MATSIRO": {
+    "IO_met_to_MAT": {
       "sourceTables": "IO_met_to_MATSIRO_{landType}",
       "landTypes": ["river", "noriv"]
     },
-    "MATSIRO_to_CMF": {
+    "MAT_to_CMF": {
       "sourceTables": "MATSIRO_simple_{landType}_to_CMF_simple_{landType}",
       "landTypes": ["river"]
     },
-    "MATSIRO_to_IO_matrow": {
+    "MAT_to_IO_matrow": {
       "sourceTables": "MATSIRO_simple_{landType}_to_IO_MATSIRO_row_{landType}",
       "landTypes": ["river", "noriv"]
     },
-    "MATSIRO_to_IO_latlon": {
+    "MAT_to_IO_latlon": {
       "sourceTables": "MATSIRO_{landType}_to_IO_latlon",
       "landTypes": ["river", "noriv"]
+    },
+    "CMF_to_MAT": {
+      "sourceTables": "CMF_simple_{landType}_to_MATSIRO_simple_{landType}",
+      "landTypes": ["river"]
     },
     "CMF_to_IO_cmfrow": {
       "sourceTables": "CMF_simple_{landType}_to_IO_CMF_row_{landType}",
@@ -151,9 +155,11 @@
     "MATSIRO_{landType}_to_IO_latlon": {
       "landTypes": ["river", "noriv"]
     },
+    "CMF_simple_{landType}_to_MATSIRO_simple_{landType}": {
+      "landTypes": ["river"]
+    },
     "CMF_simple_{landType}_to_IO_CMF_row_{landType}": {
-      "landTypes": ["river"],
-      "use_tgt_grdara": true
+      "landTypes": ["river"]
     },
     "CMF_{landType}_to_IO_latlon": {
       "landTypes": ["river"]
