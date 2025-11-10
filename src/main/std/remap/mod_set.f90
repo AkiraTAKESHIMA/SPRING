@@ -1416,6 +1416,7 @@ subroutine read_settings_remapping(rt, s, t)
   call set_keynum('fin_grdval' , 0, -1)
   call set_keynum('fout_grdval', 0, -1)
 
+  call set_keynum('length_rt', 0, 1)
   call set_keynum('fin_rt_sidx', 0, 1)
   call set_keynum('fin_rt_tidx', 0, 1)
   call set_keynum('fin_rt_area', 0, 1)
@@ -1524,7 +1525,7 @@ subroutine read_settings_remapping(rt, s, t)
     case( 'dir' )
       call read_value(dir, is_path=.true.)
     !-----------------------------------------------------------
-    !
+    ! Grid value
     case( 'fin_grdval' )
       call add(sc%f_grid_in%nFiles_val)
       call read_value(sc%f_grid_in%val(sc%f_grid_in%nFiles_val), dir)
@@ -1532,7 +1533,9 @@ subroutine read_settings_remapping(rt, s, t)
       call add(tc%f_grid_out%nfiles_val)
       call read_value(tc%f_grid_out%val(tc%f_grid_out%nFiles_val), dir)
     !-----------------------------------------------------------
-    !
+    ! Input remapping table
+    case( 'length_rt' )
+      call read_value(rtm%nij)
     case( 'fin_rt_sidx' )
       call read_value(rtm%f%sidx, dir)
     case( 'fin_rt_tidx' )
@@ -1542,7 +1545,7 @@ subroutine read_settings_remapping(rt, s, t)
     case( 'fin_rt_coef' )
       call read_value(rtm%f%coef, dir)
     !-----------------------------------------------------------
-    !
+    ! Output remapping table
     case( 'fout_rt_sidx' )
       call read_value(rtm%f%sidx, dir)
     case( 'fout_rt_tidx' )
@@ -1552,7 +1555,7 @@ subroutine read_settings_remapping(rt, s, t)
     case( 'fout_rt_coef' )
       call read_value(rtm%f%coef, dir)
     !-----------------------------------------------------------
-    !
+    ! Options for remapping table
     case( 'mesh_coef' )
       call read_value(rtm%mesh_coef, is_keyword=.true.)
 
@@ -1581,7 +1584,7 @@ subroutine read_settings_remapping(rt, s, t)
       call read_value(rtm%opt_coef%sum_error_excess)
       rtm%opt_coef%is_sum_error_excess_enabled = .true.
     !-----------------------------------------------------------
-    !
+    ! Verification data
     case( 'mesh_vrf' )
       call read_value(mesh_vrf, is_keyword=.true.)
       selectcase( mesh_vrf )
@@ -2024,35 +2027,44 @@ subroutine check_paths(s, t, rt, opt_sys)
   !-------------------------------------------------------------
   ! Check old output files
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking old output files')
+  selectcase( rt%status )
+  case( RT_STATUS__MAKE )
+    call echo(code%ent, 'Checking old output files')
 
-  call set_opt_old_files(opt_sys%old_files)
+    call set_opt_old_files(opt_sys%old_files)
 
-  rtm => rt%main
+    rtm => rt%main
 
-  call handle_old_file(rtm%f%sidx)
-  call handle_old_file(rtm%f%tidx)
-  call handle_old_file(rtm%f%area)
-  call handle_old_file(rtm%f%coef)
+    call handle_old_file(rtm%f%sidx)
+    call handle_old_file(rtm%f%tidx)
+    call handle_old_file(rtm%f%area)
+    call handle_old_file(rtm%f%coef)
 
-  do iGs = 1, 2
-    call select_rt_vrf(iGs, rt, rtv)
+    do iGs = 1, 2
+      call select_rt_vrf(iGs, rt, rtv)
 
-    call handle_old_file(rtv%f%out_grdidx)
-    call handle_old_file(rtv%f%out_grdara_true)
-    call handle_old_file(rtv%f%out_grdara_rt)
-    call handle_old_file(rtv%f%out_rerr_grdara)
-    call handle_old_file(rtv%f%out_grdnum)
-    call handle_old_file(rtv%f%out_iarea_sum)
-    call handle_old_file(rtv%f%out_iratio_sum)
-  enddo  ! iGs/
+      call handle_old_file(rtv%f%out_grdidx)
+      call handle_old_file(rtv%f%out_grdara_true)
+      call handle_old_file(rtv%f%out_grdara_rt)
+      call handle_old_file(rtv%f%out_rerr_grdara)
+      call handle_old_file(rtv%f%out_grdnum)
+      call handle_old_file(rtv%f%out_iarea_sum)
+      call handle_old_file(rtv%f%out_iratio_sum)
+    enddo  ! iGs/
 
-  fg_out => t%cmn%f_grid_out
-  do iFile = 1, fg_out%nFiles_val
-    call handle_old_file(fg_out%val(iFile))
-  enddo
+    fg_out => t%cmn%f_grid_out
+    do iFile = 1, fg_out%nFiles_val
+      call handle_old_file(fg_out%val(iFile))
+    enddo
 
-  call echo(code%ext)
+    call echo(code%ext)
+  case( RT_STATUS__READ )
+    continue
+  case( RT_STATUS__UNDEF, &
+        RT_STATUS__NONE )
+    call eerr(str(msg_unexpected_condition())//&
+            '\n  rt%status == RT_STATUS__UNDEF .or. rt%status == RT_STATUS__NONE')
+  endselect
   !-------------------------------------------------------------
   ! Prep. output directories and files
   !-------------------------------------------------------------

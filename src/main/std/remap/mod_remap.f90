@@ -186,7 +186,7 @@ subroutine set_grdidx(a)
   integer(8) :: ih, iv
   integer(8) :: ij
 
-  call echo(code%bgn, 'set_grdidx')
+  call echo(code%bgn, 'set_grdidx (mesh '//str(a%nam)//')')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -253,6 +253,7 @@ subroutine set_grdidx(a)
 
     f => afg%idx
     if( f%path == '' )then
+      call edbg('Setting grdidx')
       do ij = 1_8, ap%nij
         ag%idx(ij) = ij
       enddo
