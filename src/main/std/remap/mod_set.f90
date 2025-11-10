@@ -944,7 +944,7 @@ subroutine read_settings_gs_raster(a)
          ar%xi, ar%xf, ar%yi, ar%yf,             & ! out
          ar%nh, ar%hi, ar%hf, ar%nv, ar%vi, ar%vf) ! out
   call set_bounds_file_grid_in(fg_in)
-  call set_bounds_file_grid_out(fg_out, ar%nx, ar%ny)
+  call set_bounds_file_grid_out(fg_out, fg_in%nx, fg_in%ny)
 
   call set_gs_debug(ar%debug, ar%idx_debug, ar%idx_miss, keynum('idx_debug')==1)
 

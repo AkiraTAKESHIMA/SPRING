@@ -31,13 +31,13 @@ ENDIAN_LITTLE_SHORT = 'little'
 ENDIAN_BIG_LONG     = 'big_endian'
 ENDIAN_BIG_SHORT    = 'big'
 
-GS_LATLON  = 'latlon'
-GS_RASTER  = 'raster'
-GS_POLYGON = 'polygon'
+MESHTYPE__LATLON  = 'latlon'
+MESHTYPE__RASTER  = 'raster'
+MESHTYPE__POLYGON = 'polygon'
 
-GRID_SOURCE = 'source'
-GRID_TARGET = 'target'
-GRID_NONE   = ''
+MESH__SOURCE = 'source'
+MESH__TARGET = 'target'
+MESH__NONE   = ''
 
 UNIT_DEGREE = 'degree'
 UNIT_RADIAN = 'radian'
@@ -120,11 +120,9 @@ def draw_latlon(lon, lat, val, is_south_to_north, cfg):
         ax = fig.add_subplot(111)
         xticks = np.arange(-180,181,30)
         yticks = np.arange(-90,91,30)
-        ax.axis([-180,180,-90,90])
-        ax.set_xticks(xticks)
-        ax.set_xticklabels(xticks)
-        ax.set_yticks(yticks)
-        ax.set_yticklabels(yticks)
+        ax.axis([-180, 180, -90, 90])
+        ax.set_xticks(xticks, xticks)
+        ax.set_yticks(yticks, yticks)
         ax.set_aspect('equal')
         ax.set_title('(min,max): ({:9.2e},{:9.2e})'.format(np.nanmin(val), np.nanmax(val)))
 
@@ -148,8 +146,7 @@ def draw_latlon(lon, lat, val, is_south_to_north, cfg):
                           shrink=0.9, orientation='horizontal')
 
     else:
-        print('*** ERROR *** Invalid value in $cfg[\'mode\']: {}'.format(cfg['mode']))
-        quit()
+        raise Exception('Invalid value in $cfg["mode"]: {cfg["mode"]}')
 
     # Set the title
     if cfg['title'] != '':
@@ -184,12 +181,13 @@ def draw_raster(west, east, south, north, is_south_to_north,
     ax = fig.add_subplot(111)
     xticks = np.arange(-180,181,30)
     yticks = np.arange(-90,91,30)
-    ax.axis([west,east,south,north])
+    ax.axis([west, east, south, north])
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticks)
     ax.set_yticks(yticks)
     ax.set_yticklabels(yticks)
     ax.set_aspect('equal')
+    ax.set_title('(min,max): ({:9.2e},{:9.2e})'.format(np.nanmin(val), np.nanmax(val)))
 
     if is_south_to_north:
         ydir = -1
@@ -211,7 +209,7 @@ def draw_raster(west, east, south, north, is_south_to_north,
 
     # Set the title
     if cfg['title'] != '':
-      ax.set_title(cfg['title'])
+        ax.set_title(cfg['title'])
 
     # Save the figure
     if cfg['path'] != '':
@@ -279,7 +277,7 @@ def draw_polygon(lon, lat, coord_miss, val, cfg):
         fig = plt.figure(figsize=cfg['figsize'])
         ax = fig.add_subplot(111)
 
-        # Plot grids
+        # Plot grid values
         for ic in range(256):
             ax.fill(lon_plt[ic], lat_plt[ic],
                     facecolor=cmap(ic), 
@@ -301,7 +299,7 @@ def draw_polygon(lon, lat, coord_miss, val, cfg):
         fig = plt.figure(figsize=cfg['figsize'])
         ax = fig.add_subplot(111)
 
-        # Plot grids
+        # Plot grid values
         for ic in range(256):
             ax.fill(lon_plt[ic], lat_plt[ic], facecolor=cmap(ic), 
                     edgecolor=cmap(ic), linewidth=cfg['linewidth_fill'])
@@ -321,7 +319,7 @@ def draw_polygon(lon, lat, coord_miss, val, cfg):
     elif cfg['linewidth'] != 0 and cmap is None:
         fig, ax = plt.subplots()
 
-        # Draw grids
+        # Draw grid lines
         for ic in range(257):
             ax.plot(lon_plt[ic], lat_plt[ic], 
                     linewidth=cfg['linewidth'], color=cfg['edgecolor'])
@@ -329,12 +327,11 @@ def draw_polygon(lon, lat, coord_miss, val, cfg):
     # Modify region, aspect and labels
     xticks = np.arange(-180,181,30)
     yticks = np.arange(-90,91,30)
-    ax.axis([-180,180,-90,90])
-    ax.set_xticks(xticks)
-    ax.set_xticklabels(xticks)
-    ax.set_yticks(yticks)
-    ax.set_yticklabels(yticks)
+    ax.axis([-180, 180, -90, 90])
+    ax.set_xticks(xticks, xticks)
+    ax.set_yticks(yticks, yticks)
     ax.set_aspect('equal')
+    ax.set_title('(min,max): ({:9.2e},{:9.2e})'.format(np.nanmin(val), np.nanmax(val)))
 
     # Set the title
     if cfg['title'] != '':
@@ -442,12 +439,7 @@ def get_coords_polygon_2(lon, lat, coord_miss):
 
     for i in range(len(lon_add)):
         if lon_add[i] == coord_miss:
-            print('*** ERROR *** coord_miss was found')
-            print(np.array(lon)*r2d)
-            print(np.array(lat)*r2d)
-            print(lon_add*r2d)
-            print(lat_add*r2d)
-            quit()
+            raise Exception('coord_miss was found.')
 
     return lon_add, lat_add
 
@@ -508,7 +500,7 @@ def read_coord_polygon(f_lon, f_lat, f_x, f_y, f_z, pmax, ijmax,
         elif coord_unit == UNIT_RADIAN:
             pass
         else:
-            print('*** ERROR *** Invalid value in "coord_unit": {}'.format(coord_unit))
+            raise Exception(f'Invalid value in $coord_unit: {coord_unit}')
             quit()
 
     else:
@@ -596,31 +588,31 @@ def mkdir(path):
 
 def read_cfg(f_set):
     FLAG_NONE = 0
-    FLAG_GS_SEND = 1
-    FLAG_GS_RECV = 2
+    FLAG_MESH_SEND = 1
+    FLAG_MESH_RECV = 2
     FLAG_RMP = 3
     FLAG_OPT = 4
     FLAG_FIG = 5
 
-    BLOCK_NAME_GS_LATLON  = 'grid_system_latlon'
-    BLOCK_NAME_GS_RASTER  = 'grid_system_raster'
-    BLOCK_NAME_GS_POLYGON = 'grid_system_polygon'
-    BLOCK_NAME_REGRID     = 'remapping'
-    BLOCK_NAME_OPT        = 'options'
-    BLOCK_NAME_FIG        = 'figures'
-    BLOCK_END             = 'end'
+    BLOCK_NAME_MESH_LATLON  = 'mesh_latlon'
+    BLOCK_NAME_MESH_RASTER  = 'mesh_raster'
+    BLOCK_NAME_MESH_POLYGON = 'mesh_polygon'
+    BLOCK_NAME_REMAP        = 'remapping'
+    BLOCK_NAME_OPT          = 'options'
+    BLOCK_NAME_FIG          = 'figures'
+    BLOCK_END               = 'end'
 
     flag = FLAG_NONE
-    nBlocks_gs = 0
+    nBlocks_mesh = 0
 
-    iLines_gs_source = [0,0]
-    iLines_gs_target = [0,0]
+    iLines_mesh_src = [0,0]
+    iLines_mesh_tgt = [0,0]
     iLines_rmp = [0,0]
     iLines_opt = [0,0]
     iLines_fig = [0,0]
 
-    gs_source = ''
-    gs_target = ''
+    mesh_source = ''
+    mesh_target = ''
 
     lines = open(f_set,'r').readlines()
     nLines = len(lines)
@@ -632,61 +624,56 @@ def read_cfg(f_set):
         if flag == FLAG_NONE:
             if line[0] == '[' and line[-1] == ']':
                 block_name = line[1:-1].strip()
-                if block_name in [BLOCK_NAME_GS_LATLON,
-                                  BLOCK_NAME_GS_RASTER,
-                                  BLOCK_NAME_GS_POLYGON]:
-                    if nBlocks_gs == 0:
-                        flag = FLAG_GS_SEND
-                        iLines_gs_source[0] = iLine + 1
-                        if block_name == BLOCK_NAME_GS_LATLON:
-                            gs_source = GS_LATLON
-                        elif block_name == BLOCK_NAME_GS_RASTER:
-                            gs_source = GS_RASTER
-                        elif block_name == BLOCK_NAME_GS_POLYGON:
-                            gs_source = GS_POLYGON
-                    elif nBlocks_gs == 1:
-                        flag = FLAG_GS_RECV
-                        iLines_gs_target[0] = iLine + 1
-                        if block_name == BLOCK_NAME_GS_LATLON:
-                            gs_target = GS_LATLON
-                        elif block_name == BLOCK_NAME_GS_RASTER:
-                            gs_target = GS_RASTER
-                        elif block_name == BLOCK_NAME_GS_POLYGON:
-                            gs_target = GS_POLYGON
+                if block_name in [BLOCK_NAME_MESH_LATLON,
+                                  BLOCK_NAME_MESH_RASTER,
+                                  BLOCK_NAME_MESH_POLYGON]:
+                    if nBlocks_mesh == 0:
+                        flag = FLAG_MESH_SEND
+                        iLines_mesh_src[0] = iLine + 1
+                        if block_name == BLOCK_NAME_MESH_LATLON:
+                            mesh_source = MESHTYPE__LATLON
+                        elif block_name == BLOCK_NAME_MESH_RASTER:
+                            mesh_source = MESHTYPE__RASTER
+                        elif block_name == BLOCK_NAME_MESH_POLYGON:
+                            mesh_source = MESHTYPE__POLYGON
+                    elif nBlocks_mesh == 1:
+                        flag = FLAG_MESH_RECV
+                        iLines_mesh_tgt[0] = iLine + 1
+                        if block_name == BLOCK_NAME_MESH_LATLON:
+                            mesh_target = MESHTYPE__LATLON
+                        elif block_name == BLOCK_NAME_MESH_RASTER:
+                            mesh_target = MESHTYPE__RASTER
+                        elif block_name == BLOCK_NAME_MESH_POLYGON:
+                            mesh_target = MESHTYPE__POLYGON
                     else:
-                        print('*** ERROR *** More than 2 blocks of grid system was found')
-                        quit()
-                    nBlocks_gs += 1
+                        raise Exception('More than 2 blocks of mesh was found')
+                    nBlocks_mesh += 1
                 elif block_name == BLOCK_NAME_OPT:
                     flag = FLAG_OPT
                     iLines_opt[0] = iLine + 1
                 elif block_name == BLOCK_NAME_FIG:
                     flag = FLAG_FIG
                     iLines_fig[0] = iLine + 1
-                elif block_name == BLOCK_NAME_REGRID:
+                elif block_name == BLOCK_NAME_REMAP:
                     flag = FLAG_RMP
                     iLines_rmp[0] = iLine + 1
                 else:
-                    print('*** ERROR *** Invalid block name: "{}" @ line {}'\
-                          .format(block_name,iLine+1))
-                    quit()
+                    raise Exception(f'Invalid block name: "{block_name}" @ line {iLine+1}')
             else:
                 is_ok = False
                 if 'path_report' in line:
                     if line.index('path_report') == 0:
                         is_ok = True
                 if not is_ok:
-                    print('*** ERROR *** Invalid format of line: "{}" @ line {}'\
-                          .format(block_name,iLine+1))
-                    quit()
+                    raise Exception(f'Invalid format of line: "{block_name}" @ line {iLine+1}')
         else:
             if line[0] == '[' and line[-1] == ']':
                 block_name = line[1:-1].strip()
                 if block_name == BLOCK_END:
-                    if flag == FLAG_GS_SEND:
-                        iLines_gs_source[1] = iLine - 1
-                    elif flag == FLAG_GS_RECV:
-                        iLines_gs_target[1] = iLine - 1
+                    if flag == FLAG_MESH_SEND:
+                        iLines_mesh_src[1] = iLine - 1
+                    elif flag == FLAG_MESH_RECV:
+                        iLines_mesh_tgt[1] = iLine - 1
                     elif flag == FLAG_RMP:
                         iLines_rmp[1] = iLine - 1
                     elif flag == FLAG_OPT:
@@ -694,18 +681,15 @@ def read_cfg(f_set):
                     elif flag == FLAG_FIG:
                         iLines_fig[1] = iLine - 1
                     else:
-                        print('*** ERROR *** Unknown flag: {}'.format(flag))
-                        quit()
+                        raise Exception(f'Unknown flag: {flag}')
                     flag = FLAG_NONE
                 else:
-                    print('*** ERROR *** Invalid block name: "{}" @ line {}'\
-                          .format(block_name,iLine+1))
-                    quit()
+                    raise Exception('Invalid block name: "{block_name}" @ line {iLine+1}')
             else:
                 continue
 
-    print('Block gs_source: {} ~ {}'.format(iLines_gs_source[0]+1, iLines_gs_source[1]+1))
-    print('      gs_target: {} ~ {}'.format(iLines_gs_target[0]+1, iLines_gs_target[1]+1))
+    print('Block mesh_source: {} ~ {}'.format(iLines_mesh_src[0]+1, iLines_mesh_src[1]+1))
+    print('      mesh_target: {} ~ {}'.format(iLines_mesh_tgt[0]+1, iLines_mesh_tgt[1]+1))
     print('      remapping: {} ~ {}'.format(iLines_rmp[0]+1, iLines_rmp[1]+1))
     print('      opt      : {} ~ {}'.format(iLines_opt[0]+1, iLines_opt[1]+1))
     print('      fig      : {} ~ {}'.format(iLines_fig[0]+1, iLines_fig[1]+1))
@@ -725,10 +709,11 @@ def read_cfg(f_set):
         return res
 
     def remove_quotes(comp):
+        comp = comp.strip()
         if comp[0] == comp[-1] == "'" or comp[0] == comp[-1] == '"':
             res = comp[1:-1]
         else:
-            res = comp.strip()
+            res = comp
         return res
 
     def read_value_int(line, iLine):
@@ -737,18 +722,25 @@ def read_cfg(f_set):
     def read_value_float(line, iLine):
         return float(line[line.index(':')+1:].replace('d','e'))
 
-    def read_value_logical(line, iLine):
-        val = line[line.index(':')+1:].strip()
-        if val == '.true.':
+    def read_value_bool(line, iLine):
+        val = line[line.index(':')+1:].strip().lower()
+        if val in ['.true.', 'true']:
             return True
-        elif val == '.false.':
+        elif val in ['.false.', 'false']:
             return False
         else:
-            print('*** ERROR *** Invalid value @ line {}: {}'.format(iLine+1, line))
-            quit()
+            raise Exception(f'Invalid value @ line {iLine+1}: {line}')
 
-    def read_value_char(line, iLine):
-        return remove_quotes(line[line.index(':')+1:])
+    def read_value_str(line, iLine):
+        line = line.strip()
+        return remove_quotes(line.strip()[line.strip().index(':')+1:])
+
+    def read_value_path(line, iLine):
+        val = line[line.index(':')+1:].strip()
+        if not (val[0] == val[-1] == '"' or val[0] == val[-1] == "'"):
+            raise Exception(f'Invalid format @ line {iLine+1}: {line}\n'
+                            f'Path must be enclosed in single quotes or double quotes.')
+        return val[1:-1]
 
     def read_value_file(line, iLine, f_default):
         res = f_default.copy()
@@ -773,7 +765,7 @@ def read_cfg(f_set):
                 elif iComp == 3:
                     res['endian'] = remove_quotes(comp)
                 else:
-                    print('*** ERROR *** Too many components in line {}'.format(iLine+1))
+                    raise Exception(f'Too many components in line {iLine+1}')
                     quit()
 
         return res
@@ -782,9 +774,9 @@ def read_cfg(f_set):
         return tuple([int(i) for i in line[line.index(':')+1:].split(',')])
 
 
-    def read_cfg_gs_latlon(iLines, grid):
+    def read_cfg_mesh_latlon(iLines, mesh):
         cfg = {
-          'gs_type': GS_LATLON,
+          'type': MESHTYPE__LATLON,
           'nx': None,
           'ny': None,
           'west': None,
@@ -818,9 +810,9 @@ def read_cfg(f_set):
             elif is_key(line, 'north'):
                 cfg['north'] = read_value_float(line, iLine)
             elif is_key(line,'is_south_to_north'):
-                cfg['is_south_to_north'] = read_value_logical(line, iLine)
+                cfg['is_south_to_north'] = read_value_bool(line, iLine)
             elif is_key(line,'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
             elif is_key(line,'f_lon_bound'):
                 f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 cfg['f_lon_bound'] = read_value_file(line, iLine, f_default)
@@ -862,18 +854,17 @@ def read_cfg(f_set):
             elif is_key(line,'lonlat_miss'):
                 continue
             else:
-                print('*** ERROR *** Invalid syntax @ line {}: {}'.format(iLine+1,line))
-                quit()
+                raise Exception(f'Invalid syntax @ line {iLine+1}: {lien}')
 
-        print('[grid_{}]'.format(grid))
+        print(f'[mesh_{mesh}]')
         for key in cfg.keys():
-            print('  {}: {}'.format(key, cfg[key]))
+            print(f'  {key}: {cfg[key]}')
 
         return cfg
 
-    def read_cfg_gs_raster(iLines, grid):
+    def read_cfg_mesh_raster(iLines, mesh):
         cfg = {
-          'gs_type': GS_RASTER, 
+          'type': MESHTYPE__RASTER, 
           'nx': None, 
           'ny': None,
           'xi': None, 
@@ -922,9 +913,9 @@ def read_cfg(f_set):
             elif is_key(line,'north'):
                 cfg['north'] = read_value_float(line, iLine)
             elif is_key(line,'is_south_to_north'):
-                cfg['is_south_to_north'] = read_value_logical(line, iLine)
+                cfg['is_south_to_north'] = read_value_bool(line, iLine)
             elif is_key(line,'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
             elif is_key(line,'fin_rstidx'):
                 f_default = {'path':'', 'dtype':DTYPE_INT4, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 cfg['fin_rstidx'] = read_value_file(line, iLine, f_default)
@@ -974,19 +965,18 @@ def read_cfg(f_set):
             elif is_key(line,'lonlat_miss'):
                 continue
             else:
-                print('*** ERROR *** Invalid syntax @ line {}: {}'.format(iLine+1,line))
-                quit()
+                raise Exception(f'Invalid syntax @ line {iLine+1}: {lien}')
 
-        print('[grid_{}]'.format(grid))
+        print(f'[mesh_{mesh}]'.format(mesh))
         for key in cfg.keys():
-            print('  {}: {}'.format(key, cfg[key]))
+            print(f'  {key}: {cfg[key]}')
 
         return cfg
 
 
-    def read_cfg_gs_polygon(iLines, grid):
+    def read_cfg_mesh_polygon(iLines, mesh):
         cfg = {
-          'gs_type': GS_POLYGON,
+          'type': MESHTYPE__POLYGON,
           'np': None,
           'nij': None,
           'f_lon_vertex': None,
@@ -1015,7 +1005,7 @@ def read_cfg(f_set):
             elif is_key(line, 'nij'):
                 cfg['nij'] = read_value_int(line, iLine)
             elif is_key(line, 'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
+                directory = read_value_path(line, iLine)
             elif is_key(line, 'f_lon_vertex'):
                 f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 cfg['f_lon_vertex'] = read_value_file(line, iLine, f_default)
@@ -1037,7 +1027,7 @@ def read_cfg(f_set):
                 cfg['f_z_vertex'] = read_value_file(line, iLine, f_default)
                 cfg['f_z_vertex']['path'] = os.path.join(directory, cfg['f_z_vertex']['path'])
             elif is_key(line, 'coord_unit'):
-                cfg['coord_unit'] = read_value_char(line, iLine)
+                cfg['coord_unit'] = read_value_str(line, iLine)
             elif is_key(line, 'coord_miss'):
                 coord_miss = read_value_float(line, iLine)
             elif is_key(line, 'f_arctyp'):
@@ -1046,7 +1036,7 @@ def read_cfg(f_set):
                 f_arctyp['path'] = os.path.join(directory, f_arctyp['path'])
                 cfg['f_arctyp'] = f_arctyp
             elif is_key(line, 'arc_parallel'):
-                cfg['arc_parallel'] = read_value_logical(line, iLine)
+                cfg['arc_parallel'] = read_value_bool(line, iLine)
             elif is_key(line, 'fin_grdidx'):
                 continue
             elif is_key(line, 'fin_grdara'):
@@ -1080,8 +1070,7 @@ def read_cfg(f_set):
             elif is_key(line, 'lonlat_miss'):
                 continue
             else:
-                print('*** ERROR *** Invalid syntax @ line {}: {}'.format(iLine+1,line))
-                quit()
+                raise Exception(f'Invalid syntax @ line {iLine+1}: {lien}')
 
         if coord_miss is not None:
             if cfg['f_lon_vertex'] is not None:
@@ -1089,20 +1078,19 @@ def read_cfg(f_set):
             elif cfg['f_x_vertex'] is not None:
                 cfg['coord_miss_c'] = coord_miss
             else:
-                print('*** ERROR *** Neither f_lon_vertex or f_x_vertex was specified.')
-                quit()
+                raise Exception('Neither f_lon_vertex or f_x_vertex was specified.')
 
-        print('[grid_{}]'.format(grid))
+        print(f'[mesh_{mesh}]')
         for key in cfg.keys():
-            print('  {}: {}'.format(key, cfg[key]))
+            print(f'  {key}: {cfg[key]}')
 
         return cfg
 
-    def put_value(key, val, cfg_default, list_cfg_each):
-        if len(list_cfg_each) == 0:
+    def put_value(key, val, cfg_default, lst_cfg):
+        if len(lst_cfg) == 0:
             cfg_default[key] = val
         else:
-            list_cfg_each[-1][key] = val
+            lst_cfg[-1][key] = val
 
     def read_cfg_fig(iLines):
         cfg_default = {
@@ -1122,6 +1110,9 @@ def read_cfg(f_set):
         }
 
         cfg_each_init = {
+          'mesh': None,
+          'path': None,
+          'f_val': None,
           'figsize': None,
           'dpi': None,
           'mode': None,
@@ -1134,14 +1125,11 @@ def read_cfg(f_set):
           'vmax': None,
           'val_miss': None,
           'title': None,
-          'path': None,
-          'grid': None,
-          'f_val': None,
           'show': None,
         }
 
         directory = ''
-        list_cfg_each = []
+        lst_cfg = []
         is_default = True
 
         for iLine in range(iLines[0], iLines[1]+1):
@@ -1149,161 +1137,155 @@ def read_cfg(f_set):
             if len(line) == 0: continue
             if line[0] == '#': continue
 
-            if is_key(line, 'figsize'):
-                val = read_value_tuple_int(line, iLine)
-                put_value('figsize', val, cfg_default, list_cfg_each)
+            # Each figure starts with "mesh"
+            if is_key(line, 'mesh'):
+                mesh = read_value_str(line, iLine)
+                if mesh not in [MESH__SOURCE, MESH__TARGET]:
+                    raise Exception(f'Invalid value in $mesh: {mesh} @ line {iLine+1}')
+                lst_cfg.append(cfg_each_init.copy())
+                lst_cfg[-1]['mesh'] = mesh
 
-            elif is_key(line, 'dpi'):
-                val = read_value_float(line, iLine)
-                put_value('dpi', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'linewidth'):
-                val = read_value_float(line, iLine)
-                put_value('linewidth', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'linewidth_fill'):
-                val = read_value_float(line, iLine)
-                put_value('linewidth_fill', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'edgecolor'):
-                val = read_value_char(line, iLine)
-                put_value('edgecolor', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'cmap'):
-                val = read_value_char(line, iLine)
-                if val not in plt.colormaps() and val != 'none':
-                    print('*** ERROR @ line {} *** Invalid name of colormap: {}'\
-                          .format(iLine+1, val))
-                    quit()
-                put_value('cmap', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'color_miss'):
-                val = read_value_char(line, iLine)
-                put_value('color_miss', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'vmin'):
-                val = read_value_float(line, iLine)
-                put_value('vmin', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'vmax'):
-                val = read_value_float(line, iLine)
-                put_value('vmax', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'val_miss'):
-                val = read_value_float(line, iLine)
-                put_value('val_miss', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'title'):
-                val = read_value_char(line, iLine)
-                put_value('title', val, cfg_default, list_cfg_each)
-
-            elif is_key(line, 'dir'):
-                directory = remove_quotes(read_value_char(line, iLine))
-
+            # Unsucceeded variables
             elif is_key(line, 'path_fig'):
                 is_default = False
-                path = remove_quotes(read_value_char(line, iLine))
+                path = read_value_path(line, iLine)
                 if path != "":
                     path = os.path.join(directory, path)
-                list_cfg_each.append(cfg_each_init.copy())
-                list_cfg_each[-1]['path'] = path
+                lst_cfg[-1]['path'] = path
 
-            elif is_key(line, 'grid'):
-                grid = read_value_char(line, iLine)
-                if grid not in [GRID_SOURCE, GRID_TARGET]:
-                    print('*** ERROR *** Invalid value in "grid" @ line {}: {}'\
-                          .format(iLine+1, grid))
-                    quit()
-                list_cfg_each[-1]['grid'] = grid
-
-            elif is_key(line, 'fin_grdval'): 
+            elif is_key(line, 'f_grdval'): 
                 f_default = {'path':'', 'dtype':DTYPE_DBLE, 'rec':1, 'endian':ENDIAN_LITTLE_SHORT}
                 f_val = read_value_file(line, iLine, f_default)
                 f_val['path'] = os.path.join(directory, f_val['path'])
-                list_cfg_each[-1]['f_val'] = f_val
+                lst_cfg[-1]['f_val'] = f_val
                 if not os.path.isfile(f_val['path']):
-                    print('*** ERROR @ line {} *** File not found: {}'\
-                          .format(iLine+1,f_val['path']))
+                    raise Exception(f'File not found: {f_val["path"]} @ line {iLine+1}')
+
+            # Succeeded variables
+            elif is_key(line, 'figsize'):
+                val = read_value_tuple_int(line, iLine)
+                put_value('figsize', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'dpi'):
+                val = read_value_float(line, iLine)
+                put_value('dpi', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'linewidth'):
+                val = read_value_float(line, iLine)
+                put_value('linewidth', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'linewidth_fill'):
+                val = read_value_float(line, iLine)
+                put_value('linewidth_fill', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'edgecolor'):
+                val = read_value_str(line, iLine)
+                put_value('edgecolor', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'cmap'):
+                val = read_value_str(line, iLine)
+                if val not in plt.colormaps() and val != 'none':
+                    raise Exception(f'Invalid name of colormap: {val} @ line {iLine+1}\n'\
+                                    f'Valid values: {plt.colormaps()}')
+                put_value('cmap', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'color_miss'):
+                val = read_value_str(line, iLine)
+                put_value('color_miss', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'vmin'):
+                val = read_value_float(line, iLine)
+                put_value('vmin', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'vmax'):
+                val = read_value_float(line, iLine)
+                put_value('vmax', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'val_miss'):
+                val = read_value_float(line, iLine)
+                put_value('val_miss', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'title'):
+                val = read_value_str(line, iLine)
+                put_value('title', val, cfg_default, lst_cfg)
+
+            elif is_key(line, 'dir'):
+                directory = read_value_path(line, iLine)
 
             elif is_key(line, 'show'):
-                val = read_value_char(line, iLine) == 'True'
-                put_value('show', val, cfg_default, list_cfg_each)
+                val = read_value_bool(line, iLine)
+                put_value('show', val, cfg_default, lst_cfg)
 
             else:
-                print('*** ERROR @ line {} *** Invalid syntax: {}'\
-                      .format(iLine+1,line))
-                quit()
+                raise Exception(f'Invalid syntax: {line} @ line {iLine+1}')
 
         print('[figures]')
         print('  (Default Settings)')
         for key in cfg_default.keys():
-            print('    {}: {}'.format(key, cfg_default[key]))
+            print(f'    {key}: {cfg_default[key]}')
 
-        for i, cfg_each in enumerate(list_cfg_each):
-            print('  (Figure {} / {})'.format(i+1,len(list_cfg_each)))
+        for i, cfg_each in enumerate(lst_cfg):
+            print(f'  (Figure {i+1} / {len(lst_cfg)})')
 
-            if cfg_each['grid'] is None:
-                print('*** ERROR *** "grid" was not specified')
-                quit()
+            if cfg_each['mesh'] is None:
+                raise Exception('"mesh" was not specified.')
 
             for key in cfg_each.keys():
                 if cfg_each[key] is None:
                     if key in cfg_default.keys():
                         cfg_each[key] = copy.copy(cfg_default[key])
                 else:
-                    print('    {}: {}'.format(key, cfg_each[key]))
+                    print(f'    {key}: {cfg_each[key]}')
 
-        return list_cfg_each
+        return lst_cfg
 
     cfg = {
-      'gs_source': None,
-      'gs_target': None,
-      'rmp'      : None,
-      'opt'      : None,
-      'fig'      : None,
+      'mesh_source': None,
+      'mesh_target': None,
+      'rmp'        : None,
+      'opt'        : None,
+      'fig'        : None,
     }
 
-    if gs_source == GS_LATLON:
-        cfg['gs_source'] = read_cfg_gs_latlon(iLines_gs_source, GRID_SOURCE)
-    elif gs_source == GS_RASTER:
-        cfg['gs_source'] = read_cfg_gs_raster(iLines_gs_source, GRID_SOURCE)
-    elif gs_source == GS_POLYGON:
-        cfg['gs_source'] = read_cfg_gs_polygon(iLines_gs_source, GRID_SOURCE)
-    elif gs_souce == '':
-        cfg['gs_source'] = {'gs_type': GRID_NONE}
+    if mesh_source == MESHTYPE__LATLON:
+        cfg['mesh_source'] = read_cfg_mesh_latlon(iLines_mesh_src, MESH__SOURCE)
+    elif mesh_source == MESHTYPE__RASTER:
+        cfg['mesh_source'] = read_cfg_mesh_raster(iLines_mesh_src, MESH__SOURCE)
+    elif mesh_source == MESHTYPE__POLYGON:
+        cfg['mesh_source'] = read_cfg_mesh_polygon(iLines_mesh_src, MESH__SOURCE)
+    elif mesh_souce == '':
+        cfg['mesh_source'] = {'type': MESH__NONE}
     else:
-        print('*** ERROR *** Invalid value in gs_target: {}'.format(gs_target))
-        quit()
+        raise Exception(f'Invalid value in $mesh_source: {mesh_source}')
 
-    if gs_target == GS_LATLON:
-        cfg['gs_target'] = read_cfg_gs_latlon(iLines_gs_target, GRID_TARGET)
-    elif gs_target == GS_RASTER:
-        cfg['gs_target'] = read_cfg_gs_raster(iLines_gs_target, GRID_TARGET)
-    elif gs_target == GS_POLYGON:
-        cfg['gs_target'] = read_cfg_gs_polygon(iLines_gs_target, GRID_TARGET)
-    elif gs_target == '':
-        cfg['gs_target'] = {'gs_type': GRID_NONE}
+    if mesh_target == MESHTYPE__LATLON:
+        cfg['mesh_target'] = read_cfg_mesh_latlon(iLines_mesh_tgt, MESH__TARGET)
+    elif mesh_target == MESHTYPE__RASTER:
+        cfg['mesh_target'] = read_cfg_mesh_raster(iLines_mesh_tgt, MESH__TARGET)
+    elif mesh_target == MESHTYPE__POLYGON:
+        cfg['mesh_target'] = read_cfg_mesh_polygon(iLines_mesh_tgt, MESH__TARGET)
+    elif mesh_target == '':
+        cfg['mesh_target'] = {'type': MESH__NONE}
     else:
-        print('*** ERROR *** Invalid value in gs_target: {}'.format(gs_target))
-        quit()
+        raise Exception(f'Invalid value in $mesh_target: {mesh_target}')
 
     cfg['fig'] = read_cfg_fig(iLines_fig)
 
     return cfg
 
 
-def set_vrange(cfg_fig_each, val):
-    if cfg_fig_each['vmin'] is None:
-        if cfg_fig_each['val_miss'] is None:
-            cfg_fig_each['vmin'] = val.min()
+def set_vrange(cfg, val):
+    if cfg['vmin'] is None:
+        if cfg['val_miss'] is None:
+            cfg['vmin'] = val.min()
         else:
-            cfg_fig_each['vmin'] = val[val != cfg_fig_each['val_miss']].min()
+            cfg['vmin'] = val[val != cfg['val_miss']].min()
 
-    if cfg_fig_each['vmax'] is None:
-        if cfg_fig_each['val_miss'] is None:
-            cfg_fig_each['vmax'] = val.max()
+    if cfg['vmax'] is None:
+        if cfg['val_miss'] is None:
+            cfg['vmax'] = val.max()
         else:
-            cfg_fig_each['vmax'] = val[val != cfg_fig_each['val_miss']].max()
+            cfg['vmax'] = val[val != cfg['val_miss']].max()
 
     return
 
@@ -1312,129 +1294,129 @@ def run():
     f_cfg = sys.argv[1]
     cfg = read_cfg(f_cfg)
 
-    cfg_gs_source = cfg['gs_source']
-    cfg_gs_target = cfg['gs_target']
-    cfg_fig       = cfg['fig']
+    cfg_mesh_src = cfg['mesh_source']
+    cfg_mesh_tgt = cfg['mesh_target']
+    cfg_fig      = cfg['fig']
 
     print('Plotting')
 
-    for i, cfg_fig_each in enumerate(cfg_fig):
+    for i, c1_fig in enumerate(cfg_fig):
         print('  (Figure {} / {})'.format(i+1, len(cfg_fig)))
 
         # LatLon
-        if (cfg_fig_each['grid'] == GRID_SOURCE and cfg_gs_source['gs_type'] == GS_LATLON) or \
-           (cfg_fig_each['grid'] == GRID_TARGET and cfg_gs_target['gs_type'] == GS_LATLON):
-            if cfg_fig_each['grid'] == GRID_SOURCE:
-                cfg_gs = cfg_gs_source
+        if (c1_fig['mesh'] == MESH__SOURCE and cfg_mesh_src['type'] == MESHTYPE__LATLON) or \
+           (c1_fig['mesh'] == MESH__TARGET and cfg_mesh_tgt['type'] == MESHTYPE__LATLON):
+            if c1_fig['mesh'] == MESH__SOURCE:
+                cfg_mesh = cfg_mesh_src
             else:
-                cfg_gs = cfg_gs_target
+                cfg_mesh = cfg_mesh_tgt
 
             lon, lat = read_coord_latlon(
-              cfg_gs['nx'], cfg_gs['ny'], 
-              cfg_gs['west'], cfg_gs['east'], cfg_gs['south'], cfg_gs['north'],
-              cfg_gs['f_lon_bound'], cfg_gs['f_lat_bound'],
-              cfg_gs['coord_unit'])
+              cfg_mesh['nx'], cfg_mesh['ny'], 
+              cfg_mesh['west'], cfg_mesh['east'], cfg_mesh['south'], cfg_mesh['north'],
+              cfg_mesh['f_lon_bound'], cfg_mesh['f_lat_bound'],
+              cfg_mesh['coord_unit'])
 
-            f_val = cfg_fig_each['f_val']
+            f_val = c1_fig['f_val']
             val = np.fromfile(f_val['path'],dtype=dict_dtype[f_val['dtype']])\
-                              .reshape(-1,cfg_gs['ny'],cfg_gs['nx'])[f_val['rec']-1]
+                              .reshape(-1,cfg_mesh['ny'],cfg_mesh['nx'])[f_val['rec']-1]
             if f_val['endian'] in [ENDIAN_BIG_LONG,ENDIAN_BIG_SHORT]: val = val.byteswap()
 
             print('    val min: {}, max: {}'.format(
-                  val[val != cfg_fig_each['val_miss']].min(),
-                  val[val != cfg_fig_each['val_miss']].max()))
+                  val[val != c1_fig['val_miss']].min(),
+                  val[val != c1_fig['val_miss']].max()))
 
-            set_vrange(cfg_fig_each, val)
-            print('    cmap: {cmap}, vmin: {vmin}, vmax: {vmax}'.format(**cfg_fig_each))
+            set_vrange(c1_fig, val)
+            print('    cmap: {cmap}, vmin: {vmin}, vmax: {vmax}'.format(**c1_fig))
 
-            print('    Drawing {}'.format(cfg_fig_each['path']))
-            draw_latlon(lon, lat, val, cfg_gs['is_south_to_north'], cfg_fig_each)
+            print('    Drawing {}'.format(c1_fig['path']))
+            draw_latlon(lon, lat, val, cfg_mesh['is_south_to_north'], c1_fig)
 
         # Raster
-        if (cfg_fig_each['grid'] == GRID_SOURCE and cfg_gs_source['gs_type'] == GS_RASTER) or \
-           (cfg_fig_each['grid'] == GRID_TARGET and cfg_gs_target['gs_type'] == GS_RASTER):
-            if cfg_fig_each['grid'] == GRID_SOURCE:
-                cfg_gs = cfg_gs_source
+        if (c1_fig['mesh'] == MESH__SOURCE and cfg_mesh_src['type'] == MESHTYPE__RASTER) or \
+           (c1_fig['mesh'] == MESH__TARGET and cfg_mesh_tgt['type'] == MESHTYPE__RASTER):
+            if c1_fig['mesh'] == MESH__SOURCE:
+                cfg_mesh = cfg_mesh_src
             else:
-                cfg_gs = cfg_gs_target
+                cfg_mesh = cfg_mesh_tgt
 
-            f = cfg_gs['fin_grdidx']
+            f = cfg_mesh['fin_grdidx']
             grdidx = np.fromfile(f['path'], dtype=dict_dtype[f['dtype']])\
-                                 .reshape(-1,cfg_gs['ncy'],cfg_gs['ncx'])[f['rec']-1].reshape(-1)
+                                 .reshape(-1,cfg_mesh['ncy'],cfg_mesh['ncx'])[f['rec']-1].reshape(-1)
             if f['endian'] in [ENDIAN_BIG_LONG,ENDIAN_BIG_SHORT]: grdidx = grdidx.byteswap()
 
-            if cfg_gs['idx_miss'] is None:
+            if cfg_mesh['idx_miss'] is None:
                 idxmin = grdidx.min()
                 idxmax = grdidx.max()
             else:
-                idxmin = grdidx[grdidx != cfg_gs['idx_miss']].min()
-                idxmax = grdidx[grdidx != cfg_gs['idx_miss']].max()
+                idxmin = grdidx[grdidx != cfg_mesh['idx_miss']].min()
+                idxmax = grdidx[grdidx != cfg_mesh['idx_miss']].max()
 
             idx_to_loc = np.ones(idxmax+1).astype(np.int64) * -1
-            if cfg_gs['idx_miss'] is None:
+            if cfg_mesh['idx_miss'] is None:
                 idx_to_loc[grdidx] = range(grdidx.size)
             else:
                 for loc in range(grdidx.size):
-                    if grdidx[loc] == cfg_gs['idx_miss']: continue
+                    if grdidx[loc] == cfg_mesh['idx_miss']: continue
                     idx_to_loc[grdidx[loc]] = loc
 
-            f = cfg_fig_each['f_val']
+            f = c1_fig['f_val']
             grdval = np.fromfile(f['path'], dtype=dict_dtype[f['dtype']])\
-                                 .reshape(-1,cfg_gs['ncy'],cfg_gs['ncx'])[f['rec']-1].reshape(-1)
+                                 .reshape(-1,cfg_mesh['ncy'],cfg_mesh['ncx'])[f['rec']-1].reshape(-1)
             if f['endian'] in [ENDIAN_BIG_LONG,ENDIAN_BIG_SHORT]: grdval = grdval.byteswap()
 
-            f = cfg_gs['fin_rstidx']
+            f = cfg_mesh['fin_rstidx']
             rstidx = np.fromfile(f['path'], dtype=dict_dtype[f['dtype']])\
-                                 .reshape(-1,cfg_gs['ny'],cfg_gs['nx'])[f['rec']-1]
+                                 .reshape(-1,cfg_mesh['ny'],cfg_mesh['nx'])[f['rec']-1]
             if f['endian'] in [ENDIAN_BIG_LONG,ENDIAN_BIG_SHORT]: rstidx = rstidx.byteswap()
             rstidx = rstidx.astype(np.int64)
 
-            if cfg_gs['idx_miss'] is None:
+            if cfg_mesh['idx_miss'] is None:
                 rstval = grdval[idx_to_loc[rstidx]]
             else:
-                rstval = np.ones((cfg_gs['ny'],cfg_gs['nx'])) * cfg_fig_each['val_miss']
-                rstval[rstidx != cfg_gs['idx_miss']] = grdval[idx_to_loc[rstidx[rstidx != cfg_gs['idx_miss']]]]
+                rstval = np.ones((cfg_mesh['ny'],cfg_mesh['nx'])) * c1_fig['val_miss']
+                rstval[rstidx != cfg_mesh['idx_miss']] = grdval[idx_to_loc[rstidx[rstidx != cfg_mesh['idx_miss']]]]
 
             print('    val min: {}, max: {}'.format(
-                  rstval[rstval != cfg_fig_each['val_miss']].min(),
-                  rstval[rstval != cfg_fig_each['val_miss']].max()))
+                  rstval[rstval != c1_fig['val_miss']].min(),
+                  rstval[rstval != c1_fig['val_miss']].max()))
 
-            set_vrange(cfg_fig_each, rstval)
-            print('    cmap: {cmap}, vmin: {vmin}, vmax: {vmax}'.format(**cfg_fig_each))
+            set_vrange(c1_fig, rstval)
+            print('    cmap: {cmap}, vmin: {vmin}, vmax: {vmax}'.format(**c1_fig))
 
-            print('    Drawing {}'.format(cfg_fig_each['path']))
-            draw_raster(cfg_gs['west'], cfg_gs['east'], cfg_gs['south'], cfg_gs['north'], 
-                        cfg_gs['is_south_to_north'],
-                        rstval, cfg_fig_each)
+            print('    Drawing {}'.format(c1_fig['path']))
+            draw_raster(cfg_mesh['west'], cfg_mesh['east'], cfg_mesh['south'], cfg_mesh['north'], 
+                        cfg_mesh['is_south_to_north'],
+                        rstval, c1_fig)
 
         # Polygon
-        if (cfg_fig_each['grid'] == GRID_SOURCE and cfg_gs_source['gs_type'] == GS_POLYGON) or \
-           (cfg_fig_each['grid'] == GRID_TARGET and cfg_gs_target['gs_type'] == GS_POLYGON):
-            if cfg_fig_each['grid'] == GRID_SOURCE:
-                cfg_gs = cfg_gs_source
+        if (c1_fig['mesh'] == MESH__SOURCE and cfg_mesh_src['type'] == MESHTYPE__POLYGON) or \
+           (c1_fig['mesh'] == MESH__TARGET and cfg_mesh_tgt['type'] == MESHTYPE__POLYGON):
+            if c1_fig['mesh'] == MESH__SOURCE:
+                cfg_mesh = cfg_mesh_src
             else:
-                cfg_gs = cfg_gs_target
+                cfg_mesh = cfg_mesh_tgt
 
             lon, lat = read_coord_polygon(
-              cfg_gs['f_lon_vertex'], cfg_gs['f_lat_vertex'],
-              cfg_gs['f_x_vertex'], cfg_gs['f_y_vertex'], cfg_gs['f_z_vertex'], 
-              cfg_gs['np'], cfg_gs['nij'], 
-              cfg_gs['coord_unit'], cfg_gs['coord_miss_s'], cfg_gs['coord_miss_c'])
+              cfg_mesh['f_lon_vertex'], cfg_mesh['f_lat_vertex'],
+              cfg_mesh['f_x_vertex'], cfg_mesh['f_y_vertex'], cfg_mesh['f_z_vertex'], 
+              cfg_mesh['np'], cfg_mesh['nij'], 
+              cfg_mesh['coord_unit'], cfg_mesh['coord_miss_s'], cfg_mesh['coord_miss_c'])
 
-            f_val = cfg_fig_each['f_val']
+            f_val = c1_fig['f_val']
             val = np.fromfile(f_val['path'],dtype=dict_dtype[f_val['dtype']])\
-                              .reshape(-1,cfg_gs['nij'])[f_val['rec']-1]
+                              .reshape(-1,cfg_mesh['nij'])[f_val['rec']-1]
             if f_val['endian'] in [ENDIAN_BIG_LONG,ENDIAN_BIG_SHORT]: val = val.byteswap()
 
             print('    val min: {}, max: {}'.format(
-                  val[val != cfg_fig_each['val_miss']].min(),
-                  val[val != cfg_fig_each['val_miss']].max()))
+                  val[val != c1_fig['val_miss']].min(),
+                  val[val != c1_fig['val_miss']].max()))
 
-            set_vrange(cfg_fig_each, val)
-            print('    cmap: {cmap}, vmin: {vmin}, vmax: {vmax}'.format(**cfg_fig_each))
+            set_vrange(c1_fig, val)
+            print('    cmap: {cmap}, vmin: {vmin}, vmax: {vmax}'.format(**c1_fig))
 
-            print('    Drawing {}'.format(cfg_fig_each['path']))
-            draw_polygon(lon, lat, cfg_gs['coord_miss_s'], val, cfg_fig_each)
+            print('    Drawing {}'.format(c1_fig['path']))
+            draw_polygon(lon, lat, cfg_mesh['coord_miss_s'], val, c1_fig)
 
 
 run()
