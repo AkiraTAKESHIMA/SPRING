@@ -49,7 +49,7 @@ def make_grid_data(cnf, update_data, gsName):
 
     if update_data:
         util.make_slink(f'{env.dir_tmp}/{gsName}',
-                        f'{env.dir_out}/grid/{gsName}')
+                        f'{env.dir_out}/mesh/{gsName}')
 
 
 def run(update_data):

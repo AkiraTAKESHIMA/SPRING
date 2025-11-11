@@ -52,7 +52,7 @@ def make_grid_data_lsm(cnf, update_data):
     for landType in ['river', 'noriv_real', 'noriv_virt']:
         for var in ['lonlat', 'xyz']:
             util.make_slink(f'{env.dir_tmp}/{landType}/grd{var}.bin',
-                            f'{env.dir_out}/grid/LSM/{landType}/grid/{var}.bin')
+                            f'{env.dir_out}/mesh/LSM/{landType}/grid/{var}.bin')
 
 def run(update_data):
     step = int(__name__.split('.')[-1][1:3])

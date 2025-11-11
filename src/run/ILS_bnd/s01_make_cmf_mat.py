@@ -93,9 +93,9 @@ def make_cmf_mat(cnf, update_data):
     # Make links for output data
     if update_data:
         util.make_slink(f'{env.dir_tmp}/CMF',
-                        f'{env.dir_out}/grid/CMF')
+                        f'{env.dir_out}/mesh/CMF')
         util.make_slink(f'{env.dir_tmp}/MATSIRO',
-                        f'{env.dir_out}/grid/MATSIRO')
+                        f'{env.dir_out}/mesh/MATSIRO')
 
 
 def run(update_data):

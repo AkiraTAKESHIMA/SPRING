@@ -86,11 +86,11 @@ def make_cmf_mat(cnf, update_data):
     if update_data:
         for landType in lst_landType:
             util.make_slink(f'{env.dir_tmp}/{landType}/grdidx.bin',
-                            f'{env.dir_out}/grid/RM/{landType}/grid/index.bin')
+                            f'{env.dir_out}/mesh/RM/{landType}/grid/index.bin')
             util.make_slink(f'{env.dir_tmp}/{landType}/rstidx.bin',
-                            f'{env.dir_out}/grid/RM/{landType}/raster/index.bin')
+                            f'{env.dir_out}/mesh/RM/{landType}/raster/index.bin')
         util.make_slink(f'{env.dir_tmp}/river/rstbsn.bin',
-                        f'{env.dir_out}/grid/RM/river/raster/basin.bin')
+                        f'{env.dir_out}/mesh/RM/river/raster/basin.bin')
 
 
 def run(update_data):

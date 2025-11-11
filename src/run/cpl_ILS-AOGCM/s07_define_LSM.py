@@ -165,18 +165,18 @@ def define_lsm(cnf, update_data):
     if update_data:
         for landType in ['river', 'noriv', 'noriv_real', 'noriv_virt', 'ogcm']:
             util.make_slink(f'{env.dir_tmp}/AGCM/lndara_{landType}.bin',
-                            f'{env.dir_out}/grid/AGCM/lndara_{landType}.bin')
+                            f'{env.dir_out}/mesh/AGCM/lndara_{landType}.bin')
         for landType in ['river', 'noriv', 'noriv_real', 'noriv_virt']:
             for var_org, var_dst in zip(
               ['msk', 'idx', 'idx_bnd', 'ara', 'wgt'], 
               ['mask', 'index', 'index_bnd', 'area', 'weight']):
                 util.make_slink(f'{env.dir_tmp}/LSM/{landType}/grd{var_org}.bin',
-                                f'{env.dir_out}/grid/LSM/{landType}/grid/{var_dst}.bin')
+                                f'{env.dir_out}/mesh/LSM/{landType}/grid/{var_dst}.bin')
             for var_org, var_dst in zip(
               ['idx', 'idx_bnd'],
               ['index', 'index_bnd']):
                 util.make_slink(f'{env.dir_tmp}/LSM/{landType}/rst{var_org}.bin',
-                                f'{env.dir_out}/grid/LSM/{landType}/raster/{var_dst}.bin')
+                                f'{env.dir_out}/mesh/LSM/{landType}/raster/{var_dst}.bin')
 
 
 

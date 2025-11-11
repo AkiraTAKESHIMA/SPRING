@@ -49,7 +49,7 @@ def make_grid_data(cnf, update_data, landType):
 
     for var_org, var_dst in zip(['ara', 'lonlat', 'xyz'], ['area', 'lonlat', 'xyz']):
         util.make_slink(f'{env.dir_tmp}/{landType}/grd{var_org}.bin',
-                        f'{env.dir_out}/grid/RM/{landType}/grid/{var_dst}.bin')
+                        f'{env.dir_out}/mesh/RM/{landType}/grid/{var_dst}.bin')
 
 
 

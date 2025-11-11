@@ -55,6 +55,10 @@ def block_mesh_latlon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     else:
         raise Exception('Latit. of grid lines were not defined.')
 
+    if util.key_val_exist(gs, 'coord_unit'):
+        s += f'\
+  coord_unit: {gs["coord_unit"]}\n'
+
     if 'grdidx' in lst_varname_in and util.key_val_exist(gs, 'fin_grdidx'):
         s += f'\
   fin_grdidx: {str_file_bin(gs["fin_grdidx"])}\n'
@@ -134,13 +138,6 @@ def block_mesh_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
         s += f'\
   {key}: {str_file_bin(gs[key])}\n'
 
-    if util.key_val_exist(gs, 'arc_parallel'):
-        s += f'\
-  arc_parallel: {gs["arc_parallel"]}\n'
-    elif util.key_val_exist(gs, 'f_arctyp'):
-        s += f'\
-  f_arctyp: {str_file_bin(gs["f_arctyp"])}\n'
-
     if util.key_val_exist(gs, 'coord_unit'):
         s += f'\
   coord_unit: {gs["coord_unit"]}\n'
@@ -148,6 +145,13 @@ def block_mesh_polygon(gs, dir_in, dir_out, lst_varname_in, lst_varname_out):
     if util.key_val_exist(gs, 'coord_miss'):
         s += f'\
   coord_miss: {gs["coord_miss"]}\n'
+
+    if util.key_val_exist(gs, 'arc_parallel'):
+        s += f'\
+  arc_parallel: {gs["arc_parallel"]}\n'
+    elif util.key_val_exist(gs, 'f_arctyp'):
+        s += f'\
+  f_arctyp: {str_file_bin(gs["f_arctyp"])}\n'
 
     if 'grdidx' in lst_varname_in and util.key_val_exist(gs, 'fin_grdidx'):
         s += f'\

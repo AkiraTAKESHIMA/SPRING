@@ -114,6 +114,11 @@ def run_FLOW(cnf, update_data):
       'idx_miss': RM['idx_miss'],
     }
 
+    util.make_slink(f'{env.dir_tmp}/tmp/map/1min', 
+                    f'{env.dir_out}/mesh/RM_CMF/raster')
+    util.make_slink(f'{env.dir_tmp}/map',
+                    f'{env.dir_out}/mesh/RM_CMF/grid')
+
 
 def run(update_data):
     step = int(__name__.split('.')[-1][1:3])

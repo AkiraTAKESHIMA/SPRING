@@ -36,8 +36,8 @@ def make_cmf_mat(cnf, update_data):
     dir_tmp_cmf = f'{env.dir_tmp}/CMF'
     dir_tmp_mat = f'{env.dir_tmp}/MATSIRO'
 
-    dir_out_cmf = f'{env.dir_out}/grid/CMF'
-    dir_out_mat = f'{env.dir_out}/grid/MATSIRO'
+    dir_out_cmf = f'{env.dir_out}/mesh/CMF'
+    dir_out_mat = f'{env.dir_out}/mesh/MATSIRO'
 
     MAT_river, MAT_noriv = None, None
     if 'river' in cnf[k.lt]: MAT_river = cnf[k.m]['MATSIRO_river']
