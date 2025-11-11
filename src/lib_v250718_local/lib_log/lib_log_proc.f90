@@ -532,8 +532,10 @@ subroutine echo(cd, msg, opt)
     tf_echoWrn = get_tf(val_echoWrn, set%echoWrn(depth) .or. forceEcho)
 
     if( tf_echoWrn )then
-      tf_echoPrc = get_tf(val_echoPrc, set%echoPrc(depth))
-      tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
+      !tf_echoPrc = get_tf(val_echoPrc, set%echoPrc(depth))
+      !tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
+      tf_echoPrc = get_tf(val_echoPrc, .true.)
+      tf_echoBar = get_tf(val_echoBar, .true.)
 
       if( indent == INDENT_MISS )then
         indent = set%indent(depth) + indentInc
@@ -581,8 +583,10 @@ subroutine echo(cd, msg, opt)
     tf_stopErr = get_tf(val_stopErr, set%stopErr(depth))
 
     if( tf_echoErr )then
+      !tf_echoPrc = get_tf(val_echoPrc, set%echoPrc(depth))
+      !tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
       tf_echoPrc = get_tf(val_echoPrc, .true.)
-      tf_echoBar = get_tf(val_echoBar, set%echoBar(depth))
+      tf_echoBar = get_tf(val_echoBar, .true.)
 
       if( indent == INDENT_MISS )then
         indent = max(0, indentInc)
