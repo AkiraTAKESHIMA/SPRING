@@ -5,7 +5,7 @@
   "meshes": {
     "CMF": {
       "type": "raster",
-      "dir": "run/cpl_ILS-AOGCM/test_iso3/out/mesh/RM_CMF",
+      "dir": "run/cpl_ILS-AOGCM/test/out/mesh/RM_CMF",
       "nx_raster" : 21600, 
       "ny_raster" : 10800,
       "nx_grid":   720, 
