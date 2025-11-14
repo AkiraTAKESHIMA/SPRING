@@ -166,6 +166,8 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   call set_default_values_rt(rt_out%agcm_to_lsm_noriv     , status=RT_STATUS__MAKE)
   call set_default_values_rt(rt_out%agcm_to_lsm_ocean     , status=RT_STATUS__MAKE)
 
+  call init_opt_rt_coef(opt_rt_coef)  ! modified on v2.4.3
+
   call echo(code%ext)
   !-------------------------------------------------------------
   ! Read the settings
