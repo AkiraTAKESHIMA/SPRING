@@ -96,7 +96,7 @@
     }
   },
   "FLOW": {
-    "dir": "/data16/akira/GlobalFlowDir_20220420/glbdir_1min_gcm",
+    "dir": "dat/mesh/CaMa-Flood/GlobalFlowDir_20220420/glbdir_1min_gcm",
     "flwdir": "flwdir.bin",
     "elevtn": "elevtn.bin"
   },
