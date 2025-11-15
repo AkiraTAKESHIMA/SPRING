@@ -8,6 +8,13 @@
 #---------------------------------------------------------------
 [2025/11/15] Bug fix
 #---------------------------------------------------------------
+src/main/ext/cpl_aogcm-ils_make_rt_for_ogcm/mod_main.f90
+  subroutine read_grid_data
+
+Added initialization of $idxarg.
+#---------------------------------------------------------------
+[2025/11/15] Bug fix
+#---------------------------------------------------------------
 src/main/ext/cpl_aogcm-ils_define_mat/mod_set.f90
 
 Added initialization of $opt_rt_coef to outside the subroutine
