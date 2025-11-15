@@ -13,6 +13,12 @@ src/main/ext/cpl_aogcm-ils_define_mat/mod_set.f90
 Added initialization of $opt_rt_coef to outside the subroutine
 read_settings_rt_coef_options for the case that this subroutine 
 is not called and $opt_rt_coef is not initialized.
+#---------------------------------------------------------------
+[2025/11/15] Bug fix
+#---------------------------------------------------------------
+src/run/common/const.py
+
+Added constants of data type.
 #===============================================================
 # v02.04.02
 #===============================================================
