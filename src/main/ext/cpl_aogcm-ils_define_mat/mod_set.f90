@@ -50,6 +50,8 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
         set_status_rt_main_file    , &
         set_action_rt_main_file    , &
         apply_oldfiles_rt_main_file
+  use c2_rt_set, only: &
+        init_opt_rt_coef
   implicit none
   type(rt_in_) , intent(out) :: rt_in
   type(rt_out_), intent(out) :: rt_out
@@ -1037,8 +1039,6 @@ subroutine read_settings_rt_coef_options(opt_coef)
         raise_error_invalid_key, &
         msg_invalid_input      , &
         msg_undesirable_input
-  use c2_rt_set, only: &
-        init_opt_rt_coef
   implicit none
   type(opt_rt_coef_), intent(inout) :: opt_coef
 
@@ -1061,11 +1061,7 @@ subroutine read_settings_rt_coef_options(opt_coef)
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
 
-  call init_opt_rt_coef(opt_coef)
-
-  call echo(code%ext)
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
