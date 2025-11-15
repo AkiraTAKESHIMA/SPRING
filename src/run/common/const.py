@@ -14,6 +14,13 @@ dir_FLOW_src = '../../../src/ext/FLOW_free'
 command_ln = 'ln'
 options_ln = '-s'
 
+str_dtype_int1 = 'int1'
+str_dtype_int2 = 'int2'
+str_dtype_int4 = 'int4'
+str_dtype_int8 = 'int8'
+str_dtype_real = 'real'
+str_dtype_dble = 'dble'
+
 
 class Key():
     def __init__(self):
