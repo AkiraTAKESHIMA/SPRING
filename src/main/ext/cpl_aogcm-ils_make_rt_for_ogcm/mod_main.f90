@@ -696,6 +696,8 @@ subroutine read_grid_data(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  nullify(idxarg)
+
   f => f_idx
   if( f%path /= '' )then
     call edbg('Reading index   '//str(fileinfo(f)))
@@ -725,6 +727,8 @@ subroutine read_grid_data(&
   do ij = 1_8, nij
     if( lon(ij) < rad_0deg ) call add(lon(ij), rad_360deg)
   enddo
+
+  call realloc(idxarg, 0)
   !-------------------------------------------------------------
   call echo(code%ret)
 end subroutine read_grid_data
