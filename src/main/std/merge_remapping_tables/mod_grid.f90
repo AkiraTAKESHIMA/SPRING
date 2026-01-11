@@ -648,7 +648,7 @@ subroutine read_all_data(input, grdidx_all, grdara_all)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  nullify(grdidx, grdara)
+  nullify(grdidx, grdara, mask)
 
   nmax = 0_8
 
