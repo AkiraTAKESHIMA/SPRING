@@ -1,5 +1,4 @@
 module mod_set
-  ! lib
   use lib_const
   use lib_base
   use lib_log
@@ -23,7 +22,6 @@ module mod_set
         KEY_OPT_COEF_ZERO_NEGATIVE   , &
         KEY_OPT_COEF_ERROR_EXCESS    , &
         KEY_OPT_COEF_SUM_ERROR_EXCESS
-  ! this
   use def_type
   implicit none
   private
@@ -80,9 +78,8 @@ subroutine read_settings(input, output, opt)
   !-------------------------------------------------------------
   call echo(code%ent, 'Initializing')
 
-  output%rt%id = 'output%rt'
-
   call init_rt(output%rt)
+  output%rt%id = 'output%rt'
 
   call set_default_values_opt_sys(opt%sys)
   call set_default_values_opt_log(opt%log)
