@@ -21,6 +21,9 @@ str_dtype_int8 = 'int8'
 str_dtype_real = 'real'
 str_dtype_dble = 'dble'
 
+endian_big    = 'big'
+endian_little = 'little'
+
 
 class Key():
     def __init__(self):
