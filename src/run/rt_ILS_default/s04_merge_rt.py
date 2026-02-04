@@ -11,21 +11,21 @@ import s___const as lconst
 import s___util as lutil
 
 
-def slink_rt(rt):
-    dir_tmp = f'{env.sdir_tmp[istep("make_rt")]}/{rt["name"]}'
-    util.make_slink(f'{dir_tmp}', 
-                    f'{env.dir_out}/{rt["name"]}')
-
-
 def merge_rt(cnf, update_data, rt, rmp):
     if 'sourceTables' not in rt.keys():
         return
 
-    if len(cnf[k.lt]) == 1:
-        slink_rt(rt)
-        return
-
     dir_tmp_make_rt = f'{env.sdir_tmp[istep("make_rt")]}'
+
+    if len(cnf[k.lt]) == 1:
+        landType = cnf[k.lt][0]
+        rtName = rt['sourceTables'].format(landType=landType)
+        dir_rt = f'{dir_tmp_make_rt}/rt_{rtName}'
+        util.make_slink(
+            f'{dir_rt}',
+            f'{env.dir_out}/remapping_table/{rt["name"]}'
+        )
+        return
 
     dir_tmp = f'{env.dir_tmp}/rt_{rt["name"]}'
 
@@ -49,8 +49,10 @@ def merge_rt(cnf, update_data, rt, rmp):
         f_err = f'{env.dir_log}/rt_{rt["name"]}.err'
         util.exec_program(const.prog_merge_rt, f_conf, f_log, f_err)
 
-        util.make_slink(f'{dir_tmp}', 
-                        f'{env.dir_out}/remapping_table/{rt["name"]}')
+        util.make_slink(
+            f'{dir_tmp}', 
+            f'{env.dir_out}/remapping_table/{rt["name"]}'
+        )
 
 
 

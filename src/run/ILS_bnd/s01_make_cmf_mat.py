@@ -57,6 +57,10 @@ def make_cmf_mat(cnf, update_data):
         CMF_pre[f'fout_grdidx_{landType}'] = file_bin(f'{landType}/grdidx.bin')
 
         MAT = cnf[k.m][f'MATSIRO_{landType}']
+        MAT['fout_grdmsk'] = file_bin(
+             f'{landType}/land_mask.bin', 
+             dtype=const.str_dtype_real,
+             endian=const.endian_big)
         MAT['fout_rstidx'] = file_bin(f'{landType}/rstidx.bin')
         MAT['fout_grdidx'] = file_bin(f'{landType}/grdidx.bin')
         MAT['fout_grdbndidx'] = file_bin(f'{landType}/grdbndidx.bin')
