@@ -7,6 +7,7 @@ DEBUG = true
 #TERMINAL_WIDTH = 128
 
 ILS ?= F
+ILS_SYS = Linux64-gnu-intel
 #==============================================================
 #
 #==============================================================
@@ -18,20 +19,27 @@ ifdef TERMINAL_WIDTH
 endif
 
 FC = ifort
+
+FCFLAGS_FAST  = -O2 -g -assume byterecl -convert big_endian
+FCFLAGS_DEBUG = -O0 -check all -check noarg_temp_created -warn all -CB\
+                -gen_interfaces -traceback -g\
+                -heap-arrays\
+                -assume byterecl -convert big_endian\
+                -assume realloc_lhs -fstack-protector\
+                -assume protect_parens\
+                -fpe0 -ftrapuv
+
 CC = icc
 
-ifeq ($(DEBUG), true)
-  FCFLAGS = -O0 -check all -check noarg_temp_created -warn all -CB\
-            -gen_interfaces -traceback -g\
-            -heap-arrays\
-            -assume byterecl -convert big_endian\
-            -assume realloc_lhs -fstack-protector\
-            -assume protect_parens\
-            -fpe0 -ftrapuv
-  CCFLAGS = -O0 -g -debug all -std=c99 -no-multibyte-chars
+CCFLAGS_FAST = -O2 -std=c99 -no-multibyte-chars
+CCFLAGS_DEBUG = -O0 -g -debug all -std=c99 -no-multibyte-chars
+
+ifeq ($(DEBUG),T)
+  FCFLAGS = $(FCFLAGS_FAST)
+  CCFLAGS = $(CCFLAGS_FAST)
 else
-  FCFLAGS = -O2 -g -assume byterecl -convert big_endian
-  CCFLAGS = -O2 -std=c99 -no-multibyte-chars
+  FCFLAGS = $(FCFLAGS_DEBUG)
+  CCFLAGS = $(CCFLAGS_DEBUG)
 endif
 #==============================================================
 #
@@ -76,7 +84,10 @@ CMNDIR2 = $(CMNDIR)/2
 CMNDIR3 = $(CMNDIR)/3
 
 ifeq ($(ILS),T)
-  include $(TOPSRCDIR)/../../../Mkinclude
-  FCFLAGS = $(FFLAGS)
-  CCFLAGS = $(CFLAGS)
+  include $(TOPSRCDIR)/../../../sysdep/Makedef.$(ILS_SYS)
+  TOPDIR = $(TOPSRCDIR)/../../../..
+  FCFLAGS_FAST  = $(FFLAGS_FAST)
+  FCFLAGS_DEBUG = $(FFLAGS_DEBUG)
+  CCFLAGS_FAST  = $(CFLAGS_FAST)
+  CCFLAGS_DEBUG = $(CFLAGS_DEBUG)
 endif

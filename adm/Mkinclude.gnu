@@ -6,7 +6,8 @@ DEBUG = true
 #USE_C = false
 #TERMINAL_WIDTH = 128
 
-ILS ?= F
+ILS ?= T
+ILS_SYS = Linux64-gnu-ompi
 #==============================================================
 #
 #==============================================================
@@ -18,17 +19,25 @@ ifdef TERMINAL_WIDTH
 endif
 
 FC = gfortran
+
+FCFLAGS_FAST  = -O2 -g
+FCFLAGS_DEBUG = -O0 -Wall -g\
+                -fcheck=bounds,do,mem,pointer,recursion\
+                -frecord-marker=4\
+                -fmax-errors=5\
+                -ffpe-trap=invalid,zero,overflow,underflow
+
 CC = gcc
-ifeq ($(DEBUG), true)
-  FCFLAGS = -O0 -Wall -g\
-            -fcheck=bounds,do,mem,pointer,recursion\
-            -frecord-marker=4\
-            -fmax-errors=5\
-            -ffpe-trap=invalid,zero,overflow,underflow
-  CCFLAGS = -O0 -Wall -g
+
+CCFLAGS_FAST  = -O2
+CCFLAGS_DEBUG = -O0 -Wall -g
+
+ifeq ($(DEBUG),T)
+  FCFLAGS = $(FCFLAGS_FAST)
+  CCFLAGS = $(CCFLAGS_FAST)
 else
-  FCFLAGS = -O2 -g
-  CCFLAGS = -O2
+  FCFLAGS = $(FCFLAGS_DEBUG)
+  CCFLAGS = $(CCFLAGS_DEBUG)
 endif
 #==============================================================
 #
@@ -73,7 +82,11 @@ CMNDIR2 = $(CMNDIR)/2
 CMNDIR3 = $(CMNDIR)/3
 
 ifeq ($(ILS),T)
-  include $(TOPSRCDIR)/../../../Mkinclude
-  FCFLAGS = $(FFLAGS)
-  CCFLAGS = $(CFLAGS)
+  include $(TOPSRCDIR)/../../../sysdep/Makedef.$(ILS_SYS)
+  TOPDIR = $(TOPSRCDIR)/../../../..
+  FCFLAGS_FAST  = $(FFLAGS_FAST)
+  FCFLAGS_DEBUG = $(FFLAGS_DEBUG)
+  CCFLAGS_FAST  = $(CFLAGS_FAST)
+  CCFLAGS_DEBUG = $(CFLAGS_DEBUG)
 endif
+
