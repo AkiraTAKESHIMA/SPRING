@@ -1,4 +1,4 @@
-# SPRING version 2.4.7
+# SPRING version 2.4.8
 
 See for details: 
 http://hydro.iis.u-tokyo.ac.jp/~akira/page/Products/contents/SPRING/latest/
