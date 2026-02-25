@@ -15,11 +15,11 @@ include $(TOPSRCDIR)/Mkinclude
 	@:
 
 OBJS = \
-def_const.o\
-def_type.o\
-mod_set.o\
-mod_main.o\
-main.o
+	def_const.o\
+	def_type.o\
+	mod_set.o\
+	mod_main.o\
+	main.o
 
 TARGET = main
 BINDIR = $(TOPSRCDIR)/../bin/ext
@@ -33,7 +33,7 @@ install:
 	$(MKDIR) $(MKDIRFLAGS) $(BINDIR)
 	$(INSTALL) $(TARGET) $(BIN)
 
-$(TARGET): $(OBJS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET): $(OBJS) $(CMNDIR1)/*.a $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
 clean:

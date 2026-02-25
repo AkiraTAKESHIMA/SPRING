@@ -5,8 +5,7 @@ include $(TOPSRCDIR)/Mkinclude
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c $< -I$(LIBDIR_CONST) -I$(LIBDIR_BASE) -I$(LIBDIR_TIME)
 %.mod: %.f90 %.o
-
-TARGET = lib_log.a
+	@:
 
 OBJ_ALL = \
   lib_log_proc.o\
@@ -16,12 +15,9 @@ OBJ_ALL = \
   lib_log.o
 
 .PHONY: all
-all: $(TARGET)
-
-$(TARGET): $(OBJ_ALL)
-	$(AR) $(ARFLAGS) $@ $^
-	$(RANLIB) $@
+all:
+	$(MAKE) $(OBJ_ALL)
 
 .PHONY: clean
 clean:
-	$(RM) $(RMFLAGS) *.o *.mod $(TARGET)
+	$(RM) $(RMFLAGS) *.o *.mod

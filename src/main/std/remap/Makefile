@@ -15,17 +15,16 @@ include $(TOPSRCDIR)/Mkinclude
 	@:
 
 TARGET = main
-TARGETLIB = remap.a
 BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/remap.exe
 PY = $(BINDIR)/mkfig_remap.py
 
 OBJ_F = \
-def_type.o\
-mod_set.o\
-mod_remap.o\
-mod_finalize.o\
-main.o
+	def_type.o\
+	mod_set.o\
+	mod_remap.o\
+	mod_finalize.o\
+	main.o
 
 OBJ_ALL = $(OBJ_F)
 OBJ_LIB = def_*.o mod_*.o
@@ -34,14 +33,9 @@ OBJ_LIB = def_*.o mod_*.o
 all:
 	$(MAKE) $(OBJ_ALL)
 	$(MAKE) $(TARGET)
-	$(MAKE) $(TARGETLIB)
 
-$(TARGET): $(OBJ_ALL) $(CMNDIR3)/*.o $(CMNDIR2)/*.o $(CMNDIR1)/*.o $(LIB)
+$(TARGET): $(OBJ_ALL) $(CMNDIR3)/*.a $(CMNDIR2)/*.a $(CMNDIR1)/*.a $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
-
-$(TARGETLIB): $(OBJ_LIB)
-	$(AR) $(ARFLAGS) $@ $^
-	$(RANLIB) $@
 
 .PHONY: install
 install:
@@ -51,5 +45,5 @@ install:
 
 .PHONY: clean
 clean:
-	$(RM) $(RMFLAGS) *.o *.mod *.a core *~ *trace temp* $(TARGET)
+	$(RM) $(RMFLAGS) *.o *.mod core *~ *trace temp* $(TARGET)
 

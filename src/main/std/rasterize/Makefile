@@ -19,14 +19,14 @@ BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/rasterize.exe
 
 OBJ_F = \
-def_type.o\
-mod_set.o\
-mod_data.o\
-mod_rasterize_latlon.o\
-mod_rasterize_polygon.o\
-mod_main.o\
-mod_finalize.o\
-main.o
+	def_type.o\
+	mod_set.o\
+	mod_data.o\
+	mod_rasterize_latlon.o\
+	mod_rasterize_polygon.o\
+	mod_main.o\
+	mod_finalize.o\
+	main.o
 
 OBJ_ALL = $(OBJ_F)
 
@@ -35,7 +35,7 @@ all:
 	$(MAKE) $(OBJ_ALL)
 	$(MAKE) $(TARGET)
 
-$(TARGET): $(OBJ_ALL) $(CMNDIR3)/*.o $(CMNDIR2)/*.o $(CMNDIR1)/*.o $(LIB)
+$(TARGET): $(OBJ_ALL) $(CMNDIR3)/*.a $(CMNDIR2)/*.a $(CMNDIR1)/*.a $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
 .PHONY: install

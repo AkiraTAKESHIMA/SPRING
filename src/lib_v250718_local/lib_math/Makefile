@@ -7,8 +7,6 @@ include $(TOPSRCDIR)/Mkinclude
 %.mod: %.f90 %.o
 	@:
 
-TARGET = lib_math.a
-
 OBJ_F = \
   lib_math_base.o\
   lib_math_exception.o\
@@ -19,8 +17,6 @@ OBJ_F = \
   lib_math_array.o\
   lib_math_linalg_operator.o\
   lib_math_linalg_util.o\
-  lib_math_linalg_blas.o\
-  lib_math_linalg_lapack.o\
   lib_math_sphere.o\
   lib_math_interp.o\
   lib_math.o
@@ -30,12 +26,9 @@ OBJ_ALL = $(OBJ_F)
 MOD_ALL = $(OBJ_F:.o=.mod)
 
 .PHONY: all
-all: $(TARGET)
-
-$(TARGET): $(OBJ_ALL)
-	$(AR) $(ARFLAGS) $@ $^
-	$(RANLIB) $@
+all:
+	$(MAKE) $(OBJ_ALL)
 
 .PHONY: clean
 clean:
-	$(RM) $(RMFLAGS) *.o *.mod $(TARGET)
+	$(RM) $(RMFLAGS) *.o *.mod
