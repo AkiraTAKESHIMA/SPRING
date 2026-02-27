@@ -1,3 +1,5 @@
+TOPSRCDIR = .
+include Mkinclude
 
 all:\
   make_lib\
