@@ -4,16 +4,16 @@ include $(TOPSRCDIR)/Mkinclude
 TARGET = $(LIB)
 
 OBJ =\
-$(LIBDIR_CONST)/*.a\
-$(LIBDIR_BASE)/*.a\
-$(LIBDIR_TIME)/*.a\
-$(LIBDIR_LOG)/*.a\
-$(LIBDIR_UTIL)/*.a\
-$(LIBDIR_ARRAY)/*.a\
-$(LIBDIR_MATH)/*.a\
-$(LIBDIR_STATS)/*.a\
-$(LIBDIR_IO)/*.a\
-$(LIBDIR_PROJ)/*.a
+$(LIBDIR_CONST)/*.o\
+$(LIBDIR_BASE)/*.o\
+$(LIBDIR_TIME)/*.o\
+$(LIBDIR_LOG)/*.o\
+$(LIBDIR_UTIL)/*.o\
+$(LIBDIR_ARRAY)/*.o\
+$(LIBDIR_MATH)/*.o\
+$(LIBDIR_STATS)/*.o\
+$(LIBDIR_IO)/*.o\
+$(LIBDIR_PROJ)/*.o
 
 .PHONY: all
 all: 
@@ -60,9 +60,8 @@ install:
 
 
 $(TARGET): $(OBJ)
-	$(RM) $(RMFLAGS) $@
-	$(AR) cqT $@ $^
-	echo "create $@\naddlib $@\nsave\nend" | ar -M
+	$(AR) $(ARFLAGS) $@ $^
+	$(RANLIB) $@
 
 .PHONY: clean
 clean:

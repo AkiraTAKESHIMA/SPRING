@@ -11,8 +11,6 @@ include $(TOPSRCDIR)/Mkinclude
 %.mod: %.f90 %.o
 	@:
 
-TARGET = lib_io.a
-
 OBJ_F = \
   lib_io_system.o\
   lib_io_arg_base.o\
@@ -40,13 +38,8 @@ MOD_ALL = $(OBJ_F:.o=.mod)
 all:
 	$(MAKE) -C shapefile
 	$(MAKE) $(OBJ_ALL)
-	$(MAKE) $(TARGET)
-
-$(TARGET): $(OBJ_ALL) shapefile/*/*.o
-	$(AR) $(ARFLAGS) $@ $^
-	$(RANLIB) $@
 
 .PHONY: clean
 clean:
 	$(MAKE) -C shapefile clean
-	$(RM) $(RMFLAGS) *.o *.mod $(TARGET)
+	$(RM) $(RMFLAGS) *.o *.mod

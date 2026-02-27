@@ -16,6 +16,7 @@ OBJS = \
 .PHONY: all
 all:
 	$(MAKE) $(OBJS)
+	$(INSTALL) $(OBJS) ../..
 
 .PHONY: clean
 clean:

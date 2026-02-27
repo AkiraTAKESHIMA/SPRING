@@ -24,7 +24,7 @@ MODS = \
 .PHONY: all
 all:
 	$(MAKE) $(OBJS)
-	$(INSTALL) $(MODS) ../..
+	$(INSTALL) $(OBJS) $(MODS) ../..
 
 .PHONY: clean
 clean:
