@@ -13,15 +13,19 @@ module c1_gs_driv
   !-------------------------------------------------------------
   public :: set_gs_all
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_driv'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine set_gs_all(&
+integer(4) function set_gs_all(&
     a, &
     wgtmap, &
     grduwa, grdara, grdwgt, &
-    grdxyz, grdlonlat)
+    grdxyz, grdlonlat) result(info)
   use c1_gs_grid_core, only: &
         make_idxmap, &
         make_wgtmap, &
@@ -34,6 +38,7 @@ subroutine set_gs_all(&
   use c1_gs_define, only: &
         set_gs
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_gs_all'
   type(gs_), intent(inout), target :: a
   logical  , intent(in), optional :: wgtmap, &
                                      grduwa, grdara, grdwgt, &
@@ -46,7 +51,8 @@ subroutine set_gs_all(&
   type(gs_raster_) , pointer :: ar
   type(gs_polygon_), pointer :: ap
 
-  call echo(code%bgn, 'set_gs_all ("'//str(a%nam)//'")')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -71,55 +77,141 @@ subroutine set_gs_all(&
   case( MESHTYPE__LATLON )
     al => a%latlon
 
-    call set_gs(al)
+    if( set_gs(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call make_idxmap(al)
-    call make_grdidx(al)
+    if( make_idxmap(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdidx(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    if( grduwa_    ) call make_grduwa(al)
-    if( grdara_    ) call make_grdara(al)
-    if( grdwgt_    ) call make_grdwgt(al)
-    if( wgtmap_    ) call make_wgtmap(al)
-    if( grdxyz_    ) call make_grdxyz(al)
-    if( grdlonlat_ ) call make_grdlonlat(al)
+    if( grduwa_    )then
+      if( make_grduwa(al) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdara_    )then
+      if( make_grdara(al) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdwgt_    )then
+      if( make_grdwgt(al) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( wgtmap_    )then
+      if( make_wgtmap(al) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdxyz_    )then
+      if( make_grdxyz(al) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdlonlat_ )then
+      if( make_grdlonlat(al) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
   !-------------------------------------------------------------
   ! Case: Raster
   case( MESHTYPE__RASTER )
     ar => a%raster
 
-    call set_gs(ar)
+    if( set_gs(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call make_idxmap(ar)
-    call make_grdidx(ar)
+    if( make_idxmap(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdidx(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    if( grduwa_    ) call make_grduwa(ar)
-    if( grdara_    ) call make_grdara(ar)
-    if( grdwgt_    ) call make_grdwgt(ar)
-    if( wgtmap_    ) call make_wgtmap(ar)
-    if( grdxyz_    ) call make_grdxyz(ar)
-    if( grdlonlat_ ) call make_grdlonlat(ar)
+    if( grduwa_    )then
+      if( make_grduwa(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdara_    )then
+      if( make_grdara(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdwgt_    )then
+      if( make_grdwgt(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( wgtmap_    )then
+      if( make_wgtmap(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdxyz_    )then
+      if( make_grdxyz(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdlonlat_ )then
+      if( make_grdlonlat(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
   !-------------------------------------------------------------
   ! Case: Polygon
   case( MESHTYPE__POLYGON )
     ap => a%polygon
 
-    call make_grdidx(ap)
+    if( make_grdidx(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call set_gs(ap)
+    if( set_gs(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    if( grduwa_    ) call make_grduwa(ap)
-    if( grdara_    ) call make_grdara(ap)
-    if( grdwgt_    ) call make_grdwgt(ap)
-    if( grdxyz_    ) call make_grdxyz(ap)
-    if( grdlonlat_ ) call make_grdlonlat(ap)
+    if( grduwa_    )then
+      if( make_grduwa(ap) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdara_    )then
+      if( make_grdara(ap) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdwgt_    )then
+      if( make_grdwgt(ap) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdxyz_    )then
+      if( make_grdxyz(ap) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    if( grdlonlat_ )then
+      if( make_grdlonlat(ap) /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr('Invalid value in $a%typ: '//str(a%typ))
+    info = 1
+    call errret(msg_invalid_value('a%typ', a%typ))
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_gs_all
+  call logret(PRCNAM, MODNAM)
+end function set_gs_all
 !===============================================================
 !
 !===============================================================

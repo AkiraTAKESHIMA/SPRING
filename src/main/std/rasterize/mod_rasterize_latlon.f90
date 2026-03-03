@@ -9,6 +9,7 @@ module mod_rasterize_latlon
   use c2_type_rst
   use def_type
   implicit none
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rasterize_latlon'
   private
   !-------------------------------------------------------------
   ! Public procedures
@@ -21,12 +22,14 @@ contains
 !===============================================================
 subroutine rasterize_latlon(a, b, output)
   use c2_area_raster, only: &
-        initialize, &
-        finalize, &
-        initialize_zone, &
-        finalize_zone, &
-        alloc_map, &
-        update_iarea_sum, &
+        initialize       , &
+        finalize         , &
+        initialize_thresh, &
+        finalize_thresh  , &
+        initialize_zone  , &
+        finalize_zone    , &
+        alloc_map        , &
+        update_iarea_sum , &
         update_iarea_max
   use c3_rt_llbnds, only: &
         calc_relations_llbnds
@@ -34,6 +37,7 @@ subroutine rasterize_latlon(a, b, output)
         get_tasks, &
         make_data
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'rasterize_latlon'
   type(gs_)       , intent(in) :: a  ! latlon
   type(gs_)       , intent(in) :: b  ! raster
   type(output_)   , intent(in) :: output
@@ -60,10 +64,8 @@ subroutine rasterize_latlon(a, b, output)
   integer(8) :: iibv
   logical :: fill_miss
   integer :: case_wgtmap, case_wgtmap_a, case_wgtmap_b
-  integer :: info
 
-  call echo(code%bgn, 'rasterize_latlon')
-  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Preprocess
   !-------------------------------------------------------------
@@ -92,11 +94,10 @@ subroutine rasterize_latlon(a, b, output)
         GRID_STATUS__TO_BE_PREPARED )
     case_wgtmap_a = 0
   case( GRID_STATUS__UNDEF )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  al%status_wgtmap == '//str(al%status_wgtmap))
+    call errend(msg_unexpected_condition()//&
+              '\n  al%status_wgtmap == '//str(al%status_wgtmap))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  al%status_wgtmap: '//str(al%status_wgtmap))
+    call errend(msg_invalid_value('al%status_wgtmap', al%status_wgtmap))
   endselect
   selectcase( br%status_wgtmap )
   case( GRID_STATUS__PREPARED )
@@ -105,46 +106,45 @@ subroutine rasterize_latlon(a, b, output)
         GRID_STATUS__TO_BE_PREPARED )
     case_wgtmap_b = 0
   case( GRID_STATUS__UNDEF )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  br%status_wgtmap == '//str(br%status_wgtmap))
+    call errend(msg_unexpected_condition()//&
+              '\n  br%status_wgtmap == '//str(br%status_wgtmap))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  br%status_wgtmap: '//str(br%status_wgtmap))
+    call errend(msg_invalid_value('br%status_wgtmap', br%status_wgtmap))
   endselect
 
   case_wgtmap = case_wgtmap_a*10 + case_wgtmap_b
 
-  !info = initialize(a, b, output)
-  info = initialize(br)
+  call traperr( initialize(br) )
+  call traperr( initialize_thresh(output%thresh) )
   !-------------------------------------------------------------
   ! Calc. relationships among grid lines and pixel lines
   !-------------------------------------------------------------
-  call calc_relations_llbnds(al, br)
+  call traperr( calc_relations_llbnds(al, br) )
   !-------------------------------------------------------------
   ! Rasterize
   !-------------------------------------------------------------
-  call echo(code%ent, 'Rasterizing')
+  call logent('Rasterizing', PRCNAM, MODNAM)
 
   do ibz = 1, br%nZone
     if( br%nZone>1 )&
-      call echo(code%ent, '("'//str(br%nam)//'") zone '//str(ibz)//' / '//str(br%nZone))
+      call logent('("'//str(br%nam)//'") zone '//str(ibz)//' / '//str(br%nZone), PRCNAM, MODNAM)
 
     brz => br%zone(ibz)
     if( .not. brz%is_valid )then
-      if( br%nZone > 1 ) call echo(code%ext)
+      if( br%nZone > 1 ) call logext()
       cycle
     endif
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    info = initialize_zone(brz)
+    call traperr( initialize_zone(brz) )
 
-    if( do_make_iarea_max ) info = alloc_map(iarea_max)
-    if( do_make_iarea_sum ) info = alloc_map(iarea_sum)
+    if( do_make_iarea_max ) call traperr( alloc_map(iarea_max) )
+    if( do_make_iarea_sum ) call traperr( alloc_map(iarea_sum) )
     !-----------------------------------------------------------
     ! Calc. intersection areas
     !-----------------------------------------------------------
-    info = alloc_map(iarea)
+    call traperr( alloc_map(iarea) )
 
     do iav = al%vi, al%vf
       avr => al%vrel(iav)
@@ -233,28 +233,27 @@ subroutine rasterize_latlon(a, b, output)
         !-------------------------------------------------------
         ! Case: ERROR
         case default
-          call eerr(str(msg_invalid_value())//&
-                  '\n  case_wgtmap: '//str(case_wgtmap))
+          call errend(msg_invalid_value('case_wgtmap', case_wgtmap))
         endselect
         !-------------------------------------------------------
         !
         !-------------------------------------------------------
         if( do_make_iarea_max )then
           do ibr = 1, ahr%nr
-            info = update_iarea_max(&
-                     iarea_max,                  & ! inout
-                     iarea,                      & ! in
-                     al%idxmap(iah,iav),         & ! in
-                     bhi(ibr), bhf(ibr), bvi, bvf) ! in
+            call traperr( update_iarea_max(&
+                     iarea_max,                  &  ! inout
+                     iarea,                      &  ! in
+                     al%idxmap(iah,iav),         &  ! in
+                     bhi(ibr), bhf(ibr), bvi, bvf) )! in
           enddo
         endif
 
         if( do_make_iarea_sum )then
           do ibr = 1, ahr%nr
-            info = update_iarea_sum(&
-                     iarea_sum,                  & ! inout
-                     iarea,                      & ! in
-                     bhi(ibr), bhf(ibr), bvi, bvf) ! in
+            call traperr( update_iarea_sum(&
+                     iarea_sum,                  &  ! inout
+                     iarea,                      &  ! in
+                     bhi(ibr), bhf(ibr), bvi, bvf) )! in
           enddo
         endif
         !-------------------------------------------------------
@@ -264,29 +263,32 @@ subroutine rasterize_latlon(a, b, output)
     deallocate(iarea)
     !-----------------------------------------------------------
     ! Make the accompanying data
-    ! $iarea_max and $iarea_sum are freed.
     !-----------------------------------------------------------
     call make_data(&
-           iarea_max, iarea_sum,             & ! inout
+           iarea_max, iarea_sum,             & ! in
            brz%mskmap, br%is_south_to_north, & ! in
            output, fill_miss)                  ! in
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    info = finalize_zone()
+    if( do_make_iarea_max ) deallocate(iarea_max)
+    if( do_make_iarea_sum ) deallocate(iarea_sum)
+
+    call traperr( finalize_zone() )
     !-----------------------------------------------------------
     ! Kill the flag
     !-----------------------------------------------------------
     fill_miss = .false.
     !-----------------------------------------------------------
-    if( br%nZone>1 ) call echo(code%ext)
+    if( br%nZone>1 ) call logext()
   enddo  ! ibz/
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Postprocess
   !-------------------------------------------------------------
-  info = finalize()
+  call traperr( finalize() )
+  call traperr( finalize_thresh() )
 
   deallocate(iibh)
   nullify(ahr, avr)
@@ -294,7 +296,7 @@ subroutine rasterize_latlon(a, b, output)
   nullify(brz)
   nullify(al, br)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine rasterize_latlon
 !===============================================================
 !

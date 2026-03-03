@@ -19,7 +19,7 @@ module mod_data
 
   public :: make_data
   !-------------------------------------------------------------
-  !
+  ! Interfaces
   !-------------------------------------------------------------
   interface writedata
     module procedure writedata__int1
@@ -29,7 +29,7 @@ module mod_data
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: MSGMOD = 'MODULE mod_data'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_data'
 
   integer :: cl_var
   !-------------------------------------------------------------
@@ -42,6 +42,7 @@ subroutine get_tasks(&
     make_iarea_max, make_iarea_sum, make_iratio_sum, &
     make_idx, make_mask)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_tasks'
   type(output_), intent(in)  :: output
   logical      , intent(out) :: make_iarea_max , &
                                 make_iarea_sum , &
@@ -53,7 +54,7 @@ subroutine get_tasks(&
              out_idx       , &
              out_mask
 
-  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE get_tasks', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -72,7 +73,7 @@ subroutine get_tasks(&
                     make_mask      .or. &
                     make_iratio_sum
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine get_tasks
 !===============================================================
 !
@@ -88,6 +89,7 @@ subroutine make_data(&
         make_mask, &
         make_idx
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_data'
   type(iarea_max_), pointer    :: iarea_max(:,:)  ! inout
   real(8)         , pointer    :: iarea_sum(:,:)  ! inout
   logical(1)      , pointer    :: msk(:,:)        ! in
@@ -106,9 +108,8 @@ subroutine make_data(&
   integer(8) :: ndh, ndv, dhi, dhf, dvi, dvf
   integer(8) :: zdhi, zdhf, zdvi, zdvf, &
                 zdxi, zdxf, zdyi, zdyf
-  integer :: info
 
-  call echo(code%bgn, trim(MSGMOD)//' make_data')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -125,62 +126,65 @@ subroutine make_data(&
          do_make_mask)
   call set_cl_var(output)
 
-  info = get_range_raster(ndh, ndv, dhi, dhf, dvi, dvf)
-  info = get_range_raster_zone(zdhi, zdhf, zdvi, zdvf, &
-                               zdxi, zdxf, zdyi, zdyf)
+  call get_range_raster(ndh, ndv, dhi, dhf, dvi, dvf)
+  call get_range_raster_zone(zdhi, zdhf, zdvi, zdvf, &
+                             zdxi, zdxf, zdyi, zdyf)
 
-  if( output%f_iarea_sum%path /= '' )&
+  if( output%f_iarea_sum%path /= '' )then
     call writedata(&
            output%f_iarea_sum, iarea_sum, VARNAME_IAREA_SUM, &
            is_south_to_north, fill_miss,                     &
-           ndh, ndv, zdxi, zdxf, zdyi, zdyf)
+           ndh, ndv, zdxi, zdyi)
+  endif
 
   if( do_make_iratio_sum )then
-    info = calc_iratio_sum(iarea_sum, msk)
+    call traperr( calc_iratio_sum(iarea_sum, msk) )
     iratio_sum => iarea_sum
   endif
 
-  if( output%f_iratio_sum%path /= '' )&
+  if( output%f_iratio_sum%path /= '' )then
     call writedata(&
            output%f_iratio_sum, iratio_sum, VARNAME_IRATIO_SUM, &
            is_south_to_north, fill_miss,                        &
-           ndh, ndv, zdxi, zdxf, zdyi, zdyf)
-
-  if( do_make_idx )then
-    info = alloc_map(idx)
-    info = make_idx(&
-             idx,                 & ! out
-             iarea_max, iratio_sum) ! in
+           ndh, ndv, zdxi, zdyi)
   endif
 
-  if( output%f_idx%path /= '' )&
+  if( do_make_idx )then
+    call traperr( alloc_map(idx) )
+    call traperr( make_idx(&
+           idx,                 &  ! out
+           iarea_max, iratio_sum) )! in
+  endif
+
+  if( output%f_idx%path /= '' )then
     call writedata(&
            output%f_idx, idx, VARNAME_IDX, &
            is_south_to_north, fill_miss,   &
-           ndh, ndv, zdxi, zdxf, zdyi, zdyf)
+           ndh, ndv, zdxi, zdyi)
+  endif
 
-  if( associated(iarea_max)  ) deallocate(iarea_max)
+!  if( associated(iarea_max)  ) deallocate(iarea_max)
   if( associated(idx)        ) deallocate(idx)
 
   if( do_make_mask )then
-    info = alloc_map(mask)
-    info = make_mask(&
-             mask,     & ! out
-             iratio_sum) ! in
+    call traperr( alloc_map(mask) )
+    call traperr( make_mask(&
+           mask,     &   ! out
+           iratio_sum) ) ! in
   endif
 
   if( output%f_mask%path /= '' )then
     call writedata(&
            output%f_mask, mask, VARNAME_MASK, &
            is_south_to_north, fill_miss,      &
-           ndh, ndv, zdxi, zdxf, zdyi, zdyf)
+           ndh, ndv, zdxi, zdyi)
   endif
 
   if( associated(iratio_sum) ) nullify(iratio_sum)
-  if( associated(iarea_sum)  ) deallocate(iarea_sum)
+!  if( associated(iarea_sum)  ) deallocate(iarea_sum)
   if( associated(mask)       ) deallocate(mask)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_data
 !===============================================================
 !
@@ -199,114 +203,123 @@ end subroutine set_cl_var
 !===============================================================
 subroutine writedata__int1(&
     f, dat, varname, is_south_to_north, fill_miss, &
-    ndx, ndy, dxi, dxf, dyi, dyf)
+    ndx, ndy, dxi, dyi)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'writedata__int1'
   type(file_) , intent(in) :: f
   integer(1)  , pointer    :: dat(:,:)  ! actually in
   character(*), intent(in) :: varname
-  logical     , intent(in) :: fill_miss
   logical     , intent(in) :: is_south_to_north
-  integer(8)  , intent(in) :: ndx, ndy, dxi, dxf, dyi, dyf
+  logical     , intent(in) :: fill_miss
+  integer(8)  , intent(in) :: ndx, ndy, dxi, dyi
 
-  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE writedata__int1', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( f%path == '' )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
   if( .not. is_south_to_north )  call reverse(dat,2)
 
-  call edbg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
+  call logmsg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
   if( fill_miss )then
-    call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
-              sz=(/ndx,ndy/), lb=(/dxi,dyi/), fill=0_1)
+    call traperr( wbin(&
+           dat, f%path, f%dtype, f%endian, f%rec, &
+           sz=(/ndx,ndy/), lb=(/dxi,dyi/), fill=0_1) )
   else
-    call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
-              sz=(/ndx,ndy/), lb=(/dxi,dyi/))
+    call traperr( wbin(&
+           dat, f%path, f%dtype, f%endian, f%rec, &
+           sz=(/ndx,ndy/), lb=(/dxi,dyi/)) )
   endif
 
   if( .not. is_south_to_north )  call reverse(dat,2)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine writedata__int1
 !===============================================================
 !
 !===============================================================
 subroutine writedata__int8(&
     f, dat, varname, is_south_to_north, fill_miss, &
-    ndx, ndy, dxi, dxf, dyi, dyf)
+    ndx, ndy, dxi, dyi)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'writedata__int8'
   type(file_) , intent(in) :: f
   integer(8)  , pointer    :: dat(:,:)  ! actually in
   character(*), intent(in) :: varname
-  logical     , intent(in) :: fill_miss
   logical     , intent(in) :: is_south_to_north
-  integer(8)  , intent(in) :: ndx, ndy, dxi, dxf, dyi, dyf
+  logical     , intent(in) :: fill_miss
+  integer(8)  , intent(in) :: ndx, ndy, dxi, dyi
 
-  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE writedata__int8', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( f%path == '' )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
   if( .not. is_south_to_north )  call reverse(dat,2)
 
-  call edbg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
+  call logmsg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
   if( fill_miss )then
-    call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
-              sz=(/ndx,ndy/), lb=(/dxi,dyi/), fill=0_8)
+    call traperr( wbin(&
+           dat, f%path, f%dtype, f%endian, f%rec, &
+           sz=(/ndx,ndy/), lb=(/dxi,dyi/), fill=0_8) )
   else
-    call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
-              sz=(/ndx,ndy/), lb=(/dxi,dyi/))
+    call traperr( wbin(&
+           dat, f%path, f%dtype, f%endian, f%rec, &
+           sz=(/ndx,ndy/), lb=(/dxi,dyi/)) )
   endif
 
   if( .not. is_south_to_north )  call reverse(dat,2)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine writedata__int8
 !===============================================================
 !
 !===============================================================
 subroutine writedata__dble(&
     f, dat, varname, is_south_to_north, fill_miss, &
-    ndx, ndy, dxi, dxf, dyi, dyf)
+    ndx, ndy, dxi, dyi)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'writedata__dble'
   type(file_) , intent(in) :: f
   real(8)     , pointer    :: dat(:,:)  ! actually in
   character(*), intent(in) :: varname
-  logical     , intent(in) :: fill_miss
   logical     , intent(in) :: is_south_to_north
-  integer(8)  , intent(in) :: ndx, ndy, dxi, dxf, dyi, dyf
+  logical     , intent(in) :: fill_miss
+  integer(8)  , intent(in) :: ndx, ndy, dxi, dyi
 
-  call echo(code%bgn, trim(MSGMOD)//' SUBROUTINE writedata__dble', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( f%path == '' )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
   if( .not. is_south_to_north )  call reverse(dat,2)
 
-  call edbg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
+  call logmsg('Writing '//str(varname,cl_var)//' '//fileinfo(f))
   if( fill_miss )then
-    call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
-              sz=(/ndx,ndy/), lb=(/dxi,dyi/), fill=0.d0)
+    call traperr( wbin(&
+           dat, f%path, f%dtype, f%endian, f%rec, &
+           sz=(/ndx,ndy/), lb=(/dxi,dyi/), fill=0.d0) )
   else
-    call wbin(dat, f%path, f%dtype, f%endian, f%rec, &
-              sz=(/ndx,ndy/), lb=(/dxi,dyi/))
+    call traperr( wbin(&
+           dat, f%path, f%dtype, f%endian, f%rec, &
+           sz=(/ndx,ndy/), lb=(/dxi,dyi/)) )
   endif
 
   if( .not. is_south_to_north )  call reverse(dat,2)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine writedata__dble
 !===============================================================
 !

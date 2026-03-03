@@ -71,11 +71,11 @@ program main
   character(128), parameter :: wfile6 = 'map/basin.bin'
   character(128), parameter :: wfile7 = 'map/bsncol.bin'
 
-  call echo(code%bgn, 'program set_map')
+  call logbgn('program set_map', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
 
   open(11, file=fparams, status='old')
 
@@ -100,13 +100,13 @@ program main
   south=-90.0
   gsize=(360.*180./real(nXX)/real(nYY)) **0.5
 
-  call rbin(nextX, rfile1, rec=1)
-  call rbin(nextY, rfile1, rec=2)
+  call traperr( rbin(nextX, rfile1, rec=1) )
+  call traperr( rbin(nextY, rfile1, rec=2) )
 
-  call rbin(lon, fgrlonlat, rec=1)
-  call rbin(lat, fgrlonlat, rec=2)
+  call traperr( rbin(lon, fgrlonlat, rec=1) )
+  call traperr( rbin(lat, fgrlonlat, rec=2) )
 
-  call rbin(grarea, flndare)
+  call traperr( rbin(grarea, flndare) )
 
   open(11, file=fmapdim, status='replace')
   write(11,'(i10,5x,a)') nXX, '!! nXX'
@@ -127,7 +127,8 @@ program main
   !-------------------------------------------------------------
   ! calc river sequence
   !-------------------------------------------------------------
-print *, 'SET_MAP calc river sequence'
+  call logent('SET_MAP calc river sequence')
+
   rivseq=1
   do iYY=1, nYY
     do iXX=1, nXX
@@ -156,7 +157,7 @@ print *, 'SET_MAP calc river sequence'
     end do
   end do
   nmax=n
-  print*,'nmax=',nmax
+  call logmsg('nmax = '//str(nmax))
 
   checkpoint = 12
   do while (nmax>0)
@@ -183,13 +184,16 @@ print *, 'SET_MAP calc river sequence'
   end do
 
   nseq_max=nseq
-print *, '  nseqmax=', nseq_max
+  call logmsg('nseqmax = '//str(nseq_max))
 
-  call wbin(rivseq, wfile1, dtype=dtype_real)
+  call traperr( wbin(rivseq, wfile1, dtype=dtype_real) )
+
+  call logext()
   !-------------------------------------------------------------
   ! calc upa drainage area
   !-------------------------------------------------------------
-print *, 'SET_MAP calc upa drainage area'
+  call logent('SET_MAP calc upa drainage area')
+
   do iYY=1, nYY
     do iXX=1, nXX
       if( nextX(iXX,iYY)/=-9999 )then
@@ -227,15 +231,18 @@ print *, 'SET_MAP calc upa drainage area'
     end do
   end do
 
-  call wbin(grarea, wfile2, dtype=dtype_real)
+  call traperr( wbin(grarea, wfile2, dtype=dtype_real) )
 
-  call wbin(uparea, wfile3, dtype=dtype_real)
+  call traperr( wbin(uparea, wfile3, dtype=dtype_real) )
 
-  call wbin(upgrid, wfile4)
+  call traperr( wbin(upgrid, wfile4) )
+
+  call logext()
   !-------------------------------------------------------------
   ! clac distance to next grid
   !-------------------------------------------------------------
-print *, 'SET_MAP calc distance to next grid'
+  call logent('SET_MAP calc distance to next grid')
+
   do iYY=1, nYY
     do iXX=1, nXX
       if( nextX(iXX,iYY)>0 ) then
@@ -263,11 +270,14 @@ print *, 'SET_MAP calc distance to next grid'
     end do
   end do
 
-  call wbin(nxtdst, wfile5, dtype=dtype_real)
+  call traperr( wbin(nxtdst, wfile5, dtype=dtype_real) )
+
+  call logext()
   !-------------------------------------------------------------
   ! calc basin
   !-------------------------------------------------------------
-print *, 'SET_MAP calc basin'
+  call logent('SET_MAP calc basin')
+
   basin=0
   nbsn=0
 
@@ -307,7 +317,7 @@ print *, 'SET_MAP calc basin'
     end do
   end do
   nbsn_max=nbsn
-print *, '  number of basin=', nbsn_max
+  call logmsg('number of basin = '//str(nbsn_max))
 
   allocate(basin_grid(nbsn_max))
   allocate(basin_order(nbsn_max))
@@ -341,11 +351,14 @@ print *, '  number of basin=', nbsn_max
     end do
   end do
 
-  call wbin(basin, wfile6)
+  call traperr( wbin(basin, wfile6) )
+
+  call logext()
   !-------------------------------------------------------------
   ! decide color of each basin for use in GMT
   !-------------------------------------------------------------
-print *, 'SET_MAP color basin'
+  call logent('SET_MAP color basin')
+
   color=-9999
   color_max=0
   allocate(bsn_mask(nbsn_max,4))
@@ -496,11 +509,13 @@ print *, 'SET_MAP color basin'
       end do
     endif
   end do
-print *, '  number of color=', color_max
+  call logmsg('number of color = '//str(color_max))
 
-  call wbin(color, wfile7)
+  call traperr( wbin(color, wfile7) )
+
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------

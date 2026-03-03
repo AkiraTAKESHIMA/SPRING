@@ -37,7 +37,7 @@ program main
   !! 0:ocean, 1:river to ovean 2:inland river
   character(128), parameter :: winland = 'tmp/1min/inland.bin'
 
-  call echo(code%bgn, 'program modify_hires')
+  call logbgn('program modify_hires', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -48,18 +48,18 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading flow direction '//str(fflwdir))
-  call rbin(flwdir, fflwdir, dtype=dtype_int4)
+  call logmsg('Reading flow direction '//str(fflwdir))
+  call traperr( rbin(flwdir, fflwdir, dtype=dtype_int4) )
 
-  call edbg('Reading elevation      '//str(felevtn))
-  call rbin(elevtn, felevtn, dtype=dtype_real)
+  call logmsg('Reading elevation      '//str(felevtn))
+  call traperr( rbin(elevtn, felevtn, dtype=dtype_real) )
 
-  call edbg('Reading land mask      '//str(flndmsk))
-  call rbin(lndmsk, flndmsk)
+  call logmsg('Reading land mask      '//str(flndmsk))
+  call traperr( rbin(lndmsk, flndmsk) )
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying hires flow direction map')
+  call logent('Modifying hires flow direction map')
 
   do iy=1, ny
     do ix=1, nx
@@ -76,11 +76,11 @@ program main
     end do
   end do
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying hires elevation map')
+  call logent('Modifying hires elevation map')
 
   do iy=1, ny
     do ix=1, nx
@@ -193,21 +193,21 @@ program main
     end do
   end do
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Writing flow direction '//str(wflwdir))
-  call wbin(flwdir, wflwdir)
+  call logmsg('Writing flow direction '//str(wflwdir))
+  call traperr( wbin(flwdir, wflwdir) )
 
-  call edbg('Writing land mask      '//str(wlndmsk))
-  call wbin(lndmsk, wlndmsk)
+  call logmsg('Writing land mask      '//str(wlndmsk))
+  call traperr( wbin(lndmsk, wlndmsk) )
 
-  call edbg('Writing elevation      '//str(welevtn))
-  call wbin(elevtn, welevtn)
+  call logmsg('Writing elevation      '//str(welevtn))
+  call traperr( wbin(elevtn, welevtn) )
 
-  call edbg('Writing inland         '//str(winland))
-  call wbin(inland, winland)
+  call logmsg('Writing inland         '//str(winland))
+  call traperr( wbin(inland, winland) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

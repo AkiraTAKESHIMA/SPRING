@@ -19,20 +19,21 @@ module ls_remap
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: MODNAME = 'ls_remap'
+  character(CLEN_PROC), parameter :: MODNAM = 'ls_remap'
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine spring_remap(&
+integer(4) function spring_remap(&
     rtname, sdata, tdata, &
-    smiss, tmiss)
+    smiss, tmiss) result(info)
   use ls_gs, only: &
-        point_grdsys
+        point_mesh
   use ls_rt, only: &
         point_rt
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'spring_remap'
   character(*), intent(in)  :: rtname
   real(8)     , intent(in)  :: sdata(:,:)
   real(8)     , intent(out) :: tdata(:,:)
@@ -54,7 +55,8 @@ subroutine spring_remap(&
   integer(8) :: ij
   integer(8) :: loc
 
-  call echo(code%bgn, trim(MODNAME)//' spring_remap', logopt())
+  info = 0
+  call logbgn(PRCNAM, MODNAM, logopt())
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -66,11 +68,17 @@ subroutine spring_remap(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call point_rt(rtname, rt)
+  if( point_rt(rtname, rt) /= 0 )then
+    info = 1; call errret(); return
+  endif
   rtm => rt%main
 
-  call point_grdsys(rt%snam, s)
-  call point_grdsys(rt%tnam, t)
+  if( point_mesh(rt%snam, s) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( point_mesh(rt%tnam, t) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   sl => s%latlon
   nsx = sl%nx
@@ -142,8 +150,8 @@ subroutine spring_remap(&
   nullify(rtm)
   nullify(rt)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine spring_remap
+  call logret(PRCNAM, MODNAM)
+end function spring_remap
 !===============================================================
 !
 !===============================================================

@@ -11,17 +11,19 @@ module mod_main
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: run
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_main'
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine run(s, t, output)
-  use c1_gs_base, only: &
-        free_gs
   use c1_gs_define, only: &
         set_gs
   use c1_gs_grid_core, only: &
@@ -36,6 +38,7 @@ subroutine run(s, t, output)
   use mod_rasterize_polygon, only: &
         rasterize_polygon
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'run'
   type(gs_)    , intent(inout) :: s  ! origin
   type(gs_)    , intent(inout) :: t  ! raster
   type(output_), intent(in)    :: output
@@ -45,13 +48,13 @@ subroutine run(s, t, output)
   type(gs_raster_) , pointer :: tr
   type(file_grid_in_), pointer :: fg_in
 
-  call echo(code%bgn, 'run')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   tr => t%raster
 
-  call set_gs(tr)
+  call traperr( set_gs(tr) )
 
   fg_in => s%cmn%f_grid_in
 
@@ -61,48 +64,46 @@ subroutine run(s, t, output)
   case( MESHTYPE__LATLON )
     sl => s%latlon
 
-    call set_gs(sl)
-    call make_idxmap(sl)
+    call traperr( set_gs(sl) )
+    call traperr( make_idxmap(sl) )
     if( sl%f_grid_in%wgt%path /= '' )then
-      call make_grdidx(sl)
-      call make_grduwa(sl)
-      call make_grdara(sl)
-      call make_grdwgt(sl)
-      call make_wgtmap(sl)
+      call traperr( make_grdidx(sl) )
+      call traperr( make_grduwa(sl) )
+      call traperr( make_grdara(sl) )
+      call traperr( make_grdwgt(sl) )
+      call traperr( make_wgtmap(sl) )
     endif
 
     call rasterize_latlon(s, t, output)
   !-------------------------------------------------------------
   ! Case: Raster
   case( MESHTYPE__RASTER )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  s%typ: '//str(s%typ))
+    call errend(msg_unexpected_condition()//&
+              '\n  s%typ: '//str(s%typ))
   !-------------------------------------------------------------
   ! Case: Polygon
   case( MESHTYPE__POLYGON )
     sp => s%polygon
-    call make_grdidx(sp)
-    call set_gs(sp)
+    call traperr( make_grdidx(sp) )
+    call traperr( set_gs(sp) )
     if( fg_in%wgt%path /= '' )then
-      call make_grduwa(sp)
-      call make_grdara(sp)
-      call make_grdwgt(sp)
+      call traperr( make_grduwa(sp) )
+      call traperr( make_grdara(sp) )
+      call traperr( make_grdwgt(sp) )
     endif
 
     call rasterize_polygon(s, t, output)
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ))
+    call errend(msg_invalid_value('s%typ', s%typ))
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_gs(s)
-  call free_gs(t)
+  nullify(sl, sp, tr, fg_in)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine run
 !===============================================================
 !

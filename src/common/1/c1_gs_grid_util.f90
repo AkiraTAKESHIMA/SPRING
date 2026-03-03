@@ -6,18 +6,24 @@ module c1_gs_grid_util
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: print_indices
   public :: print_idxmap
   public :: print_grid_stats
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_grid_util'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine print_indices(idx, arg, idx_miss, idxmin, idxmax)
+subroutine print_indices(&
+    idx, arg, idx_miss, idxmin, idxmax)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_indices'
   integer(8), intent(in) :: idx(:), arg(:)
   integer(8), intent(in) :: idx_miss
   integer(8), intent(in) :: idxmin, idxmax
@@ -25,21 +31,21 @@ subroutine print_indices(idx, arg, idx_miss, idxmin, idxmax)
   character(1024) :: msg
   integer(8) :: mij, ij
 
-  call echo(code%bgn, 'print_indices', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('The set of grid indices:')
-  call echo(code%set, '+x2')
+  call logmsg('The set of grid indices:')
+  call setlog('+x2')
 
   mij = size(idx)
-  call edbg('The number of grids: '//str(mij))
+  call logmsg('The number of grids: '//str(mij))
 
   if( idxmin == idx_miss )then
-    call edbg('No valid index exists.')
+    call logmsg('No valid index exists.')
   else
-    call edbg('min: '//str(idxmin,dgt((/idxmin,idxmax/),dgt_opt_max))//&
-             ' max: '//str(idxmax,dgt((/idxmin,idxmax/),dgt_opt_max)))
+    call logmsg('min: '//str(idxmin,dgt((/idxmin,idxmax/),dgt_opt_max))//&
+               ' max: '//str(idxmax,dgt((/idxmin,idxmax/),dgt_opt_max)))
 
     if( mij < 9_8 )then
       msg = 'idx:'
@@ -58,18 +64,19 @@ subroutine print_indices(idx, arg, idx_miss, idxmin, idxmax)
       enddo
       msg = msg(:len_trim(msg)-1)
     endif
-    call edbg(str(msg))
+    call logmsg(str(msg))
   endif
 
-  call echo(code%set, '-x2')
+  call setlog('-x2')
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_indices
 !===============================================================
 !
 !===============================================================
 subroutine print_idxmap(idxmap)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_idxmap'
   integer(8), pointer :: idxmap(:,:)  ! in
 
   integer(8) :: hi, hf, vi, vf
@@ -80,7 +87,7 @@ subroutine print_idxmap(idxmap)
   character(4) :: c_south_north
   integer(8), allocatable :: arr(:)
 
-  call echo(code%bgn, 'print_idxmap', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   hi = lbound(idxmap,1)
   hf = ubound(idxmap,1)
@@ -93,21 +100,21 @@ subroutine print_idxmap(idxmap)
   vi_ = min(vi+2,vf)
   vf_ = max(vf-2,vi)
   dgt_idx = max(dgt(hf), &
-                dgt(min(minval(idxmap(hi:hi_,vi:vi_)), &   ! lower left
-                        minval(idxmap(hi:hi_,vf_:vf)), &   ! upper left
-                        minval(idxmap(hf_:hf,vi:vi_)), &   ! lower right
-                        minval(idxmap(hf_:hf,vf_:vf)))), & ! upper right
-                dgt(max(maxval(idxmap(hi:hi_,vi:vi_)), &   ! lower left
-                        maxval(idxmap(hi:hi_,vf_:vf)), &   ! upper left
-                        maxval(idxmap(hf_:hf,vi:vi_)), &   ! lower right
-                        maxval(idxmap(hf_:hf,vf_:vf)))))   ! upper right
+                dgt(min(minval(idxmap(hi :hi_,vi :vi_))  , & ! lower left
+                        minval(idxmap(hi :hi_,vf_:vf ))  , & ! upper left
+                        minval(idxmap(hf_:hf ,vi :vi_))  , & ! lower right
+                        minval(idxmap(hf_:hf ,vf_:vf )))), & ! upper right
+                dgt(max(maxval(idxmap(hi :hi_,vi :vi_))  , & ! lower left
+                        maxval(idxmap(hi :hi_,vf_:vf ))  , & ! upper left
+                        maxval(idxmap(hf_:hf ,vi :vi_))  , & ! lower right
+                        maxval(idxmap(hf_:hf ,vf_:vf )))))   ! upper right
   dgt_v = max(3, dgt(vf))
 
   if( hf - hi + 1_8 > 6_8 )then
-    call edbg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*6+4-6)//'(E)')
-    call edbg(str('',4+dgt_v+1-4)//'v\h| '//str((/hi,hi+1,hi+2/),dgt_idx,' ')//&
-                                   '     '//str((/hf-2,hf-1,hf/),dgt_idx,' '))
-    call edbg(str('',4+dgt_v+1+(dgt_idx+1)*6+4,'-'))
+    call logmsg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*6+4-6)//'(E)')
+    call logmsg(str('',4+dgt_v+1-4)//'v\h| '//str((/hi,hi+1,hi+2/),dgt_idx,' ')//&
+                                     '     '//str((/hf-2,hf-1,hf/),dgt_idx,' '))
+    call logmsg(str('',4+dgt_v+1+(dgt_idx+1)*6+4,'-'))
 
     if( vf - vi + 1_8 > 10_8 )then
       do iv = vf, vf-2_8, -1_8
@@ -116,12 +123,12 @@ subroutine print_idxmap(idxmap)
         else
           c_south_north = ''
         endif
-        call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
-                              ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
+        call logmsg(str(c_south_north,4)//&
+                    str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
+                                ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
       enddo
 
-      call edbg(str('',4+dgt_v+1-4)//'...|')
+      call logmsg(str('',4+dgt_v+1-4)//'...|')
 
       do iv = vi+2_8, vi, -1_8
         if( iv == vi )then
@@ -129,9 +136,9 @@ subroutine print_idxmap(idxmap)
         else
           c_south_north = ''
         endif
-        call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
-                              ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
+        call logmsg(str(c_south_north,4)//&
+                    str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
+                                ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
       enddo
     else
       do iv = vf, vi, -1_8
@@ -142,21 +149,21 @@ subroutine print_idxmap(idxmap)
         else
           c_south_north = ''
         endif
-        call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
-                              ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
+        call logmsg(str(c_south_north,4)//&
+                    str(iv,dgt_v)//'| '//str(idxmap(hi:hi+2,iv),dgt_idx)//&
+                                ' ... '//str(idxmap(hf-2:hf,iv),dgt_idx))
       enddo
     endif
   else
-    call edbg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*int(hf-hi+1,4)-6)//'(E)')
+    call logmsg(str('',4+dgt_v)//'|(W)'//str('',(dgt_idx+1)*int(hf-hi+1,4)-6)//'(E)')
 
     allocate(arr(hi:hf))
     do ih = hi, hf
       arr(ih) = ih
     enddo
-    call edbg(str('',4+dgt_v+1-4)//'v\h| '//str(arr,dgt_idx,' '))
+    call logmsg(str('',4+dgt_v+1-4)//'v\h| '//str(arr,dgt_idx,' '))
     deallocate(arr)
-    call edbg(str('',4+dgt_v+1+(dgt_idx+1)*int(mh,4),'-'))
+    call logmsg(str('',4+dgt_v+1+(dgt_idx+1)*int(mh,4),'-'))
 
     if( vf - vi + 1_8 > 10_8 )then
       do iv = vf, vf-2_8, -1_8
@@ -165,11 +172,11 @@ subroutine print_idxmap(idxmap)
         else
           c_south_north = ''
         endif
-        call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
+        call logmsg(str(c_south_north,4)//&
+                    str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
       enddo
 
-      call edbg(str('',4+dgt_v+1-4)//'...|')
+      call logmsg(str('',4+dgt_v+1-4)//'...|')
 
       do iv = vi+2_8, vi, -1_8
         if( iv == vi )then
@@ -177,8 +184,8 @@ subroutine print_idxmap(idxmap)
         else
           c_south_north = ''
         endif
-        call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
+        call logmsg(str(c_south_north,4)//&
+                    str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
       enddo
     else
       do iv = vf, vi, -1_8
@@ -189,13 +196,13 @@ subroutine print_idxmap(idxmap)
         else
           c_south_north = ''
         endif
-        call edbg(str(c_south_north,4)//&
-                  str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
+        call logmsg(str(c_south_north,4)//&
+                    str(iv,dgt_v)//'| '//str(idxmap(hi:hf,iv),dgt_idx))
       enddo
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_idxmap
 !===============================================================
 !
@@ -204,6 +211,7 @@ subroutine print_grid_stats(&
     g, idx_miss, &
     uwa, ara, wgt, xyz, lonlat)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_grid_stats'
   type(grid_), intent(in) :: g
   integer(8) , intent(in) :: idx_miss
   logical    , intent(in), optional :: uwa, ara, wgt, xyz, lonlat
@@ -216,7 +224,7 @@ subroutine print_grid_stats(&
   logical(1), allocatable :: mask(:)
   character(clen_wfmt), parameter :: wfmt = 'es20.13'
 
-  call echo(code%bgn, 'print_grid_stats', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -238,42 +246,42 @@ subroutine print_grid_stats(&
   mask = g%idx /= idx_miss
 
   if( .not. any(mask) )then
-    call edbg('No valid grid exists')
+    call logmsg('No valid grid exists')
     deallocate(mask)
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
   if( print_uwa_ )then
-    call edbg('uwa min: '//str(minval(g%uwa,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%uwa,mask=mask),wfmt))
+    call logmsg('uwa min: '//str(minval(g%uwa,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%uwa,mask=mask),wfmt))
   endif
   if( print_ara_ )then
-    call edbg('ara min: '//str(minval(g%ara,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%ara,mask=mask),wfmt))
+    call logmsg('ara min: '//str(minval(g%ara,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%ara,mask=mask),wfmt))
   endif
   if( print_wgt_ )then
-    call edbg('wgt min: '//str(minval(g%wgt,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%wgt,mask=mask),wfmt))
+    call logmsg('wgt min: '//str(minval(g%wgt,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%wgt,mask=mask),wfmt))
   endif
   if( print_xyz_ )then
-    call edbg('x   min: '//str(minval(g%x,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%x,mask=mask),wfmt))
-    call edbg('y   min: '//str(minval(g%y,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%y,mask=mask),wfmt))
-    call edbg('z   min: '//str(minval(g%z,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%z,mask=mask),wfmt))
+    call logmsg('x   min: '//str(minval(g%x,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%x,mask=mask),wfmt))
+    call logmsg('y   min: '//str(minval(g%y,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%y,mask=mask),wfmt))
+    call logmsg('z   min: '//str(minval(g%z,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%z,mask=mask),wfmt))
   endif
   if( print_lonlat_ )then
-    call edbg('lon min: '//str(minval(g%lon,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%lon,mask=mask),wfmt))
-    call edbg('lat min: '//str(minval(g%lat,mask=mask),wfmt)//&
-                 ' max: '//str(maxval(g%lat,mask=mask),wfmt))
+    call logmsg('lon min: '//str(minval(g%lon,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%lon,mask=mask),wfmt))
+    call logmsg('lat min: '//str(minval(g%lat,mask=mask),wfmt)//&
+                   ' max: '//str(maxval(g%lat,mask=mask),wfmt))
   endif
 
   deallocate(mask)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_grid_stats
 !===============================================================
 !

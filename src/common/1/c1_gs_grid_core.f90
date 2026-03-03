@@ -81,95 +81,125 @@ module c1_gs_grid_core
     module procedure read_lattice_data__dble
   end interface
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_grid_core'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap_gs(a)
+integer(4) function make_idxmap_gs(a) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_idxmap_gs'
   type(gs_), intent(inout) :: a
 
-  call echo(code%bgn, 'make_idxmap_gs', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
   case( MESHTYPE__LATLON )
-    call make_idxmap__latlon(a%latlon)
+    if( make_idxmap__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__RASTER )
-    call make_idxmap__raster(a%raster)
+    if( make_idxmap__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_idxmap_gs
+  call logret(PRCNAM, MODNAM)
+end function make_idxmap_gs
 !===============================================================
 !
 !===============================================================
-subroutine make_wgtmap_gs(a)
+integer(4) function make_wgtmap_gs(a) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_wgtmap_gs'
   type(gs_), intent(inout) :: a
 
-  call echo(code%bgn, 'make_wgtmap_gs', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
   case( MESHTYPE__LATLON )
-    call make_wgtmap__latlon(a%latlon)
+    if( make_wgtmap__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__RASTER )
-    call make_wgtmap__raster(a%raster)
+    if( make_wgtmap__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_wgtmap_gs
+  call logret(PRCNAM, MODNAM)
+end function make_wgtmap_gs
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx_gs(a)
+integer(4) function make_grdidx_gs(a) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx_gs'
   type(gs_), intent(inout) :: a
 
-  call echo(code%bgn, 'make_grdidx_gs', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
   case( MESHTYPE__LATLON )
-    call make_grdidx__latlon(a%latlon)
+    if( make_grdidx__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__RASTER )
-    call make_grdidx__raster(a%raster)
+    if( make_grdidx__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__POLYGON )
     continue
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdidx_gs
+  call logret(PRCNAM, MODNAM)
+end function make_grdidx_gs
 !===============================================================
 !
 !===============================================================
-subroutine make_grdara_gs(a)
+integer(4) function make_grdara_gs(a) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdara_gs'
   type(gs_), intent(inout) :: a
 
-  call echo(code%bgn, 'make_grdara_gs', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
   case( MESHTYPE__LATLON )
-    call make_grdara__latlon(a%latlon)
+    if( make_grdara__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__RASTER )
-    call make_grdara__raster(a%raster)
+    if( make_grdara__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
   case( MESHTYPE__POLYGON )
-    call make_grdara__polygon(a%polygon)
+    if( make_grdara__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdara_gs
+  call logret(PRCNAM, MODNAM)
+end function make_grdara_gs
 !===============================================================
 !
 !===============================================================
@@ -181,8 +211,10 @@ end subroutine make_grdara_gs
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
+integer(4) function make_idxmap__latlon(&
+    al, mi1, mi2, mi4, mi8, mr4, mr8) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_idxmap__latlon'
   type(gs_latlon_), intent(inout), target :: al
   integer(1), intent(in), optional :: mi1(:,:)
   integer(2), intent(in), optional :: mi2(:,:)
@@ -198,9 +230,10 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   integer    :: vsgn
   integer :: stat
 
+  info = 0
   if( al%status_idxmap == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_idxmap__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -217,7 +250,7 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   if( present(mi1) .or. present(mi2) .or. &
       present(mi4) .or. present(mi8) .or. &
       present(mr4) .or. present(mr8) )then
-    call echo(code%ent, 'Case: Index data were given as an argument')
+    call logent('Case: Index data were given as an argument', PRCNAM, MODNAM)
 
     if( al%is_south_to_north )then
       v0 = al%vi - 1_8
@@ -258,20 +291,22 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
 
     endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Index data were given via a file
   elseif( fg_in%idx%path /= '' )then
-    call echo(code%ent, 'Case: Index data were given via a file')
+    call logent('Case: Index data were given via a file', PRCNAM, MODNAM)
 
-    call read_lattice_data(&
-           al%idxmap, fg_in%idx, al%is_south_to_north)
+    if( read_lattice_data(&
+          al%idxmap, fg_in%idx, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Index data were not given
   else
-    call echo(code%ent, 'Case: Index data were not given')
+    call logent('Case: Index data were not given', PRCNAM, MODNAM)
 
     if( al%is_south_to_north )then
       do iv = al%vi, al%vf
@@ -291,21 +326,18 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
       al%idxmax = al%idxmap(al%hf,al%vi)
     endif
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   al%nij = size(al%idxmap)
 
-  call get_stats(al%idxmap, vmin=al%idxmin, vmax=al%idxmax, miss=al%idx_miss, stat=stat)
+  if( get_minmax(al%idxmap, stat, vmin=al%idxmin, vmax=al%idxmax, miss=al%idx_miss) /= 0 )then
+    info = 1; call errret(); return
+  endif
   al%is_valid = stat == 0
 
-!  do iv = al%vi, al%vf
-!    do ih = al%hi, al%hf
-!      al%mskmap(ih,iv) = al%idxmap(ih,iv) /= al%idx_miss
-!    enddo
-!  enddo
   where( al%idxmap /= al%idx_miss )
     al%mskmap = .true.
   elsewhere
@@ -313,19 +345,14 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
   endwhere
 
   if( al%is_valid )then
-    call edbg('The number of grids        : '//str(size(al%idxmap))//&
-            '\nidx min: '//str(al%idxmin,dgt((/al%idxmin,al%idxmax/),DGT_OPT_MAX))//&
-            '\n    max: '//str(al%idxmax,dgt((/al%idxmin,al%idxmax/),DGT_OPT_MAX)))
+    call logmsg('The number of grids: '//str(size(al%idxmap))//&
+              '\nidx min: '//str(al%idxmin)//&
+                  ', max: '//str(al%idxmax))
   else
-    call ewrn('No valid index was found.')
+    call logwrn('No valid index was found.')
   endif
 
   if( al%debug )then
-!    do iv = al%vi, al%vf
-!      do ih = al%hi, al%hf
-!        al%mskmap(ih,iv) = al%idxmap(ih,iv) == al%idx_debug
-!      enddo
-!    enddo
     where( al%idxmap == al%idx_debug )
       al%mskmap = .true.
     elsewhere
@@ -333,15 +360,16 @@ subroutine make_idxmap__latlon(al, mi1, mi2, mi4, mi8, mr4, mr8)
     endwhere
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_idxmap__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_idxmap__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_wgtmap__latlon(al)
+integer(4) function make_wgtmap__latlon(al) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_wgtmap__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(file_latlon_in_), pointer :: fl
@@ -351,14 +379,19 @@ subroutine make_wgtmap__latlon(al)
   integer(8) :: ih, iv
   integer(8) :: ij
 
+  info = 0
   if( al%status_wgtmap == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_wgtmap__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
-  call make_grdidx__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fl     => al%f_latlon_in
   fg_in  => al%f_grid_in
@@ -369,20 +402,24 @@ subroutine make_wgtmap__latlon(al)
 
   if( .not. al%is_valid )then
     al%wgtmap(:,:) = al%wgt_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Weighted area were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area data were given')
+    call logent('Case: Weighted area data were given', PRCNAM, MODNAM)
 
-    call make_grduwa__latlon(al)
-    call make_grdara__latlon(al)
+    if( make_grduwa__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdara__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     al%wgtmap(:,:) = al%wgt_miss
     ij = 0_8
@@ -394,23 +431,26 @@ subroutine make_wgtmap__latlon(al)
       enddo
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-----------------------------------------------------------
   ! Case: Weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight data were given')
+    call logent('Case: Weight data were given', PRCNAM, MODNAM)
 
-    call read_lattice_data(al%wgtmap, fg_in%wgt, al%is_south_to_north)
+    if( read_lattice_data(&
+          al%wgtmap, fg_in%wgt, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   !-----------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     al%wgtmap(:,:) = 1.d0
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Put missing values in
@@ -425,18 +465,19 @@ subroutine make_wgtmap__latlon(al)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(al%wgtmap,mask=al%wgtmap/=al%wgt_miss))//&
-          ', max: '//str(maxval(al%wgtmap,mask=al%wgtmap/=al%wgt_miss)))
+  call logmsg('min: '//str(minval(al%wgtmap,mask=al%wgtmap/=al%wgt_miss))//&
+            ', max: '//str(maxval(al%wgtmap,mask=al%wgtmap/=al%wgt_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_wgtmap__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_wgtmap__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx__latlon(al)
+integer(4) function make_grdidx__latlon(al) result(info)
   use c1_gs_grid_util, only: &
         print_indices
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(grid_), pointer :: g
@@ -444,13 +485,16 @@ subroutine make_grdidx__latlon(al)
   integer(8) :: ij
   integer(8) :: loc
 
+  info = 0
   if( al%grid%status_idx == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdidx__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   g => al%grid
 
@@ -489,15 +533,16 @@ subroutine make_grdidx__latlon(al)
     g%msk(g%ij_debug) = .true.
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdidx__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_grdidx__latlon
 !===============================================================
 ! Calc. unweighted area
 !===============================================================
-subroutine make_grduwa__latlon(al)
+integer(4) function make_grduwa__latlon(al) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grduwa__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(file_grid_in_), pointer :: fg_in
@@ -507,14 +552,19 @@ subroutine make_grduwa__latlon(al)
   integer(8) :: ih, iv
   integer(8) :: ij
 
+  info = 0
   if( al%grid%status_uwa == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grduwa__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
-  call make_grdidx__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => al%f_grid_in
   g     => al%grid
@@ -524,11 +574,11 @@ subroutine make_grduwa__latlon(al)
 
   if( .not. al%is_valid )then
     g%uwa(:) = al%uwa_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -541,8 +591,9 @@ subroutine make_grduwa__latlon(al)
     grduwa_1rad(:) = area_ellips_rect(al%lat(al%vi-1_8:al%vf-1_8), al%lat(al%vi:al%vf), &
                                       earth%e2)
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth%shp: '//str(earth%shp))
+    info = 1
+    call errret(msg_invalid_value('earth%shp', earth%shp))
+    return
   endselect
   !-------------------------------------------------------------
   !
@@ -560,23 +611,24 @@ subroutine make_grduwa__latlon(al)
     enddo  ! ih/
   enddo  ! iv/
 
-  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=al%uwa_miss))//&
-          ', max: '//str(maxval(g%uwa,mask=g%uwa/=al%uwa_miss))//&
-          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=al%uwa_miss),'es20.13'))
+  call logmsg('min: '//str(minval(g%uwa,mask=g%uwa/=al%uwa_miss))//&
+            ', max: '//str(maxval(g%uwa,mask=g%uwa/=al%uwa_miss))//&
+            '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=al%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   deallocate(grduwa_1rad)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grduwa__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_grduwa__latlon
 !===============================================================
 ! Calc. weighted area
 !===============================================================
-subroutine make_grdara__latlon(al)
+integer(4) function make_grdara__latlon(al) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdara__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(file_grid_in_), pointer :: fg_in
@@ -586,14 +638,19 @@ subroutine make_grdara__latlon(al)
   integer(8) :: ih, iv
   integer(8) :: ij
 
+  info = 0
   if( al%grid%status_ara == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdara__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
-  call make_grdidx__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => al%f_grid_in
   g     => al%grid
@@ -603,22 +660,27 @@ subroutine make_grdara__latlon(al)
 
   if( .not. al%is_valid )then
     g%ara(:) = al%ara_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Weighted area data were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area data were given')
+    call logent('Case: Weighted area data were given', PRCNAM, MODNAM)
 
     allocate(aramap(al%hi:al%hf,al%vi:al%vf))
 
-    call read_lattice_data(aramap, fg_in%ara, al%is_south_to_north)
-    call conv_unit(aramap, fg_in%unit_ara, UNIT_SQUARE_METER)
+    if( read_lattice_data(&
+          aramap, fg_in%ara, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( conv_unit(aramap, fg_in%unit_ara, UNIT_SQUARE_METER) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     g%ara(:) = al%ara_miss
     ij = 0_8
@@ -632,14 +694,18 @@ subroutine make_grdara__latlon(al)
 
     deallocate(aramap)
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight data were given')
+    call logent('Case: Weight data were given', PRCNAM, MODNAM)
 
-    call make_grduwa__latlon(al)
-    call make_wgtmap__latlon(al)
+    if( make_grduwa__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_wgtmap__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     g%ara(:) = al%ara_miss
     ij = 0_8
@@ -651,34 +717,37 @@ subroutine make_grdara__latlon(al)
       enddo  ! ih/
     enddo  ! iv/
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
-    call make_grduwa__latlon(al)
+    if( make_grduwa__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     call cpval(g%uwa, g%ara)
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%ara,mask=g%ara/=al%ara_miss))//&
-          ', max: '//str(maxval(g%ara,mask=g%ara/=al%ara_miss))//&
-          '\ntotal: '//str(sum(g%ara,mask=g%ara/=al%ara_miss),'es20.13'))
+  call logmsg('min: '//str(minval(g%ara,mask=g%ara/=al%ara_miss))//&
+            ', max: '//str(maxval(g%ara,mask=g%ara/=al%ara_miss))//&
+            '\ntotal: '//str(sum(g%ara,mask=g%ara/=al%ara_miss),'es20.13'))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdara__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_grdara__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdwgt__latlon(al)
+integer(4) function make_grdwgt__latlon(al) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdwgt__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(file_grid_in_), pointer :: fg_in
@@ -687,14 +756,19 @@ subroutine make_grdwgt__latlon(al)
   integer(8) :: ih, iv
   integer(8) :: ij
 
+  info = 0
   if( al%grid%status_wgt == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdwgt__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
-  call make_grdidx__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => al%f_grid_in
   g     => al%grid
@@ -704,19 +778,21 @@ subroutine make_grdwgt__latlon(al)
 
   if( .not. al%is_valid )then
     g%wgt(:) = al%wgt_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Weight data were given
   if( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight data were given')
+    call logent('Case: Weight data were given', PRCNAM, MODNAM)
 
-    call make_wgtmap__latlon(al)
+    if( make_wgtmap__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     g%wgt(:) = al%wgt_miss
     ij = 0_8
@@ -728,14 +804,18 @@ subroutine make_grdwgt__latlon(al)
       enddo
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Weighted area were given
   elseif( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area data were given')
+    call logent('Case: Weighted area data were given', PRCNAM, MODNAM)
 
-    call make_grduwa__latlon(al)
-    call make_grdara__latlon(al)
+    if( make_grduwa__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdara__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = 1_8, g%nij
       if( .not. g%msk(ij) )then
@@ -743,44 +823,49 @@ subroutine make_grdwgt__latlon(al)
       elseif( g%ara(ij) == al%ara_miss )then
         g%wgt(ij) = al%wgt_miss
       elseif( g%uwa(ij) == al%uwa_miss )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%uwa(ij) == al%uwa_miss')
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  g%uwa(ij) == al%uwa_miss')
+        return
       elseif( g%uwa(ij) <= 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%uwa(ij) <= 0')
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  g%uwa(ij) <= 0')
+        return
       else
         g%wgt(ij) = g%ara(ij) / g%uwa(ij)
       endif
     enddo  ! ij/
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Neither weight or area was input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     g%wgt(:) = al%wgt_miss
     do ij = 1_8, g%nij
       if( g%msk(ij) ) g%wgt(ij) = 1.d0
     enddo
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=al%wgt_miss))//&
-          ', max: '//str(maxval(g%wgt,mask=g%wgt/=al%wgt_miss)))
+  call logmsg('min: '//str(minval(g%wgt,mask=g%wgt/=al%wgt_miss))//&
+            ', max: '//str(maxval(g%wgt,mask=g%wgt/=al%wgt_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdwgt__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_grdwgt__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz__latlon(al)
+integer(4) function make_grdxyz__latlon(al) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdxyz__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(file_grid_in_), pointer :: fg_in
@@ -794,14 +879,19 @@ subroutine make_grdxyz__latlon(al)
   real(8) :: r
   real(8), parameter :: THRESH_EARTH_R_ERROR = 1d-6
 
+  info = 0
   if( al%grid%status_xyz == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdxyz__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
-  call make_grdidx__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => al%f_grid_in
   g     => al%grid
@@ -815,24 +905,30 @@ subroutine make_grdxyz__latlon(al)
     g%x(:) = al%xyz_miss
     g%y(:) = al%xyz_miss
     g%z(:) = al%xyz_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Cartesian coordinate data were given
   if( fg_in%x%path /= '' )then
-    call echo(code%ent, 'Cartesian coordinate data were given')
+    call logent('Cartesian coordinate data were given', PRCNAM, MODNAM)
 
     allocate(xmap(al%hi:al%hf,al%vi:al%vf))
     allocate(ymap(al%hi:al%hf,al%vi:al%vf))
     allocate(zmap(al%hi:al%hf,al%vi:al%vf))
-    call read_lattice_data(xmap, fg_in%x, al%is_south_to_north)
-    call read_lattice_data(ymap, fg_in%y, al%is_south_to_north)
-    call read_lattice_data(zmap, fg_in%z, al%is_south_to_north)
+    if( read_lattice_data(xmap, fg_in%x, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( read_lattice_data(ymap, fg_in%y, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( read_lattice_data(zmap, fg_in%z, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
     ij = 0_8
     do iv = al%vi, al%vf
       do ih = al%hi, al%hf
@@ -850,8 +946,10 @@ subroutine make_grdxyz__latlon(al)
       if( g%msk(ij) )then
         r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
         if( abs(r-earth%r)/earth%r > THRESH_EARTH_R_ERROR )then
-          call eerr("Earth's diameter calculated from the input cartesian coordinate"//&
-                    ' differs from the true value.')
+          info = 1
+          call errret("Earth's diameter calculated from the input cartesian coordinate"//&
+                      ' differs from the true value.')
+          return
         endif
       else
         g%x(ij) = al%xyz_miss
@@ -860,29 +958,33 @@ subroutine make_grdxyz__latlon(al)
       endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Spherical coordinate data were given
   elseif( fg_in%lon%path /= '' )then
-    call echo(code%ent, 'Case: Spherical coordinate data were given')
+    call logent('Case: Spherical coordinate data were given', PRCNAM, MODNAM)
 
-    call make_grdlonlat__latlon(al)
+    if( make_grdlonlat__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = 1_8, g%nij
       if( g%msk(ij) )then
-        call conv_spherical_to_cartesian_rad(&
-               g%lon(ij), g%lat(ij), g%x(ij), g%y(ij), g%z(ij))
+        if( spherical_to_cartesian_rad(&
+              g%lon(ij), g%lat(ij), g%x(ij), g%y(ij), g%z(ij)) /= 0 )then
+          info = 1; call errret(); return
+        endif
       else
         g%lon(ij) = al%lonlat_miss
         g%lat(ij) = al%lonlat_miss
       endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     allocate(cos_grdlon(al%hi:al%hf))
     allocate(sin_grdlon(al%hi:al%hf))
@@ -916,10 +1018,12 @@ subroutine make_grdxyz__latlon(al)
         g%z(ij) = sin_grdlat(iv)
 
         if( g%x(ij) == 0.d0 .and. g%y(ij) == 0.d0 .and. g%z(ij) == 0.d0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  (x,y,z) == (0,0,0)'//&
-                  '\n  ij: '//str(ij)//&
-                  '\n  idx: '//str(g%idx(ij)))
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\n  (x,y,z) == (0,0,0)'//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  idx: '//str(g%idx(ij)))
+          return
         endif
 
         r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
@@ -934,27 +1038,28 @@ subroutine make_grdxyz__latlon(al)
     deallocate(cos_grdlat)
     deallocate(sin_grdlat)
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('x min: '//str(minval(g%x,mask=g%x/=al%xyz_miss))//&
-            ', max: '//str(maxval(g%x,mask=g%x/=al%xyz_miss))//&
-          '\ny min: '//str(minval(g%y,mask=g%y/=al%xyz_miss))//&
-            ', max: '//str(maxval(g%y,mask=g%y/=al%xyz_miss))//&
-          '\nz min: '//str(minval(g%z,mask=g%z/=al%xyz_miss))//&
-            ', max: '//str(maxval(g%z,mask=g%z/=al%xyz_miss)))
+  call logmsg('x min: '//str(minval(g%x,mask=g%x/=al%xyz_miss))//&
+              ', max: '//str(maxval(g%x,mask=g%x/=al%xyz_miss))//&
+            '\ny min: '//str(minval(g%y,mask=g%y/=al%xyz_miss))//&
+              ', max: '//str(maxval(g%y,mask=g%y/=al%xyz_miss))//&
+            '\nz min: '//str(minval(g%z,mask=g%z/=al%xyz_miss))//&
+              ', max: '//str(maxval(g%z,mask=g%z/=al%xyz_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdxyz__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_grdxyz__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat__latlon(al)
+integer(4) function make_grdlonlat__latlon(al) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdlonlat__latlon'
   type(gs_latlon_), intent(inout), target :: al
 
   type(file_latlon_in_), pointer :: fl
@@ -965,14 +1070,19 @@ subroutine make_grdlonlat__latlon(al)
   integer(8) :: ih, iv
   integer(8) :: ij
 
+  info = 0
   if( al%grid%status_lonlat == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdlonlat__latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__latlon(al)
-  call make_grdidx__latlon(al)
+  if( make_idxmap__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__latlon(al) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fl    => al%f_latlon_in
   fg_in => al%f_grid_in
@@ -985,22 +1095,26 @@ subroutine make_grdlonlat__latlon(al)
   if( .not. al%is_valid )then
     g%lon(:) = al%lonlat_miss
     g%lat(:) = al%lonlat_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Spherical coord. data were given
   if( fg_in%lon%path /= '' )then
-    call echo(code%ent, 'Case: Spherical coordinate data were given')
+    call logent('Case: Spherical coordinate data were given', PRCNAM, MODNAM)
 
     allocate(lonmap(al%hi:al%hf,al%vi:al%vf))
     allocate(latmap(al%hi:al%hf,al%vi:al%vf))
-    call read_lattice_data(lonmap, fg_in%lon, al%is_south_to_north)
-    call read_lattice_data(latmap, fg_in%lat, al%is_south_to_north)
+    if( read_lattice_data(lonmap, fg_in%lon, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( read_lattice_data(latmap, fg_in%lat, al%is_south_to_north) /= 0 )then
+      info = 1; call errret(); return
+    endif
     ij = 0_8
     do iv = al%vi, al%vf
       do ih = al%hi, al%hf
@@ -1017,11 +1131,15 @@ subroutine make_grdlonlat__latlon(al)
       do ij = 1_8, g%nij
         if( g%msk(ij) )then
           if( g%lon(ij) < -180.d0 .or. g%lon(ij) > 360.d0 )then
-            call eerr(str(msg_invalid_value())//&
-                    '\nLongitude is out of range.')
+            info = 1
+            call errret(msg_invalid_value('g%lon('//str(ij)//')', g%lon(ij))//&
+                      '\n Longitude is out of range.')
+            return
           elseif( g%lat(ij) < -90.d0 .or. g%lat(ij) > 90.d0 )then
-            call eerr(str(msg_invalid_value())//&
-                    '\nLatitude is out of range.')
+            info = 1
+            call errret(msg_invalid_value('g%lat('//str(ij)//')', g%lat(ij))//&
+                      '\n Latitude is out of range.')
+            return
           endif
         else
           g%lon(ij) = al%lonlat_miss
@@ -1032,11 +1150,15 @@ subroutine make_grdlonlat__latlon(al)
       do ij = 1_8, g%nij
         if( g%msk(ij) )then
           if( g%lon(ij) < -rad_180deg .or. g%lon(ij) > rad_360deg )then
-            call eerr(str(msg_invalid_value())//&
-                    '\nLongitude is out of range.')
+            info = 1
+            call errret(msg_invalid_value('g%lon('//str(ij)//')', g%lon(ij))//&
+                      '\n Longitude is out of range.')
+            return
           elseif( g%lat(ij) < -90.d0 .or. g%lat(ij) > 90.d0 )then
-            call eerr(str(msg_invalid_value())//&
-                    '\nLatitude is out of range.')
+            info = 1
+            call errret(msg_invalid_value('g%lat('//str(ij)//')', g%lat(ij))//&
+                      '\n Latitude is out of range.')
+            return
           endif
         else
           g%lon(ij) = al%lonlat_miss
@@ -1044,43 +1166,55 @@ subroutine make_grdlonlat__latlon(al)
         endif
       enddo
     case default
-      call eerr('Invalid value in $fg_in%unit_lonlat: '//str(fg_in%unit_lonlat))
+      info = 1
+      call errret(msg_invalid_value('fg_in%unit_lonlat', fg_in%unit_lonlat))
+      return
     endselect
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Cartesian coord. data were given
   elseif( fg_in%x%path /= '' )then
-    call echo(code%ent, 'Case: Cartesian coordinate data were given')
+    call logent('Case: Cartesian coordinate data were given', PRCNAM, MODNAM)
 
-    call make_grdxyz__latlon(al)
+    if( make_grdxyz__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, al%xyz_miss, al%lonlat_miss)
+    if( cartesian_to_spherical_rad(&
+          g%x, g%y, g%z, g%lon, g%lat, &
+          al%xyz_miss, al%lonlat_miss) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
-    call make_grdxyz__latlon(al)
+    if( make_grdxyz__latlon(al) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, al%xyz_miss, al%lonlat_miss)
+    if( cartesian_to_spherical_rad(&
+          g%x, g%y, g%z, g%lon, g%lat, &
+          al%xyz_miss, al%lonlat_miss) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=al%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=al%lonlat_miss))//&
-          '\nlat min: '//str(minval(g%lat,mask=g%lat/=al%lonlat_miss))//&
-              ', max: '//str(maxval(g%lat,mask=g%lat/=al%lonlat_miss)))
+  call logmsg('lon min: '//str(minval(g%lon,mask=g%lon/=al%lonlat_miss))//&
+                ', max: '//str(maxval(g%lon,mask=g%lon/=al%lonlat_miss))//&
+            '\nlat min: '//str(minval(g%lat,mask=g%lat/=al%lonlat_miss))//&
+                ', max: '//str(maxval(g%lat,mask=g%lat/=al%lonlat_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdlonlat__latlon
+  call logret(PRCNAM, MODNAM)
+end function make_grdlonlat__latlon
 !===============================================================
 !
 !===============================================================
@@ -1092,10 +1226,12 @@ end subroutine make_grdlonlat__latlon
 !===============================================================
 !
 !===============================================================
-subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
+integer(4) function make_idxmap__raster(&
+    ar, mi1, mi2, mi4, mi8, mr4, mr8) result(info)
   use c1_gs_grid_util, only: &
         print_idxmap
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_idxmap__raster'
   type(gs_raster_), intent(inout), target :: ar
   integer(1), intent(in), optional :: mi1(:,:)
   integer(2), intent(in), optional :: mi2(:,:)
@@ -1113,9 +1249,10 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
   integer(8) :: h0, v0
   integer    :: vsgn
 
+  info = 0
   if( ar%status_idxmap == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_idxmap__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1134,7 +1271,7 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
   if( present(mi1) .or. present(mi2) .or. &
       present(mi4) .or. present(mi8) .or. &
       present(mr4) .or. present(mr8) )then
-    call echo(code%ent, 'Case: Index data were given as an argument')
+    call logent('Case: Index data were given as an argument', PRCNAM, MODNAM)
 
     if( ar%is_south_to_north )then
       v0 = ar%vi - 1_8
@@ -1183,20 +1320,22 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
 
     endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Index data were given via a file
   else
-    call echo(code%ent, 'Case: Index data were given via a file')
+    call logent('Case: Index data were given via a file', PRCNAM, MODNAM)
 
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
-      call read_lattice_data(&
-             arz%idxmap, fr%idx, ar%is_south_to_north, &
-             arz%xi, arz%yi)
+      if( read_lattice_data(&
+            arz%idxmap, fr%idx, ar%is_south_to_north, &
+            arz%xi, arz%yi) /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   endif
 
   do iz = 1, ar%nZone
@@ -1238,15 +1377,15 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
   ar%idxmax = maxval(ar%zone(:)%idxmax)
 
   if( ar%is_valid )then
-    call edbg('Num. of valid rasters: '//str(n_valid)//&
-            '\nidx min: '//str(ar%idxmin,dgt((/ar%idxmin,ar%idxmax/),DGT_OPT_MAX))//&
-            '\n    max: '//str(ar%idxmax,dgt((/ar%idxmin,ar%idxmax/),DGT_OPT_MAX)))
+    call logmsg('Num. of valid rasters: '//str(n_valid)//&
+              '\nidx min: '//str(ar%idxmin)//&
+                  ', max: '//str(ar%idxmax))
   else
-    call ewrn('No valid index was found.')
+    call logwrn('No valid index was found.')
   endif
 
   if( .not. ar%is_valid )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
   !-------------------------------------------------------------
@@ -1270,19 +1409,20 @@ subroutine make_idxmap__raster(ar, mi1, mi2, mi4, mi8, mr4, mr8)
 
     ar%is_valid = any(ar%zone(:)%is_valid)
     if( .not. ar%is_valid )then
-      call edbg('No valid raster was found in debugging mode.')
+      call logmsg('No valid raster was found in debugging mode.')
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_idxmap__raster
+  call logret(PRCNAM, MODNAM)
+end function make_idxmap__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_wgtmap__raster(ar)
+integer(4) function make_wgtmap__raster(ar) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_wgtmap__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr
@@ -1296,15 +1436,20 @@ subroutine make_wgtmap__raster(ar)
   integer(8) :: ij, ij_prev
   integer :: iz
 
+  info = 0
   if( ar%status_wgtmap == GRID_STATUS__PREPARED .or. &
       ar%status_wgtmap == GRID_STATUS__NOT_USED ) return
 
-  call echo(code%bgn, 'make_wgtmap__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
-  call make_grdidx__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fr    => ar%f_raster_in
   fg_in => ar%f_grid_in
@@ -1312,22 +1457,26 @@ subroutine make_wgtmap__raster(ar)
 
   if( .not. ar%is_valid )then
     ar%status_wgtmap = GRID_STATUS__NOT_USED
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Grid area data were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Grid area data were given')
+    call logent('Case: Grid area data were given', PRCNAM, MODNAM)
 
     ar%status_wgtmap = GRID_STATUS__PREPARED
 
-    call make_grduwa__raster(ar)
-    call make_grdara__raster(ar)
+    if( make_grduwa__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdara__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     idx_prev = ar%idx_miss
     ij_prev = 0_8
@@ -1339,22 +1488,28 @@ subroutine make_wgtmap__raster(ar)
           if( .not. arz%mskmap(ih,iv) ) cycle
           ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
           if( g%uwa(ij) <= 0.d0 .or. g%ara(ij) <= 0.d0 )then
-            call eerr(str(msg_unexpected_condition())//&
-                    '\n  g%uwa(ij) <= 0 .or. g%ara(ij) <= 0.d0')
+            info = 1
+            call errret(msg_unexpected_condition()//&
+                      '\n  g%uwa(ij) <= 0 .or. g%ara(ij) <= 0.d0')
+            return
           endif
           arz%wgtmap(ih,iv) = g%ara(ij) / g%uwa(ij)
         enddo  ! ih/
       enddo  ! iv/
     enddo  ! iz/
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Grid weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Grid weight data were given')
+    call logent('Case: Grid weight data were given', PRCNAM, MODNAM)
 
-    call make_grdidx__raster(ar)
-    call make_grdwgt__raster(ar)
+    if( make_grdidx__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdwgt__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     if( all(g%wgt(:)==1.d0 .eqv. g%msk) )then
       ar%status_wgtmap = GRID_STATUS__NOT_USED
@@ -1376,11 +1531,11 @@ subroutine make_wgtmap__raster(ar)
       enddo  ! iz/
     endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Raster data of weighted area were given
   elseif( fr%ara%path /= '' )then
-    call echo(code%ent, 'Case: Raster data of weighted area were given')
+    call logent('Case: Raster data of weighted area were given', PRCNAM, MODNAM)
 
     ar%status_wgtmap = GRID_STATUS__PREPARED
 
@@ -1394,25 +1549,33 @@ subroutine make_wgtmap__raster(ar)
                                        earth%e2) &
                         * ar%lonwidth(1)
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  earth%shp: '//str(earth%shp))
+      info = 1
+      call errret(msg_invalid_value('earth%shp', earth%shp))
+      return
     endselect
 
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
       allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
-      call read_lattice_data(arz%wgtmap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi)
-      call conv_unit(arz%wgtmap, fr%unit_ara, UNIT_SQUARE_METER)
+      if( read_lattice_data(&
+            arz%wgtmap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( conv_unit(arz%wgtmap, fr%unit_ara, UNIT_SQUARE_METER) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
       do iv = arz%vi, arz%vf
         do ih = arz%hi, arz%hf
           if( arz%mskmap(ih,iv) )then
             if( arz%wgtmap(ih,iv) < 0.d0 )then
-              call eerr(str(msg_unexpected_condition())//&
-                      '\n  Negative value was found in aramap.'//&
-                      '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
-                      '\n  ara: '//str(arz%wgtmap(ih,iv))//&
-                      '\n  idx: '//str(arz%idxmap(ih,iv)))
+              info = 1
+              call errret(msg_unexpected_condition()//&
+                        '\n  Negative value was found in aramap.'//&
+                        '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
+                        '\n  ara: '//str(arz%wgtmap(ih,iv))//&
+                        '\n  idx: '//str(arz%idxmap(ih,iv)))
+              return
             endif
             arz%wgtmap(ih,iv) = arz%wgtmap(ih,iv) / rstuwa_col(iv)
           else
@@ -1424,28 +1587,33 @@ subroutine make_wgtmap__raster(ar)
 
     deallocate(rstuwa_col)
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Raster data of weight were given
   elseif( fr%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Raster data of weight were given')
+    call logent('Case: Raster data of weight were given', PRCNAM, MODNAM)
 
     ar%status_wgtmap = GRID_STATUS__PREPARED
 
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
       allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
-      call read_lattice_data(arz%wgtmap, fr%wgt, ar%is_south_to_north, arz%xi, arz%yi)
+      if( read_lattice_data(&
+            arz%wgtmap, fr%wgt, ar%is_south_to_north, arz%xi, arz%yi) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
       do iv = arz%vi, arz%vf
         do ih = arz%hi, arz%hf
           if( arz%mskmap(ih,iv) )then
             if( arz%wgtmap(ih,iv) < 0.d0 )then
-              call eerr(str(msg_unexpected_condition())//&
-                      '\n  Negative value was found in wgtmap.'//&
-                      '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
-                      '\n  wgt: '//str(arz%wgtmap(ih,iv))//&
-                      '\n  idx: '//str(arz%idxmap(ih,iv)))
+              info = 1
+              call errret(msg_unexpected_condition()//&
+                        '\n  Negative value was found in wgtmap.'//&
+                        '\n  (ih, iv): ('//str((/ih,iv/),', ')//')'//&
+                        '\n  wgt: '//str(arz%wgtmap(ih,iv))//&
+                        '\n  idx: '//str(arz%idxmap(ih,iv)))
+              return
             endif
           else
             arz%wgtmap(ih,iv) = ar%wgt_miss
@@ -1454,26 +1622,27 @@ subroutine make_wgtmap__raster(ar)
       enddo  ! iv/
     enddo  ! iz/
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     ar%status_wgtmap = GRID_STATUS__NOT_USED
 
-    call echo(code%ext)
+    call logext()
   endif
   !---------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_wgtmap__raster
+  call logret(PRCNAM, MODNAM)
+end function make_wgtmap__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx__raster(ar)
+integer(4) function make_grdidx__raster(ar) result(info)
   use c1_gs_grid_util, only: &
         print_indices
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(file_grid_in_), pointer :: fg_in
@@ -1489,13 +1658,16 @@ subroutine make_grdidx__raster(ar)
   integer :: stat
   integer :: dgt_idx
 
+  info = 0
   if( ar%grid%status_idx == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdidx__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => ar%f_grid_in
   g => ar%grid
@@ -1507,7 +1679,7 @@ subroutine make_grdidx__raster(ar)
   !-------------------------------------------------------------
   ! Case: Index data were given
   if( fg_in%idx%path /= '' )then
-    call echo(code%ent, 'Case: Index data were given')
+    call logent('Case: Index data were given', PRCNAM, MODNAM)
 
     ar%nij = fg_in%nij
     g%nij = fg_in%nij
@@ -1516,38 +1688,48 @@ subroutine make_grdidx__raster(ar)
     allocate(g%msk(g%nij))
 
     f => fg_in%idx
-    call rbin(g%idx, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
+    if( rbin(g%idx, fg_in%nx, fg_in%ny, &
+             f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2)) /= 0 )then
+      info = 1; call errret(); return
+    endif
     call argsort(g%idx, g%idxarg)
 
     selectcase( ar%idx_condition )
     !-----------------------------------------------------------
     ! Case: Set of indices from grdidx and that from rstidx must match
     case( IDX_CONDITION__MATCH )
-      call echo(code%ent, 'Case: Set of indices from grdidx and that from rstidx must match')
+      call logent('Case: Set of indices from grdidx and that from rstidx must match', PRCNAM, MODNAM)
       !---------------------------------------------------------
       ! Check if the ranges match
       !---------------------------------------------------------
-      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( get_minmax(g%idx, stat, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss) /= 0 )then
+        info = 1; call errret(); return
+      endif
       if( ar%is_valid )then
         if( stat /= 0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nNo valid index found in the given set of indices.')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nNo valid index found in the given set of indices.')
+          return
         elseif( g%idxmin /= ar%idxmin .or. g%idxmax /= ar%idxmax )then
+          info = 1
           dgt_idx = dgt((/g%idxmin,g%idxmax,ar%idxmin,ar%idxmax/),DGT_OPT_MAX)
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe ranges of the given set of indices and the one '//&
-                    'generated from the raster map does not match.'//&
-                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),dgt_idx,' - ')//&
-                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),dgt_idx,' - '))
+          call errret(msg_unexpected_condition()//&
+                    '\nThe ranges of the given set of indices and the one '//&
+                      'generated from the raster map does not match.'//&
+                    '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),dgt_idx,' - ')//&
+                    '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),dgt_idx,' - '))
+          return
         endif
       else
         if( stat == 0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe ranges of the given set of indices and the one '//&
-                    'generated from the raster map does not match.'//&
-                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
-                  '\n  Made from raster map: (no valid index)')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe ranges of the given set of indices and the one '//&
+                      'generated from the raster map does not match.'//&
+                    '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
+                    '\n  Made from raster map: (no valid index)')
+          return
         endif
       endif
       !---------------------------------------------------------
@@ -1565,26 +1747,32 @@ subroutine make_grdidx__raster(ar)
             if( .not. arz%mskmap(ih,iv) ) cycle
             ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .true.)
             if( ij == 0_8 )then
-              call eerr(str(msg_unexpected_condition())//&
-                      '\nThe given set of grid indices and the one made from '//&
-                        'raster index map do not match.'//&
-                      '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
-                        'was not found in the raster map.')
+              info = 1
+              call errret(msg_unexpected_condition()//&
+                        '\nThe given set of grid indices and the one made from '//&
+                          'raster index map do not match.'//&
+                        '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
+                          'was not found in the raster map.')
+              return
             endif
             is_valid(arz%idxmap(ih,iv)) = .true.
           enddo  ! ih/
         enddo  ! iv/
       enddo  ! iz/
 
-      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( get_minmax(g%idx, stat, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss) /= 0 )then
+        info = 1; call errret(); return
+      endif
       do ij = 1_8, g%nij
         if( g%idx(ij) == ar%idx_miss ) cycle
         if( .not. is_valid(g%idx(ij)) )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe set of grid indices given as "grdidx" and the one '//&
-                    'made from raster index map do not match.'//&
-                  '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
-                    'was not found in the raster map.')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe set of grid indices given as "grdidx" and the one '//&
+                      'made from raster index map do not match.'//&
+                    '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
+                      'was not found in the raster map.')
+          return
         endif
       enddo  ! ij/
 
@@ -1594,29 +1782,35 @@ subroutine make_grdidx__raster(ar)
       !---------------------------------------------------------
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
-      call echo(code%ext)
+      call logext()
     !-----------------------------------------------------------
     ! Case: Set of indices from rstidx must be an element of that from grdidx
     case( IDX_CONDITION__RST_IN_GRD )
-      call echo(code%ent, 'Case: Set of indices of rstidx '//&
-                'must be an element of that of grdidx')
+      call logent('Case: Set of indices of rstidx '//&
+                'must be an element of that of grdidx', PRCNAM, MODNAM)
       !---------------------------------------------------------
       ! Check the ranges
       !---------------------------------------------------------
-      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( get_minmax(g%idx, stat, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss) /= 0 )then
+        info = 1; call errret(); return
+      endif
       if( ar%is_valid )then
         if( stat /= 0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe range of indices made from raster map '//&
-                    'is not in the range of the one given as "grdidx".'//&
-                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - ')//&
-                  '\n  Given as "grdidx"   : (no valid index)')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe range of indices made from raster map '//&
+                      'is not in the range of the one given as "grdidx".'//&
+                    '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - ')//&
+                    '\n  Given as "grdidx"   : (no valid index)')
+          return
         elseif( ar%idxmin < g%idxmin .or. g%idxmax < ar%idxmax )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe range of indices made from raster map '//&
-                    'is not in the range of the one given as "grdidx".'//&
-                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - ')//&
-                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - '))
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe range of indices made from raster map '//&
+                      'is not in the range of the one given as "grdidx".'//&
+                    '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - ')//&
+                    '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - '))
+          return
         endif
       endif
       ar%idxmin = g%idxmin
@@ -1634,11 +1828,13 @@ subroutine make_grdidx__raster(ar)
             if( .not. arz%mskmap(ih,iv) ) cycle
             ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .true.)
             if( ij == 0_8 )then
-              call eerr(str(msg_unexpected_condition())//&
-                      '\nThe set of grid indices made from raster index map '//&
-                        'is not an element of the one given as "grdidx".'//&
-                      '\nIndex '//str(arz%idxmap(ih,iv))//', that is in the raster map, '//&
-                        'was not found in the given set.')
+              info = 1
+              call errret(msg_unexpected_condition()//&
+                        '\nThe set of grid indices made from raster index map '//&
+                          'is not an element of the one given as "grdidx".'//&
+                        '\nIndex '//str(arz%idxmap(ih,iv))//', that is in the raster map, '//&
+                          'was not found in the given set.')
+              return
             endif
 !            is_valid(arz%idxmap(ih,iv)) = .true.
           enddo  ! ih/
@@ -1658,33 +1854,39 @@ subroutine make_grdidx__raster(ar)
 !      enddo
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
-      call echo(code%ext)
+      call logext()
     !-----------------------------------------------------------
     ! Case: Set of indices from grdidx must be an element of that from rstidx
     case( IDX_CONDITION__GRD_IN_RST )
-      call echo(code%ent, 'Case: Set of indices of grdidx '//&
-                'must be an element of that of rstidx')
+      call logent('Case: Set of indices of grdidx '//&
+                'must be an element of that of rstidx', PRCNAM, MODNAM)
       !---------------------------------------------------------
       ! Check the ranges
       !---------------------------------------------------------
-      call get_stats(g%idx, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss, stat=stat)
+      if( get_minmax(g%idx, stat, vmin=g%idxmin, vmax=g%idxmax, miss=ar%idx_miss) /= 0 )then
+        info = 1; call errret(); return
+      endif
       if( ar%is_valid )then
         if( stat /= 0 )then
           continue
         elseif( g%idxmin < ar%idxmin .or. ar%idxmax < g%idxmax )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe range of indices given as "grdidx" '//&
-                    'is not in the range of the one made from raster map.'//&
-                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
-                  '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - '))
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe range of indices given as "grdidx" '//&
+                      'is not in the range of the one made from raster map.'//&
+                    '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
+                    '\n  Made from raster map: '//str((/ar%idxmin,ar%idxmax/),' - '))
+          return
         endif
       else
         if( stat == 0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe range of indices given as "grdidx" '//&
-                    'is not in the range of the one made from raster map.'//&
-                  '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
-                  '\n  Made from raster map: (no valid index)')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe range of indices given as "grdidx" '//&
+                      'is not in the range of the one made from raster map.'//&
+                    '\n  Given as "grdidx"   : '//str((/g%idxmin,g%idxmax/),' - ')//&
+                    '\n  Made from raster map: (no valid index)')
+          return
         endif
       endif
       !---------------------------------------------------------
@@ -1713,11 +1915,13 @@ subroutine make_grdidx__raster(ar)
       do ij = 1_8, g%nij
         if( g%idx(ij) == ar%idx_miss ) cycle
         if( .not. is_valid(g%idx(ij)) )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\nThe set of grid indices given as "grdidx" '//&
-                    'is not an element of the one made from raster index map.'//&
-                  '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
-                    'was not found in the raster map.')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nThe set of grid indices given as "grdidx" '//&
+                      'is not an element of the one made from raster index map.'//&
+                    '\nIndex '//str(g%idx(ij))//', that is in the given set, '//&
+                      'was not found in the raster map.')
+          return
         endif
       enddo
 
@@ -1727,25 +1931,28 @@ subroutine make_grdidx__raster(ar)
       !---------------------------------------------------------
       g%msk(:) = g%idx(:) /= ar%idx_miss
       !---------------------------------------------------------
-      call echo(code%ext)
+      call logext()
     !-----------------------------------------------------------
     ! Case: No condition
     case( IDX_CONDITION__NONE )
-      call echo(code%ent, 'No condition')
+      call logent('No condition', PRCNAM, MODNAM)
 
       g%msk(:) = g%idx(:) /= ar%idx_miss
 
-      call echo(code%ext)
+      call logext()
     !-----------------------------------------------------------
     ! Case: ERROR (undef)
     case( IDX_CONDITION__UNDEF )
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  ar%idx_condition: '//str(ar%idx_condition))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n  ar%idx_condition: '//str(ar%idx_condition))
+      return
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  ar%idx_condition: '//str(ar%idx_condition))
+      info = 1
+      call errret(msg_invalid_value('ar%idx_condition', ar%idx_condition))
+      return
     endselect
     !-----------------------------------------------------------
     !
@@ -1762,11 +1969,11 @@ subroutine make_grdidx__raster(ar)
       g%idxmax = maxval(g%idx, mask=g%msk)
     endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     allocate(is_valid(ar%idxmin:ar%idxmax))
     is_valid(:) = .false.
@@ -1801,7 +2008,7 @@ subroutine make_grdidx__raster(ar)
 
     deallocate(is_valid)
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
@@ -1822,15 +2029,16 @@ subroutine make_grdidx__raster(ar)
 
   ar%is_valid = any(g%msk)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdidx__raster
+  call logret(PRCNAM, MODNAM)
+end function make_grdidx__raster
 !===============================================================
 ! Calc. unweighted grid area.
 !===============================================================
-subroutine make_grduwa__raster(ar)
+integer(4) function make_grduwa__raster(ar) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grduwa__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(grid_)       , pointer :: g
@@ -1842,14 +2050,19 @@ subroutine make_grduwa__raster(ar)
   integer(8) :: idx_prev
   integer(8) :: ij, ij_prev
 
+  info = 0
   if( ar%grid%status_uwa == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grduwa__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
-  call make_grdidx__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   g => ar%grid
 
@@ -1858,11 +2071,11 @@ subroutine make_grduwa__raster(ar)
 
   if( .not. ar%is_valid )then
     g%uwa(:) = ar%uwa_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   ! Calc. unweighted area of raster column
   !-------------------------------------------------------------
@@ -1877,8 +2090,9 @@ subroutine make_grduwa__raster(ar)
                                       earth%e2) &
                       * ar%lonwidth(ar%hi)
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth%shp: '//str(earth%shp))
+    info = 1
+    call errret(msg_invalid_value('earth%shp', earth%shp))
+    return
   endselect
   !-----------------------------------------------------------
   ! Calc. unweighted area of grids
@@ -1902,11 +2116,13 @@ subroutine make_grduwa__raster(ar)
     do ij = 1_8, g%nij
       if( g%msk(ij) )then
         if( g%uwa(ij) <= 0.d0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  g%uwa(ij) <= 0.0'//&
-                  '\n  ij: '//str(ij)//&
-                  '\n  idx: '//str(g%idx(ij))//&
-                  '\n  uwa: '//str(g%uwa(ij)))
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\n  g%uwa(ij) <= 0.0'//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  idx: '//str(g%idx(ij))//&
+                    '\n  uwa: '//str(g%uwa(ij)))
+          return
         endif
         g%uwa(ij) = g%uwa(ij) * earth%r**2
       else
@@ -1917,11 +2133,13 @@ subroutine make_grduwa__raster(ar)
     do ij = 1_8, g%nij
       if( g%msk(ij) )then
         if( g%uwa(ij) < 0.d0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  g%uwa(ij) < 0.0'//&
-                  '\n  ij: '//str(ij)//&
-                  '\n  idx: '//str(g%idx(ij))//&
-                  '\n  uwa: '//str(g%uwa(ij)))
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\n  g%uwa(ij) < 0.0'//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  idx: '//str(g%idx(ij))//&
+                    '\n  uwa: '//str(g%uwa(ij)))
+          return
         endif
         g%uwa(ij) = g%uwa(ij) * earth%r**2
       else
@@ -1929,27 +2147,29 @@ subroutine make_grduwa__raster(ar)
       endif
     enddo
   case default
-    call eerr(str(msg_invalid_value())//&
-           '\n  ar%idx_condition: '//str(ar%idx_condition))
+    info = 1
+    call errret(msg_invalid_value('ar%idx_condition', ar%idx_condition))
+    return
   endselect
 
   deallocate(rstuwa_col)
   !-----------------------------------------------------------
   !
   !-----------------------------------------------------------
-  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=ar%uwa_miss))//&
-          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ar%uwa_miss))//&
-          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ar%uwa_miss),'es20.13'))
+  call logmsg('min: '//str(minval(g%uwa,mask=g%uwa/=ar%uwa_miss))//&
+            ', max: '//str(maxval(g%uwa,mask=g%uwa/=ar%uwa_miss))//&
+            '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ar%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grduwa__raster
+  call logret(PRCNAM, MODNAM)
+end function make_grduwa__raster
 !===============================================================
 ! Calc. weighted grid area.
 !===============================================================
-subroutine make_grdara__raster(ar)
+integer(4) function make_grdara__raster(ar) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdara__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr
@@ -1965,14 +2185,19 @@ subroutine make_grdara__raster(ar)
   integer(8) :: idx_prev
   integer(8) :: ij, ij_prev
 
+  info = 0
   if( ar%grid%status_ara == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdara__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
-  call make_grdidx__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fr    => ar%f_raster_in
   fg_in => ar%f_grid_in
@@ -1983,40 +2208,46 @@ subroutine make_grdara__raster(ar)
 
   if( .not. ar%is_valid )then
     g%ara(:) = ar%ara_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Grid area data were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Grid area data were given')
+    call logent('Case: Grid area data were given', PRCNAM, MODNAM)
 
     f => fg_in%ara
-    call rbin(g%ara, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
+    if( rbin(g%ara, fg_in%nx, fg_in%ny, &
+             f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Grid weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Grid weight data were given')
+    call logent('Case: Grid weight data were given', PRCNAM, MODNAM)
 
-    call make_grduwa__raster(ar)
-    call make_grdwgt__raster(ar)
+    if( make_grduwa__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdwgt__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = 1_8, g%nij
       if( g%msk(ij) ) g%ara(ij) = g%uwa(ij)*g%wgt(ij)
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Raster data of area were given
   elseif( fr%ara%path /= '' )then
-    call echo(code%ent, 'Case: Raster data of area were given')
+    call logent('Case: Raster data of area were given', PRCNAM, MODNAM)
 
     g%ara(:) = 0.d0
     idx_prev = ar%idx_miss
@@ -2024,7 +2255,10 @@ subroutine make_grdara__raster(ar)
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
       allocate(aramap(arz%hi:arz%hf,arz%vi:arz%vf))
-      call read_lattice_data(aramap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi)
+      if( read_lattice_data(&
+            aramap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi) /= 0 )then
+        info = 1; call errret(); return
+      endif
       do iv = arz%vi, arz%vf
         do ih = arz%hi, arz%hf
           ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
@@ -2034,19 +2268,21 @@ subroutine make_grdara__raster(ar)
       deallocate(aramap)
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Raster data of weight were given
   elseif( fr%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Raster data of weight were given')
+    call logent('Case: Raster data of weight were given', PRCNAM, MODNAM)
 
-    call make_wgtmap__raster(ar)
+    if( make_wgtmap__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     selectcase( ar%status_wgtmap )
     !-----------------------------------------------------------
     ! Case: $wgtmap was prepared
     case( GRID_STATUS__PREPARED )
-      call echo(code%ent, 'Case: Raster weight map was prepared')
+      call logent('Case: Raster weight map was prepared', PRCNAM, MODNAM)
 
       allocate(uwacol(ar%vi:ar%vf))
       uwacol(:) &
@@ -2068,40 +2304,47 @@ subroutine make_grdara__raster(ar)
 
       deallocate(uwacol)
 
-      call echo(code%ext)
+      call logext()
     !-----------------------------------------------------------
     ! Case: $wgtmap is not used
     case( GRID_STATUS__NOT_USED )
-      call echo(code%ent, 'Case: Raster weight map is not used')
+      call logent('Case: Raster weight map is not used', PRCNAM, MODNAM)
 
-      call make_grduwa__raster(ar)
+      if( make_grduwa__raster(ar) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
       call cpval(g%uwa, g%ara)
 
-      call echo(code%ext)
+      call logext()
     !-----------------------------------------------------------
-    ! 
+    !
     case( GRID_STATUS__TO_BE_PREPARED )
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  ar%status_wgtmap == GRID_STATUS__TO_BE_PREPARED')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n  ar%status_wgtmap == GRID_STATUS__TO_BE_PREPARED')
+      return
     !-----------------------------------------------------------
-    ! 
+    !
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\b  ar%status_wgtmap: '//str(ar%status_wgtmap))
+      info = 1
+      call errret(msg_invalid_value('ar%status_wgtmap', ar%status_wgtmap))
+      return
     endselect
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
-    call make_grduwa__raster(ar)
+    if( make_grduwa__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     call cpval(g%uwa, g%ara)
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
@@ -2109,11 +2352,13 @@ subroutine make_grdara__raster(ar)
   do ij = 1_8, g%nij
     if( g%msk(ij) )then
       if( g%ara(ij) < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%ara(ij) < 0.d0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  ara: '//str(g%ara(ij)))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  g%ara(ij) < 0.d0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  ara: '//str(g%ara(ij)))
+        return
       endif
     else
       g%ara(ij) = ar%ara_miss
@@ -2122,19 +2367,20 @@ subroutine make_grdara__raster(ar)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%ara,mask=g%ara/=ar%ara_miss))//&
-          ', max: '//str(maxval(g%ara,mask=g%ara/=ar%ara_miss))//&
-          '\ntotal: '//str(sum(g%ara,mask=g%ara/=ar%ara_miss),'es20.13'))
+  call logmsg('min: '//str(minval(g%ara,mask=g%ara/=ar%ara_miss))//&
+            ', max: '//str(maxval(g%ara,mask=g%ara/=ar%ara_miss))//&
+            '\ntotal: '//str(sum(g%ara,mask=g%ara/=ar%ara_miss),'es20.13'))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdara__raster
+  call logret(PRCNAM, MODNAM)
+end function make_grdara__raster
 !===============================================================
 ! Calc. grid weight.
 !===============================================================
-subroutine make_grdwgt__raster(ar)
+integer(4) function make_grdwgt__raster(ar) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdwgt__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr
@@ -2144,14 +2390,19 @@ subroutine make_grdwgt__raster(ar)
   type(opt_earth_) :: earth
   integer(8) :: ij
 
+  info = 0
   if( ar%grid%status_wgt == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdwgt__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
-  call make_grdidx__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fr    => ar%f_raster_in
   fg_in => ar%f_grid_in
@@ -2162,29 +2413,33 @@ subroutine make_grdwgt__raster(ar)
 
   if( .not. ar%is_valid )then
     g%wgt(:) = ar%wgt_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Grid weight data were given
   if( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Grid weight data were given')
+    call logent('Case: Grid weight data were given', PRCNAM, MODNAM)
 
     f => fg_in%wgt
-    call rbin(g%wgt, fg_in%nx, fg_in%ny, &
-              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2))
+    if( rbin(g%wgt, fg_in%nx, fg_in%ny, &
+             f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Grid area data were given
   elseif( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Grid area data were given')
+    call logent('Case: Grid area data were given', PRCNAM, MODNAM)
 
-    call make_grdara__raster(ar)
+    if( make_grdara__raster(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = 1_8, g%nij
       if( g%idx(ij) /= ar%idx_miss )then
@@ -2194,15 +2449,15 @@ subroutine make_grdwgt__raster(ar)
       endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     g%wgt(:) = 1.d0
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
@@ -2210,11 +2465,13 @@ subroutine make_grdwgt__raster(ar)
   do ij = 1_8, g%nij
     if( g%msk(ij) )then
       if( g%wgt(ij) < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%ara(ij) < 0.d0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  wgt: '//str(g%wgt(ij)))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  g%ara(ij) < 0.d0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  wgt: '//str(g%wgt(ij)))
+        return
       endif
     else
       g%wgt(ij) = ar%wgt_miss
@@ -2223,18 +2480,19 @@ subroutine make_grdwgt__raster(ar)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=ar%wgt_miss))//&
-          ', max: '//str(maxval(g%wgt,mask=g%wgt/=ar%wgt_miss)))
+  call logmsg('min: '//str(minval(g%wgt,mask=g%wgt/=ar%wgt_miss))//&
+            ', max: '//str(maxval(g%wgt,mask=g%wgt/=ar%wgt_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdwgt__raster
+  call logret(PRCNAM, MODNAM)
+end function make_grdwgt__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz__raster(ar)
+integer(4) function make_grdxyz__raster(ar) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdxyz__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(grid_)       , pointer :: g
@@ -2249,14 +2507,19 @@ subroutine make_grdxyz__raster(ar)
   integer(8) :: ij, ij_prev
   real(8) :: r
 
+  info = 0
   if( ar%grid%status_xyz == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdxyz__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
-  call make_grdidx__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   g => ar%grid
 
@@ -2269,11 +2532,11 @@ subroutine make_grdxyz__raster(ar)
     g%x(:) = ar%xyz_miss
     g%y(:) = ar%xyz_miss
     g%z(:) = ar%xyz_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2314,10 +2577,12 @@ subroutine make_grdxyz__raster(ar)
   do ij = 1_8, ar%nij
     if( g%msk(ij) )then
       if( g%x(ij) == 0.d0 .and. g%y(ij) == 0.d0 .and. g%z(ij) == 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  (x,y,z) are zero.'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij)))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  (x,y,z) are zero.'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij)))
+        return
       endif
 
       r = sqrt(g%x(ij)**2 + g%y(ij)**2 + g%z(ij)**2)
@@ -2333,11 +2598,11 @@ subroutine make_grdxyz__raster(ar)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('x min: '//str(minval(g%x,mask=g%x/=ar%xyz_miss))//&
+  call logmsg('x min: '//str(minval(g%x,mask=g%x/=ar%xyz_miss))//&
             ', max: '//str(maxval(g%x,mask=g%x/=ar%xyz_miss)))
-  call edbg('y min: '//str(minval(g%y,mask=g%y/=ar%xyz_miss))//&
+  call logmsg('y min: '//str(minval(g%y,mask=g%y/=ar%xyz_miss))//&
             ', max: '//str(maxval(g%y,mask=g%y/=ar%xyz_miss)))
-  call edbg('z min: '//str(minval(g%z,mask=g%z/=ar%xyz_miss))//&
+  call logmsg('z min: '//str(minval(g%z,mask=g%z/=ar%xyz_miss))//&
             ', max: '//str(maxval(g%z,mask=g%z/=ar%xyz_miss)))
   !-------------------------------------------------------------
   !
@@ -2349,15 +2614,16 @@ subroutine make_grdxyz__raster(ar)
 
   deallocate(rstara)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdxyz__raster
+  call logret(PRCNAM, MODNAM)
+end function make_grdxyz__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat__raster(ar)
+integer(4) function make_grdlonlat__raster(ar) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdlonlat__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(file_raster_in_), pointer :: fr_in
@@ -2365,14 +2631,19 @@ subroutine make_grdlonlat__raster(ar)
   type(grid_)          , pointer :: g
   type(opt_earth_) :: earth
 
+  info = 0
   if( ar%grid%status_lonlat == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdlonlat__raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_idxmap__raster(ar)
-  call make_grdidx__raster(ar)
+  if( make_idxmap__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fr_in => ar%f_raster_in
   fg_in => ar%f_grid_in
@@ -2385,28 +2656,33 @@ subroutine make_grdlonlat__raster(ar)
   if( .not. ar%is_valid )then
     g%lon(:) = ar%lonlat_miss
     g%lat(:) = ar%lonlat_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_grdxyz__raster(ar)
+  if( make_grdxyz__raster(ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call conv_cartesian_to_spherical_rad(&
-         g%x, g%y, g%z, g%lon, g%lat, ar%xyz_miss, ar%lonlat_miss)
+  if( cartesian_to_spherical_rad(&
+        g%x, g%y, g%z, g%lon, g%lat, &
+        ar%xyz_miss, ar%lonlat_miss) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ar%lonlat_miss))//&
+  call logmsg('lon min: '//str(minval(g%lon,mask=g%lon/=ar%lonlat_miss))//&
               ', max: '//str(maxval(g%lon,mask=g%lon/=ar%lonlat_miss)))
-  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=ar%lonlat_miss))//&
+  call logmsg('lat min: '//str(minval(g%lat,mask=g%lat/=ar%lonlat_miss))//&
               ', max: '//str(maxval(g%lat,mask=g%lat/=ar%lonlat_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdlonlat__raster
+  call logret(PRCNAM, MODNAM)
+end function make_grdlonlat__raster
 !===============================================================
 !
 !===============================================================
@@ -2418,10 +2694,11 @@ end subroutine make_grdlonlat__raster
 !===============================================================
 !
 !===============================================================
-subroutine make_grdidx__polygon(ap)
+integer(4) function make_grdidx__polygon(ap) result(info)
   use c1_gs_grid_util, only: &
         print_indices
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_grid_in_), pointer :: fg_in
@@ -2430,9 +2707,10 @@ subroutine make_grdidx__polygon(ap)
   integer(8) :: ij
   integer(8) :: loc
 
+  info = 0
   if( ap%grid%status_idx == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdidx__polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2450,10 +2728,12 @@ subroutine make_grdidx__polygon(ap)
   !-------------------------------------------------------------
   ! Case: Index data were given
   if( fg_in%idx%path /= '' )then
-    call echo(code%ent, 'Case: Index data were given')
+    call logent('Case: Index data were given', PRCNAM, MODNAM)
 
     f => fg_in%idx
-    call rbin(g%idx, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1))
+    if( rbin(g%idx, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     call argsort(g%idx, g%idxarg)
 
@@ -2461,11 +2741,11 @@ subroutine make_grdidx__polygon(ap)
       g%msk(ij) = g%idx(ij) /= ap%idx_miss
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     do ij = 1_8, g%nij
       g%idx(ij) = ij + fg_in%idx_bgn - 1_8
@@ -2473,7 +2753,7 @@ subroutine make_grdidx__polygon(ap)
       g%msk(ij) = .true.
     enddo
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
@@ -2502,15 +2782,16 @@ subroutine make_grdidx__polygon(ap)
 
   ap%is_valid = any(g%msk)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdidx__polygon
+  call logret(PRCNAM, MODNAM)
+end function make_grdidx__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grduwa__polygon(ap)
+integer(4) function make_grduwa__polygon(ap) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grduwa__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_grid_in_), pointer :: fg_in
@@ -2519,13 +2800,16 @@ subroutine make_grduwa__polygon(ap)
   type(opt_earth_) :: earth
   integer(8) :: ij
 
+  info = 0
   if( ap%grid%status_uwa == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grduwa__polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_grdidx__polygon(ap)
+  if( make_grdidx__polygon(ap) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => ap%f_grid_in
   g     => ap%grid
@@ -2535,11 +2819,11 @@ subroutine make_grduwa__polygon(ap)
 
   if( .not. ap%is_valid )then
     g%uwa(:) = ap%uwa_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2549,31 +2833,39 @@ subroutine make_grduwa__polygon(ap)
 
     p => ap%polygon(ij)
 
-    g%uwa(ij) = area_sphere_polygon(p%lon, p%lat, p%arctyp) * earth%r**2
+    if( area_sphere_polygon(p%lon, p%lat, p%arctyp, g%uwa(ij)) /= 0 )then
+      info = 1
+      call errret('@ ij = '//str(ij))
+      return
+    endif
+    g%uwa(ij) = g%uwa(ij) * earth%r**2
 
     if( g%uwa(ij) <= 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  g%uwa(ij) <= 0.0'//&
-              '\n  ij: '//str(ij)//&
-              '\n  uwa: '//str(g%uwa(ij)))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n  g%uwa(ij) <= 0.0'//&
+                '\n  ij: '//str(ij)//&
+                '\n  uwa: '//str(g%uwa(ij)))
+      return
     endif
   enddo  ! ij/
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%uwa,mask=g%uwa/=ap%uwa_miss))//&
-          ', max: '//str(maxval(g%uwa,mask=g%uwa/=ap%uwa_miss))//&
-          '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ap%uwa_miss),'es20.13'))
+  call logmsg('min: '//str(minval(g%uwa,mask=g%uwa/=ap%uwa_miss))//&
+            ', max: '//str(maxval(g%uwa,mask=g%uwa/=ap%uwa_miss))//&
+            '\ntotal: '//str(sum(g%uwa,mask=g%uwa/=ap%uwa_miss),'es20.13'))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grduwa__polygon
+  call logret(PRCNAM, MODNAM)
+end function make_grduwa__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdara__polygon(ap)
+integer(4) function make_grdara__polygon(ap) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdara__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_grid_in_), pointer :: fg_in
@@ -2582,13 +2874,16 @@ subroutine make_grdara__polygon(ap)
   type(opt_earth_) :: earth
   integer(8) :: ij
 
+  info = 0
   if( ap%grid%status_ara == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdara__polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_grdidx__polygon(ap)
+  if( make_grdidx__polygon(ap) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => ap%f_grid_in
   g     => ap%grid
@@ -2598,41 +2893,51 @@ subroutine make_grdara__polygon(ap)
 
   if( .not. ap%is_valid )then
     g%ara(:) = ap%ara_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Weighted area data were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area data were given')
+    call logent('Case: Weighted area data were given', PRCNAM, MODNAM)
 
     f => fg_in%ara
-    call rbin(g%ara, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1))
-    call conv_unit(g%ara, fg_in%unit_ara, UNIT_SQUARE_METER)
+    if( rbin(g%ara, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1)) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( conv_unit(g%ara, fg_in%unit_ara, UNIT_SQUARE_METER) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = 1_8, g%nij
       if( g%msk(ij) )then
         if( g%ara(ij) <= 0.d0 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  g%ara('//str(ij)//') <= 0.0'//&
-                  '\n  idx: '//str(g%idx(ij))//&
-                  '\n  ara: '//str(g%ara(ij)))
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\n  g%ara('//str(ij)//') <= 0.0'//&
+                    '\n  idx: '//str(g%idx(ij))//&
+                    '\n  ara: '//str(g%ara(ij)))
+          return
         endif
       endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight data were given')
+    call logent('Case: Weight data were given', PRCNAM, MODNAM)
 
-    call make_grduwa__polygon(ap)
-    call make_grdwgt__polygon(ap)
+    if( make_grduwa__polygon(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdwgt__polygon(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = 1_8, g%nij
       if( g%msk(ij) )then
@@ -2642,34 +2947,37 @@ subroutine make_grdara__polygon(ap)
       endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
-    call make_grduwa__polygon(ap)
+    if( make_grduwa__polygon(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     call cpval(g%uwa, g%ara)
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%ara,mask=g%ara/=ap%ara_miss))//&
-          ', max: '//str(maxval(g%ara,mask=g%ara/=ap%ara_miss))//&
-          '\ntotal: '//str(sum(g%ara,mask=g%ara/=ap%ara_miss),'es20.13'))
+  call logmsg('min: '//str(minval(g%ara,mask=g%ara/=ap%ara_miss))//&
+            ', max: '//str(maxval(g%ara,mask=g%ara/=ap%ara_miss))//&
+            '\ntotal: '//str(sum(g%ara,mask=g%ara/=ap%ara_miss),'es20.13'))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdara__polygon
+  call logret(PRCNAM, MODNAM)
+end function make_grdara__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdwgt__polygon(ap)
+integer(4) function make_grdwgt__polygon(ap) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdwgt__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_grid_in_), pointer :: fg_in
@@ -2678,13 +2986,16 @@ subroutine make_grdwgt__polygon(ap)
   type(opt_earth_) :: earth
   integer(8) :: ij
 
+  info = 0
   if( ap%grid%status_wgt == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdwgt__polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_grdidx__polygon(ap)
+  if( make_grdidx__polygon(ap) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => ap%f_grid_in
   g     => ap%grid
@@ -2694,20 +3005,24 @@ subroutine make_grdwgt__polygon(ap)
 
   if( .not. ap%is_valid )then
     g%wgt(:) = ap%wgt_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Weighted area data were given
   if( fg_in%ara%path /= '' )then
-    call echo(code%ent, 'Case: Weighted area data were given')
+    call logent('Case: Weighted area data were given', PRCNAM, MODNAM)
 
-    call make_grduwa__polygon(ap)
-    call make_grdara__polygon(ap)
+    if( make_grduwa__polygon(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_grdara__polygon(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     g%wgt(:) = ap%wgt_miss
     do ij = 1_8, g%nij
@@ -2715,24 +3030,26 @@ subroutine make_grdwgt__polygon(ap)
       g%wgt(ij) = g%ara(ij) / g%uwa(ij)
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Weight data were given
   elseif( fg_in%wgt%path /= '' )then
-    call echo(code%ent, 'Case: Weight data were given')
+    call logent('Case: Weight data were given', PRCNAM, MODNAM)
 
     f => fg_in%wgt
-    call rbin(g%wgt, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1))
+    if( rbin(g%wgt, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     g%wgt(:) = 1.d0
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
@@ -2740,11 +3057,13 @@ subroutine make_grdwgt__polygon(ap)
   do ij = 1_8, g%nij
     if( g%msk(ij) )then
       if( g%wgt(ij) < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  g%wgt(ij) < 0.d0'//&
-                '\n  ij: '//str(ij)//&
-                '\n  idx: '//str(g%idx(ij))//&
-                '\n  wgt: '//str(g%wgt(ij)))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  g%wgt(ij) < 0.d0'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  wgt: '//str(g%wgt(ij)))
+        return
       endif
     else
       g%wgt(ij) = ap%wgt_miss
@@ -2753,18 +3072,19 @@ subroutine make_grdwgt__polygon(ap)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(minval(g%wgt,mask=g%wgt/=ap%wgt_miss))//&
-           ' max: '//str(maxval(g%wgt,mask=g%wgt/=ap%wgt_miss)))
+  call logmsg('min: '//str(minval(g%wgt,mask=g%wgt/=ap%wgt_miss))//&
+            ', max: '//str(maxval(g%wgt,mask=g%wgt/=ap%wgt_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdwgt__polygon
+  call logret(PRCNAM, MODNAM)
+end function make_grdwgt__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdxyz__polygon(ap)
+integer(4) function make_grdxyz__polygon(ap) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdxyz__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_grid_in_), pointer :: fg_in
@@ -2774,13 +3094,16 @@ subroutine make_grdxyz__polygon(ap)
   integer(8) :: ij
   real(8) :: r
 
+  info = 0
   if( ap%grid%status_xyz == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdxyz__polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_grdidx__polygon(ap)
+  if( make_grdidx__polygon(ap) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => ap%f_grid_in
   g     => ap%grid
@@ -2794,33 +3117,37 @@ subroutine make_grdxyz__polygon(ap)
     g%x(:) = ap%xyz_miss
     g%y(:) = ap%xyz_miss
     g%z(:) = ap%xyz_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Cartesian coord. data were given
   if( fg_in%x%path /= '' )then
-    call echo(code%ent, 'Cartesian coordinate data were given')
+    call logent('Case: Cartesian coordinate data were given', PRCNAM, MODNAM)
 
-    call eerr('Not implemented.')
+    info = 1
+    call errret('Not implemented.')
+    return
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Spherical coord. data were given
   elseif( fg_in%lon%path /= '' )then
-    call echo(code%ent, 'Spherical coordinate data were given')
+    call logent('Case: Spherical coordinate data were given', PRCNAM, MODNAM)
 
-    call eerr('Not implemented.')
+    info = 1
+    call errret('Not implemented.')
+    return
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
     g%x(:) = ap%xyz_miss
     g%y(:) = ap%xyz_miss
@@ -2840,40 +3167,44 @@ subroutine make_grdxyz__polygon(ap)
       g%z(ij) = g%z(ij) / r * earth%r
     enddo  ! ij/
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('x min: '//str(minval(g%x,mask=g%x/=ap%xyz_miss))//&
-            ', max: '//str(maxval(g%x,mask=g%x/=ap%xyz_miss)))
-  call edbg('y min: '//str(minval(g%y,mask=g%y/=ap%xyz_miss))//&
-            ', max: '//str(maxval(g%y,mask=g%y/=ap%xyz_miss)))
-  call edbg('z min: '//str(minval(g%z,mask=g%z/=ap%xyz_miss))//&
-            ', max: '//str(maxval(g%z,mask=g%z/=ap%xyz_miss)))
+  call logmsg('x min: '//str(minval(g%x,mask=g%x/=ap%xyz_miss))//&
+              ', max: '//str(maxval(g%x,mask=g%x/=ap%xyz_miss)))
+  call logmsg('y min: '//str(minval(g%y,mask=g%y/=ap%xyz_miss))//&
+              ', max: '//str(maxval(g%y,mask=g%y/=ap%xyz_miss)))
+  call logmsg('z min: '//str(minval(g%z,mask=g%z/=ap%xyz_miss))//&
+              ', max: '//str(maxval(g%z,mask=g%z/=ap%xyz_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdxyz__polygon
+  call logret(PRCNAM, MODNAM)
+end function make_grdxyz__polygon
 !===============================================================
 !
 !===============================================================
-subroutine make_grdlonlat__polygon(ap)
+integer(4) function make_grdlonlat__polygon(ap) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdlonlat__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_grid_in_), pointer :: fg_in
   type(grid_)        , pointer :: g
   type(opt_earth_) :: earth
 
+  info = 0
   if( ap%grid%status_lonlat == GRID_STATUS__PREPARED ) return
 
-  call echo(code%bgn, 'make_grdlonlat__polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call make_grdidx__polygon(ap)
+  if( make_grdidx__polygon(ap) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   fg_in => ap%f_grid_in
   g     => ap%grid
@@ -2885,52 +3216,60 @@ subroutine make_grdlonlat__polygon(ap)
   if( .not. ap%is_valid )then
     g%lon(:) = ap%lonlat_miss
     g%lat(:) = ap%lonlat_miss
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ! Case: Spherical coord. data were given
   if( fg_in%lon%path /= '' )then
-    call echo(code%ent, 'Case: Spherical coord. data were given')
+    call logent('Case: Spherical coordinate data were given', PRCNAM, MODNAM)
 
-    call eerr('No implemented.')
+    info = 1
+    call errret(msg_not_implemented())
+    return
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Cartesian coord. data were given
   elseif( fg_in%x%path /= '' )then
-    call echo(code%ent, 'Case: Cartesian coord. data were given')
+    call logent('Case: Cartesian coordinate data were given', PRCNAM, MODNAM)
 
-    call eerr('No implemented.')
+    info = 1
+    call errret(msg_not_implemented())
+    return
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
-    call echo(code%ent, 'Case: No input')
+    call logent('Case: No input', PRCNAM, MODNAM)
 
-    call make_grdxyz__polygon(ap)
+    if( make_grdxyz__polygon(ap) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call conv_cartesian_to_spherical_rad(&
-           g%x, g%y, g%z, g%lon, g%lat, &
-           ap%xyz_miss, ap%lonlat_miss)
+    if( cartesian_to_spherical_rad(&
+          g%x, g%y, g%z, g%lon, g%lat, &
+          ap%xyz_miss, ap%lonlat_miss) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('lon min: '//str(minval(g%lon,mask=g%lon/=ap%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=ap%lonlat_miss)))
-  call edbg('lat min: '//str(minval(g%lat,mask=g%lat/=ap%lonlat_miss))//&
-              ', max: '//str(maxval(g%lat,mask=g%lat/=ap%lonlat_miss)))
+  call logmsg('lon min: '//str(minval(g%lon,mask=g%lon/=ap%lonlat_miss))//&
+                ', max: '//str(maxval(g%lon,mask=g%lon/=ap%lonlat_miss)))
+  call logmsg('lat min: '//str(minval(g%lat,mask=g%lat/=ap%lonlat_miss))//&
+                ', max: '//str(maxval(g%lat,mask=g%lat/=ap%lonlat_miss)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_grdlonlat__polygon
+  call logret(PRCNAM, MODNAM)
+end function make_grdlonlat__polygon
 !===============================================================
 !
 !===============================================================
@@ -2945,6 +3284,7 @@ integer(8) function find_index(&
     idx, idx_prev, ij_prev, grdidx, grdidxarg, &
     allow_not_found) result(ij)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'find_index'
   integer(8), intent(in) :: idx
   integer(8), intent(inout) :: idx_prev
   integer(8), intent(inout) :: ij_prev
@@ -2961,8 +3301,9 @@ integer(8) function find_index(&
       if( allow_not_found )then
         ij = 0_8
       else
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  Index '//str(idx)//' is not found')
+        call logbgn(PRCNAM, MODNAM)
+        call errret(msg_unexpected_condition()//&
+                  '\n  Index '//str(idx)//' is not found')
       endif
     else
       ij = grdidxarg(loc)
@@ -2974,8 +3315,10 @@ end function find_index
 !===============================================================
 !
 !===============================================================
-subroutine read_lattice_data__int8(dat, f, s2n, xi, yi)
+integer(4) function read_lattice_data__int8(&
+    dat, f, s2n, xi, yi) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_lattice_data__int8'
   integer(8) , intent(out) :: dat(:,:)
   type(file_), intent(in)  :: f
   logical    , intent(in)  :: s2n
@@ -2983,23 +3326,28 @@ subroutine read_lattice_data__int8(dat, f, s2n, xi, yi)
 
   integer(8) :: lb(2)
 
-  call echo(code%bgn, 'read_lattice_data__int8', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   lb(:) = f%lb(:2)
   if( present(xi) ) lb(1) = xi
   if( present(yi) ) lb(2) = yi
 
-  call rbin(dat, f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=lb)
+  if( rbin(dat, f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=lb) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( .not. s2n ) call reverse(dat, 2)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine read_lattice_data__int8
+  call logret(PRCNAM, MODNAM)
+end function read_lattice_data__int8
 !===============================================================
 !
 !===============================================================
-subroutine read_lattice_data__dble(dat, f, s2n, xi, yi)
+integer(4) function read_lattice_data__dble(&
+    dat, f, s2n, xi, yi) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_lattice_data__dble'
   real(8)    , intent(out) :: dat(:,:)
   type(file_), intent(in)  :: f
   logical    , intent(in)  :: s2n
@@ -3007,18 +3355,21 @@ subroutine read_lattice_data__dble(dat, f, s2n, xi, yi)
 
   integer(8) :: lb(2)
 
-  call echo(code%bgn, 'read_lattice_data__dble', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   lb(:) = f%lb(:2)
   if( present(xi) ) lb(1) = xi
   if( present(yi) ) lb(2) = yi
 
-  call rbin(dat, f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=lb)
+  if( rbin(dat, f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=lb) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( .not. s2n ) call reverse(dat, 2)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine read_lattice_data__dble
+  call logret(PRCNAM, MODNAM)
+end function read_lattice_data__dble
 !===============================================================
 !
 !===============================================================

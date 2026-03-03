@@ -16,7 +16,7 @@ program main
   type(rm_)     :: rm
   type(lsm_)    :: lsm
 
-  call echo(code%bgn, 'program cpl_aogcm-ils_define_mat')
+  call logbgn('program main', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -28,5 +28,5 @@ program main
 
   call finalize()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret('program main', '')
 end program main

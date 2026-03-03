@@ -10,12 +10,17 @@ module c1_regions_base
   !-------------------------------------------------------------
   public :: clear_regions
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_regions_base'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine clear_regions(regions)
+integer(4) function clear_regions(regions) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_regions'
   type(regions_), intent(inout), target :: regions
 
   type(region_), pointer :: region
@@ -23,7 +28,8 @@ subroutine clear_regions(regions)
   integer :: iRegion
   integer(8) :: ij
 
-  call echo(code%bgn, 'clear_regions', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -55,8 +61,8 @@ subroutine clear_regions(regions)
     endif
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine clear_regions
+  call logret(PRCNAM, MODNAM)
+end function clear_regions
 !===============================================================
 !
 !===============================================================

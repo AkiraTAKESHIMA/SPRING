@@ -36,11 +36,11 @@ program main
   character(128), parameter :: wfile1 = 'tmp/1min/uparea.bin'
   character(128), parameter :: wfile2 = 'tmp/1min/upgrid.bin'
 
-  call echo(code%bgn, 'program calc_uparea')
+  call logbgn('program calc_uparea', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
   open(11, file=fparams, status='old')
 
   read(11,*) ! nXX
@@ -67,7 +67,7 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating pixel area')
+  call logent('Calculating pixel area')
 
   allocate(pixlat(0:ny))
 
@@ -82,21 +82,20 @@ program main
   case( earth_shape_ellips )
     pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth_e2) * rad_360deg/nx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth_shape: '//trim(earth_shape))
+    call errend(msg_invalid_value('earth_shape', earth_shape))
   endselect
 
   pixare(:) = pixare(:) * earth_r**2
 
   deallocate(pixlat)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating uparea and upgrid')
+  call logent('Calculating uparea and upgrid')
 
-  call rbin(flwdir, rfile1)
+  call traperr( rbin(flwdir, rfile1) )
 
   upgrid(:,:)=0
   upnow(:,:)=0
@@ -173,15 +172,15 @@ program main
     nseq=jseq
   end do
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Writing uparea '//str(wfile1))
-  call wbin(upa, wfile1)
+  call logmsg('Writing uparea '//str(wfile1))
+  call traperr( wbin(upa, wfile1) )
 
-  call edbg('Writing upgrid '//str(wfile2))
-  call wbin(upg, wfile2)
+  call logmsg('Writing upgrid '//str(wfile2))
+  call traperr( wbin(upg, wfile2) )
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -196,5 +195,5 @@ program main
   deallocate(upa)
   deallocate(upg)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

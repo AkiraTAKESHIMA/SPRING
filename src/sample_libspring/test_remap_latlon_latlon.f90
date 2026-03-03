@@ -1,20 +1,21 @@
 program main
   use libspring, only: &
-        spring_initialize          , &
-        spring_finalize            , &
-        spring_set_logopt          , &
-        spring_define_grdsys_latlon, &
-        spring_define_grdsys_raster, &
-        spring_clear_grdsys        , &
-        spring_print_grdsys_name   , &
-        spring_print_grdsys        , &
-        spring_make_rmptbl         , &
-        spring_clear_rmptbl        , &
-        spring_get_rmptbl_length   , &
-        spring_get_rmptbl_data     , &
-        spring_print_rmptbl_name   , &
-        spring_print_rmptbl        , &
-        spring_remap
+        spring_initialize         , &
+        spring_finalize           , &
+        spring_set_logopt         , &
+        spring_define_mesh_latlon , &
+        spring_define_mesh_raster , &
+        spring_clear_mesh         , &
+        spring_print_meshes_name  , &
+        spring_print_mesh         , &
+        spring_make_rmptbl        , &
+        spring_clear_rmptbl       , &
+        spring_get_rmptbl_length  , &
+        spring_get_rmptbl_data    , &
+        spring_print_rmptbl_name  , &
+        spring_print_rmptbl       , &
+        spring_remap              , &
+        spring_print_error_message
   implicit none
   !-------------------------------------------------------------
   !
@@ -89,21 +90,31 @@ subroutine remap_latlon_latlon()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call spring_initialize(logopt='')
-  !call spring_initialize()
+  if( spring_initialize(logopt='') /= 0 )then
+    call spring_print_error_message()
+  endif
 
   ! Define grid systems
-  call spring_define_grdsys_latlon(&
+  if( spring_define_mesh_latlon(&
          '05deg', nsx, nsy, &
-         lon=slon, lat=slat, origin='north')
-  call spring_define_grdsys_latlon(&
-         '288x192', ntx, nty, 0.d0, 360.d0, -90.d0, 90.d0)
+         lon=slon, lat=slat, origin='north') /= 0 )then
+    call spring_print_error_message()
+  endif
+  if( spring_define_mesh_latlon(&
+         '288x192', ntx, nty, &
+         0.d0, 360.d0, -90.d0, 90.d0) /= 0 )then
+    call spring_print_error_message()
+  endif
 
   ! Make remapping table
-  call spring_make_rmptbl('rt1', '05deg', '288x192')
+  if( spring_make_rmptbl('rt1', '05deg', '288x192') /= 0 )then
+    call spring_print_error_message()
+  endif
 
   ! Get generated remapping table
-  call spring_get_rmptbl_length('rt1', nij)
+  if( spring_get_rmptbl_length('rt1', nij) /= 0 )then
+    call spring_print_error_message()
+  endif
   print*, 'nij ',nij
 
   ! Get remapping table and check values
@@ -111,14 +122,19 @@ subroutine remap_latlon_latlon()
   allocate(rttidx(nij))
   allocate(rtarea(nij))
   allocate(rtcoef(nij))
-  call spring_get_rmptbl_data('rt1', rtsidx, rttidx, rtarea, rtcoef)
+  if( spring_get_rmptbl_data(&
+        'rt1', rtsidx, rttidx, rtarea, rtcoef) /= 0 )then
+    call spring_print_error_message()
+  endif
   print*, 'sidx', minval(rtsidx), maxval(rtsidx)
   print*, 'tidx', minval(rttidx), maxval(rttidx)
   print*, 'area', minval(rtarea), maxval(rtarea)
   print*, 'coef', minval(rtcoef), maxval(rtcoef)
 
   ! Remap
-  call spring_remap('rt1', sdat, tdat, smiss, tmiss)
+  if( spring_remap('rt1', sdat, tdat, smiss, tmiss) /= 0 )then
+    call spring_print_error_message()
+  endif
   print*, 'sdat', minval(sdat), maxval(sdat)
   print*, 'tdat', minval(tdat), maxval(tdat)
 

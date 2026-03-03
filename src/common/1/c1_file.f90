@@ -12,14 +12,15 @@ module c1_file
   !-------------------------------------------------------------
   public :: open_report_file
   public :: close_report_file
+  public :: is_report_file_opened
   public :: report
 
   public :: set_opt_old_files
   public :: handle_old_file
   !-------------------------------------------------------------
   interface handle_old_file
-    module procedure handle_old_file_file
-    module procedure handle_old_file_path
+    module procedure handle_old_file__file
+    module procedure handle_old_file__path
   end interface
   !-------------------------------------------------------------
   ! Private Variables
@@ -28,47 +29,81 @@ module c1_file
   character(clen_path), save :: path_report = ''
 
   character(clen_key), save :: old_files = ''
+
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_file'
 !---------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine open_report_file(path)
+integer(4) function open_report_file(path) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'open_report_file'
   character(*), intent(in) :: path
 
-  call echo(code%bgn, 'open_report_file', '-p -x2')
+  integer :: ios
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   path_report = path
   un_report = unit_number()
 
-  call mkdir(dirname(path_report), output=.true., hut='+ ')
+  if( mkdir(dirname(path_report), output=.true., hut='+ ') /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Open[w] '//str(un_report)//' '//str(path))
-  open(un_report, file=path, form='formatted', action='write', status='replace')
+  call logmsg('Open[w] '//str(un_report)//' '//str(path))
+  open(un_report, file=path, &
+       form='formatted', action='write', status='replace', &
+       iostat=ios)
+  if( ios /= 0 )then
+    info = 1
+    call errret(msg_io_error()//&
+              '\nFailed to open file.')
+    return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine open_report_file
+  call logret(PRCNAM, MODNAM)
+end function open_report_file
 !===============================================================
 !
 !===============================================================
-subroutine close_report_file()
+integer(4) function close_report_file() result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'close_report_file'
 
-  call echo(code%bgn, 'close_report_file', '-p -x2')
+  integer :: ios
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Close '//str(un_report)//' '//str(path_report))
-  close(un_report)
+  call logmsg('Close '//str(un_report)//' '//str(path_report))
+  close(un_report, iostat=ios)
+  if( ios /= 0 )then
+    info = 1
+    call errret(msg_io_error()//&
+              '\nFailed to open file.')
+    return
+  endif
 
   path_report = ''
   un_report   = 0
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine close_report_file
+  call logret(PRCNAM, MODNAM)
+end function close_report_file
+!===============================================================
+!
+!===============================================================
+logical function is_report_file_opened() result(res)
+  implicit none
+
+  inquire(unit=un_report, opened=res)
+end function is_report_file_opened
 !===============================================================
 !
 !===============================================================
@@ -76,18 +111,7 @@ subroutine report(s)
   implicit none
   character(*), intent(in) :: s
 
-  call echo(code%bgn, 'report', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( un_report == 0 )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  Report file has not been opened.')
-  endif
-
-  call echo(un_report, s)
-  !-------------------------------------------------------------
-  call echo(code%ret)
+  call logmsg(s, un=un_report)
 end subroutine report
 !===============================================================
 !
@@ -100,121 +124,156 @@ end subroutine report
 !===============================================================
 !
 !===============================================================
-subroutine set_opt_old_files(opt_old_files)
+integer(4) function set_opt_old_files(opt_old_files) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_opt_old_files'
   character(*), intent(in) :: opt_old_files
 
-  call echo(code%bgn, 'set_opt_old_files', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   old_files = opt_old_files
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_opt_old_files
+  call logret(PRCNAM, MODNAM)
+end function set_opt_old_files
 !===============================================================
 !
 !===============================================================
-subroutine handle_old_file_file(f)
+integer(4) function handle_old_file__file(f) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'handle_old_file__file'
   type(file_), intent(in) :: f
 
   integer :: access
 
-  call echo(code%bgn, 'handle_old_file_file', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( old_files )
   !-------------------------------------------------------------
   ! Case: Stop
-  case( opt_old_files_stop )
+  case( OPT_OLD_FILES_STOP )
     if( access(f%path,' ') == 0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  File already exists.'//&
-              '\n  id  : '//str(f%id)//&
-              '\n  path: '//str(f%path))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nFile already exists.'//&
+                '\n  id  : '//str(f%id)//&
+                '\n  path: '//str(f%path))
+      return
     endif
   !-------------------------------------------------------------
   ! Case: Remove
-  case( opt_old_files_remove )
+  case( OPT_OLD_FILES_REMOVE )
     selectcase( f%action )
-    case( action_read )
-      call eerr(str(msg_unexpected_condition())//&
-             '\n  old_files == '//str(old_files)//' .and. f%action == '//str(f%action))
-    case( action_write, &
-          action_readwrite, &
-          action_undef )
+    case( ACTION_READ )
+      info = 1
+      call errret(msg_unexpected_condition()//&
+               '\nold_files == '//str(old_files)//&
+                  ' .and. f%action == '//str(f%action))
+      return
+    case( ACTION_WRITE, &
+          ACTION_READWRITE, &
+          ACTION_UNDEF )
       if( access(f%path,' ') == 0 )then
-        call edbg('Remove '//str(f%id)//': "'//str(f%path)//'"')
-        call remove(f%path, output=.false.)
+        call logmsg('Remove '//str(f%id)//': "'//str(f%path)//'"')
+        if( remove(f%path, output=.false.) /= 0 )then
+          info = 1; call errret(); return
+        endif
       endif
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  id    : '//str(f%id)//&
-              '\n  action: '//str(f%action))
+      info = 1
+      call errret(msg_invalid_value()//&
+                '\n  id    : '//str(f%id)//&
+                '\n  action: '//str(f%action))
+      return
     endselect
   !-------------------------------------------------------------
   ! Case: Overwrite (Check permission)
-  case( opt_old_files_overwrite )
+  case( OPT_OLD_FILES_OVERWRITE )
     if( access(f%path,' ') == 0 )then
-      call edbg('To be updated '//str(f%id)//': "'//str(f%path)//'"')
-      call check_permission(f%path, action_readwrite)
+      call logmsg('To be updated '//str(f%id)//': "'//str(f%path)//'"')
+      if( check_permission(f%path, action_readwrite) /= 0 )then
+        info = 1
+        call errret(&
+          'Option "'//str(OPT_OLD_FILES_OVERWRITE)//&
+          '" was selected but no readwrite permission for'//&
+          ' the file.')
+        return
+      endif
     endif
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  old_files: '//str(old_files))
+    info = 1
+    call errret(msg_invalid_value('old_files', old_files))
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine handle_old_file_file
+  call logret(PRCNAM, MODNAM)
+end function handle_old_file__file
 !===============================================================
 !
 !===============================================================
-subroutine handle_old_file_path(path, id)
+integer(4) function handle_old_file__path(path, id) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'handle_old_file__path'
   character(*), intent(in) :: path
   character(*), intent(in) :: id
 
   integer :: access
 
-  call echo(code%bgn, 'handle_old_file_path', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   selectcase( old_files )
   !-------------------------------------------------------------
   ! Case: Stop
-  case( opt_old_files_stop )
+  case( OPT_OLD_FILES_STOP )
     if( access(path,' ') == 0 )then
-      call eerr('File already exists.'//&
-              '\n'//str(id)//': "'//str(path)//'"')
+      info = 1
+      call errret('File already exists.'//&
+                '\n'//str(id)//': "'//str(path)//'"')
+      return
     endif
   !-------------------------------------------------------------
   ! Case: Remove
-  case( opt_old_files_remove )
+  case( OPT_OLD_FILES_REMOVE )
     if( access(path,' ') == 0 )then
-      call edbg('Remove '//str(id)//': "'//str(path)//'"')
-      call remove(path, output=.false.)
+      call logmsg('Remove '//str(id)//': "'//str(path)//'"')
+      if( remove(path, output=.false.) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
   !-------------------------------------------------------------
   ! Case: Overwrite (Check permission)
-  case( opt_old_files_overwrite )
+  case( OPT_OLD_FILES_OVERWRITE )
     if( access(path,' ') == 0 )then
-      call edbg('To be updated '//str(id)//': "'//str(path)//'"')
-      call check_permission(path, action_readwrite)
+      call logmsg('To be updated '//str(id)//': "'//str(path)//'"')
+      if( check_permission(path, ACTION_READWRITE) /= 0 )then
+        info = 1
+        call errret(&
+          'Option "'//str(OPT_OLD_FILES_OVERWRITE)//&
+          '" was selected but no readwrite permission for'//&
+          ' the file.')
+        return
+      endif
     endif
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  old_files: '//str(old_files))
+    info = 1
+    call errret(msg_invalid_value('old_files', old_files))
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine handle_old_file_path
+  call logret(PRCNAM, MODNAM)
+end function handle_old_file__path
 !===============================================================
 !
 !===============================================================

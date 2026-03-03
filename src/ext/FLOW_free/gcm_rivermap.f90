@@ -74,11 +74,11 @@ program main
   character(128), parameter :: wfile7 = 'map/uparea.bin'
   character(128), parameter :: wfile8 = 'map/lonlat.bin'
 
-  call echo(code%bgn, 'program gcm_rivermap')
+  call logbgn('program gcm_rivermap', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
 
   open(11, file=fparams, status='old')
 
@@ -104,55 +104,58 @@ program main
 
   !
       allocate(out_x(nXX,nYY),out_y(nXX,nYY))
-! ===============================================
-print *, 'READ FILES'
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call logent('READ FILES')
 
-print *, '  reading lndare ',trim(flndare)
-  call rbin(lndare, flndare)
+  call logmsg('Reading lndare '//trim(flndare))
+  call traperr( rbin(lndare, flndare) )
 
-print *, '  reading gcmxy ',trim(fgcmxy)
-  call rbin(gcmx, fgcmxy, rec=1)
-  call rbin(gcmy, fgcmxy, rec=2)
+  call logmsg('Reading gcmxy '//trim(fgcmxy))
+  call traperr( rbin(gcmx, fgcmxy, rec=1) )
+  call traperr( rbin(gcmy, fgcmxy, rec=2) )
 
-print *, '  reading grlonlat ',trim(fgrlonlat)
-  call rbin(grlon, fgrlonlat, rec=1)
-  call rbin(grlat, fgrlonlat, rec=2)
+  call logmsg('Reading grlonlat '//trim(fgrlonlat))
+  call traperr( rbin(grlon, fgrlonlat, rec=1) )
+  call traperr( rbin(grlat, fgrlonlat, rec=2) )
+  !-------------------------------------------------------------
+  call logmsg('Reading nextxy '//trim(rfile1))
+  call traperr( rbin(nextXX, rfile1, rec=1) )
+  call traperr( rbin(nextYY, rfile1, rec=2) )
 
-! =====================
-print *, '  reading nextxy ',trim(rfile1)
-  call rbin(nextXX, rfile1, rec=1)
-  call rbin(nextYY, rfile1, rec=2)
+  call logmsg('Reading elvation '//trim(rfile2))
+  call traperr( rbin(elevtn, rfile2) )
 
-print *, '  reading elvation ',trim(rfile2)
-  call rbin(elevtn, rfile2)
-
-print *, '  reading floodplain topography ',trim(rfile3)
+  call logmsg('Reading floodplain topography '//trim(rfile3))
   do m = 1, nflp
-    call rbin(fldhgt(:,:,m), rfile3, rec=m)
+    call traperr( rbin(fldhgt(:,:,m), rfile3, rec=m) )
   enddo
 
-print *, '  reading next distance ',trim(rfile4)
-  call rbin(nxtdst, rfile4)
+  call logmsg('Reading next distance '//trim(rfile4))
+  call traperr( rbin(nxtdst, rfile4) )
       
-print *, '  reading channel length ',trim(rfile5)
-  call rbin(rivlen, rfile5)
+  call logmsg('Reading channel length '//trim(rfile5))
+  call traperr( rbin(rivlen, rfile5) )
 
-print *, '  reading catchment area ',trim(rfile6)
-  call rbin(grarea, rfile6)
+  call logmsg('Reading catchment area '//trim(rfile6))
+  call traperr( rbin(grarea, rfile6) )
 
-print *, '  reading drainage area ',trim(rfile7)
-  call rbin(uparea, rfile7)
+  call logmsg('Reading drainage area '//trim(rfile7))
+  call traperr( rbin(uparea, rfile7) )
 
-print *, '  reading lon lat ',trim(rfile8)
-  call rbin(out_lon, rfile8, rec=1)
-  call rbin(out_lat, rfile8, rec=2)
+  call logmsg('Reading lon lat '//trim(rfile8))
+  call traperr( rbin(out_lon, rfile8, rec=1) )
+  call traperr( rbin(out_lat, rfile8, rec=2) )
 
-print *, '  reading outlet pixel ',trim(rfile9)
-  call rbin(out_x, rfile9, rec=1)
-  call rbin(out_y, rfile9, rec=2)
-! ===============================================
+  call logmsg('Reading outlet pixel '//trim(rfile9))
+  call traperr( rbin(out_x, rfile9, rec=1) )
+  call traperr( rbin(out_y, rfile9, rec=2) )
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call logent('Modify river mask')
 
-print *, '  modify river mask'
   do iYY=1, nYY
     do iXX=1, nXX
       if( nextXX(iXX,iYY)==-9 )then
@@ -180,7 +183,12 @@ print *, '  modify river mask'
     end do
   end do
 
-print *, '  modify no land pixel grid'
+  call logext()
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call logent('Modify no land pixel grid')
+
   do iYY=1, nYY
     do iXX=1, nXX
       if( lndare(iXX,iYY)>0 .and. nextXX(iXX,iYY)==-9999 )then
@@ -199,7 +207,11 @@ print *, '  modify no land pixel grid'
       endif
     end do
   end do
-! ===================================
+
+  call logext()
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   do iYY=1, nYY
     do iXX=1, nXX
       if( nextXX(iXX,iYY)>0 )then
@@ -207,52 +219,57 @@ print *, '  modify no land pixel grid'
         jYY=nextYY(iXX,iYY)
 
         if( elevtn(jXX,jYY)>elevtn(iXX,iYY) )then
-          print *, 'NegativeSlope',iXX,iYY,jXX,jYY,elevtn(iXX,iYY),elevtn(jXX,jYY),out_lon(iXX,iYY),out_lat(iXX,iYY)
+          call logmsg('NegativeSlope '//str((/iXX,iYY,jXX,jYY/))//&
+                      ' '//str((/elevtn(iXX,iYY),elevtn(jXX,jYY)/))//&
+                      ' '//str((/out_lon(iXX,iYY),out_lat(iXX,iYY)/)))
         endif
       endif
       if( nextXX(iXX,iYY)==-9 )then
         if( elevtn(iXX,iYY)>0 )then
-          print *, 'NotSeaLevel',iXX,iYY,elevtn(iXX,iYY),out_lon(iXX,iYY),out_lat(iXX,iYY)
+          call logmsg('NotSeaLevel '//str((/iXX,iYY/))//&
+                      ' '//str(elevtn(iXX,iYY))//&
+                      ' '//str((/out_lon(iXX,iYY),out_lat(iXX,iYY)/)))
           elevtn(iXX,iYY)=0
         endif
       endif
     end do
   end do
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call logent('SAVE RIVER MAPS')
 
-! ===============================================
-print *, 'SAVE RIVER MAPS'
+  call logmsg('Writing nextxy '//trim(wfile1))
+  call traperr( wbin(nextXX, wfile1, rec=1) )
+  call traperr( wbin(nextYY, wfile1, rec=2) )
 
-! =====================
-print *, '  writing nextxy ',trim(wfile1)
-  call wbin(nextXX, wfile1, rec=1)
-  call wbin(nextYY, wfile1, rec=2)
+  call logmsg('Writing elvation '//trim(wfile2))
+  call traperr( wbin(elevtn, wfile2, dtype=dtype_real) )
 
-print *, '  writing elvation ',trim(wfile2)
-  call wbin(elevtn, wfile2, dtype=dtype_real)
-
-print *, '  writing floodplain topography ',trim(wfile3)
+  call logmsg('Writing floodplain topography '//trim(wfile3))
   do m = 1, nflp
-    call wbin(fldhgt(:,:,m), wfile3, dtype=dtype_real)
+    call traperr( wbin(fldhgt(:,:,m), wfile3, dtype=dtype_real) )
   enddo
 
-print *, '  writing next distance ',trim(wfile4)
-  call wbin(nxtdst, wfile4, dtype=dtype_real)
+  call logmsg('Writing next distance '//trim(wfile4))
+  call traperr( wbin(nxtdst, wfile4, dtype=dtype_real) )
       
-print *, '  writing channel length ',trim(wfile5)
-  call wbin(rivlen, wfile5, dtype=dtype_real)
+  call logmsg('Writing channel length '//trim(wfile5))
+  call traperr( wbin(rivlen, wfile5, dtype=dtype_real) )
 
-print *, '  writing catchment area ',trim(wfile6)
-  call wbin(grarea, wfile6, dtype=dtype_real)
+  call logmsg('Writing catchment area '//trim(wfile6))
+  call traperr( wbin(grarea, wfile6, dtype=dtype_real) )
 
-print *, '  writing drainage area ',trim(wfile7)
-  call wbin(uparea, wfile7, dtype=dtype_real)
+  call logmsg('Writing drainage area '//trim(wfile7))
+  call traperr( wbin(uparea, wfile7, dtype=dtype_real) )
 
-print *, '  writing lon lat ',trim(wfile8)
-  call wbin(out_lon, wfile8, dtype=dtype_real, rec=1)
-  call wbin(out_lat, wfile8, dtype=dtype_real, rec=2)
-! ===============================================
+  call logmsg('Writing lon lat '//trim(wfile8))
+  call traperr( wbin(out_lon, wfile8, dtype=dtype_real, rec=1) )
+  call traperr( wbin(out_lat, wfile8, dtype=dtype_real, rec=2) )
 
-
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  !
+  !-------------------------------------------------------------
+  call logret()
 end program main

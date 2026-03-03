@@ -12,14 +12,14 @@ module c2_area_raster
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: initialize
   public :: finalize
-  public :: initialize_zone
-  public :: finalize_zone
   public :: initialize_thresh
   public :: finalize_thresh
+  public :: initialize_zone
+  public :: finalize_zone
 
   public :: get_range_raster
   public :: get_range_raster_zone
@@ -33,7 +33,7 @@ module c2_area_raster
 
   public :: alloc_map
   !-------------------------------------------------------------
-  !
+  ! Interfaces
   !-------------------------------------------------------------
   interface calc_iratio_sum
     module procedure calc_iratio_sum__out
@@ -47,9 +47,9 @@ module c2_area_raster
     module procedure alloc_map__iarea_max
   end interface
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: MSGMOD = 'MODULE c2_area_raster SUBROUTINE'
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_area_raster'
 
   logical :: is_initialized        = .false.
   logical :: is_initialized_zone   = .false.
@@ -79,28 +79,17 @@ contains
 !===============================================================
 !
 !===============================================================
-function errat(procname) result(ret)
+integer(4) function initialize(br) result(info)
   implicit none
-  character(32), parameter :: ERRMSGHEAD = '****** ERROR @'
-  character(32), parameter :: ERRMSGTAIL = '******'
-  character(*), intent(in) :: procname
-  character(len_trim(procname)+len_trim(ERRMSGHEAD)+len_trim(ERRMSGTAIL)+2) :: ret
-
-  ret = trim(ERRMSGHEAD)//' '//procname//' '//trim(ERRMSGTAIL)
-end function errat
-!===============================================================
-!
-!===============================================================
-integer function initialize(br) result(info)
-  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'initialize'
   type(gs_raster_), intent(in) :: br
 
   info = 0
-!  call clear_errmsg()
+  !-------------------------------------------------------------
   if( is_initialized )then
     info = 1
-!    call put_errmsg(errat(trim(MSGMOD)//' initialize')//&
-!                 '\n  The module has already been initialized.')
+    call errret('The module has already been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
   is_initialized = .true.
@@ -120,33 +109,45 @@ integer function initialize(br) result(info)
   dara(:) = area_sphere_rect(br%lat(br%vi-1:br%vf-1), br%lat(br%vi:br%vf)) * dlon
 
   vrf_miss = -1d20
+  !-------------------------------------------------------------
 end function initialize
 !===============================================================
 !
 !===============================================================
-integer function finalize() result(info)
+integer(4) function finalize() result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'finalize'
 
   info = 0
+  !-------------------------------------------------------------
   if( .not. is_initialized )then
     info = 1
+    call errret('The module has not been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
   is_initialized = .false.
 
   deallocate(dara)
+  !-------------------------------------------------------------
 end function finalize
 !===============================================================
 !
 !===============================================================
-integer function initialize_thresh(thresh) result(info)
+integer(4) function initialize_thresh(thresh) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'initialize_thresh'
   type(rst_thresh_), intent(in) :: thresh
 
   info = 0
+  !-------------------------------------------------------------
   if( is_initialized_thresh )then
     info = 1
+    call errret('Thresholds have already been initialized.', &
+                PRCNAM, MODNAM)
+    return
   endif
+
   is_initialized_thresh = .true.
 
   thresh_ineq_iratio_min = thresh%ineq_iratio_min
@@ -154,30 +155,41 @@ integer function initialize_thresh(thresh) result(info)
   thresh_iratio_min      = thresh%iratio_min
   thresh_iratio_max      = thresh%iratio_max
   thresh_iratio_min_idx  = thresh%iratio_min_idx
+  !-------------------------------------------------------------
 end function initialize_thresh
 !===============================================================
 !
 !===============================================================
-integer function finalize_thresh() result(info)
+integer(4) function finalize_thresh() result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'finalize_thresh'
 
   info = 0
+  !-------------------------------------------------------------
   if( .not. is_initialized_thresh )then
     info = 1
+    call errret('Thresholds has not been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
+
   is_initialized_thresh = .false.
+  !-------------------------------------------------------------
 end function finalize_thresh
 !===============================================================
 !
 !===============================================================
-integer function initialize_zone(brz) result(info)
+integer(4) function initialize_zone(brz) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'initialize_zone'
   type(raster_zone_), intent(in) :: brz
 
   info = 0
+  !-------------------------------------------------------------
   if( is_initialized_zone )then
     info = 1
+    call errret('The zone has already been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
   is_initialized_zone = .true.
@@ -191,53 +203,53 @@ integer function initialize_zone(brz) result(info)
   bdxf = brz%xf
   bdyi = brz%yi
   bdyf = brz%yf
+  !-------------------------------------------------------------
 end function initialize_zone
 !===============================================================
 !
 !===============================================================
-integer function finalize_zone() result(info)
+integer(4) function finalize_zone() result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'finalize_zone'
 
   info = 0
+  !-------------------------------------------------------------
   if( .not. is_initialized_zone )then
     info = 1
+    call errret('The zone has not been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
   is_initialized_zone = .false.
+  !-------------------------------------------------------------
 end function finalize_zone
 !===============================================================
 !
 !===============================================================
-integer function get_range_raster(&
-    nh, nv, hi, hf, vi, vf &
-  ) result(info)
+subroutine get_range_raster(&
+    nh, nv, hi, hf, vi, vf)
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_range_raster'
   integer(8), intent(out) :: nh, nv, hi, hf, vi, vf
-
-  info = 0
-
-
+  !-------------------------------------------------------------
   nh = ndh
   nv = ndv
   hi = dhi
   hf = dhf
   vi = dvi
   vf = dvf
-end function get_range_raster
+  !-------------------------------------------------------------
+end subroutine get_range_raster
 !===============================================================
 !
 !===============================================================
-integer function get_range_raster_zone(&
+subroutine get_range_raster_zone(&
     bhi, bhf, bvi, bvf, &
-    bxi, bxf, byi, byf  &
-  ) result(info)
+    bxi, bxf, byi, byf)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_range_raster_zone'
   integer(8), intent(out) :: bhi, bhf, bvi, bvf, &
                              bxi, bxf, byi, byf
-
-  info = 0
-
-
-
+  !-------------------------------------------------------------
   bhi = bdhi
   bhf = bdhf
   bvi = bdvi
@@ -247,7 +259,8 @@ integer function get_range_raster_zone(&
   bxf = bdxf
   byi = bdyi
   byf = bdyf
-end function get_range_raster_zone
+  !-------------------------------------------------------------
+end subroutine get_range_raster_zone
 !===============================================================
 !
 !===============================================================
@@ -259,18 +272,20 @@ end function get_range_raster_zone
 !===============================================================
 !
 !===============================================================
-integer function update_iarea_sum(&
-    iarea_sum, iarea, sdhi, sdhf, sdvi, sdvf) &
-    result(info)
+integer(4) function update_iarea_sum(&
+    iarea_sum, iarea, sdhi, sdhf, sdvi, sdvf &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_iarea_sum'
   real(8)   , pointer    :: iarea_sum(:,:)  ! inout
   real(8)   , pointer    :: iarea(:,:)      ! in
   integer(8), intent(in) :: sdhi, sdhf, sdvi, sdvf  ! in
 
   info = 0
-
+  !-------------------------------------------------------------
   iarea_sum(sdhi:sdhf,sdvi:sdvf) &
     = iarea_sum(sdhi:sdhf,sdvi:sdvf) + iarea(sdhi:sdhf,sdvi:sdvf)
+  !-------------------------------------------------------------
 end function update_iarea_sum
 !===============================================================
 !
@@ -278,27 +293,22 @@ end function update_iarea_sum
 integer function update_iarea_max(&
     iarea_max,                   & ! inout
     iarea,                       & ! in
-    aidx, adhi, adhf, advi, advf)& ! in
-    result(info)
+    aidx, adhi, adhf, advi, advf & ! in
+) result(info)
   implicit none
-  type(iarea_max_), pointer :: iarea_max(:,:)
-  real(8)         , pointer    :: iarea(:,:)              ! in
-  integer(8)      , intent(in) :: aidx                    ! in
-  integer(8)      , intent(in) :: adhi, adhf, advi, advf  ! in
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_iarea_max'
+  type(iarea_max_), pointer    :: iarea_max(:,:)
+  real(8)         , pointer    :: iarea(:,:)
+  integer(8)      , intent(in) :: aidx
+  integer(8)      , intent(in) :: adhi, adhf, advi, advf
 
   type(iarea_max_), pointer :: iamax
   integer(8) :: idh, idv
 
-  call echo(code%bgn, trim(MSGMOD)//' update_iarea_max', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
-
-
-
-
-
   do idv = advi, advf
     do idh = adhi, adhf
       iamax => iarea_max(idh,idv)
@@ -311,8 +321,11 @@ integer function update_iarea_max(&
       elseif( iarea(idh,idv) == iamax%val )then
         selectcase( iamax%nij )
         case( :0 )
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  iamax%nij <= 0')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\niamax%nij <= 0', &
+                      PRCNAM, MODNAM)
+          return
         case( 1 )
           iamax%nij = 2
           call realloc(iamax%list_idx, 2, clear=.true.)
@@ -331,35 +344,34 @@ integer function update_iarea_max(&
   !-------------------------------------------------------------
   nullify(iamax)
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function update_iarea_max
 !===============================================================
 !
 !===============================================================
-integer function fill_miss_vrf(dat, msk) result(info)
+integer(4) function fill_miss_vrf(dat, msk) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'fill_miss_vrf'
   real(8)   , pointer    :: dat(:,:)  ! inout
   logical(1), pointer    :: msk(:,:)  ! in
 
   integer(8) :: idh, idv
 
-  call echo(code%bgn, trim(MSGMOD)//' fill_miss_vrf', '-p -x2')
-  !-------------------------------------------------------------
   info = 0
-
+  !-------------------------------------------------------------
   do idv = bdvi, bdvf
     do idh = bdhi, bdhf
       if( .not. msk(idh,idv) ) dat(idh,idv) = vrf_miss
     enddo  ! idh/
   enddo  ! idv/
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function fill_miss_vrf
 !===============================================================
 !
 !===============================================================
-integer function calc_iratio_sum__out(ratio, area, mask) result(info)
+integer(4) function calc_iratio_sum__out(&
+    ratio, area, mask) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_iratio_sum__out'
   real(8)   , pointer           :: ratio(:,:)  ! out
   real(8)   , pointer           :: area(:,:)   ! in
   logical(1), pointer, optional :: mask(:,:)   ! in
@@ -367,19 +379,25 @@ integer function calc_iratio_sum__out(ratio, area, mask) result(info)
   integer(8) :: idh, idv
   logical :: use_mask
 
-  call echo(code%bgn, trim(MSGMOD)//' calc_iratio_sum__out', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
-!  call clear_errmsg()
   if( .not. is_initialized )then
     info = 1
-!    call update_errmsg()
-    call echo(code%ret)
+    call errret('The module has not been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
-
+  if( .not. is_initialized_zone )then
+    info = 1
+    call errret('The zone has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   if( present(mask) )then
     use_mask = associated(mask)
   endif
@@ -402,32 +420,39 @@ integer function calc_iratio_sum__out(ratio, area, mask) result(info)
     enddo
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function calc_iratio_sum__out
 !===============================================================
 !
 !===============================================================
-integer function calc_iratio_sum__inout(area, mask) result(info)
+integer(4) function calc_iratio_sum__inout(&
+    area, mask) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_iratio_sum__inout'
   real(8)   , pointer           :: area(:,:)   ! inout
   logical(1), pointer, optional :: mask(:,:)   ! in
 
   integer(8) :: idv, idh
   logical :: use_mask
 
-  call echo(code%bgn, trim(MSGMOD)//' calc_iratio_sum__inout', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
-!  call clear_errmsg()
   if( .not. is_initialized )then
     info = 1
-!    call update_errmsg()
-    call echo(code%ret)
+    call errret('The module has not been initialized.', &
+                PRCNAM, MODNAM)
     return
   endif
-
+  if( .not. is_initialized_zone )then
+    info = 1
+    call errret('The zone has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   use_mask = .false.
   if( present(mask) )then
     use_mask = associated(mask)
@@ -451,16 +476,16 @@ integer function calc_iratio_sum__inout(area, mask) result(info)
     enddo
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function calc_iratio_sum__inout
 !===============================================================
 !
 !===============================================================
-integer function make_idx(&
-    idx, &
-    iarea_max, iratio_sum) &
-    result(info)
+integer(4) function make_idx(&
+    idx,                  &
+    iarea_max, iratio_sum &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_idx'
   integer(8)      , pointer    :: idx(:,:)        ! out
   type(iarea_max_), pointer    :: iarea_max(:,:)  ! in
   real(8)         , pointer    :: iratio_sum(:,:) ! in
@@ -468,18 +493,38 @@ integer function make_idx(&
   type(iarea_max_), pointer :: iamax
   integer(8) :: idh, idv
 
-  call echo(code%bgn, TRIM(MSGMOD)//' make_idx', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
-
-
-
+  if( .not. is_initialized )then
+    info = 1
+    call errret('The module has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  if( .not. is_initialized_thresh )then
+    info = 1
+    call errret('Thresholds has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  if( .not. is_initialized_zone )then
+    info = 1
+    call errret('The zone has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   if( thresh_iratio_min_idx > 0.d0 )then
     if( .not. associated(iratio_sum) )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n$iratio_sum has not been allocated.')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n$iratio_sum has not been allocated.', &
+                  PRCNAM, MODNAM)
+      return
     endif
 
     do idv = bdvi, bdvf
@@ -493,8 +538,11 @@ integer function make_idx(&
 
         selectcase( iamax%nij )
         case( :-1 )
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  iamax%nij < 0')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\niamax%nij < 0', &
+                      PRCNAM, MODNAM)
+          return
         case( 0 )
           idx(idh,idv) = sidx_miss
         case( 1 )
@@ -511,8 +559,11 @@ integer function make_idx(&
 
         selectcase( iamax%nij )
         case( :-1 )
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  iamax%nij < 0')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\niamax%nij < 0', &
+                      PRCNAM, MODNAM)
+          return
         case( 0 )
           idx(idh,idv) = sidx_miss
         case( 1 )
@@ -528,27 +579,41 @@ integer function make_idx(&
   !-------------------------------------------------------------
   nullify(iamax)
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function make_idx
 !===============================================================
 !
 !===============================================================
-integer function make_mask(mask, iratio_sum) result(info)
+integer(4) function make_mask(mask, iratio_sum) result(info)
   implicit none
-  integer(1), pointer    :: mask(:,:)        ! out
-  real(8)   , pointer    :: iratio_sum(:,:)  ! in
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_mask'
+  integer(1), pointer :: mask(:,:)        ! out
+  real(8)   , pointer :: iratio_sum(:,:)  ! in
 
-  integer(8) :: idh, idv
-
-  call echo(code%bgn, trim(MSGMOD)//' make_mask', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
-
-
-
-
+  if( .not. is_initialized )then
+    info = 1
+    call errret('The module has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  if( .not. is_initialized_thresh )then
+    info = 1
+    call errret('Thresholds has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  if( .not. is_initialized_zone )then
+    info = 1
+    call errret('The zone has not been initialized.', &
+                PRCNAM, MODNAM)
+    return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
   mask(:,:) = 1_1
 
   selectcase( thresh_ineq_iratio_max )
@@ -556,25 +621,17 @@ integer function make_mask(mask, iratio_sum) result(info)
     where( iratio_sum(bdhi:bdhf,bdvi:bdvf) >= thresh_iratio_min )
       mask = 0_1
     endwhere
-    !do idv = bdvi, bdvf
-    !  do idh = bdhi, bdhf
-    !    if( iratio_sum(idh,idv) >= thresh_iratio_max ) mask(idh,idv) = 0_1
-    !  enddo  ! idh/
-    !enddo  ! idv/
   case( INEQ_LE )
     where( iratio_sum(bdhi:bdhf,bdvi:bdvf) > thresh_iratio_min )
       mask = 0_1
     endwhere
-    !do idv = bdvi, bdvf
-    !  do idh = bdhi, bdhf
-    !    if( iratio_sum(idh,idv) > thresh_iratio_max ) mask(idh,idv) = 0_1
-    !  enddo  ! idh/
-    !enddo  ! idv/
   case( INEQ_NONE )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  thresh_ineq_iratio_max: '//str(thresh_ineq_iratio_max))
+    info = 1
+    call errret(msg_invalid_value('thresh_ineq_iratio_max', thresh_ineq_iratio_max), &
+                PRCNAM, MODNAM)
+    return
   endselect
 
   selectcase( thresh_ineq_iratio_min )
@@ -582,28 +639,19 @@ integer function make_mask(mask, iratio_sum) result(info)
     where( iratio_sum(bdhi:bdhf,bdvi:bdvf) <= thresh_iratio_min )
       mask = 0_1
     endwhere
-    !do idv = bdvi, bdvf
-    !  do idh = bdhi, bdhf
-    !    if( iratio_sum(idh,idv) <= thresh_iratio_min ) mask(idh,idv) = 0_1
-    !  enddo  ! idh/
-    !enddo  ! idv/
   case( INEQ_GE )
     where( iratio_sum(bdhi:bdhf,bdvi:bdvf) < thresh_iratio_min )
       mask = 0_1
     endwhere
-    !do idv = bdvi, bdvf
-    !  do idh = bdhi, bdhf
-    !    if( iratio_sum(idh,idv) < thresh_iratio_min ) mask(idh,idv) = 0_1
-    !  enddo  ! idh/
-    !enddo  ! idv/
   case( INEQ_NONE )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  thresh_ineq_iratio_min: '//str(thresh_ineq_iratio_min))
+    info = 1
+    call errret(msg_invalid_value('thresh_ineq_iratio_min', thresh_ineq_iratio_min), &
+                PRCNAM, MODNAM)
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function make_mask
 !===============================================================
 !
@@ -616,76 +664,96 @@ end function make_mask
 !===============================================================
 !
 !===============================================================
-integer function alloc_map__int1(map) result(info)
+integer(4) function alloc_map__int1(map) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'alloc_map__int1'
   integer(1), pointer :: map(:,:)
 
-  call echo(code%bgn, trim(MSGMOD)//' alloc_map__int1', '-p')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
+  if( associated(map) )then
+    info = 1
+    call errret('`map` has already been allocated.', &
+                PRCNAM, MODNAM)
+    return
+  endif
 
   allocate(map(bdhi:bdhf,bdvi:bdvf))
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function alloc_map__int1
 !===============================================================
 !
 !===============================================================
-integer function alloc_map__int8(map) result(info)
+integer(4) function alloc_map__int8(map) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'alloc_map__int8'
   integer(8), pointer :: map(:,:)
 
-  call echo(code%bgn, trim(MSGMOD)//' alloc_map__int8', '-p')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
+  if( associated(map) )then
+    info = 1
+    call errret('`map` has already been allocated.', &
+                PRCNAM, MODNAM)
+    return
+  endif
 
   allocate(map(bdhi:bdhf,bdvi:bdvf))
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function alloc_map__int8
 !===============================================================
 !
 !===============================================================
-integer function alloc_map__dble(map, buffer) result(info)
+integer(4) function alloc_map__dble(map, buffer) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'alloc_map__dble'
   real(8), pointer :: map(:,:)
   integer, intent(in), optional :: buffer
 
   integer :: buffer_
 
-  call echo(code%bgn, trim(MSGMOD)//' alloc_map__dble', '-p')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   buffer_ = 0
   if( present(buffer) ) buffer_ = 1
 
-  info = 0
+  if( associated(map) )then
+    info = 1
+    call errret('`map` has already been allocated.', &
+                PRCNAM, MODNAM)
+    return
+  endif
 
   allocate(map(bdhi-buffer_:bdhf+buffer_,bdvi-buffer_:bdvf+buffer_))
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function alloc_map__dble
 !===============================================================
 !
 !===============================================================
-integer function alloc_map__iarea_max(map) result(info)
+integer(4) function alloc_map__iarea_max(map) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'alloc_map__iarea_max'
   type(iarea_max_), pointer :: map(:,:)
 
   type(iarea_max_), pointer :: iamax
   integer(8) :: idh, idv
 
-  call echo(code%bgn, trim(MSGMOD)//' alloc_map__iarea_max', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  info = 0
-
+  if( associated(map) )then
+    info = 1
+    call errret('`map` has already been allocated.', &
+                PRCNAM, MODNAM)
+    return
+  endif
 
   allocate(map(bdhi:bdhf,bdvi:bdvf))
 
@@ -701,7 +769,6 @@ integer function alloc_map__iarea_max(map) result(info)
 
   nullify(iamax)
   !-------------------------------------------------------------
-  call echo(code%ret)
 end function alloc_map__iarea_max
 !===============================================================
 !

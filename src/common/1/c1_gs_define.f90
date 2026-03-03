@@ -28,12 +28,17 @@ module c1_gs_define
     module procedure set_gs__polygon
   end interface
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_define'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine set_gs__latlon(ul, lon, lat)
+integer(4) function set_gs__latlon(ul, lon, lat) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_gs__latlon'
   type(gs_latlon_), intent(inout), target :: ul
   real(8), intent(in), optional :: lon(:), lat(:)
 
@@ -43,7 +48,8 @@ subroutine set_gs__latlon(ul, lon, lat)
   real(8) :: coef
   logical :: lon_is_given, lat_is_given
 
-  call echo(code%bgn, 'set_gs__latlon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -60,12 +66,14 @@ subroutine set_gs__latlon(ul, lon, lat)
   !
   !-------------------------------------------------------------
   selectcase( ul%coord_unit )
-  case( unit_degree )
+  case( UNIT_DEGREE )
     coef = d2r
-  case( unit_radian )
+  case( UNIT_RADIAN )
     coef = 1.d0
   case default
-    call eerr(str(msg_invalid_value()))
+    info = 1
+    call errret(msg_invalid_value('ul%coord_unit', ul%coord_unit))
+    return
   endselect
 
   lon_is_given = .false.
@@ -82,7 +90,9 @@ subroutine set_gs__latlon(ul, lon, lat)
     ul%lon(:) = lon(:)
 
     do ih = 0_8, ul%nh
-      call modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')')
+      if( modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')') /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo
 
     ul%lon(:) = ul%lon(:) * coef
@@ -96,11 +106,15 @@ subroutine set_gs__latlon(ul, lon, lat)
   !-------------------------------------------------------------
   ! Case: Given via a file
   elseif( f%path /= '' )then
-    call edbg('Reading lon '//str(fileinfo(f)))
-    call rbin(ul%lon, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading lon '//str(fileinfo(f)))
+    if( rbin(ul%lon, f%path, f%dtype, f%endian, f%rec) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ih = 0_8, ul%nh
-      call modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')')
+      if( modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')') /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo
 
     ul%lon(:) = ul%lon(:) * coef
@@ -114,19 +128,29 @@ subroutine set_gs__latlon(ul, lon, lat)
   !-------------------------------------------------------------
   ! Case: Not given
   else
-    call modify_lon_deg(ul%west, 'ul%west')
-    call modify_lon_deg(ul%east, 'ul%east')
+    if( modify_lon_deg(ul%west, 'ul%west') /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( modify_lon_deg(ul%east, 'ul%east') /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     if( is_int(ul%west) .and. is_int(ul%east) )then
-      call calc_latlon_bounds_int(&
-             ul%lon, ul%lonwidth, ul%west, ul%east, ul%nh)
+      if( calc_latlon_bounds_int(&
+            ul%lon, ul%lonwidth, ul%west, ul%east, ul%nh) /= 0 )then
+        info = 1; call errret(); return
+      endif
     else
-      call calc_latlon_bounds_float(&
-             ul%lon, ul%lonwidth, ul%west, ul%east)
+      if( calc_latlon_bounds_float(&
+            ul%lon, ul%lonwidth, ul%west, ul%east) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     do ih = 0, ul%nh
-      call modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')')
+      if( modify_lon_deg(ul%lon(ih), 'ul%lon('//str(ih)//')') /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo
 
     ul%west = ul%west * d2r
@@ -153,8 +177,10 @@ subroutine set_gs__latlon(ul, lon, lat)
   !-------------------------------------------------------------
   ! Case: Given via a file
   elseif( f%path /= '' )then
-    call edbg('Reading lat '//str(fileinfo(f)))
-    call rbin(ul%lat, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading lat '//str(fileinfo(f)))
+    if( rbin(ul%lat, f%path, f%dtype, f%endian, f%rec) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     if( ul%lat(0) > ul%lat(ul%nv) ) call reverse(ul%lat)
 
@@ -167,11 +193,15 @@ subroutine set_gs__latlon(ul, lon, lat)
   ! Case: Not given
   else
     if( is_int(ul%south) .and. is_int(ul%north) )then
-      call calc_latlon_bounds_int(&
-             ul%lat, ul%latwidth, ul%south, ul%north, ul%nv)
+      if( calc_latlon_bounds_int(&
+            ul%lat, ul%latwidth, ul%south, ul%north, ul%nv) /= 0 )then
+        info = 1; call errret(); return
+      endif
     else
-      call calc_latlon_bounds_float(&
-             ul%lat, ul%latwidth, ul%south, ul%north)
+      if( calc_latlon_bounds_float(&
+            ul%lat, ul%latwidth, ul%south, ul%north) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     ul%south = ul%south * d2r
@@ -206,22 +236,24 @@ subroutine set_gs__latlon(ul, lon, lat)
   !-------------------------------------------------------------
   call print_grids_latlon(ul%is_cyclic, ul%lon, ul%lat, ul%lon0)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_gs__latlon
+  call logret(PRCNAM, MODNAM)
+end function set_gs__latlon
 !===============================================================
 !
 !===============================================================
-subroutine set_gs__raster(ar)
+integer(4) function set_gs__raster(ar) result(info)
   use c1_gs_base, only: &
-        init_gs_raster_zone
+        init_mesh_raster_zone
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_gs__raster'
   type(gs_raster_), intent(inout), target :: ar
 
   type(raster_zone_), pointer :: arz
   integer(8) :: ih
   integer    :: iz
 
-  call echo(code%bgn, 'set_gs__raster')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -235,25 +267,43 @@ subroutine set_gs__raster(ar)
   !-------------------------------------------------------------
   ! Calc. coords. of the boundaries
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating coords. of the boundaries')
+  call logent('Calculating coords. of the boundaries', PRCNAM, MODNAM)
 
-  call modify_lon_deg(ar%west, 'ar%west')
-  call modify_lon_deg(ar%east, 'ar%east')
+  if( modify_lon_deg(ar%west, 'ar%west') /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( modify_lon_deg(ar%east, 'ar%east') /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( is_int(ar%west) .and. is_int(ar%east) )then
-    call calc_latlon_bounds_int(ar%lon, ar%lonwidth, ar%west, ar%east, ar%nh)
+    if( calc_latlon_bounds_int(&
+          ar%lon, ar%lonwidth, ar%west, ar%east, ar%nh) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
-    call calc_latlon_bounds_float(ar%lon, ar%lonwidth, ar%west, ar%east)
+    if( calc_latlon_bounds_float(&
+          ar%lon, ar%lonwidth, ar%west, ar%east) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
   if( is_int(ar%south) .and. is_int(ar%north) )then
-    call calc_latlon_bounds_int(ar%lat, ar%latwidth, ar%south, ar%north, ar%nv)
+    if( calc_latlon_bounds_int(&
+          ar%lat, ar%latwidth, ar%south, ar%north, ar%nv) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
-    call calc_latlon_bounds_float(ar%lat, ar%latwidth, ar%south, ar%north)
+    if( calc_latlon_bounds_float(&
+          ar%lat, ar%latwidth, ar%south, ar%north) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
   do ih = ar%hi, ar%hf
-    call modify_lon_deg(ar%lon(ih), 'ar%lon('//str(ih)//')')
+    if( modify_lon_deg(ar%lon(ih), 'ar%lon('//str(ih)//')') /= 0 )then
+      info = 1; call errret(); return
+    endif
   enddo
 
   ar%west  = ar%west * d2r
@@ -265,7 +315,7 @@ subroutine set_gs__raster(ar)
   ar%lonwidth(:) = ar%lonwidth(:) * d2r
   ar%latwidth(:) = ar%latwidth(:) * d2r
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -296,7 +346,9 @@ subroutine set_gs__raster(ar)
     ar%nZone = 1
     allocate(ar%zone(1))
     arz => ar%zone(1)
-    call init_gs_raster_zone(arz)
+    if( init_mesh_raster_zone(arz) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     arz%is_valid = .true.  ! not necessary
 
@@ -321,7 +373,7 @@ subroutine set_gs__raster(ar)
     arz%south = ar%lat(ar%vi-1_8)
     arz%north = ar%lat(ar%vf)
   else
-    call edbg('Raster grid is divided by the zero-longit. line.')
+    call logmsg('Raster grid is divided by the zero-longit. line.')
 
     ar%nZone = 2
     allocate(ar%zone(ar%nZone))
@@ -329,7 +381,9 @@ subroutine set_gs__raster(ar)
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
 
-      call init_gs_raster_zone(arz)
+      if( init_mesh_raster_zone(arz) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
       arz%is_valid = .true.  ! not necessary
 
@@ -368,17 +422,18 @@ subroutine set_gs__raster(ar)
     ar%zone(:)%xf = ar%zone(:)%hf
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_gs__raster
+  call logret(PRCNAM, MODNAM)
+end function set_gs__raster
 !===============================================================
 !
 !===============================================================
-subroutine modify_lon_deg(lon, id)
+integer(4) function modify_lon_deg(lon, id) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'modify_lon_deg'
   real(8), intent(inout) :: lon
   character(*), intent(in) :: id
 
-  call echo(code%bgn, 'modify_lon_deg', '-p -x2')
+  info = 0
   !-------------------------------------------------------------
   if( -1.8d2 <= lon .and. lon < 0.d0 )then
     lon = lon + 3.6d2
@@ -387,19 +442,23 @@ subroutine modify_lon_deg(lon, id)
   elseif( 0.d0 <= lon .and. lon <= 3.6d2 )then
     continue
   else
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  lon < -180 .or. 360 < lon'//&
-            '\n  id: '//str(id)//&
-            '\n  lon: '//str(lon))
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nlon < -180 .or. 360 < lon'//&
+              '\n  id: '//str(id)//&
+              '\n  lon: '//str(lon), &
+                PRCNAM, MODNAM)
+    return
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine modify_lon_deg
+end function modify_lon_deg
 !===============================================================
 !
 !===============================================================
-subroutine calc_latlon_bounds_float(bnd, width, vmin, vmax)
+integer(4) function calc_latlon_bounds_float(&
+    bnd, width, vmin, vmax) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_latlon_bounds_float'
   real(8), pointer :: bnd(:)    ! out (0:n)
   real(8), pointer :: width(:)  ! out (1:n)
   real(8), intent(in)  :: vmin, vmax
@@ -407,7 +466,8 @@ subroutine calc_latlon_bounds_float(bnd, width, vmin, vmax)
   real(8) :: vrange
   integer(8) :: n, i
 
-  call echo(code%bgn, 'calc_latlon_bounds_float', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -428,13 +488,15 @@ subroutine calc_latlon_bounds_float(bnd, width, vmin, vmax)
 
   width(:) = vrange / n
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_latlon_bounds_float
+  call logret(PRCNAM, MODNAM)
+end function calc_latlon_bounds_float
 !===============================================================
 !
 !===============================================================
-subroutine calc_latlon_bounds_int(bnd, width, vmin, vmax, n)
+integer(4) function calc_latlon_bounds_int(&
+    bnd, width, vmin, vmax, n) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_latlon_bounds_int'
   real(8), pointer :: bnd(:)    ! out, (is-1:ie)
   real(8), pointer :: width(:)  ! out, (is:ie)
   integer(8), intent(in) :: n
@@ -448,7 +510,8 @@ subroutine calc_latlon_bounds_int(bnd, width, vmin, vmax, n)
   integer(8) :: nBlocks, iBlock
   real(8), allocatable :: bnd_all(:)
 
-  call echo(code%bgn, 'calc_latlon_bounds_int', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -487,8 +550,8 @@ subroutine calc_latlon_bounds_int(bnd, width, vmin, vmax, n)
 
   deallocate(bnd_all)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_latlon_bounds_int
+  call logret(PRCNAM, MODNAM)
+end function calc_latlon_bounds_int
 !===============================================================
 !
 !===============================================================
@@ -500,21 +563,26 @@ end subroutine calc_latlon_bounds_int
 !===============================================================
 !
 !===============================================================
-subroutine check_bounds_lon(west, east)
+integer(4) function check_bounds_lon(west, east) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_bounds_lon'
   real(8), intent(in) :: west, east
 
-  call echo(code%bgn, 'check_bounds_lon', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( west < -180.d0 .or. west > 360.d0 .or. &
       east < -180.d0 .or. east > 360.d0 )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  west: '//str(west)//&
-            '\n  east: '//str(west)//&
-            '\nBounds of longit. must be input in the range'//&
-              ' [-180, 180] or [0, 360].')
+    info = 0
+    call errret(msg_unexpected_condition()//&
+              '\nRange of longitudes is invalid.'//&
+              '\n  west: '//str(west)//&
+              '\n  east: '//str(east)//&
+              '\nLongitudes must be in the range of'//&
+                ' [-180, 180] or [0, 360].')
+    return
   endif
   !-------------------------------------------------------------
   ! Relation
@@ -522,69 +590,83 @@ subroutine check_bounds_lon(west, east)
   ! Case: -180 ~ 180
   if( west < 0.d0 )then
     if( east < -180.d0 .or. east > 180.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\nRange of longit. is invalid:'//&
-              '\n  west < 0 .and. (east < -180 .or. east > 180)'//&
-              '\nBounds must be input in the range [-180, 180]'//&
-                ' when $west is negative.')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nRange of longitudes is invalid:'//&
+                '\n  west < 0 .and. (east < -180 .or. east > 180)'//&
+                '\nLongitudes must be in the range of [-180, 180]'//&
+                  ' when $west is negative.')
+      return
     endif
   !-------------------------------------------------------------
   ! Case: 0 ~ 360
   elseif( west > 180.d0 )then
     if( east < 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\nRange of longit. is invalid:'//&
-              '\n  west > 180 .and. east < 0'//&
-              '\nBounds must be input in the range [0, 360]'//&
-                ' when $west is negative.')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nRange of longitudes is invalid:'//&
+                '\n  west > 180 .and. east < 0'//&
+                '\nLongitudes must be in the range of [0, 360]'//&
+                  ' when $west is negative.')
+      return
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_bounds_lon
+  call logret(PRCNAM, MODNAM)
+end function check_bounds_lon
 !===============================================================
 !
 !===============================================================
-subroutine check_bounds_lat(south, north)
+integer(4) function check_bounds_lat(south, north) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_bounds_lat'
   real(8), intent(in) :: south, north
 
-  call echo(code%bgn, 'check_bounds_lat', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( south < -90.d0 .or. south > 90.d0 .or. &
       north < -90.d0 .or. north > 90.d0 )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  south: '//str(south)//&
-            '\n  north: '//str(north)//&
-            '\nBounds of latit. must be input in the range'//&
-              ' [-90, 90].')
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nRange of latitudes is invalid.'//&
+              '\n  south: '//str(south)//&
+              '\n  north: '//str(north)//&
+              '\nLatitudes must be in the range of'//&
+                ' [-90, 90].')
+    return
   endif
   !-------------------------------------------------------------
   ! Relation
   !-------------------------------------------------------------
   if( south >= north )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  south >= north')
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\n  south >= north'//&
+              '\n  south: '//str(south)//&
+              '\n  north: '//str(north))
+    return
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_bounds_lat
+  call logret(PRCNAM, MODNAM)
+end function check_bounds_lat
 !===============================================================
 !
 !===============================================================
 subroutine print_grids_latlon(is_cyclic, lon, lat, lon0)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_grids_latlon'
   logical, intent(in) :: is_cyclic
   real(8), pointer :: lon(:), lat(:)
   logical, pointer :: lon0(:)
 
   integer(8) :: mh, hi, hf, mv, vi, vf, ih
 
-  call echo(code%bgn, 'print_grids_latlon', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call edbg('is_cyclic: '//str(is_cyclic))
+  call logmsg('is_cyclic: '//str(is_cyclic))
 
   mh = size(lon)
   mv = size(lat)
@@ -594,31 +676,31 @@ subroutine print_grids_latlon(is_cyclic, lon, lat, lon0)
   vf = ubound(lat,1)
 
   if( mh > 8_8 )then
-    call edbg('lon: '//str(lon(hi-1_8:hi+1_8)*r2d,'f12.7',', ')//&
+    call logmsg('lon: '//str(lon(hi-1_8:hi+1_8)*r2d,'f12.7',', ')//&
             ', ..., '//str(lon(hf-2_8:hf)*r2d,'f12.7',', ')//' (deg)')
   else
-    call edbg('lon: '//str(lon*r2d,'f12.7',', ')//' (deg)')
+    call logmsg('lon: '//str(lon*r2d,'f12.7',', ')//' (deg)')
   endif
 
   if( mv > 8_8 )then
-    call edbg('lat: '//str(lat(vi-1_8:vi+1_8)*r2d,'f12.7',', ')//&
+    call logmsg('lat: '//str(lat(vi-1_8:vi+1_8)*r2d,'f12.7',', ')//&
             ', ..., '//str(lat(vf-2_8:vf)*r2d,'f12.7',', ')//' (deg)')
   else
-    call edbg('lat: '//str(lat*r2d,'f12.7',', ')//' (deg)')
+    call logmsg('lat: '//str(lat*r2d,'f12.7',', ')//' (deg)')
   endif
 
   if( any(lon0) )then
     do ih = hi, hf
       if( .not. lon0(ih) ) cycle
-      call edbg('Cell # '//str(ih)//' intersects with zero-longit. line.'//&
+      call logmsg('Cell # '//str(ih)//' intersects with zero-longit. line.'//&
               '\n(west: '//str(lon(ih-1)*r2d,'f12.7')//&
                ', east: '//str(lon(ih  )*r2d,'f12.7')//')')
     enddo
   else
-    call edbg('Any cell or pixel does not intersect with zero-longit. line.')
+    call logmsg('Any cell or pixel does not intersect with zero-longit. line.')
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_grids_latlon
 !===============================================================
 !

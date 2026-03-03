@@ -98,11 +98,11 @@ program main
   character(128), parameter :: wfile6 = 'tmp/map/nxtdst.bin'
   character(128), parameter :: wfile7 = 'tmp/map/rivlen.bin'
 
-  call echo(code%bgn, 'program const_network')
+  call logbgn('program const_network', '', '+tr')
   !-------------------------------------------------------------
   ! Read params.
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
   open(11, file=fparams, status='old')
 
   read(11,*) nXX
@@ -143,39 +143,39 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading files')
+  call logent('Reading files')
 
-  call edbg('Reading land fraction in GCM grid '//str(fgrlndf))
-  call rbin(grlndf, fgrlndf)
+  call logmsg('Reading land fraction in GCM grid '//str(fgrlndf))
+  call traperr( rbin(grlndf, fgrlndf) )
 
-  call edbg('Reading pixel number in GCM grid  '//str(fpixnum))
-  call rbin(pixnum, fpixnum)
+  call logmsg('Reading pixel number in GCM grid  '//str(fpixnum))
+  call traperr( rbin(pixnum, fpixnum) )
 
-  call edbg('Reading pixel of GCM grid index x '//str(fgcmxy))
-  call edbg('Reading pixel of GCM grid index y '//str(fgcmxy))
-  call rbin(gcmx, fgcmxy, rec=1)
-  call rbin(gcmy, fgcmxy, rec=2)
+  call logmsg('Reading pixel of GCM grid index x '//str(fgcmxy))
+  call logmsg('Reading pixel of GCM grid index y '//str(fgcmxy))
+  call traperr( rbin(gcmx, fgcmxy, rec=1) )
+  call traperr( rbin(gcmy, fgcmxy, rec=2) )
 
-  call edbg('Reading flow direction '//str(rfile1))
-  call rbin(dir, rfile1)
+  call logmsg('Reading flow direction '//str(rfile1))
+  call traperr( rbin(dir, rfile1) )
 
-  call edbg('Reading drainage area  '//str(rfile2))
-  call rbin(upa, rfile2)
+  call logmsg('Reading drainage area  '//str(rfile2))
+  call traperr( rbin(upa, rfile2) )
 
-  call edbg('Reading elevation      '//str(rfile3))
-  call rbin(elv, rfile3)
+  call logmsg('Reading elevation      '//str(rfile3))
+  call traperr( rbin(elv, rfile3) )
 
-  call edbg('Reading drainage pixel '//str(rfile4))
-  call rbin(upg, rfile4, dtype=dtype_real)
+  call logmsg('Reading drainage pixel '//str(rfile4))
+  call traperr( rbin(upg, rfile4, dtype=dtype_real) )
 
-  call edbg('Reading inland pixel   '//str(rfile5))
-  call rbin(inland, rfile5)
+  call logmsg('Reading inland pixel   '//str(rfile5))
+  call traperr( rbin(inland, rfile5) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting lonlat')
+  call logent('Setting lonlat')
 
   do ix=1, nx
     lon(ix)=-180.d0 + (dble(ix)-0.5d0) * (360.d0/nx)
@@ -184,11 +184,11 @@ program main
     lat(iy)=  90.d0 - (dble(iy)-0.5d0) * (180.d0/ny)
   end do
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting threshold')
+  call logent('Setting threshold')
 
   do iYY=1, nYY
     do iXX=1, nXX
@@ -197,10 +197,10 @@ program main
     end do
   end do
 
-  call edbg('dst_min '//str(dst_min(nXX/2,nYY/2)))
-  call edbg('upg_min '//str(upg_min(nXX/2,nYY/2)))
+  call logmsg('dst_min '//str(dst_min(nXX/2,nYY/2)))
+  call logmsg('upg_min '//str(upg_min(nXX/2,nYY/2)))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -212,7 +212,7 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating local drainage area')
+  call logent('Calculating local drainage area')
 
   locdir(:,:)=dir(:,:)
   do iy=1, ny
@@ -256,7 +256,7 @@ program main
     end do
   end do
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -327,18 +327,16 @@ program main
       endif
     end do
   end do
-
-!call wbin(upg, 'upg_1.bin')
-!stop
   !-------------------------------------------------------------
   ! find outlet pixel with maximum drainage area
   !-------------------------------------------------------------
-print *, 'SEARCH POTENTIAL OUTLET'
+  call logent('SEARCH POTENTIAL OUTLET')
 
   outlet(:,:)=2
   out_num(:,:)=0
+  !-------------------------------------------------------------
+  call logent('search mouth')
 
-print *, '  search mouth'
   upg_max(:,:)=0
   do iy=1, ny
     do ix=1, nx
@@ -355,7 +353,6 @@ print *, '  search mouth'
     end do
   end do
 
-
   do iy=1, ny
     do ix=1, nx
       if( dir(ix,iy)==0  )then
@@ -370,7 +367,10 @@ print *, '  search mouth'
     end do
   end do
 
-print *, '  search river'
+  call logext()
+  !-------------------------------------------------------------
+  call logent('search river')
+
   do iy=1, ny
     do ix=1, nx
       iXX=gcmx(ix,iy)
@@ -397,8 +397,10 @@ print *, '  search river'
     end do
   end do
 
+  call logext()
+  !-------------------------------------------------------------
+  call logent('search small river')
 
-print *, '  search small river'
   upg_max(:,:)=0
   do iy=1, ny
     do ix=1, nx
@@ -429,7 +431,10 @@ print *, '  search small river'
     end do
   end do
 
-print *, '  check no hires land grid'
+  call logext()
+  !-------------------------------------------------------------
+  call logent('check no hires land grid')
+
   do iYY=1, nYY
     do iXX=1, nXX
       if( grlndf(iXX,iYY)>0 .and. out_num(iXX,iYY)==0 )then
@@ -439,17 +444,23 @@ print *, '  check no hires land grid'
       if( out_num(iXX,iYY)==-1 ) out_num(iXX,iYY)=1
     end do
   end do
+
+  call logext()
+  !-------------------------------------------------------------
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-print *, 'SELECT OUTLET PIXEL FROM POTENTIAL OUTLET'
+  call logent('SELECT OUTLET PIXEL FROM POTENTIAL OUTLET')
+
   again=1
   step=1
 
   do while( again>0 .and. step<=5 )
     again=0
+    !-----------------------------------------------------------
+    call logent('finding outlet pixel with max upgrea')
 
-print *, '  finding outlet pixel with max upgrea'
     out_x(:,:)=0
     out_y(:,:)=0
     upg_max(:,:)=0
@@ -484,8 +495,11 @@ print *, '  finding outlet pixel with max upgrea'
         endif
       end do
     end do
-    if( step>=5 ) cycle
 
+    call logext()
+    !-----------------------------------------------------------
+    if( step>=5 ) cycle
+    !-----------------------------------------------------------
     ! sort large upg first
     allocate(arg(nseq))
     call argsort(sort_area(:,1), arg)
@@ -493,8 +507,9 @@ print *, '  finding outlet pixel with max upgrea'
     call sort(sort_area(:,2), arg)
     call sort(sort_area(:,3), arg)
     deallocate(arg)
+    !-----------------------------------------------------------
+    call logent('reject outlet if downstream distant < threshold')
 
-print *, '  reject outlet if downstream distant < threshold'
     do iseq=nseq, 1, -1
       if( sort_area(iseq,1)>0 )then
         iXX=int(sort_area(iseq,2))
@@ -531,9 +546,13 @@ print *, '  reject outlet if downstream distant < threshold'
       endif
     end do
 
-    print *, '    # of rejected =', again
+    call logmsg('# of rejected = '//str(again))
+    call logext()
+    !-----------------------------------------------------------
     step=step+1
   end do
+
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -619,7 +638,8 @@ print *, '  reject outlet if downstream distant < threshold'
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-print *, '  set downstream xy'
+  call logent('set downstream xy')
+
   nextXX(:,:)=-9999
   nextYY(:,:)=-9999
 
@@ -651,10 +671,13 @@ print *, '  set downstream xy'
       endif
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
   ! decide relation between GDBD cell which is recongnized as maximum drainage cell in TRIP grid
   !-------------------------------------------------------------
-print *, '  setting river parameters'
+  call logent('setting river parameters')
+
   out_upa(:,:)=-9999
   out_lon(:,:)=-9999
   out_lat(:,:)=-9999
@@ -671,10 +694,13 @@ print *, '  setting river parameters'
       endif
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
   ! downstream distance
   !-------------------------------------------------------------
-print *, '  calc nextdst'
+  call logent('calc nextdst')
+
   nxtdst(:,:)=-9999
   do iYY=1, nYY
     do iXX=1, nXX
@@ -699,10 +725,13 @@ print *, '  calc nextdst'
       endif
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-print *, '  channle length'
+  call logent('channel length')
+
   upg_max(:,:)=0
   rivlen(:,:)=-9999
 
@@ -763,38 +792,40 @@ print *, '  channle length'
       endif
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Saving river maps')
+  call logent('Saving river maps')
 
-  call edbg('Writing outlet pixel   '//str(wfile1))
-  call wbin(out_x, wfile1, rec=1)
-  call wbin(out_y, wfile1, rec=2)
+  call logmsg('Writing outlet pixel   '//str(wfile1))
+  call traperr( wbin(out_x, wfile1, rec=1) )
+  call traperr( wbin(out_y, wfile1, rec=2) )
 
-  call edbg('Writing drainage area  '//str(wfile2))
-  call wbin(out_upa, wfile2)
+  call logmsg('Writing drainage area  '//str(wfile2))
+  call traperr( wbin(out_upa, wfile2) )
 
-  call edbg('Writing lon lat        '//str(wfile3))
-  call wbin(out_lon, wfile3, rec=1)
-  call wbin(out_lat, wfile3, rec=2)
+  call logmsg('Writing lon lat        '//str(wfile3))
+  call traperr( wbin(out_lon, wfile3, rec=1) )
+  call traperr( wbin(out_lat, wfile3, rec=2) )
 
-  call edbg('Writing elvation       '//str(wfile4))
-  call wbin(out_elv, wfile4)
+  call logmsg('Writing elvation       '//str(wfile4))
+  call traperr( wbin(out_elv, wfile4) )
 
-  call edbg('Writing nextxy         '//str(wfile5))
-  call wbin(nextXX, wfile5, rec=1)
-  call wbin(nextYY, wfile5, rec=2)
+  call logmsg('Writing nextxy         '//str(wfile5))
+  call traperr( wbin(nextXX, wfile5, rec=1) )
+  call traperr( wbin(nextYY, wfile5, rec=2) )
 
-  call edbg('Writing next distance  '//str(wfile6))
-  call wbin(nxtdst, wfile6)
+  call logmsg('Writing next distance  '//str(wfile6))
+  call traperr( wbin(nxtdst, wfile6) )
 
-  call edbg('Writing channel length '//str(wfile7))
-  call wbin(rivlen, wfile7)
+  call logmsg('Writing channel length '//str(wfile7))
+  call traperr( wbin(rivlen, wfile7) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------

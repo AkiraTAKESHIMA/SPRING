@@ -15,15 +15,17 @@ module c3_rt_polygon_polygon
   !-------------------------------------------------------------
   public :: make_rt_polygon_polygon
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_polygon_polygon'
+
   logical :: debug
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_polygon_polygon(s, t, rt)
+integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c1_regions_base, only: &
@@ -37,6 +39,7 @@ subroutine make_rt_polygon_polygon(s, t, rt)
   use c3_rt_polygon_polygon_regions, only: &
         set_regions_polygon_polygon
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_polygon_polygon'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
 
@@ -56,15 +59,18 @@ subroutine make_rt_polygon_polygon(s, t, rt)
   real(8) :: area
   integer(8) :: IJSIZE_INIT = 4_8
 
-  call echo(code%bgn, 'make_rt_polygon_polygon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
   if( s%typ /= MESHTYPE__POLYGON .or. &
       t%typ /= MESHTYPE__POLYGON )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endif
 
   a => s
@@ -78,7 +84,7 @@ subroutine make_rt_polygon_polygon(s, t, rt)
 
   rtm => rt%main
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   ! Print debugging grids
   !-------------------------------------------------------------
@@ -89,12 +95,16 @@ subroutine make_rt_polygon_polygon(s, t, rt)
   !-------------------------------------------------------------
   ! Set regions
   !-------------------------------------------------------------
-  call set_regions_polygon_polygon(ap, bp, regions)
+  if( set_regions_polygon_polygon(ap, bp, regions) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
   allocate(rt1d(bp%nij))
-  call init_rt1d(rt1d)
+  if( init_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   do bij = bp%ijs, bp%ije
     rt1 => rt1d(bij)
@@ -148,18 +158,23 @@ subroutine make_rt_polygon_polygon(s, t, rt)
           if( .not. ap%debug ) call print_polygon(ap0, ap%coord_miss_s)
         endif
 
-        area = area_sphere_intersection_polygon_polygon(&
-                 ap0%pos   , ap0%x, ap0%y, ap0%z, ap0%lon, ap0%lat,    &
-                 ap0%arctyp, ap0%a, ap0%b, ap0%c,                      &
-                 ap0%n_pole, ap0%convex  , ap0%lontop    , ap0%lattop, &
-                 aarea     ,                                           &
-                 bp0%pos   , bp0%x, bp0%y, bp0%z, bp0%lon, bp0%lat,    &
-                 bp0%arctyp, bp0%a, bp0%b, bp0%c,                      &
-                 bp0%n_pole, bp0%convex  , bp0%lontop    , bp0%lattop, &
-                 barea)
+        if( area_sphere_intersection_polygon_polygon(&
+              ap0%pos   , ap0%x, ap0%y, ap0%z, ap0%lon, ap0%lat,    &
+              ap0%arctyp, ap0%a, ap0%b, ap0%c,                      &
+              ap0%n_pole, ap0%convex  , ap0%lontop    , ap0%lattop, &
+              aarea     ,                                           &
+              bp0%pos   , bp0%x, bp0%y, bp0%z, bp0%lon, bp0%lat,    &
+              bp0%arctyp, bp0%a, bp0%b, bp0%c,                      &
+              bp0%n_pole, bp0%convex  , bp0%lontop    , bp0%lattop, &
+              barea     ,                                           &
+              area) /= 0 )then
+          info = 1
+          call errret('@ aij = '//str(aij)//', bij = '//str(bij))
+          return
+        endif
 
         if( debug )then
-          call edbg('  intersection area: '//str(area,'es22.15')//&
+          call logmsg('  intersection area: '//str(area,'es22.15')//&
                     ' ('//str(area/barea*1d2,'f8.3')//' % of T, '//&
                           str(area/aarea*1d2,'f8.3')//' % of S)')
         endif
@@ -181,7 +196,9 @@ subroutine make_rt_polygon_polygon(s, t, rt)
 
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, b%is_source, rtm)
+  if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.false.)
@@ -190,31 +207,36 @@ subroutine make_rt_polygon_polygon(s, t, rt)
   !
   !-------------------------------------------------------------
   nullify(rt1)
-  call clear_rt1d(rt1d)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   nullify(rtm)
 
   nullify(region)
-  call clear_regions(regions)
+  if( clear_regions(regions) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   nullify(ap0, bp0)
   nullify(ag, bg)
   nullify(ap, bp)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt_polygon_polygon
+  call logret(PRCNAM, MODNAM)
+end function make_rt_polygon_polygon
 !===============================================================
 !
 !===============================================================
 logical function to_be_skipped(iRegion, s_rgn, t_rgn)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'to_be_skipped'
   integer, intent(in) :: iRegion
   type(list_iRegion_), intent(in) :: s_rgn, t_rgn
 
   integer :: iiRegion_s, iRegion_s, iiRegion_t, iRegion_t
 
   to_be_skipped = .false.
-  
+
   if( s_rgn%nRegions > 1 .and. t_rgn%nRegions > 1 .and. &
       s_rgn%list_iRegion(1) /= iRegion .and. t_rgn%list_iRegion(1) /= iRegion )then
     iiRegion_s = 1
@@ -230,7 +252,7 @@ logical function to_be_skipped(iRegion, s_rgn, t_rgn)
         to_be_skipped = iRegion_s /= iRegion
         if( to_be_skipped )then
           !call add(n_loop_skipped)
-          !call edbg('iRegion '//str(iRegion)//' s('//str(sij)//') and t('//str(tij)//')'//&
+          !call logmsg('iRegion '//str(iRegion)//' s('//str(sij)//') and t('//str(tij)//')'//&
           !          ' has already been investigated in iRegion '//str(iRegion_s))
         endif
         exit

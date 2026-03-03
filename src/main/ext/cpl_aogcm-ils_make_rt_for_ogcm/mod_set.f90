@@ -17,6 +17,10 @@ module mod_set
   !-------------------------------------------------------------
   public :: read_settings
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_set'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
@@ -47,6 +51,7 @@ subroutine read_settings(&
   use c2_rt_base, only: &
         init_rt
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings'
   type(rt_)  , intent(out), target :: rt_in_agcm_to_ogcm
   type(rt_)  , intent(out), target :: rt_out_lsm_to_agcm
   type(agcm_), intent(out), target :: agcm
@@ -73,14 +78,14 @@ subroutine read_settings(&
   character(CLEN_VAR) :: block_name
   type(opt_) :: opt
 
-  call echo(code%bgn, 'read_settings')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initializing variables')
+  call logent('Initializing variables', PRCNAM, MODNAM)
 
-  call init_rt(rt_in_agcm_to_ogcm)
-  call init_rt(rt_out_lsm_to_agcm)
+  call traperr( init_rt(rt_in_agcm_to_ogcm) )
+  call traperr( init_rt(rt_out_lsm_to_agcm) )
 
   rt_in_agcm_to_ogcm%id = 'rt_in_agcm_to_ogcm'
   rt_out_lsm_to_agcm%id = 'rt_out_lsm_to_agcm'
@@ -91,18 +96,18 @@ subroutine read_settings(&
   call set_default_values_opt_log(opt%log)
   call set_default_values_opt_earth(opt%earth)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   call open_setting_file()
 
   ! Open report file
   !-------------------------------------------------------------
   call read_path_report()
-  call open_report_file(get_path_report())
+  call traperr( open_report_file(get_path_report()) )
 
   ! Read settings
   !-------------------------------------------------------------
@@ -117,7 +122,7 @@ subroutine read_settings(&
     case( '' )
      exit
     !-----------------------------------------------------------
-    ! 
+    !
     case( block_name_input_rt_agcm_to_ogcm )
       call update_counter(counter%input_rt_agcm_to_ogcm)
       call read_settings_input_rt(rt_in_agcm_to_ogcm)
@@ -140,9 +145,8 @@ subroutine read_settings(&
     !-----------------------------------------------------------
     ! ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  block_name: '//str(block_name)//&
-              '\nCheck the name of the block.')
+      call errend(msg_invalid_value('block_name', block_name)//&
+                '\nCheck the name of the block.')
     endselect
   enddo
 
@@ -150,44 +154,44 @@ subroutine read_settings(&
 
   call check_number_of_blocks()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Detect conflictions
   !-------------------------------------------------------------
   !-------------------------------------------------------------
   ! Set some variables
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting some variables')
+  call logent('Setting some variables', PRCNAM, MODNAM)
 
   call set_opt_sys(opt%sys)
   call set_opt_log(opt%log)
   call set_opt_earth(opt%earth)
 
-  call echo(code%ext)  
+  call logext()
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Printing the settings', '-p -x2')
 
   call echo_settings_input_rt(rt_in_agcm_to_ogcm)
   call echo_settings_input_agcm(agcm)
   call echo_settings_input_lsm(lsm)
   call echo_settings_output_rt(rt_out_lsm_to_agcm)
   call echo_settings_opt(opt, opt_ext)
-  call edbg(str(bar('')))
+  call logmsg(str(bar('')))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check paths
   !-------------------------------------------------------------
   call check_paths(rt_in_agcm_to_ogcm, agcm, lsm, rt_out_lsm_to_agcm, opt)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
 subroutine init_counter()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_counter'
 
   counter%input_rt_agcm_to_ogcm = 0
   counter%input_agcm = 0
@@ -198,9 +202,10 @@ end subroutine init_counter
 !---------------------------------------------------------------
 subroutine update_counter(n)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_counter'
   integer, intent(inout) :: n
 
-  call echo(code%bgn, 'update_counter', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   n = n + 1
 
@@ -224,13 +229,14 @@ subroutine update_counter(n)
          counter%options, &
          BLOCK_NAME_OPTIONS, 0, 1)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine update_counter
 !---------------------------------------------------------------
 subroutine check_number_of_blocks()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_number_of_blocks'
 
-  call echo(code%bgn, '__IP__check_number_of_blocks', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   call check_num_of_key(&
          counter%input_rt_agcm_to_ogcm, &
@@ -252,7 +258,7 @@ subroutine check_number_of_blocks()
          counter%options, &
          BLOCK_NAME_OPTIONS, 0, 1)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks
 !---------------------------------------------------------------
 end subroutine read_settings
@@ -276,17 +282,18 @@ subroutine read_settings_input_rt(rt)
   use c2_rt_base, only: &
         set_default_values_rt
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_input_rt'
   type(rt_), intent(inout), target :: rt
 
   type(rt_main_), pointer :: rtm
 
   character(CLEN_PATH) :: dir
 
-  call echo(code%bgn, 'read_settings_input_rt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
 
@@ -297,22 +304,22 @@ subroutine read_settings_input_rt(rt)
   call set_keynum('f_area', 1, 1)
   call set_keynum('f_coef', 1, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
   rtm => rt%main
 
-  call set_default_values_rt(rt)
+  call traperr( set_default_values_rt(rt) )
   rtm%mesh_sort = MESH__NONE
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   dir = ''
 
@@ -351,24 +358,24 @@ subroutine read_settings_input_rt(rt)
 
   call check_keynum()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
   rtm%f%sidx%length = rtm%nij
   rtm%f%tidx%length = rtm%nij
   rtm%f%area%length = rtm%nij
   rtm%f%coef%length = rtm%nij
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_settings_input_rt
 !===============================================================
 !
@@ -391,15 +398,16 @@ subroutine read_settings_input_agcm(agcm)
         msg_invalid_input      , &
         msg_undesirable_input
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_input_agcm'
   type(agcm_), intent(inout) :: agcm
 
   character(CLEN_PATH) :: dir
 
-  call echo(code%bgn, 'read_settings_input_ogcm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
   call set_keynum('nij', 1, 1)
@@ -410,11 +418,11 @@ subroutine read_settings_input_agcm(agcm)
   call set_keynum('f_grdlat', 1, 1)
   call set_keynum('idx_miss', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
   agcm%nij = 0_8
 
@@ -427,11 +435,11 @@ subroutine read_settings_input_agcm(agcm)
 
   agcm%idx_miss = IDX_MISS_DEFAULT
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   dir = ''
 
@@ -473,24 +481,24 @@ subroutine read_settings_input_agcm(agcm)
 
   call check_keynum()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
   agcm%f_grdidx%length = agcm%nij
   agcm%f_grdara%length = agcm%nij
   agcm%f_grdlon%length = agcm%nij
   agcm%f_grdlat%length = agcm%nij
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free the external module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_settings_input_agcm
 !===============================================================
 !
@@ -513,15 +521,16 @@ subroutine read_settings_input_lsm(lsm)
         msg_invalid_input      , &
         msg_undesirable_input
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_input_lsm'
   type(lsm_), intent(inout) :: lsm
 
   character(CLEN_PATH) :: dir
 
-  call echo(code%bgn, 'read_settings_input_lsm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
   call set_keynum('nij', 1, 1)
@@ -532,11 +541,11 @@ subroutine read_settings_input_lsm(lsm)
   call set_keynum('f_grdlat', 1, 1)
   call set_keynum('idx_miss', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
   lsm%nij = 0_8
 
@@ -549,11 +558,11 @@ subroutine read_settings_input_lsm(lsm)
 
   lsm%idx_miss = IDX_MISS_DEFAULT
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   dir = ''
 
@@ -597,24 +606,24 @@ subroutine read_settings_input_lsm(lsm)
 
   call check_keynum()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
   lsm%f_grdidx%length = lsm%nij
   lsm%f_grdara%length = lsm%nij
   lsm%f_grdlon%length = lsm%nij
   lsm%f_grdlat%length = lsm%nij
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free the external module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_settings_input_lsm
 !===============================================================
 !
@@ -646,6 +655,7 @@ subroutine read_settings_output_rt(rt)
         KEY_OPT_COEF_ERROR_EXCESS    , &
         KEY_OPT_COEF_SUM_ERROR_EXCESS
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_output_rt'
   type(rt_), intent(inout), target :: rt
 
   type(rt_main_), pointer :: rtm
@@ -654,11 +664,11 @@ subroutine read_settings_output_rt(rt)
   character(CLEN_PATH) :: dir
   character(CLEN_KEY) :: mesh_vrf
 
-  call echo(code%bgn, 'read_settings_output_rt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
 
@@ -686,21 +696,21 @@ subroutine read_settings_output_rt(rt)
   call set_keynum('fout_vrf_grdnum'     , 0, -1)
   call set_keynum('vrf_val_miss'        , 0, -1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
   rtm => rt%main
 
-  call set_default_values_rt(rt)
+  call traperr( set_default_values_rt(rt) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   call back_to_block_head()
   call reset_keynum()
@@ -768,8 +778,7 @@ subroutine read_settings_output_rt(rt)
       case( MESH__TARGET )
         rtv => rt%vrf_tgt
       case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  mesh_vrf: '//str(mesh_vrf))
+        call errend(msg_invalid_value('mesh_vrf', mesh_vrf))
       endselect
 
     case( 'fout_vrf_grdidx' )
@@ -794,42 +803,22 @@ subroutine read_settings_output_rt(rt)
 
   call check_keynum()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine check_value_vrf_form(val, key)
-  implicit none
-  character(*), intent(in) :: val
-  character(*), intent(in) :: key
-
-  call echo(code%bgn, '__IP__check_value_vrf_form', '-p -x2')
-  !---------------------------------------------------------------
-  if( val /= GRID_FORM_AUTO .and. &
-      val /= GRID_FORM_INDEX .and. &
-      val /= GRID_FORM_RASTER )then
-    call eerr(str(msg_invalid_input())//&
-            '\n  @ line '//str(line_number())//&
-            '\n  key  : '//str(key)//&
-            '\n  value: '//str(val)//&
-            '\nOnly "'//str(GRID_FORM_AUTO)//'", "'//str(GRID_FORM_INDEX)//&
-              '" or "'//str(GRID_FORM_RASTER)//'" is valid for this key.')
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_value_vrf_form
-!---------------------------------------------------------------
 subroutine read_value_fvrf_file(f)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value_fvrf_file'
   type(file_), intent(inout) :: f
 
-  call echo(code%bgn, '__IP__read_value_fvrf_file', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -838,86 +827,30 @@ subroutine read_value_fvrf_file(f)
       key() /= 'fout_vrf_grdara_rt'   .and. &
       key() /= 'fout_vrf_rerr_grdara' .and. &
       key() /= 'fout_vrf_grdnum'      )then
-    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-            '\nOnly the following keys can be used for the group of'//&
-              ' verification data:'//&
-            '\n  "fout_vrf_grdidx"'//&
-            '\n  "fout_vrf_grdara_true"'//&
-            '\n  "fout_vrf_grdara_rt"'//&
-            '\n  "fout_vrf_rerr_grdara"'//&
-            '\n  "fout_vrf_grdnum"')
+    call errend(msg_invalid_input(line_number())//&
+              '\nOnly the following keys can be used for the group of'//&
+                ' verification data:'//&
+              '\n  "fout_vrf_grdidx"'//&
+              '\n  "fout_vrf_grdara_true"'//&
+              '\n  "fout_vrf_grdara_rt"'//&
+              '\n  "fout_vrf_rerr_grdara"'//&
+              '\n  "fout_vrf_grdnum"')
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( f%path /= '' )then
-    call eerr(str(msg_invalid_input())//' @ line '//str(line_number())//&
-            '\nDuplicated input of "'//str(key())//'".')
+    call errend(msg_invalid_input(line_number())//&
+              '\nDuplicated input of "'//str(key())//'".')
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call read_value(f, dir=dir)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value_fvrf_file
 !---------------------------------------------------------------
-subroutine check_form_and_file_path(f, form, key)
-  implicit none
-  type(file_) , intent(in) :: f
-  character(*), intent(in) :: form
-  character(*), intent(in) :: key
-
-  call echo(code%bgn, '__IP__check_form_and_file_path', '-p -x2')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  selectcase( form )
-  case( '' )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n@ line '//str(line_number())//&
-            '\nNone of "vrf_source_form" or "vrf_target_form"'//&
-              ' was given for "'//str(key)//'".')
-  !-------------------------------------------------------------
-  ! Auto or index
-  case( GRID_FORM_AUTO, GRID_FORM_INDEX )
-    if( key /= 'fout_vrf_grdidx'      .and. &
-        key /= 'fout_vrf_grdara_true' .and. &
-        key /= 'fout_vrf_grdara_rt'   .and. &
-        key /= 'fout_vrf_rerr_grdara' .and. &
-        key /= 'fout_vrf_grdnum'      )then
-      call eerr(str(msg_invalid_input())//&
-              '\n@ line '//str(line_number())//&
-              '\nOnly the following keys can be given for the group of'//&
-                ' verification data whose formatting mode is "'//str(form)//'":'//&
-              '\n  "fout_vrf_grdidx"'//&
-              '\n  "fout_vrf_grdara_true"'//&
-              '\n  "fout_vrf_grdara_rt"'//&
-              '\n  "fout_vrf_rerr_grdara"'//&
-              '\n  "fout_vrf_grdnum"')
-    endif
-  !-------------------------------------------------------------
-  ! Raster
-  case( GRID_FORM_RASTER )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  form: '//str(form))
-  !-------------------------------------------------------------
-  ! ERROR
-  case default
-    call eerr(str(msg_invalid_input())//&
-             '\n  form: '//str(form))
-  endselect
-
-  if( f%path /= '' )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n@ line '//str(line_number())//&
-            '\nKey "'//str(key)//'" appeared more than once'//&
-              ' for one group of verification data.')
-  endif
-  !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_form_and_file_path
-!----------------------------------------------------------------
 end subroutine read_settings_output_rt
 !===============================================================
 !
@@ -952,14 +885,15 @@ subroutine read_settings_opt(opt, opt_ext)
   use mod_const_util, only: &
         checkval_method_rivwat
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_opt'
   type(opt_)    , intent(inout) :: opt
   type(opt_ext_), intent(inout) :: opt_ext
 
-  call echo(code%bgn, 'read_settings_opt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
 
@@ -973,11 +907,11 @@ subroutine read_settings_opt(opt, opt_ext)
 
   call set_keynum('method_rivwat', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   do
     call read_input()
@@ -1022,30 +956,30 @@ subroutine read_settings_opt(opt, opt_ext)
 
   call check_keynum()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the values')
+  call logent('Checking the values', PRCNAM, MODNAM)
 
-  call checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files')
+  call traperr( checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files') )
   call checkval_method_rivwat(opt_ext%method_rivwat, 'opt_ext%method_rivwat')
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call set_values_opt_earth(opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2))
+  call traperr( set_values_opt_earth(opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2)) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_settings_opt
 !===============================================================
 !
@@ -1062,22 +996,23 @@ subroutine echo_settings_input_rt(rt)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_input_rt'
   type(rt_), intent(in), target :: rt
 
   type(rt_main_), pointer :: rtm
 
-  call echo(code%bgn, 'echo_settings_input_rt', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call edbg(str(bar('Input of Regridding Table (AGCM - OGCM_ocean)')))
+  call logmsg(str(bar('Input of Regridding Table (AGCM - OGCM_ocean)')))
   !-------------------------------------------------------------
   rtm => rt%main
 
-  call edbg('length: '//str(rtm%nij))
-  call edbg('sidx: '//str(fileinfo(rtm%f%sidx)))
-  call edbg('tidx: '//str(fileinfo(rtm%f%tidx)))
-  call edbg('coef: '//str(fileinfo(rtm%f%coef)))
+  call logmsg('length: '//str(rtm%nij))
+  call logmsg('sidx: '//str(fileinfo(rtm%f%sidx)))
+  call logmsg('tidx: '//str(fileinfo(rtm%f%tidx)))
+  call logmsg('coef: '//str(fileinfo(rtm%f%coef)))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_input_rt
 !===============================================================
 !
@@ -1086,21 +1021,22 @@ subroutine echo_settings_input_agcm(agcm)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_input_agcm'
   type(agcm_), intent(in) :: agcm
 
-  call echo(code%bgn, 'echo_settings_input_ogcm', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call edbg(str(bar('Input of OGCM')))
+  call logmsg(str(bar('Input of OGCM')))
   !-------------------------------------------------------------
-  call edbg('nij: '//str(agcm%nij))
-  call edbg('grdidx: '//str(fileinfo(agcm%f_grdidx)))
-  call edbg('grdara: '//str(fileinfo(agcm%f_grdara)))
-  call edbg('grdlon: '//str(fileinfo(agcm%f_grdlon)))
-  call edbg('grdlat: '//str(fileinfo(agcm%f_grdlat)))
+  call logmsg('nij: '//str(agcm%nij))
+  call logmsg('grdidx: '//str(fileinfo(agcm%f_grdidx)))
+  call logmsg('grdara: '//str(fileinfo(agcm%f_grdara)))
+  call logmsg('grdlon: '//str(fileinfo(agcm%f_grdlon)))
+  call logmsg('grdlat: '//str(fileinfo(agcm%f_grdlat)))
 
-  call edbg('Missing index: '//str(agcm%idx_miss))
+  call logmsg('Missing index: '//str(agcm%idx_miss))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_input_agcm
 !===============================================================
 !
@@ -1109,21 +1045,22 @@ subroutine echo_settings_input_lsm(lsm)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_input_lsm'
   type(lsm_), intent(in) :: lsm
 
-  call echo(code%bgn, 'echo_settings_input_lsm', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call edbg(str(bar('Input of LSM')))
+  call logmsg(str(bar('Input of LSM')))
   !-------------------------------------------------------------
-  call edbg('nij: '//str(lsm%nij))
-  call edbg('grdidx: '//str(fileinfo(lsm%f_grdidx)))
-  call edbg('grdara: '//str(fileinfo(lsm%f_grdara)))
-  call edbg('grdlon: '//str(fileinfo(lsm%f_grdlon)))
-  call edbg('grdlat: '//str(fileinfo(lsm%f_grdlat)))
+  call logmsg('nij: '//str(lsm%nij))
+  call logmsg('grdidx: '//str(fileinfo(lsm%f_grdidx)))
+  call logmsg('grdara: '//str(fileinfo(lsm%f_grdara)))
+  call logmsg('grdlon: '//str(fileinfo(lsm%f_grdlon)))
+  call logmsg('grdlat: '//str(fileinfo(lsm%f_grdlat)))
 
-  call edbg('Missing index: '//str(lsm%idx_miss))
+  call logmsg('Missing index: '//str(lsm%idx_miss))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_input_lsm
 !===============================================================
 !
@@ -1134,28 +1071,29 @@ subroutine echo_settings_output_rt(rt)
   use c2_rt_set, only: &
         echo_settings_opt_rt_coef
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_output_rt'
   type(rt_), intent(in), target :: rt
 
   type(rt_main_), pointer :: rtm
 
-  call echo(code%bgn, 'echo_settings_output_rt', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call edbg(str(bar('Output of Regridding Table (LSM - AGCM)')))
+  call logmsg(str(bar('Output of Regridding Table (LSM - AGCM)')))
   !-------------------------------------------------------------
   rtm => rt%main
 
-  call edbg('mesh_coef: '//str(rtm%mesh_coef))
-  call edbg('mesh_sort: '//str(rtm%mesh_sort))
+  call logmsg('mesh_coef: '//str(rtm%mesh_coef))
+  call logmsg('mesh_sort: '//str(rtm%mesh_sort))
 
-  call edbg('Files')
-  call edbg('  sidx: '//str(fileinfo(rtm%f%sidx)))
-  call edbg('  tidx: '//str(fileinfo(rtm%f%tidx)))
-  call edbg('  area: '//str(fileinfo(rtm%f%area)))
-  call edbg('  coef: '//str(fileinfo(rtm%f%coef)))
+  call logmsg('Files')
+  call logmsg('  sidx: '//str(fileinfo(rtm%f%sidx)))
+  call logmsg('  tidx: '//str(fileinfo(rtm%f%tidx)))
+  call logmsg('  area: '//str(fileinfo(rtm%f%area)))
+  call logmsg('  coef: '//str(fileinfo(rtm%f%coef)))
 
   call echo_settings_opt_rt_coef(rtm%opt_coef, 0)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_output_rt
 !===============================================================
 !
@@ -1168,18 +1106,19 @@ subroutine echo_settings_opt(opt, opt_ext)
         echo_settings_opt_log, &
         echo_settings_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_opt'
   type(opt_)    , intent(in) :: opt
   type(opt_ext_), intent(in) :: opt_ext
 
-  call echo(code%bgn, 'echo_settings_opt', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   call echo_settings_opt_sys(opt%sys)
   call echo_settings_opt_log(opt%log)
   call echo_settings_opt_earth(opt%earth)
 
-  call edbg('Method for river water: '//str(opt_ext%method_rivwat))
+  call logmsg('Method for river water: '//str(opt_ext%method_rivwat))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_opt
 !===============================================================
 !
@@ -1199,6 +1138,7 @@ subroutine check_paths(&
         set_opt_old_files, &
         handle_old_file
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_paths'
   type(rt_)   , intent(in), target :: rt_in_agcm_to_ogcm
   type(agcm_) , intent(in)         :: agcm
   type(lsm_)  , intent(in)         :: lsm
@@ -1208,7 +1148,7 @@ subroutine check_paths(&
   type(rt_main_), pointer :: rtmi
   type(rt_main_), pointer :: rtmo
 
-  call echo(code%bgn, 'check_paths')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1217,67 +1157,67 @@ subroutine check_paths(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking permissions of input files')
+  call logent('Checking permissions of input files', PRCNAM, MODNAM)
 
-  call check_permission(rtmi%f%sidx)
-  call check_permission(rtmi%f%tidx)
-  call check_permission(rtmi%f%area)
-  call check_permission(rtmi%f%coef)
+  call traperr( check_permission(rtmi%f%sidx) )
+  call traperr( check_permission(rtmi%f%tidx) )
+  call traperr( check_permission(rtmi%f%area) )
+  call traperr( check_permission(rtmi%f%coef) )
 
-  call check_permission(agcm%f_grdidx, allow_empty=.true.)
-  call check_permission(agcm%f_grdara)
-  call check_permission(agcm%f_grdlon)
-  call check_permission(agcm%f_grdlat)
+  call traperr( check_permission(agcm%f_grdidx, allow_empty=.true.) )
+  call traperr( check_permission(agcm%f_grdara) )
+  call traperr( check_permission(agcm%f_grdlon) )
+  call traperr( check_permission(agcm%f_grdlat) )
 
-  call check_permission(lsm%f_grdidx, allow_empty=.true.)
-  call check_permission(lsm%f_grdara)
-  call check_permission(lsm%f_grdlon)
-  call check_permission(lsm%f_grdlat)
+  call traperr( check_permission(lsm%f_grdidx, allow_empty=.true.) )
+  call traperr( check_permission(lsm%f_grdara) )
+  call traperr( check_permission(lsm%f_grdlon) )
+  call traperr( check_permission(lsm%f_grdlat) )
 
-  call check_file_size(rtmi%f%sidx)
-  call check_file_size(rtmi%f%tidx)
-  call check_file_size(rtmi%f%area)
-  call check_file_size(rtmi%f%coef)
+  call traperr( check_file_size(rtmi%f%sidx) )
+  call traperr( check_file_size(rtmi%f%tidx) )
+  call traperr( check_file_size(rtmi%f%area) )
+  call traperr( check_file_size(rtmi%f%coef) )
 
-  call check_file_size(agcm%f_grdidx, allow_empty=.true.)
-  call check_file_size(agcm%f_grdara)
-  call check_file_size(agcm%f_grdlon)
-  call check_file_size(agcm%f_grdlat)
+  call traperr( check_file_size(agcm%f_grdidx, allow_empty=.true.) )
+  call traperr( check_file_size(agcm%f_grdara) )
+  call traperr( check_file_size(agcm%f_grdlon) )
+  call traperr( check_file_size(agcm%f_grdlat) )
 
-  call check_file_size(lsm%f_grdidx, allow_empty=.true.)
-  call check_file_size(lsm%f_grdara)
-  call check_file_size(lsm%f_grdlon)
-  call check_file_size(lsm%f_grdlat)
+  call traperr( check_file_size(lsm%f_grdidx, allow_empty=.true.) )
+  call traperr( check_file_size(lsm%f_grdara) )
+  call traperr( check_file_size(lsm%f_grdlon) )
+  call traperr( check_file_size(lsm%f_grdlat) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking old files of output')
+  call logent('Checking old files of output', PRCNAM, MODNAM)
 
-  call set_opt_old_files(opt%sys%old_files)
+  call traperr( set_opt_old_files(opt%sys%old_files) )
 
-  call handle_old_file(rtmo%f%sidx)
-  call handle_old_file(rtmo%f%tidx)
-  call handle_old_file(rtmo%f%area)
-  call handle_old_file(rtmo%f%coef)
+  call traperr( handle_old_file(rtmo%f%sidx) )
+  call traperr( handle_old_file(rtmo%f%tidx) )
+  call traperr( handle_old_file(rtmo%f%area) )
+  call traperr( handle_old_file(rtmo%f%coef) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing output directories')
+  call logent('Preparing output directories', PRCNAM, MODNAM)
 
-  call set_opt_mkdir(output=.true., hut=hut_command)
+  call traperr( set_opt_mkdir(output=.true., hut=hut_command) )
 
-  call mkdir(dirname(rtmo%f%sidx%path))
-  call mkdir(dirname(rtmo%f%tidx%path))
-  call mkdir(dirname(rtmo%f%area%path))
-  call mkdir(dirname(rtmo%f%coef%path))
+  call traperr( mkdir(dirname(rtmo%f%sidx%path)) )
+  call traperr( mkdir(dirname(rtmo%f%tidx%path)) )
+  call traperr( mkdir(dirname(rtmo%f%area%path)) )
+  call traperr( mkdir(dirname(rtmo%f%coef%path)) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_paths
 !===============================================================
 !

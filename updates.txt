@@ -4,10 +4,30 @@
 - Shapefile input
 - Shapefile input
 #===============================================================
-# v02.04.08
+# v02.04.09
 #===============================================================
 #---------------------------------------------------------------
-[2026/02/27] Setting files
+[2026/03/03] Modification
+#---------------------------------------------------------------
+set/
+
+Modified paths in the sample setting files.
+#---------------------------------------------------------------
+[2026/03/03] Bug fix
+#---------------------------------------------------------------
+src/main/std/rasterize/mod_rasterize_latlon.f90
+
+Added initialization and finalization of thresholds.
+#---------------------------------------------------------------
+[2026/03/03] Bug fix
+#---------------------------------------------------------------
+src/main/std/rasterize/mod_data.f90
+src/main/std/rasterize/mod_rasterize_latlon.f90
+src/main/std/rasterize/mod_rasterize_raster.f90
+
+Fixed a bug of allocation and deallocation of the pointers.
+#---------------------------------------------------------------
+[2026/02/27] Modification
 #---------------------------------------------------------------
 Renamed setting files for remapping of MIRA meshes, 
 `set/remapping/MIRA...` and modified mesh names.

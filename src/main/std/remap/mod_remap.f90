@@ -12,9 +12,13 @@ module mod_remap
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: remap
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_remap'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -22,6 +26,7 @@ contains
 !===============================================================
 subroutine remap(s, t, rt)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'remap'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
 
@@ -40,7 +45,7 @@ subroutine remap(s, t, rt)
   integer(8) :: rtij
   integer(8) :: loc
 
-  call echo(code%bgn, 'remap')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -54,7 +59,7 @@ subroutine remap(s, t, rt)
   rtm => rt%main
 
   if( sfg%nFiles_val == 0 )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
   !-------------------------------------------------------------
@@ -63,7 +68,7 @@ subroutine remap(s, t, rt)
   selectcase( rtm%mode )
   !-------------------------------------------------------------
   ! Case: 1st order conservative
-  case( remap_mode_1st_order_conservative )
+  case( REMAP_MODE_1ST_ORDER_CONSERVATIVE )
     !-----------------------------------------------------------
     ! Read the remapping table
     !-----------------------------------------------------------
@@ -72,16 +77,16 @@ subroutine remap(s, t, rt)
     allocate(rtm%coef(rtm%nij))
 
     f => rtm%f%sidx
-    call edbg('Reading sidx '//str(fileinfo(f)))
-    call rbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading sidx '//str(fileinfo(f)))
+    call traperr( rbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec) )
 
     f => rtm%f%tidx
-    call edbg('Reading tidx '//str(fileinfo(f)))
-    call rbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading tidx '//str(fileinfo(f)))
+    call traperr( rbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec) )
 
     f => rtm%f%coef
-    call edbg('Reading coef '//str(fileinfo(f)))
-    call rbin(rtm%coef, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading coef '//str(fileinfo(f)))
+    call traperr( rbin(rtm%coef, f%path, f%dtype, f%endian, f%rec) )
     !-----------------------------------------------------------
     ! Set grid indices
     !-----------------------------------------------------------
@@ -102,13 +107,14 @@ subroutine remap(s, t, rt)
     do iFile = 1, sfg%nFiles_val
       sf => sfg%val(iFile)
       tf => tfg%val(iFile)
-      call edbg('In : '//str(fileinfo(sf)))
-      call edbg('Out: '//str(fileinfo(tf)))
+      call logmsg('In : '//str(fileinfo(sf)))
+      call logmsg('Out: '//str(fileinfo(tf)))
       !---------------------------------------------------------
       ! Read input
       !---------------------------------------------------------
-      call rbin(sval_2d, sf%path, sf%dtype, sf%endian, sf%rec, &
-                sz=sfg%sz(:2), lb=sfg%lb(:2))
+      call traperr( rbin(&
+             sval_2d, sf%path, sf%dtype, sf%endian, sf%rec, &
+             sz=sfg%sz(:2), lb=sfg%lb(:2)) )
 
       sval(:) = reshape(sval_2d, (/sfg%nij/))
       !---------------------------------------------------------
@@ -120,15 +126,15 @@ subroutine remap(s, t, rt)
       do rtij = 1_8, rtm%nij
         call search(rtm%sidx(rtij), sg%idx, sg%idxarg, loc)
         if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(rtm%sidx(rtij))//' of the source mesh was not found.')
+          call errend(msg_unexpected_condition()//&
+                    '\nIndex '//str(rtm%sidx(rtij))//' of the source mesh was not found.')
         endif
         sij = sg%idxarg(loc)
 
         call search(rtm%tidx(rtij), tg%idx, tg%idxarg, loc)
         if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index '//str(rtm%tidx(rtij))//' of the target mesh was not found.')
+          call errend(msg_unexpected_condition()//&
+                    '\nIndex '//str(rtm%tidx(rtij))//' of the target mesh was not found.')
         endif
         tij = tg%idxarg(loc)
 
@@ -146,8 +152,9 @@ subroutine remap(s, t, rt)
       !---------------------------------------------------------
       tval_2d = reshape(tval,(/tfg%nx,tfg%ny/))
 
-      call wbin(tval_2d, tf%path, tf%dtype, tf%endian, tf%rec, &
-                sz=tf%sz(:2), lb=tf%lb(:2))
+      call traperr( wbin(&
+             tval_2d, tf%path, tf%dtype, tf%endian, tf%rec, &
+             sz=tf%sz(:2), lb=tf%lb(:2)) )
     enddo  ! iFile/
     !-----------------------------------------------------------
     !
@@ -161,17 +168,17 @@ subroutine remap(s, t, rt)
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mode: '//str(rtm%mode))
+    call errend(msg_invalid_value('rtm%mode', rtm%mode))
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine remap
 !===============================================================
 !
 !===============================================================
 subroutine set_grdidx(a)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_grdidx'
   type(gs_), intent(inout), target :: a
 
   type(gs_latlon_) , pointer :: al
@@ -186,7 +193,7 @@ subroutine set_grdidx(a)
   integer(8) :: ih, iv
   integer(8) :: ij
 
-  call echo(code%bgn, 'set_grdidx (mesh '//str(a%nam)//')')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -210,7 +217,7 @@ subroutine set_grdidx(a)
 
     f => afg%idx
     if( f%path == '' )then
-      call edbg('Setting grdidx')
+      call logmsg('Setting grdidx')
       ij = 0_8
       do iv = 1_8, al%nv
         do ih = 1_8, al%nh
@@ -219,9 +226,10 @@ subroutine set_grdidx(a)
         enddo  ! ih/
       enddo  ! iv/
     else
-      call edbg('Reading grdidx')
-      call rbin(int8_2d, f%path, f%dtype, f%endian, f%rec, &
-                sz=afg%sz(:2), lb=afg%lb(:2))
+      call logmsg('Reading grdidx')
+      call traperr( rbin(&
+             int8_2d, f%path, f%dtype, f%endian, f%rec, &
+             sz=afg%sz(:2), lb=afg%lb(:2)) )
     endif
 
     ag%idx = reshape(int8_2d,(/ag%nij/))
@@ -236,13 +244,14 @@ subroutine set_grdidx(a)
 
     f => afg%idx
     if( f%path == '' )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  '//str(afg%id)//'%idx%path == ""'//&
-              '\nInput file of grid index was not specified.')
+      call errend(msg_unexpected_condition()//&
+                '\n  '//str(afg%id)//'%idx%path == ""'//&
+                '\nInput file of grid index was not specified.')
     endif
-    call edbg('Reading grdidx')
-    call rbin(int8_2d, f%path, f%dtype, f%endian, f%rec, &
-              sz=afg%sz(:2), lb=afg%lb(:2))
+    call logmsg('Reading grdidx')
+    call traperr( rbin(&
+           int8_2d, f%path, f%dtype, f%endian, f%rec, &
+           sz=afg%sz(:2), lb=afg%lb(:2)) )
     ag%idx = reshape(int8_2d,(/ag%nij/))
 
     deallocate(int8_2d)
@@ -253,14 +262,15 @@ subroutine set_grdidx(a)
 
     f => afg%idx
     if( f%path == '' )then
-      call edbg('Setting grdidx')
+      call logmsg('Setting grdidx')
       do ij = 1_8, ap%nij
         ag%idx(ij) = ij
       enddo
     else
-      call edbg('Reading grdidx')
-      call rbin(ag%idx, f%path, f%dtype, f%endian, f%rec, &
-                sz=afg%sz(1), lb=afg%lb(1))
+      call logmsg('Reading grdidx')
+      call traperr( rbin(&
+             ag%idx, f%path, f%dtype, f%endian, f%rec, &
+             sz=afg%sz(1), lb=afg%lb(1)) )
     endif
   endselect
   !-------------------------------------------------------------
@@ -268,7 +278,7 @@ subroutine set_grdidx(a)
   !-------------------------------------------------------------
   call argsort(ag%idx, ag%idxarg)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine set_grdidx
 !===============================================================
 !

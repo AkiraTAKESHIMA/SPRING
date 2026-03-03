@@ -43,15 +43,20 @@ module c1_opt_set
   character(clen_var), parameter :: key_earth_r     = 'earth_r'
   character(clen_var), parameter :: key_earth_e2    = 'earth_e2'
   !-----------------------------------------------------------
+  ! Private module variables
+  !-----------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_opt_set'
+  !-----------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine set_default_values_opt_sys(sys)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_opt_sys'
   type(opt_sys_), intent(out) :: sys
 
-  call echo(code%bgn, 'set_default_values_opt_sys', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -60,32 +65,34 @@ subroutine set_default_values_opt_sys(sys)
   sys%dir_im      = ''
   sys%memory_ulim = 0.d0
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine set_default_values_opt_sys
 !===============================================================
 !
 !===============================================================
 subroutine set_default_values_opt_log(log)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_opt_log'
   type(opt_log_), intent(inout) :: log
 
-  call echo(code%bgn, 'set_default_values_opt_log', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   log%print_summary = .true.
   log%write_summary = .true.
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine set_default_values_opt_log
 !===============================================================
 !
 !===============================================================
 subroutine set_default_values_opt_earth(earth)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_opt_earth'
   type(opt_earth_), intent(out) :: earth
 
-  call echo(code%bgn, 'set_default_values_opt_earth', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -93,18 +100,20 @@ subroutine set_default_values_opt_earth(earth)
   earth%r   = EARTH_WGS84ELLIPS_R_VOLMETRIC
   earth%e2  = 0.d0
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine set_default_values_opt_earth
 !===============================================================
 !
 !===============================================================
-subroutine set_values_opt_earth(&
-    earth, n_earth_r, n_earth_e2)
+integer(4) function set_values_opt_earth(&
+    earth, n_earth_r, n_earth_e2) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_values_opt_earth'
   type(opt_earth_), intent(inout) :: earth
   integer         , intent(in)    :: n_earth_r, n_earth_e2
 
-  call echo(code%bgn, 'set_values_opt_earth', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -113,9 +122,11 @@ subroutine set_values_opt_earth(&
   ! Case: Sphere
   case( earth_shape_sphere )
     if( n_earth_e2 == 1 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  "'//str(key_earth_e2)//'" (square of eccentricity) was specified'//&
-                ' although shape of the earth is "'//str(earth%shp)//'".')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n"'//str(key_earth_e2)//'" (square of eccentricity) was specified'//&
+                  ' although shape of the earth is "'//str(earth%shp)//'".')
+      return
     endif
   !-------------------------------------------------------------
   ! Case: Ellipsoid
@@ -130,78 +141,82 @@ subroutine set_values_opt_earth(&
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth%shp: '//str(earth%shp)//&
-            '\nCheck the value of "'//str(key_earth_shape)//'".')
+    info = 1
+    call errret(msg_invalid_value('earth%shp', earth%shp)//&
+              '\nCheck the value of "'//str(key_earth_shape)//'".')
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_values_opt_earth
+  call logret(PRCNAM, MODNAM)
+end function set_values_opt_earth
 !===============================================================
 !
 !===============================================================
 subroutine echo_settings_opt_sys(sys)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_opt_sys'
   type(opt_sys_), intent(in) :: sys
 
-  call echo(code%bgn, 'echo_settings_opt_sys', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('System')
-  call edbg('  Treatment of old files: '//str(sys%old_files))
-  call edbg('  Output directory of intermediates: '//str(sys%dir_im))
-  call edbg('  Remove intermediates: '//str(sys%remove_im))
+  call logmsg('System')
+  call logmsg('  Treatment of old files: '//str(sys%old_files))
+  call logmsg('  Output directory of intermediates: '//str(sys%dir_im))
+  call logmsg('  Remove intermediates: '//str(sys%remove_im))
 
   if( sys%memory_ulim == 0.d0 )then
-    call edbg('  Upper limit of memory: (not limited)')
+    call logmsg('  Upper limit of memory: (not limited)')
   else
-    call edbg('  Upper limit of memory: '//str(sys%memory_ulim)//' MB')
+    call logmsg('  Upper limit of memory: '//str(sys%memory_ulim)//' MB')
   endif
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_opt_sys
 !===============================================================
 !
 !===============================================================
 subroutine echo_settings_opt_log(log)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_opt_log'
   type(opt_log_), intent(in) :: log
 
-  call echo(code%bgn, 'echo_settings_opt_log', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Log')
-  call edbg('  Print summary: '//str(log%print_summary))
-  call edbg('  Write summary: '//str(log%write_summary))
+  call logmsg('Log')
+  call logmsg('  Print summary: '//str(log%print_summary))
+  call logmsg('  Write summary: '//str(log%write_summary))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_opt_log
 !===============================================================
 !
 !===============================================================
 subroutine echo_settings_opt_earth(earth)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_opt_earth'
   type(opt_earth_), intent(in) :: earth
 
-  call echo(code%bgn, 'echo_settings_opt_earth', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Earth')
-  call edbg('  Shape: '//str(earth%shp))
+  call logmsg('Earth')
+  call logmsg('  Shape: '//str(earth%shp))
   selectcase( earth%shp )
   case( EARTH_SHAPE_SPHERE )
-    call edbg('  Radius: '//str(earth%r)//' m')
+    call logmsg('  Radius: '//str(earth%r)//' m')
   case( EARTH_SHAPE_ELLIPS )
-    call edbg('  Semi-major axis       : '//str(earth%r,'es20.13')//' m')
-    call edbg('  Square of eccentricity: '//str(earth%e2,'es20.13'))
+    call logmsg('  Semi-major axis       : '//str(earth%r,'es20.13')//' m')
+    call logmsg('  Square of eccentricity: '//str(earth%e2,'es20.13'))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth%shp: '//str(earth%shp))
+    call errend(msg_invalid_value('earth%shp', earth%shp))
+    stop
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_opt_earth
 !===============================================================
 !

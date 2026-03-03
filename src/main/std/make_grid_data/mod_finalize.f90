@@ -1,4 +1,5 @@
 module mod_finalize
+  use lib_const
   use lib_log
   use c1_type_gs
   implicit none
@@ -6,6 +7,10 @@ module mod_finalize
   ! Public procedures
   !-------------------------------------------------------------
   public :: finalize
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_finalize'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -15,19 +20,20 @@ subroutine finalize(a)
   use c1_file, only: &
         close_report_file
   use c1_gs_base, only: &
-        clear_gs
+        clear_mesh
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'finalize'
   type(gs_), intent(inout) :: a
 
-  call echo(code%bgn, 'finalize')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call clear_gs(a)
+  call traperr( clear_mesh(a) )
 
-  call close_report_file()
+  call traperr( close_report_file() )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine finalize
 !===============================================================
 !

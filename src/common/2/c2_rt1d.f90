@@ -7,7 +7,7 @@ module c2_rt1d
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: init_rt1d
   public :: alloc_rt1d
@@ -15,19 +15,25 @@ module c2_rt1d
   public :: clear_rt1d
   public :: reshape_rt1d
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt1d'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine init_rt1d(rt1d)
+integer(4) function init_rt1d(rt1d) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt1d'
   type(rt1d_), intent(inout), target :: rt1d(:)
 
   type(rt1d_), pointer :: rt1
 
   integer(8) :: ijs, ije, ij
 
-  call echo(code%bgn, 'init_rt1d', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -43,13 +49,14 @@ subroutine init_rt1d(rt1d)
     nullify(rt1%ara)
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt1d
+  call logret(PRCNAM, MODNAM)
+end function init_rt1d
 !===============================================================
 !
 !===============================================================
-subroutine alloc_rt1d(rt1d, n, ijsize)
+integer(4) function alloc_rt1d(rt1d, n, ijsize) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'alloc_rt1d'
   type(rt1d_), pointer :: rt1d(:)
   integer(8) , intent(in) :: n
   integer(8) , intent(in) :: ijsize
@@ -57,7 +64,8 @@ subroutine alloc_rt1d(rt1d, n, ijsize)
   type(rt1d_), pointer :: rt1
   integer(8) :: i
 
-  call echo(code%bgn, 'alloc_rt1d', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -70,19 +78,21 @@ subroutine alloc_rt1d(rt1d, n, ijsize)
     allocate(rt1%ara(ijsize))
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine alloc_rt1d
+  call logret(PRCNAM, MODNAM)
+end function alloc_rt1d
 !===============================================================
 !
 !===============================================================
-subroutine free_rt1d_data(rt1d)
+integer(4) function free_rt1d_data(rt1d) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_rt1d_data'
   type(rt1d_), intent(inout), target :: rt1d(:)
 
   type(rt1d_), pointer :: rt1
   integer(8) :: ij
 
-  call echo(code%bgn, 'free_rt1d_data', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -98,31 +108,36 @@ subroutine free_rt1d_data(rt1d)
     endif
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_rt1d_data
+  call logret(PRCNAM, MODNAM)
+end function free_rt1d_data
 !===============================================================
 !
 !===============================================================
-subroutine clear_rt1d(rt1d)
+integer(4) function clear_rt1d(rt1d) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_rt1d'
   type(rt1d_), pointer :: rt1d(:)
 
-  call echo(code%bgn, 'clear_rt1d', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt1d_data(rt1d)
+  if( free_rt1d_data(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
   deallocate(rt1d)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine clear_rt1d
+  call logret(PRCNAM, MODNAM)
+end function clear_rt1d
 !===============================================================
 !
 !===============================================================
-subroutine reshape_rt1d(rt1d, self_is_source, rtm)
+integer(4) function reshape_rt1d(rt1d, self_is_source, rtm) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'reshape_rt1d'
   type(rt1d_)   , intent(in)   , target :: rt1d(:)
   logical       , intent(in)            :: self_is_source
   type(rt_main_), intent(inout), target :: rtm
@@ -131,21 +146,22 @@ subroutine reshape_rt1d(rt1d, self_is_source, rtm)
   type(rt1d_), pointer :: rt1
   integer(8) :: ij
 
-  call echo(code%bgn, 'reshape_rt1d', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
 
   rtm%nij = sum(rt1d(:)%mij)
   rtm%ijsize = rtm%nij
   call realloc(rtm%sidx, rtm%ijsize)
   call realloc(rtm%tidx, rtm%ijsize)
   call realloc(rtm%area, rtm%ijsize)
-  call edbg('Length: '//str(rtm%ijsize))
+  call logmsg('Length: '//str(rtm%ijsize))
 
   if( rtm%ijsize == 0_8 )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
@@ -175,11 +191,12 @@ subroutine reshape_rt1d(rt1d, self_is_source, rtm)
 
   rtm%area(:) = rtm%area(:) * earth%r**2
 
-  call edbg('area min: '//str(minval(rtm%area))//' max: '//str(maxval(rtm%area))//&
-          '\n     sum: '//str(sum(rtm%area)))
+  call logmsg('area min: '//str(minval(rtm%area))//&
+                 ', max: '//str(maxval(rtm%area))//&
+            '\n     sum: '//str(sum(rtm%area)))
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine reshape_rt1d
+  call logret(PRCNAM, MODNAM)
+end function reshape_rt1d
 !===============================================================
 !
 !===============================================================

@@ -11,6 +11,7 @@ module mod_rasterize_polygon
   use c2_type_rst
   use def_type
   implicit none
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rasterize_polygon'
   private
   !-------------------------------------------------------------
   ! Public procedures
@@ -22,13 +23,6 @@ module mod_rasterize_polygon
 !
 !===============================================================
 subroutine rasterize_polygon(a, b, output)
-  use c2_area_raster_polygon, only: &
-        c2arp_initialize      => initialize     , &
-        c2arp_finalize        => finalize       , &
-        c2arp_initialize_zone => initialize_zone, &
-        c2arp_finalize_zone   => finalize_zone  , &
-        calc_iarea     , &
-        get_dhv_polygon
   use c2_area_raster, only: &
         c2ar_initialize        => initialize       , &
         c2ar_finalize          => finalize         , &
@@ -39,10 +33,18 @@ subroutine rasterize_polygon(a, b, output)
         alloc_map       , &
         update_iarea_sum, &
         update_iarea_max
+  use c2_area_raster_polygon, only: &
+        c2arp_initialize      => initialize     , &
+        c2arp_finalize        => finalize       , &
+        c2arp_initialize_zone => initialize_zone, &
+        c2arp_finalize_zone   => finalize_zone  , &
+        calc_iarea     , &
+        get_dhv_polygon
   use mod_data, only: &
         get_tasks, &
         make_data
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'rasterize_polygon'
   type(gs_)    , intent(in) :: a
   type(gs_)    , intent(in) :: b
   type(output_), intent(in) :: output
@@ -64,10 +66,8 @@ subroutine rasterize_polygon(a, b, output)
   integer(8) :: dhi, dhf, dvi, dvf
   logical :: iarea_is_updated
   logical :: fill_miss
-  !integer :: case_wgtmap, case_wgtmap_a, case_wgtmap_b
-  integer :: info
 
-  call echo(code%bgn, 'rasterize_polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -87,30 +87,30 @@ subroutine rasterize_polygon(a, b, output)
 
   fill_miss = .true.
 
-  info = c2ar_initialize(br)
-  info = c2ar_initialize_thresh(output%thresh)
-  info = c2arp_initialize(br, ap, make_rt=.true.)
+  call traperr( c2ar_initialize(br) )
+  call traperr( c2ar_initialize_thresh(output%thresh) )
+  call traperr( c2arp_initialize(br, ap, make_rt=.true.) )
   !-------------------------------------------------------------
   ! Rasterize
   !-------------------------------------------------------------
   do ibz = 1, br%nZone
     if( br%nZone>1 )&
-      call echo(code%ent, '("'//str(br%nam)//'") zone '//str(ibz)//' / '//str(br%nZone))
+      call logent('("'//str(br%nam)//'") zone '//str(ibz)//' / '//str(br%nZone), PRCNAM, MODNAM)
 
     brz => br%zone(ibz)
     if( .not. brz%is_valid )then
-      if( br%nZone>1 ) call echo(code%ext)
+      if( br%nZone>1 ) call logext()
       cycle
     endif
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    info = c2ar_initialize_zone(brz)
-    info = c2arp_initialize_zone(brz)
+    call traperr( c2ar_initialize_zone(brz) )
+    call traperr( c2arp_initialize_zone(brz) )
 
-    info = alloc_map(iarea, buffer=1)
-    if( do_make_iarea_max ) info = alloc_map(iarea_max)
-    if( do_make_iarea_sum ) info = alloc_map(iarea_sum)
+    call traperr( alloc_map(iarea, buffer=1) )
+    if( do_make_iarea_max ) call traperr( alloc_map(iarea_max) )
+    if( do_make_iarea_sum ) call traperr( alloc_map(iarea_sum) )
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -121,7 +121,7 @@ subroutine rasterize_polygon(a, b, output)
       !---------------------------------------------------------
       ! Calc. intersection area
       !---------------------------------------------------------
-      call calc_iarea(iarea, ap0, iarea_is_updated)
+      call traperr( calc_iarea(iarea, ap0, iarea_is_updated) )
 
       if( .not. iarea_is_updated ) cycle
       !---------------------------------------------------------
@@ -130,53 +130,56 @@ subroutine rasterize_polygon(a, b, output)
       call get_dhv_polygon(dhi, dhf, dvi, dvf)
 
       if( do_make_iarea_max )then
-          info = update_iarea_max(&
-                   iarea_max,        & ! inout
-                   iarea,            & ! in
-                   ap0%idx,          & ! in
-                   dhi, dhf, dvi, dvf) ! in
+        call traperr( update_iarea_max(&
+               iarea_max,        &  ! inout
+               iarea,            &  ! in
+               ap0%idx,          &  ! in
+               dhi, dhf, dvi, dvf) )! in
       endif
 
       if( do_make_iarea_sum )then
-        info = update_iarea_sum(&
-                 iarea_sum,        & ! inout
-                 iarea,            & ! in
-                 dhi, dhf, dvi, dvf) ! in
+        call traperr( update_iarea_sum(&
+               iarea_sum,        &  ! inout
+               iarea,            &  ! in
+               dhi, dhf, dvi, dvf) )! in
       endif
       !---------------------------------------------------------
     enddo  ! aij/
     !-----------------------------------------------------------
     ! Make the accompanying data
-    ! $iarea_max and $iarea_sum are freed.
     !-----------------------------------------------------------
     call make_data(&
-           iarea_max, iarea_sum,             & ! inout
+           iarea_max, iarea_sum,             & ! in
            brz%mskmap, br%is_south_to_north, & ! in
            output, fill_miss)                  ! in
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    info = c2ar_finalize_zone()
-    info = c2arp_finalize_zone()
+    deallocate(iarea)
+    if( do_make_iarea_max ) deallocate(iarea_max)
+    if( do_make_iarea_sum ) deallocate(iarea_sum)
+
+    call traperr( c2ar_finalize_zone() )
+    call traperr( c2arp_finalize_zone() )
     !-----------------------------------------------------------
     ! Kill the flag
     !-----------------------------------------------------------
     fill_miss = .false.
     !-----------------------------------------------------------
-    if( br%nZone>1 ) call echo(code%ext)
+    if( br%nZone>1 ) call logext()
   enddo  ! ibz/
   !-------------------------------------------------------------
   ! Postprocess
   !-------------------------------------------------------------
-  info = c2ar_finalize()
-  info = c2ar_finalize_thresh()
-  info = c2arp_finalize()
+  call traperr( c2ar_finalize() )
+  call traperr( c2ar_finalize_thresh() )
+  call traperr( c2arp_finalize() )
 
   nullify(ap0)
   nullify(brz)
   nullify(ap, br)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine rasterize_polygon
 !===============================================================
 !

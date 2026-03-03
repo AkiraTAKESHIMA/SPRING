@@ -22,18 +22,25 @@ module c1_gs_util
   public :: print_latlon
   public :: print_polygon
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_util'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine set_gs_debug(debug, idx_debug, idx_miss, do_debug)
+integer(4) function set_gs_debug(&
+    debug, idx_debug, idx_miss, do_debug) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_gs_debug'
   logical   , intent(out)   :: debug
   integer(8), intent(inout) :: idx_debug
   integer(8), intent(in)    :: idx_miss
   logical   , intent(in)    :: do_debug
 
-  call echo(code%bgn, 'set_gs_debug', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -44,8 +51,8 @@ subroutine set_gs_debug(debug, idx_debug, idx_miss, do_debug)
     idx_debug = idx_miss
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_gs_debug
+  call logret(PRCNAM, MODNAM)
+end function set_gs_debug
 !===============================================================
 !
 !===============================================================
@@ -57,8 +64,9 @@ end subroutine set_gs_debug
 !===============================================================
 !
 !===============================================================
-subroutine mass_to_dens(dens, mass, ara, idx)
+integer(4) function mass_to_dens(dens, mass, ara, idx) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'mass_to_dens'
   real(8)   , intent(out) :: dens(:)
   real(8)   , intent(in)  :: mass(:)
   real(8)   , intent(in)  :: ara(:)
@@ -66,7 +74,8 @@ subroutine mass_to_dens(dens, mass, ara, idx)
 
   integer(8) :: nij, ij
 
-  call echo(code%bgn, 'mass_to_dens', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -77,13 +86,14 @@ subroutine mass_to_dens(dens, mass, ara, idx)
     if( idx(ij) > 0_8 ) dens(ij) = mass(ij) / ara(ij)
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine mass_to_dens
+  call logret(PRCNAM, MODNAM)
+end function mass_to_dens
 !===============================================================
 !
 !===============================================================
-subroutine dens_to_mass(mass, dens, ara, idx)
+integer(4) function dens_to_mass(mass, dens, ara, idx) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'dens_to_mass'
   real(8)   , intent(out) :: mass(:)
   real(8)   , intent(in)  :: dens(:)
   real(8)   , intent(in)  :: ara(:)
@@ -91,7 +101,8 @@ subroutine dens_to_mass(mass, dens, ara, idx)
 
   integer(8) :: nij, ij
 
-  call echo(code%bgn, 'dens_to_mass', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -102,8 +113,8 @@ subroutine dens_to_mass(mass, dens, ara, idx)
     if( idx(ij) > 0_8 ) mass(ij) = dens(ij) * ara(ij)
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine dens_to_mass
+  call logret(PRCNAM, MODNAM)
+end function dens_to_mass
 !===============================================================
 !
 !===============================================================
@@ -121,19 +132,20 @@ subroutine print_gs_latlon(&
     hi, hf, vi, vf, &
     west, east, south, north)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_gs_latlon'
   character(*), intent(in) :: str_source_target
   character(*), intent(in) :: nam
   integer(1)  , intent(in) :: region_type
   integer(8)  , intent(in) :: hi, hf, vi, vf
   real(8)     , intent(in) :: west, east, south, north
 
-  call edbg(str_source_target//' grid (latlon) '//&
-          '\n  name: '//str(nam))
-  call edbg('  region_type: '//str(str_region_type_long(region_type)))
-  call edbg('  (h,v): ('//str((/hi,hf/),dgt(hf),':')//&
-                    ', '//str((/vi,vf/),dgt(vf),':')//')')
-  call edbg('  lon: '//str((/west,east/)*r2d,'f12.7',' ~ ')//&
-          '\n  lat: '//str((/south,north/)*r2d,'f12.7',' ~ '))
+  call logmsg(str_source_target//' grid (latlon) '//&
+            '\n  name: '//str(nam))
+  call logmsg('  region_type: '//str(str_region_type_long(region_type)))
+  call logmsg('  (h,v): ('//str((/hi,hf/),dgt(hf),':')//&
+                      ', '//str((/vi,vf/),dgt(vf),':')//')')
+  call logmsg('  lon: '//str((/west,east/)*r2d,'f12.7',' ~ ')//&
+            '\n  lat: '//str((/south,north/)*r2d,'f12.7',' ~ '))
 end subroutine print_gs_latlon
 !===============================================================
 !
@@ -144,19 +156,20 @@ subroutine print_gs_raster(&
     hi, hf, vi, vf, &
     west, east, south, north)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_gs_raster'
   character(*), intent(in) :: str_source_target
   character(*), intent(in) :: nam
   integer(1)  , intent(in) :: region_type
   integer(8)  , intent(in) :: hi, hf, vi, vf
   real(8)     , intent(in) :: west, east, south, north
 
-  call edbg(str_source_target//' grid (raster) '//&
-          '\n  name: '//str(nam))
-  call edbg('  region_type: '//str(str_region_type_long(region_type)))
-  call edbg('  (h,v): ('//str((/hi,hf/),dgt(hf),':')//&
-                    ', '//str((/vi,vf/),dgt(vf),':')//')')
-  call edbg('  lon: '//str((/west,east/)*r2d,'f12.7',' ~ ')//&
-          '\n  lat: '//str((/south,north/)*r2d,'f12.7',' ~ '))
+  call logmsg(str_source_target//' grid (raster) '//&
+            '\n  name: '//str(nam))
+  call logmsg('  region_type: '//str(str_region_type_long(region_type)))
+  call logmsg('  (h,v): ('//str((/hi,hf/),dgt(hf),':')//&
+                      ', '//str((/vi,vf/),dgt(vf),':')//')')
+  call logmsg('  lon: '//str((/west,east/)*r2d,'f12.7',' ~ ')//&
+            '\n  lat: '//str((/south,north/)*r2d,'f12.7',' ~ '))
 end subroutine print_gs_raster
 !===============================================================
 !
@@ -165,11 +178,12 @@ subroutine print_gs_polygon(&
     str_source_target, nam, &
     ijs, ije)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_gs_polygon'
   character(*), intent(in) :: str_source_target
   character(*), intent(in) :: nam
   integer(8)  , intent(in) :: ijs, ije
 
-  call edbg(str_source_target//' grid (polygon) '//&
+  call logmsg(str_source_target//' grid (polygon) '//&
           '\n  name: '//str(nam)//&
           '\n  ij: ('//str((/ijs,ije/),dgt(ije),':')//')')
 end subroutine print_gs_polygon
@@ -178,6 +192,7 @@ end subroutine print_gs_polygon
 !===============================================================
 subroutine print_latlon(nam, ugl, ih, iv)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_latlon'
   character(*)    , intent(in) :: nam
   type(gs_latlon_), intent(in) :: ugl
   integer(8)      , intent(in) :: ih, iv
@@ -186,61 +201,62 @@ subroutine print_latlon(nam, ugl, ih, iv)
   integer(8) :: loc
   integer(8) :: ij
 
-  call echo(code%bgn, 'print_latlon', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   idx = ugl%idxmap(ih,iv)
   call search(idx, ugl%grid%idx, ugl%grid%idxarg, loc)
   if( loc == 0_8 )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  Index '//str(idx)//' was not found in the list of indices.'//&
-            '\n  nam: '//str(nam))
+    call errend(msg_unexpected_condition()//&
+              '\nIndex '//str(idx)//' was not found in the list of indices.'//&
+              '\n  nam: '//str(nam))
   endif
   ij = ugl%grid%idxarg(loc)
 
-  call edbg(nam//' latlon('//str((/ih,iv/),', ')//') idx: '//str(ugl%idxmap(ih,iv)))
-  call edbg('  lon: '//str(ugl%lon(ih-1_8:ih)*r2d,'f12.7',' - '))
-  call edbg('  lat: '//str(ugl%lat(iv-1_8:iv)*r2d,'f12.7',' - '))
-  call edbg('  area: '//str(ugl%grid%ara(ij)))
+  call logmsg(nam//' latlon('//str((/ih,iv/),', ')//') idx: '//str(ugl%idxmap(ih,iv)))
+  call logmsg('  lon: '//str(ugl%lon(ih-1_8:ih)*r2d,'f12.7',' - '))
+  call logmsg('  lat: '//str(ugl%lat(iv-1_8:iv)*r2d,'f12.7',' - '))
+  call logmsg('  area: '//str(ugl%grid%ara(ij)))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_latlon
 !===============================================================
 !
 !===============================================================
 subroutine print_polygon(p, lonlat_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_polygon'
   type(polygon_), intent(in) :: p
   real(8), intent(in) :: lonlat_miss
 
   character(8), parameter :: WFMT_LONLAT = 'f12.7'
   character(8), parameter :: WFMT_FLOAT = 'es12.5'
 
-  call echo(code%bgn, 'print_polygon', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('polygon '//str(p%idx))
-  call edbg('  n: '//str(p%n))
-  call edbg('  pos: '//str(str_polygon_pos_long(p%pos)))
-  call edbg('  bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,WFMT_LONLAT,','))
-  call edbg('  n_west: '//str(p%n_west)//', n_east: '//str(p%n_east)//&
+  call logmsg('polygon '//str(p%idx))
+  call logmsg('  n: '//str(p%n))
+  call logmsg('  pos: '//str(str_polygon_pos_long(p%pos)))
+  call logmsg('  bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,WFMT_LONLAT,','))
+  call logmsg('  n_west: '//str(p%n_west)//', n_east: '//str(p%n_east)//&
             ', n_pole: '//str(p%n_pole))
-  call edbg('  lon   : '//str_coords(p%lon, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
-  call edbg('  lat   : '//str_coords(p%lat, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
-  call edbg('  lontop: '//str_coords(p%lontop, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
-  call edbg('  lattop: '//str_coords(p%lattop, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
-  call edbg('  convex: '//str(str_convex_long(p%convex),-cl(WFMT_LONLAT),','))
-  call edbg('  arctyp: '//str(str_arctyp_long(p%arctyp),-cl(WFMT_LONLAT),','))
-  call edbg('  arcpos: '//str(str_arcpos_long(p%arcpos),-cl(WFMT_LONLAT),','))
+  call logmsg('  lon   : '//str_coords(p%lon, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call logmsg('  lat   : '//str_coords(p%lat, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call logmsg('  lontop: '//str_coords(p%lontop, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call logmsg('  lattop: '//str_coords(p%lattop, r2d, lonlat_miss, WFMT_LONLAT, ',', p%n))
+  call logmsg('  convex: '//str(str_convex_long(p%convex),-cl(WFMT_LONLAT),','))
+  call logmsg('  arctyp: '//str(str_arctyp_long(p%arctyp),-cl(WFMT_LONLAT),','))
+  call logmsg('  arcpos: '//str(str_arcpos_long(p%arcpos),-cl(WFMT_LONLAT),','))
   if( associated(p%a) )then
-    call edbg('  a     : '//str(p%a,WFMT_FLOAT))
-    call edbg('  b     : '//str(p%b,WFMT_FLOAT))
-    call edbg('  c     : '//str(p%c,WFMT_FLOAT))
+    call logmsg('  a     : '//str(p%a,WFMT_FLOAT))
+    call logmsg('  b     : '//str(p%b,WFMT_FLOAT))
+    call logmsg('  c     : '//str(p%c,WFMT_FLOAT))
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_polygon
 !===============================================================
 !

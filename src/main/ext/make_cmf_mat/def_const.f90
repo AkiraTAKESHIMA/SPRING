@@ -1,22 +1,22 @@
 module def_const
   use lib_const, only: &
-    clen_path, &
-    clen_key, &
-    clen_var
+    CLEN_PATH, &
+    CLEN_KEY , &
+    CLEN_VAR
   implicit none
   public
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  character(clen_var), parameter :: set_block_name_cmn = 'common'
-  character(clen_var), parameter :: set_block_name_cmf = 'cama-flood'
-  character(clen_var), parameter :: set_block_name_mat = 'matsiro'
-  character(clen_var), parameter :: set_block_name_opt = 'options'
+  character(CLEN_VAR), parameter :: set_block_name_cmn = 'common'
+  character(CLEN_VAR), parameter :: set_block_name_cmf = 'cama-flood'
+  character(CLEN_VAR), parameter :: set_block_name_mat = 'matsiro'
+  character(CLEN_VAR), parameter :: set_block_name_opt = 'options'
 
-  character(clen_var), parameter :: set_block_name_log_cmn = 'Common'
-  character(clen_var), parameter :: set_block_name_log_cmf = 'CaMa-Flood'
-  character(clen_var), parameter :: set_block_name_log_mat = 'MATSIRO'
-  character(clen_var), parameter :: set_block_name_log_opt = 'Options'
+  character(CLEN_VAR), parameter :: set_block_name_log_cmn = 'Common'
+  character(CLEN_VAR), parameter :: set_block_name_log_cmf = 'CaMa-Flood'
+  character(CLEN_VAR), parameter :: set_block_name_log_mat = 'MATSIRO'
+  character(CLEN_VAR), parameter :: set_block_name_log_opt = 'Options'
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -38,9 +38,9 @@ module def_const
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  character(clen_key), parameter :: opt_invalid_grdidx_catmxy_allow_all     = 'allow_all'
-  character(clen_key), parameter :: opt_invalid_grdidx_catmxy_allow_end     = 'allow_end'
-  character(clen_key), parameter :: opt_invalid_grdidx_catmxy_allow_nothing = 'allow_nothing'
-  character(clen_key), parameter :: opt_invalid_grdidx_catmxy_default = opt_invalid_grdidx_catmxy_allow_nothing
+  character(CLEN_KEY), parameter :: opt_invalid_grdidx_catmxy_allow_all     = 'allow_all'
+  character(CLEN_KEY), parameter :: opt_invalid_grdidx_catmxy_allow_end     = 'allow_end'
+  character(CLEN_KEY), parameter :: opt_invalid_grdidx_catmxy_allow_nothing = 'allow_nothing'
+  character(CLEN_KEY), parameter :: opt_invalid_grdidx_catmxy_default = opt_invalid_grdidx_catmxy_allow_nothing
   !-------------------------------------------------------------
 end module def_const

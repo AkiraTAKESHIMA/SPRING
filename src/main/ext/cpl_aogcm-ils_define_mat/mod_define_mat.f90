@@ -6,7 +6,6 @@ module mod_define_mat
   use lib_math
   use c1_const
   use c2_type_rt
-  ! this
   use def_const
   use def_type
   implicit none
@@ -15,7 +14,11 @@ module mod_define_mat
   ! Public procedures
   !-------------------------------------------------------------
   public :: define_mat
-!---------------------------------------------------------------
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_define_mat'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
@@ -30,6 +33,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   use c2_rt_main_io, only: &
         write_rt_main
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'define_mat'
   type(rt_in_) , intent(inout), target :: rt_in
   type(rt_out_), intent(inout), target :: rt_out
   type(agcm_)  , intent(inout), target :: agcm
@@ -59,7 +63,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   character(clen_wfmt) :: wfmt
   real(8) :: v
 
-  call echo(code%bgn, 'define_mat')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -99,12 +103,12 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   ! Prep. AGCM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing AGCM grid')
+  call logent('Preparing AGCM grid', PRCNAM, MODNAM)
 
   f => agcm%fin_grdidx
   if( f%path /= '' )then
-    call edbg('Reading grdidx')
-    call rbin(agcm%grdidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading grdidx')
+    call traperr( rbin(agcm%grdidx, f%path, f%dtype, f%endian, f%rec) )
     call realloc(agcm%grdidxarg, agcm%nij)
     call argsort(agcm%grdidx, agcm%grdidxarg)
   else
@@ -115,75 +119,75 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   endif
 
   f => agcm%fin_grdara
-  call edbg('Reading grdara')
-  call rbin(agcm%grdara, f%path, f%dtype, f%endian, f%rec)
-  call edbg('  min: '//str(minval(agcm%grdara,mask=agcm%grdidx/=agcm%idx_miss))//&
-             ' max: '//str(maxval(agcm%grdara,mask=agcm%grdidx/=agcm%idx_miss)))
+  call logmsg('Reading grdara')
+  call traperr( rbin(agcm%grdara, f%path, f%dtype, f%endian, f%rec) )
+  call logmsg('  min: '//str(minval(agcm%grdara,mask=agcm%grdidx/=agcm%idx_miss))//&
+               ' max: '//str(maxval(agcm%grdara,mask=agcm%grdidx/=agcm%idx_miss)))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Prep. RM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing RM grid')
+  call logent('Preparing RM grid', PRCNAM, MODNAM)
 
   f => rm%fin_grdidx_river
-  call edbg('Reading grdidx_river')
-  call rbin(rm%grdidx_river, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading grdidx_river')
+  call traperr( rbin(rm%grdidx_river, f%path, f%dtype, f%endian, f%rec) )
 
   f => rm%fin_grdidx_noriv
-  call edbg('Reading grdidx_noriv')
-  call rbin(rm%grdidx_noriv, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading grdidx_noriv')
+  call traperr( rbin(rm%grdidx_noriv, f%path, f%dtype, f%endian, f%rec) )
 
   f => rm%fin_grdidx_ocean
-  call edbg('Reading grdidx_ocean')
-  call rbin(rm%grdidx_ocean, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading grdidx_ocean')
+  call traperr( rbin(rm%grdidx_ocean, f%path, f%dtype, f%endian, f%rec) )
 
   f => rm%fin_grdara_river
-  call edbg('Reading grdara_river')
-  call rbin(rm%grdara_river, f%path, f%dtype, f%endian, f%rec)
-  call edbg('  min: '//str(minval(rm%grdara_river,mask=rm%grdara_river/=rm%ara_miss))//&
-             ' max: '//str(maxval(rm%grdara_river,mask=rm%grdara_river/=rm%ara_miss)))
+  call logmsg('Reading grdara_river')
+  call traperr( rbin(rm%grdara_river, f%path, f%dtype, f%endian, f%rec) )
+  call logmsg('  min: '//str(minval(rm%grdara_river,mask=rm%grdara_river/=rm%ara_miss))//&
+               ' max: '//str(maxval(rm%grdara_river,mask=rm%grdara_river/=rm%ara_miss)))
 
   f => rm%fin_grdara_noriv
-  call edbg('Reading grdara_noriv')
-  call rbin(rm%grdara_noriv, f%path, f%dtype, f%endian, f%rec)
-  call edbg('  min: '//str(minval(rm%grdara_noriv,mask=rm%grdara_noriv/=rm%ara_miss))//&
-             ' max: '//str(maxval(rm%grdara_noriv,mask=rm%grdara_noriv/=rm%ara_miss)))
+  call logmsg('Reading grdara_noriv')
+  call traperr( rbin(rm%grdara_noriv, f%path, f%dtype, f%endian, f%rec) )
+  call logmsg('  min: '//str(minval(rm%grdara_noriv,mask=rm%grdara_noriv/=rm%ara_miss))//&
+               ' max: '//str(maxval(rm%grdara_noriv,mask=rm%grdara_noriv/=rm%ara_miss)))
 
   f => rm%fin_grdara_ocean
-  call edbg('Reading grdara_ocean')
-  call rbin(rm%grdara_ocean, f%path, f%dtype, f%endian, f%rec)
-  call edbg('  min: '//str(minval(rm%grdara_ocean,mask=rm%grdara_ocean/=rm%ara_miss))//&
-             ' max: '//str(maxval(rm%grdara_ocean,mask=rm%grdara_ocean/=rm%ara_miss)))
+  call logmsg('Reading grdara_ocean')
+  call traperr( rbin(rm%grdara_ocean, f%path, f%dtype, f%endian, f%rec) )
+  call logmsg('  min: '//str(minval(rm%grdara_ocean,mask=rm%grdara_ocean/=rm%ara_miss))//&
+               ' max: '//str(maxval(rm%grdara_ocean,mask=rm%grdara_ocean/=rm%ara_miss)))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Summary of RM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Summary of RM grid', '-p')
+  call logent('Summary of RM grid', PRCNAM, MODNAM, '-p')
 
   rm%sum_grdara_river = sum(rm%grdara_river,mask=rm%grdara_river/=rm%ara_miss)
   rm%sum_grdara_noriv = sum(rm%grdara_noriv,mask=rm%grdara_noriv/=rm%ara_miss)
   rm%sum_grdara_ocean = sum(rm%grdara_ocean,mask=rm%grdara_ocean/=rm%ara_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. lndara_ogcm, lndara_river, lndara_noriv_real in AGCM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating lndara_ogcm, lndara_river, lndara_noriv_real in AGCM grid')
+  call logent('Calculating lndara_ogcm, lndara_river, lndara_noriv_real in AGCM grid', PRCNAM, MODNAM)
 
   ! ogcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'ogcm')
+  call logent('ogcm', PRCNAM, MODNAM)
 
   allocate(lndara(agcm%nij))
   allocate(ocnara(agcm%nij))
 
   if( rtmi_ol_a%nij == 0_8 )then
     call calc_grdara_from_rt(&
-           ocnara, & ! out
+           ocnara,                  & ! out
            rtmi_oo_a, MESH__TARGET, & ! in
-           agcm%grdidx, agcm%grdara) ! in
+           agcm%grdidx, agcm%grdara)  ! in
 
     do aij = 1_8, agcm%nij
       agcm%lndara_ogcm(aij) = agcm%grdara(aij) - ocnara(aij)
@@ -193,14 +197,14 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     enddo
   else
     call calc_grdara_from_rt(&
-           lndara, & ! out
+           lndara,                  & ! out
            rtmi_ol_a, MESH__TARGET, & ! in
-           agcm%grdidx, agcm%grdara) ! in
+           agcm%grdidx, agcm%grdara)  ! in
 
     call calc_grdara_from_rt(&
-           ocnara, & ! out
+           ocnara,                  & ! out
            rtmi_oo_a, MESH__TARGET, & ! in
-           agcm%grdidx, agcm%grdara) ! in
+           agcm%grdidx, agcm%grdara)  ! in
 
     do aij = 1_8, agcm%nij
       if( lndara(aij) == 0.d0 )then
@@ -216,38 +220,38 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   deallocate(lndara)
   deallocate(ocnara)
 
-  call echo(code%ext)
+  call logext()
 
   ! river
   !-------------------------------------------------------------
-  call echo(code%ent, 'river')
+  call logent('river', PRCNAM, MODNAM)
 
   call calc_grdara_from_rt(&
          agcm%lndara_river, & ! out
          rtmi_rr_a, MESH__TARGET, & ! in
          agcm%grdidx, agcm%grdara) ! in
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv_real
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-real')
+  call logent('noriv-real', PRCNAM, MODNAM)
 
   call calc_grdara_from_rt(&
          agcm%lndara_noriv_real, & ! out
          rtmi_rn_a, MESH__TARGET, & ! in
          agcm%grdidx, agcm%grdara) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call free_rt_main(rtmi_oo_a)
-  call free_rt_main(rtmi_ol_a)
+  call traperr( free_rt_main(rtmi_oo_a) )
+  call traperr( free_rt_main(rtmi_ol_a) )
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. lndara_noriv_virt and lndara_noriv in AGCM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating lndara_noriv_virt and lndara_noriv in AGCM grid')
+  call logent('Calculating lndara_noriv_virt and lndara_noriv in AGCM grid', PRCNAM, MODNAM)
 
   call calc_lndara_noriv_virt(&
          agcm%lndara_noriv_virt, & ! out
@@ -259,11 +263,11 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
          agcm%lndara_noriv_real, agcm%lndara_noriv_virt, & ! in
          agcm%grdara) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Summary of AGCM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Summary of AGCM grid', '-p')
+  call logent('Summary of AGCM grid', PRCNAM, MODNAM, '-p')
 
   agcm%sum_grdara            = sum(agcm%grdara)
   agcm%sum_lndara_ogcm       = sum(agcm%lndara_ogcm)
@@ -272,58 +276,58 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   agcm%sum_lndara_noriv_real = sum(agcm%lndara_noriv_real)
   agcm%sum_lndara_noriv_virt = sum(agcm%lndara_noriv_virt)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Output lndara of AGCM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting lndara of AGCM')
+  call logent('Outputting lndara of AGCM', PRCNAM, MODNAM)
 
   f => agcm%fout_lndara_ogcm
   if( f%path /= '' )then
-    call edbg('Writing lndara_ogcm')
-    call wbin(agcm%lndara_ogcm, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lndara_ogcm')
+    call traperr( wbin(agcm%lndara_ogcm, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => agcm%fout_lndara_river
   if( f%path /= '' )then
-    call edbg('Writing lndara_river')
-    call wbin(agcm%lndara_river, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lndara_river')
+    call traperr( wbin(agcm%lndara_river, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => agcm%fout_lndara_noriv
   if( f%path /= '' )then
-    call edbg('Writing lndara_noriv')
-    call wbin(agcm%lndara_noriv, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lndara_noriv')
+    call traperr( wbin(agcm%lndara_noriv, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => agcm%fout_lndara_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing lndara_noriv_real')
-    call wbin(agcm%lndara_noriv_real, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lndara_noriv_real')
+    call traperr( wbin(agcm%lndara_noriv_real, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => agcm%fout_lndara_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing lndara_noriv_virt')
-    call wbin(agcm%lndara_noriv_virt, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lndara_noriv_virt')
+    call traperr( wbin(agcm%lndara_noriv_virt, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call init_rt_main_data(rtmi_rr_a)
-  call init_rt_main_data(rtmi_rn_a)
-  call init_rt_main_data(rtmi_ro_a)
+  call traperr( init_rt_main_data(rtmi_rr_a) )
+  call traperr( init_rt_main_data(rtmi_rn_a) )
+  call traperr( init_rt_main_data(rtmi_ro_a) )
 
-  call init_rt_main_data(rtmo_lr_a)
-  call init_rt_main_data(rtmo_ln_a)
-  call init_rt_main_data(rtmo_lnv_a)
-  call init_rt_main_data(rtmo_lo_a)
+  call traperr( init_rt_main_data(rtmo_lr_a) )
+  call traperr( init_rt_main_data(rtmo_ln_a) )
+  call traperr( init_rt_main_data(rtmo_lnv_a) )
+  call traperr( init_rt_main_data(rtmo_lo_a) )
   !-------------------------------------------------------------
   ! Make rt_lsm_noriv_to_agcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_lsm_noriv_to_agcm')
+  call logent('Making rt_lsm_noriv_to_agcm', PRCNAM, MODNAM)
 
   call make_rt_lsm_noriv_virt_to_agcm(&
          rtmi_ro_a, & ! in
@@ -338,11 +342,11 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
          rtmo_ln_a, & ! out
          agcm%grdidx, agcm%grdidxarg, agcm%grdara) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rt_lsm_ocean_to_agcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_lsm_ocean_to_agcm')
+  call logent('Making rt_lsm_ocean_to_agcm', PRCNAM, MODNAM)
 
   call make_rt_lsm_ocean_to_agcm(&
          rtmi_ro_a, & ! in
@@ -351,7 +355,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
          agcm%lndara_ogcm, agcm%lndara_noriv_virt, & ! in
          agcm%opt_thresh_lndfrc_zero)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -386,9 +390,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   ! Calc. grdara_noriv_virt of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating all types of grdara of LSM')
+  call logent('Calculating all types of grdara of LSM', PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river (from rm_river)')
+  call logent('river (from rm_river)', PRCNAM, MODNAM)
 
   do lij = 1_8, lsm%nij
     if( rm%grdara_river(lij) == rm%ara_miss )then
@@ -398,9 +402,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-real (from rm_noriv)')
+  call logent('noriv-real (from rm_noriv)', PRCNAM, MODNAM)
 
   do lij = 1_8, lsm%nij
     if( rm%grdara_noriv(lij) == rm%ara_miss )then
@@ -410,9 +414,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-virt (from rm_ocean)')
+  call logent('noriv-virt (from rm_ocean)', PRCNAM, MODNAM)
 
   call calc_grdara_from_rt(&
          lsm%grdara_noriv_virt, &  ! out
@@ -425,9 +429,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv (from lsm_noriv-real and lsm_noriv-virt)')
+  call logent('noriv (from lsm_noriv-real and lsm_noriv-virt)', PRCNAM, MODNAM)
 
   lsm%grdara_noriv(:) = 0.d0
   do lij = 1_8, lsm%nij
@@ -444,18 +448,18 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     if( lsm%grdara_noriv(lij) == 0.d0 )then
       lsm%grdara_noriv(lij) = lsm%ara_miss
     elseif( lsm%grdara_noriv(lij) < 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  lsm%grdara_noriv < 0.0'//&
-              '\n  lij: '//str(lij)//&
-              '\n  lsm%grdara_noriv_real: '//str(lsm%grdara_noriv_real(lij))//&
-              '\n  lsm%grdara_noriv_virt: '//str(lsm%grdara_noriv_virt(lij))//&
-              '\n  lsm%grdara_noriv     : '//str(lsm%grdara_noriv(lij)))
+      call errend(msg_unexpected_condition()//&
+                '\n  lsm%grdara_noriv < 0.0'//&
+                '\n  lij: '//str(lij)//&
+                '\n  lsm%grdara_noriv_real: '//str(lsm%grdara_noriv_real(lij))//&
+                '\n  lsm%grdara_noriv_virt: '//str(lsm%grdara_noriv_virt(lij))//&
+                '\n  lsm%grdara_noriv     : '//str(lsm%grdara_noriv(lij)))
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'ocean')
+  call logent('ocean', PRCNAM, MODNAM)
 
   call calc_grdara_from_rt(&
          lsm%grdara_ocean, & ! out
@@ -468,19 +472,19 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main(rtmo_lnv_a)
+  call traperr( free_rt_main(rtmo_lnv_a) )
   !-------------------------------------------------------------
   ! Calc. all types of grdwgt of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating all types of grdwgt of LSM')
+  call logent('Calculating all types of grdwgt of LSM', PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river')
+  call logent('river', PRCNAM, MODNAM)
 
   do lij = 1_8, lsm%nij
     if( lsm%grdara_river(lij) == lsm%ara_miss )then
@@ -490,9 +494,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-real')
+  call logent('noriv-real', PRCNAM, MODNAM)
 
   do lij = 1_8, lsm%nij
     if( lsm%grdara_noriv_real(lij) == lsm%ara_miss )then
@@ -502,9 +506,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-virt')
+  call logent('noriv-virt', PRCNAM, MODNAM)
 
   !lsm%grdwgt_noriv_virt(:) = lsm%wgt_miss
   do lij = 1_8, lsm%nij
@@ -515,14 +519,14 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv')
+  call logent('noriv', PRCNAM, MODNAM)
 
   lsm%grdwgt_noriv(:) = lsm%wgt_miss
   do lij = 1_8, lsm%nij
     if( lsm%grdara_noriv(lij) == lsm%ara_miss ) cycle
- 
+
     uwa = 0.d0
     if( rm%grdara_noriv(lij) /= rm%ara_miss )then
       uwa = uwa + rm%grdara_noriv(lij)
@@ -540,21 +544,21 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
 
     if( uwa == 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  uwa == 0.0')
+      call errend(msg_unexpected_condition()//&
+                '\n  uwa == 0.0')
     endif
 
     if( ara == 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  ara == 0.0')
+      call errend(msg_unexpected_condition()//&
+                '\n  ara == 0.0')
     endif
 
     lsm%grdwgt_noriv(lij) = ara / uwa
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'ocean')
+  call logent('ocean', PRCNAM, MODNAM)
 
   do lij = 1_8, lsm%nij
     if( lsm%grdara_ocean(lij) == lsm%ara_miss )then
@@ -564,15 +568,15 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make grdidx of LMS
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making grdidx of LSM')
+  call logent('Making grdidx of LSM', PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river')
+  call logent('river', PRCNAM, MODNAM)
 
   lidx0 = 0_8
 
@@ -581,18 +585,18 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
          lidx0, & ! inout
          lsm%grdara_river, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv')
+  call logent('noriv', PRCNAM, MODNAM)
 
   call make_grdidx_lsm(&
          lsm%grdidx_noriv, & ! out
          lidx0, & ! inout
          lsm%grdara_noriv, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-real')
+  call logent('noriv-real', PRCNAM, MODNAM)
 
   lsm%grdidx_noriv_real(:) = lsm%idx_miss
 
@@ -602,9 +606,9 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-virt')
+  call logent('noriv-virt', PRCNAM, MODNAM)
 
   lsm%grdidx_noriv_virt(:) = lsm%idx_miss
 
@@ -614,106 +618,106 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'ocean')
+  call logent('ocean', PRCNAM, MODNAM)
 
   call make_grdidx_lsm(&
          lsm%grdidx_ocean, & ! out
          lidx0, & ! inout
          lsm%grdara_ocean, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make grdidx_bnd of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making grdidx_bnd of LSM')
+  call logent('Making grdidx_bnd of LSM', PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river')
+  call logent('river', PRCNAM, MODNAM)
 
   call make_grdidx_bnd_lsm(&
          lsm%grdidx_bnd_river, & ! out
          lsm%grdidx_river, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv')
+  call logent('noriv', PRCNAM, MODNAM)
 
   call make_grdidx_bnd_lsm(&
          lsm%grdidx_bnd_noriv, & ! out
          lsm%grdidx_noriv, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-real')
+  call logent('noriv-real', PRCNAM, MODNAM)
 
   call make_grdidx_bnd_lsm(&
          lsm%grdidx_bnd_noriv_real, & ! out
          lsm%grdidx_noriv_real, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv-virt')
+  call logent('noriv-virt', PRCNAM, MODNAM)
 
   call make_grdidx_bnd_lsm(&
          lsm%grdidx_bnd_noriv_virt, & ! out
          lsm%grdidx_noriv_virt, lsm%idx_miss) ! in
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make grdmsk of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making grdmsk of LSM')
+  call logent('Making grdmsk of LSM', PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river')
+  call logent('river', PRCNAM, MODNAM)
 
   call make_grdmsk(&
          lsm%grdmsk_river, &
          lsm%grdidx_river, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv')
+  call logent('noriv', PRCNAM, MODNAM)
 
   call make_grdmsk(&
          lsm%grdmsk_noriv, &
          lsm%grdidx_noriv, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv_real')
+  call logent('noriv_real', PRCNAM, MODNAM)
 
   call make_grdmsk(&
          lsm%grdmsk_noriv_real, &
          lsm%grdidx_noriv_real, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv_virt')
+  call logent('noriv_virt', PRCNAM, MODNAM)
 
   call make_grdmsk(&
          lsm%grdmsk_noriv_virt, &
          lsm%grdidx_noriv_virt, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ent, 'ocean')
+  call logent('ocean', PRCNAM, MODNAM)
 
   call make_grdmsk(&
          lsm%grdmsk_ocean, &
          lsm%grdidx_ocean, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Summary of LSM grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Summary of LSM grid', '-p')
+  call logent('Summary of LSM grid', PRCNAM, MODNAM, '-p')
 
   lsm%sum_grdara_river      = sum(lsm%grdara_river,mask=lsm%grdara_river/=lsm%ara_miss)
   lsm%sum_grdara_noriv      = sum(lsm%grdara_noriv,mask=lsm%grdara_noriv/=lsm%ara_miss)
@@ -721,261 +725,261 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   lsm%sum_grdara_noriv_virt = sum(lsm%grdara_noriv_virt,mask=lsm%grdara_noriv_virt/=lsm%ara_miss)
   lsm%sum_grdara_ocean      = sum(lsm%grdara_ocean,mask=lsm%grdara_ocean/=lsm%ara_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Output grid data of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting grid data of LSM')
+  call logent('Outputting grid data of LSM', PRCNAM, MODNAM)
 
   ! grdmsk
   !-------------------------------------------------------------
   f => lsm%fout_grdmsk_river
   if( f%path /= '' )then
-    call edbg('Writing grdmsk_river')
-    call wbin(lsm%grdmsk_river, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdmsk_river')
+    call traperr( wbin(lsm%grdmsk_river, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdmsk_noriv
   if( f%path /= '' )then
-    call edbg('Writing grdmsk_noriv')
-    call wbin(lsm%grdmsk_noriv, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdmsk_noriv')
+    call traperr( wbin(lsm%grdmsk_noriv, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdmsk_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing grdmsk_noriv_real')
-    call wbin(lsm%grdmsk_noriv_real, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdmsk_noriv_real')
+    call traperr( wbin(lsm%grdmsk_noriv_real, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdmsk_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing grdmsk_noriv_virt')
-    call wbin(lsm%grdmsk_noriv_virt, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdmsk_noriv_virt')
+    call traperr( wbin(lsm%grdmsk_noriv_virt, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdmsk_ocean
   if( f%path /= '' )then
-    call edbg('Writing grdmsk_ocean')
-    call wbin(lsm%grdmsk_ocean, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdmsk_ocean')
+    call traperr( wbin(lsm%grdmsk_ocean, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   ! grdidx
   !-------------------------------------------------------------
   f => lsm%fout_grdidx_river
   if( f%path /= '' )then
-    call edbg('Writing grdidx_river')
-    call wbin(lsm%grdidx_river, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_river')
+    call traperr( wbin(lsm%grdidx_river, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_noriv
   if( f%path /= '' )then
-    call edbg('Writing grdidx_noriv')
-    call wbin(lsm%grdidx_noriv, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_noriv')
+    call traperr( wbin(lsm%grdidx_noriv, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing grdidx_noriv_real')
-    call wbin(lsm%grdidx_noriv_real, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_noriv_real')
+    call traperr( wbin(lsm%grdidx_noriv_real, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing grdidx_noriv_virt')
-    call wbin(lsm%grdidx_noriv_virt, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_noriv_virt')
+    call traperr( wbin(lsm%grdidx_noriv_virt, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_ocean
   if( f%path /= '' )then
-    call edbg('Writing grdidx_ocean')
-    call wbin(lsm%grdidx_ocean, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_ocean')
+    call traperr( wbin(lsm%grdidx_ocean, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   ! grdidx_bnd
   !-------------------------------------------------------------
   f => lsm%fout_grdidx_bnd_river
   if( f%path /= '' )then
-    call edbg('Writing grdidx_bnd_river')
-    call wbin(lsm%grdidx_bnd_river, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_bnd_river')
+    call traperr( wbin(lsm%grdidx_bnd_river, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_bnd_noriv
   if( f%path /= '' )then
-    call edbg('Writing grdidx_bnd_noriv')
-    call wbin(lsm%grdidx_bnd_noriv, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_bnd_noriv')
+    call traperr( wbin(lsm%grdidx_bnd_noriv, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_bnd_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing grdidx_bnd_noriv_real')
-    call wbin(lsm%grdidx_bnd_noriv_real, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_bnd_noriv_real')
+    call traperr( wbin(lsm%grdidx_bnd_noriv_real, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdidx_bnd_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing grdidx_bnd_noriv_virt')
-    call wbin(lsm%grdidx_bnd_noriv_virt, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdidx_bnd_noriv_virt')
+    call traperr( wbin(lsm%grdidx_bnd_noriv_virt, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   ! grdara
   !-------------------------------------------------------------
   f => lsm%fout_grdara_river
   if( f%path /= '' )then
-    call edbg('Writing grdara_river')
-    call wbin(lsm%grdara_river, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdara_river')
+    call traperr( wbin(lsm%grdara_river, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdara_noriv
   if( f%path /= '' )then
-    call edbg('Writing grdara_noriv')
-    call wbin(lsm%grdara_noriv, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdara_noriv')
+    call traperr( wbin(lsm%grdara_noriv, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdara_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing grdara_noriv_real')
-    call wbin(lsm%grdara_noriv_real, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdara_noriv_real')
+    call traperr( wbin(lsm%grdara_noriv_real, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdara_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing grdara_noriv_virt')
-    call wbin(lsm%grdara_noriv_virt, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdara_noriv_virt')
+    call traperr( wbin(lsm%grdara_noriv_virt, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdara_ocean
   if( f%path /= '' )then
-    call edbg('Writing grdara_ocean')
-    call wbin(lsm%grdara_ocean, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdara_ocean')
+    call traperr( wbin(lsm%grdara_ocean, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   ! grdwgt
   !-------------------------------------------------------------
   f => lsm%fout_grdwgt_river
   if( f%path /= '' )then
-    call edbg('Writing grdwgt_river')
-    call wbin(lsm%grdwgt_river, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdwgt_river')
+    call traperr( wbin(lsm%grdwgt_river, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdwgt_noriv
   if( f%path /= '' )then
-    call edbg('Writing grdwgt_noriv')
-    call wbin(lsm%grdwgt_noriv, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdwgt_noriv')
+    call traperr( wbin(lsm%grdwgt_noriv, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdwgt_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing grdwgt_noriv_real')
-    call wbin(lsm%grdwgt_noriv_real, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdwgt_noriv_real')
+    call traperr( wbin(lsm%grdwgt_noriv_real, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdwgt_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing grdwgt_noriv_virt')
-    call wbin(lsm%grdwgt_noriv_virt, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdwgt_noriv_virt')
+    call traperr( wbin(lsm%grdwgt_noriv_virt, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   f => lsm%fout_grdwgt_ocean
   if( f%path /= '' )then
-    call edbg('Writing grdwgt_ocean')
-    call wbin(lsm%grdwgt_ocean, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing grdwgt_ocean')
+    call traperr( wbin(lsm%grdwgt_ocean, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rt_lsm_river_to_agcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_lsm_river_to_agcm')
+  call logent('Making rt_lsm_river_to_agcm', PRCNAM, MODNAM)
 
   call make_rt_lsm_river_to_agcm(rtmi_rr_a, rtmo_lr_a, lsm, agcm)
 
-  call write_rt_main(rtmo_lr_a)
+  call traperr( write_rt_main(rtmo_lr_a) )
 
-  call get_rt_main_stats(rtmo_lr_a, echo_msg=.false.)
-  call report_rt_main_summary(rtmo_lr_a, .true., .true.)
+  call traperr( get_rt_main_stats(rtmo_lr_a, echo_msg=.false.) )
+  call traperr( report_rt_main_summary(rtmo_lr_a, .true., .true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Modify index of lsm of rt_lsm_noriv_to_agcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying index of lsm of rt_lsm_noriv_to_agcm')
+  call logent('Modifying index of lsm of rt_lsm_noriv_to_agcm', PRCNAM, MODNAM)
 
   call modify_idx_lsm_rt(rtmo_ln_a%sidx, lsm%grdidx_noriv, lsm%idx_miss)
 
-  call write_rt_main(rtmo_ln_a)
+  call traperr( write_rt_main(rtmo_ln_a) )
 
-  call get_rt_main_stats(rtmo_ln_a, echo_msg=.false.)
-  call report_rt_main_summary(rtmo_ln_a, .true., .true.)
+  call traperr( get_rt_main_stats(rtmo_ln_a, echo_msg=.false.) )
+  call traperr( report_rt_main_summary(rtmo_ln_a, .true., .true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Modify index of lsm of rt_lsm_ocean_to_agcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying index of lsm of rt_lsm_ocean_to_agcm')
+  call logent('Modifying index of lsm of rt_lsm_ocean_to_agcm', PRCNAM, MODNAM)
 
   call modify_idx_lsm_rt(rtmo_lo_a%sidx, lsm%grdidx_ocean, lsm%idx_miss)
 
-  call write_rt_main(rtmo_lo_a)
+  call traperr( write_rt_main(rtmo_lo_a) )
 
-  call get_rt_main_stats(rtmo_lo_a, echo_msg=.false.)
-  call report_rt_main_summary(rtmo_lo_a, .true., .true.)
+  call traperr( get_rt_main_stats(rtmo_lo_a, echo_msg=.false.) )
+  call traperr( report_rt_main_summary(rtmo_lo_a, .true., .true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rt_agcm_to_lsm_river
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_agcm_to_lsm_river')
+  call logent('Making rt_agcm_to_lsm_river', PRCNAM, MODNAM)
 
   call make_rt_agcm_to_lsm(&
          rtmo_lr_a, &  ! in
          rtmo_a_lr, &  ! inout
          lsm%grdidx_river, lsm%grdara_river)  ! in
 
-  call write_rt_main(rtmo_a_lr)
+  call traperr( write_rt_main(rtmo_a_lr) )
 
-  call get_rt_main_stats(rtmo_a_lr, echo_msg=.false.)
-  call report_rt_main_summary(rtmo_a_lr, .true., .true.)
+  call traperr( get_rt_main_stats(rtmo_a_lr, echo_msg=.false.) )
+  call traperr( report_rt_main_summary(rtmo_a_lr, .true., .true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rt_agcm_to_lsm_noriv
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_agcm_to_lsm_noriv')
+  call logent('Making rt_agcm_to_lsm_noriv', PRCNAM, MODNAM)
 
   call make_rt_agcm_to_lsm(rtmo_ln_a, rtmo_a_ln, lsm%grdidx_noriv, lsm%grdara_noriv)
 
-  call write_rt_main(rtmo_a_ln)
+  call traperr( write_rt_main(rtmo_a_ln) )
 
-  call get_rt_main_stats(rtmo_a_ln, echo_msg=.false.)
-  call report_rt_main_summary(rtmo_a_ln, .true., .true.)
+  call traperr( get_rt_main_stats(rtmo_a_ln, echo_msg=.false.) )
+  call traperr( report_rt_main_summary(rtmo_a_ln, .true., .true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rt_agcm_to_lsm_ocean
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_agcm_to_lsm_ocean')
+  call logent('Making rt_agcm_to_lsm_ocean', PRCNAM, MODNAM)
 
   call make_rt_agcm_to_lsm(rtmo_lo_a, rtmo_a_lo, lsm%grdidx_ocean, lsm%grdara_ocean)
 
-  call write_rt_main(rtmo_a_lo)
+  call traperr( write_rt_main(rtmo_a_lo) )
 
-  call get_rt_main_stats(rtmo_a_lo, echo_msg=.false.)
-  call report_rt_main_summary(rtmo_a_lo, .true., .true.)
+  call traperr( get_rt_main_stats(rtmo_a_lo, echo_msg=.false.) )
+  call traperr( report_rt_main_summary(rtmo_a_lo, .true., .true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free rt
   !-------------------------------------------------------------
-  call free_rt_main(rtmi_rr_a)
-  call free_rt_main(rtmi_rn_a)
-  call free_rt_main(rtmi_ro_a)
+  call traperr( free_rt_main(rtmi_rr_a) )
+  call traperr( free_rt_main(rtmi_rn_a) )
+  call traperr( free_rt_main(rtmi_ro_a) )
 
-  call free_rt_main(rtmo_lr_a)
-  call free_rt_main(rtmo_ln_a)
-  call free_rt_main(rtmo_lo_a)
-  call free_rt_main(rtmo_a_lr)
-  call free_rt_main(rtmo_a_ln)
-  call free_rt_main(rtmo_a_lo)
+  call traperr( free_rt_main(rtmo_lr_a) )
+  call traperr( free_rt_main(rtmo_ln_a) )
+  call traperr( free_rt_main(rtmo_lo_a) )
+  call traperr( free_rt_main(rtmo_a_lr) )
+  call traperr( free_rt_main(rtmo_a_ln) )
+  call traperr( free_rt_main(rtmo_a_lo) )
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -984,13 +988,13 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   !-------------------------------------------------------------
   ! Make rstidx of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rstidx of LSM')
+  call logent('Making rstidx of LSM', PRCNAM, MODNAM)
 
   lsm%rstidx_tmp(:,:) = lsm%idx_miss
 
   ! river (from rm_river)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river (from rm_river)')
+  call logent('river (from rm_river)', PRCNAM, MODNAM)
 
   call make_rstidx_lsm(&
          lsm%rstidx, & ! out
@@ -1000,15 +1004,15 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_river
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_river')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_river')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv_real (from rm_noriv)
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv_real (from rm_noriv)')
+  call logent('noriv_real (from rm_noriv)', PRCNAM, MODNAM)
 
   call make_rstidx_lsm(&
          lsm%rstidx, & ! out
@@ -1018,8 +1022,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_noriv_real')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_noriv_real')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   ! copy to tmp
@@ -1031,11 +1035,11 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     enddo
   enddo
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv_virt (from rm_ocean)
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv_virt (from rm_ocean)')
+  call logent('noriv_virt (from rm_ocean)', PRCNAM, MODNAM)
 
   call make_rstidx_lsm(&
          lsm%rstidx, & ! out
@@ -1045,8 +1049,8 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_noriv_virt')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_noriv_virt')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
   ! copy to tmp
@@ -1058,25 +1062,25 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
     enddo
   enddo
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv')
+  call logent('noriv', PRCNAM, MODNAM)
 
   lsm%rstidx(:,:) = lsm%rstidx_tmp(:,:)
 
   f => lsm%fout_rstidx_noriv
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_noriv')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_noriv')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
 
   ! ocean
   !-------------------------------------------------------------
-  call echo(code%ent, 'ocean')
+  call logent('ocean', PRCNAM, MODNAM)
 
   call make_rstidx_lsm(&
          lsm%rstidx, & ! out
@@ -1086,23 +1090,23 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_ocean
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_ocean')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_ocean')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rstidx_bnd of LSM
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rstidx_bnd of LSM')
+  call logent('Making rstidx_bnd of LSM', PRCNAM, MODNAM)
 
   lsm%rstidx_tmp(:,:) = lsm%idx_miss
 
   ! river (from rm_river)
   !-------------------------------------------------------------
-  call echo(code%ent, 'river (from rm_river)')
+  call logent('river (from rm_river)', PRCNAM, MODNAM)
 
   call make_rstidx_bnd_lsm(&
          lsm%rstidx, & ! out
@@ -1112,15 +1116,15 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_bnd_river
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_bnd_river')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_bnd_river')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv_real (from rm_noriv)
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv_real (from rm_noriv)')
+  call logent('noriv_real (from rm_noriv)', PRCNAM, MODNAM)
 
   call make_rstidx_bnd_lsm(&
          lsm%rstidx, & ! out
@@ -1139,15 +1143,15 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_bnd_noriv_real
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_bnd_noriv_real')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_bnd_noriv_real')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv_virt (from rm_ocean)
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv_virt (from rm_ocean)')
+  call logent('noriv_virt (from rm_ocean)', PRCNAM, MODNAM)
 
   call make_rstidx_bnd_lsm(&
          lsm%rstidx, & ! out
@@ -1166,73 +1170,73 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
 
   f => lsm%fout_rstidx_bnd_noriv_virt
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_bnd_noriv_virt')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_bnd_noriv_virt')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
 
   ! noriv
   !-------------------------------------------------------------
-  call echo(code%ent, 'noriv')
+  call logent('noriv', PRCNAM, MODNAM)
 
   lsm%rstidx(:,:) = lsm%rstidx_tmp(:,:)
 
   f => lsm%fout_rstidx_bnd_noriv
   if( f%path /= '' )then
-    call edbg('Writing lsm_rstidx_bnd_noriv')
-    call wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing lsm_rstidx_bnd_noriv')
+    call traperr( wbin(lsm%rstidx, f%path, f%dtype, f%endian, f%rec) )
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Summary
   !-------------------------------------------------------------
-  call echo(code%ent, 'Summary')
+  call logent('Summary', PRCNAM, MODNAM)
 
   wfmt = 'es20.13'
 
-  call edbg('AGCM grid')
-  call edbg('  Grid area')
-  call edbg('    total: '//str(agcm%sum_grdara,wfmt))
-  call edbg('  Land area')
-  call edbg('    (a1) ogcm      : '//str(agcm%sum_lndara_ogcm,wfmt))
-  call edbg('    (a2) river     : '//str(agcm%sum_lndara_river,wfmt))
-  call edbg('    (a3) noriv     : '//str(agcm%sum_lndara_noriv,wfmt))
-  call edbg('    (a4) noriv_real: '//str(agcm%sum_lndara_noriv_real,wfmt))
-  call edbg('    (a5) noriv_virt: '//str(agcm%sum_lndara_noriv_virt,wfmt))
+  call logmsg('AGCM grid')
+  call logmsg('  Grid area')
+  call logmsg('    total: '//str(agcm%sum_grdara,wfmt))
+  call logmsg('  Land area')
+  call logmsg('    (a1) ogcm      : '//str(agcm%sum_lndara_ogcm,wfmt))
+  call logmsg('    (a2) river     : '//str(agcm%sum_lndara_river,wfmt))
+  call logmsg('    (a3) noriv     : '//str(agcm%sum_lndara_noriv,wfmt))
+  call logmsg('    (a4) noriv_real: '//str(agcm%sum_lndara_noriv_real,wfmt))
+  call logmsg('    (a5) noriv_virt: '//str(agcm%sum_lndara_noriv_virt,wfmt))
 
   v = agcm%sum_lndara_noriv_real + agcm%sum_lndara_noriv_virt
-  call edbg('    (a4)+(a5)      : '//str(v,wfmt)//&
-            ' (error: '//str((v-agcm%sum_lndara_noriv)/agcm%sum_lndara_noriv,wfmt)//')')
+  call logmsg('    (a4)+(a5)      : '//str(v,wfmt)//&
+              ' (error: '//str((v-agcm%sum_lndara_noriv)/agcm%sum_lndara_noriv,wfmt)//')')
   v = agcm%sum_lndara_river + agcm%sum_lndara_noriv
-  call edbg('    (a2)+(a3)      : '//str(v,wfmt)//&
-            ' (error: '//str((v-agcm%sum_lndara_ogcm)/agcm%sum_lndara_ogcm,wfmt)//')')
+  call logmsg('    (a2)+(a3)      : '//str(v,wfmt)//&
+              ' (error: '//str((v-agcm%sum_lndara_ogcm)/agcm%sum_lndara_ogcm,wfmt)//')')
 
-  call edbg('RM grid')
-  call edbg('  Grid area')
-  call edbg('    (b1) river     : '//str(rm%sum_grdara_river,wfmt))
-  call edbg('    (b2) noriv     : '//str(rm%sum_grdara_noriv,wfmt))
-  call edbg('    (b2) ocean     : '//str(rm%sum_grdara_ocean,wfmt))
+  call logmsg('RM grid')
+  call logmsg('  Grid area')
+  call logmsg('    (b1) river     : '//str(rm%sum_grdara_river,wfmt))
+  call logmsg('    (b2) noriv     : '//str(rm%sum_grdara_noriv,wfmt))
+  call logmsg('    (b2) ocean     : '//str(rm%sum_grdara_ocean,wfmt))
 
-  call edbg('LSM grid')
-  call edbg('  Grid area')
-  call edbg('    (c1) river     : '//str(lsm%sum_grdara_river,wfmt))
-  call edbg('    (c2) noriv     : '//str(lsm%sum_grdara_noriv,wfmt))
-  call edbg('    (c3) noriv_real: '//str(lsm%sum_grdara_noriv_real,wfmt))
-  call edbg('    (c4) noriv_virt: '//str(lsm%sum_grdara_noriv_virt,wfmt))
-  call edbg('    (c5) ocean     : '//str(lsm%sum_grdara_ocean,wfmt))
+  call logmsg('LSM grid')
+  call logmsg('  Grid area')
+  call logmsg('    (c1) river     : '//str(lsm%sum_grdara_river,wfmt))
+  call logmsg('    (c2) noriv     : '//str(lsm%sum_grdara_noriv,wfmt))
+  call logmsg('    (c3) noriv_real: '//str(lsm%sum_grdara_noriv_real,wfmt))
+  call logmsg('    (c4) noriv_virt: '//str(lsm%sum_grdara_noriv_virt,wfmt))
+  call logmsg('    (c5) ocean     : '//str(lsm%sum_grdara_ocean,wfmt))
 
   v = lsm%sum_grdara_noriv_real + lsm%sum_grdara_noriv_virt
-  call edbg('    (c3)+(c4)      : '//str(v,wfmt)//&
-            ' (error: '//str((v-lsm%sum_grdara_noriv)/lsm%sum_grdara_noriv,wfmt)//')')
+  call logmsg('    (c3)+(c4)      : '//str(v,wfmt)//&
+              ' (error: '//str((v-lsm%sum_grdara_noriv)/lsm%sum_grdara_noriv,wfmt)//')')
   v = lsm%sum_grdara_river + lsm%sum_grdara_noriv + lsm%sum_grdara_ocean
-  call edbg('    (c1)+(c2)+(c5) : '//str(v,wfmt)//&
-            ' (error: '//str((v-agcm%sum_grdara)/agcm%sum_grdara,wfmt)//')')
+  call logmsg('    (c1)+(c2)+(c5) : '//str(v,wfmt)//&
+              ' (error: '//str((v-agcm%sum_grdara)/agcm%sum_grdara,wfmt)//')')
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1283,7 +1287,7 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   deallocate(agcm%lndara_noriv_real)
   deallocate(agcm%lndara_noriv_virt)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine define_mat
 !===============================================================
 !
@@ -1304,6 +1308,7 @@ subroutine calc_grdara_from_rt(&
   use c2_rt_main_io, only: &
         read_rt_main
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_grdara_from_rt'
   real(8)       , intent(out)           :: grdara(:)
   type(rt_main_), intent(inout), target :: rtm
   character(*)  , intent(in)            :: mesh_which
@@ -1319,7 +1324,7 @@ subroutine calc_grdara_from_rt(&
   integer(8) :: imin, imax
   logical :: is_rtm_associated
 
-  call echo(code%bgn, 'calc_grdara_from_rt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Read rt
   !-------------------------------------------------------------
@@ -1328,11 +1333,11 @@ subroutine calc_grdara_from_rt(&
   if( rtm%ijsize == 0_8 )then
     is_rtm_associated = .false.
 
-    call echo(code%ent, 'Reading remapping table')
+    call logent('Reading remapping table', PRCNAM, MODNAM)
 
-    call read_rt_main(rtm)
+    call traperr( read_rt_main(rtm) )
 
-    call echo(code%ext)
+    call logext()
   endif
 
   selectcase( mesh_which )
@@ -1341,24 +1346,23 @@ subroutine calc_grdara_from_rt(&
   case( MESH__TARGET )
     rtm_grid => rtm%tidx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  mesh_which: '//str(mesh_which))
+    call errend(msg_invalid_value('mesh_which', mesh_which))
   endselect
   !-------------------------------------------------------------
   ! Calc. grdara
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating land area')
+  call logent('Calculating land area', PRCNAM, MODNAM)
 
   allocate(arg(size(grdidx)))
-  call argsort(grdidx, arg)  
+  call argsort(grdidx, arg)
 
   grdara(:) = 0.d0
   do ij = 1_8, rtm%nij
     idx = rtm_grid(ij)
     call search(idx, grdidx, arg, loc)
     if( loc == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  Index '//str(idx)//' was not found.')
+      call errend(msg_unexpected_condition()//&
+                '\n  Index '//str(idx)//' was not found.')
     endif
     call add(grdara(arg(loc)), rtm%area(ij))
   enddo
@@ -1370,18 +1374,18 @@ subroutine calc_grdara_from_rt(&
   imin = minloc(grdara,1,mask=grdara/=0.d0)
   imax = maxloc(grdara,1,mask=grdara/=0.d0)
 
-  call edbg('min: '//str(vmin)//' ('//str(vmin/grdara_all(imin),'es12.5')//')'//&
-          '\nmax: '//str(vmax)//' ('//str(vmax/grdara_all(imax),'es12.5')//')')
+  call logmsg('min: '//str(vmin)//' ('//str(vmin/grdara_all(imin),'es12.5')//')'//&
+            '\nmax: '//str(vmax)//' ('//str(vmax/grdara_all(imax),'es12.5')//')')
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( .not. is_rtm_associated )then
-    call free_rt_main(rtm)
+    call traperr( free_rt_main(rtm) )
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine calc_grdara_from_rt
 !===============================================================
 !
@@ -1391,6 +1395,7 @@ subroutine calc_lndara_noriv_virt(&
     lndara_all, lndara_river, lndara_noriv_real, &
     grdara, opt_thresh_lndfrc_excess)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_lndara_noriv_virt'
   real(8), intent(out) :: lndara_noriv_virt(:)
   real(8), intent(in)  :: lndara_all(:)
   real(8), intent(in)  :: lndara_river(:)
@@ -1403,7 +1408,7 @@ subroutine calc_lndara_noriv_virt(&
   real(8)    :: vmin, vmax
   integer(8) :: imin, imax
 
-  call echo(code%bgn, 'calc_lndara_noriv_virt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1412,12 +1417,12 @@ subroutine calc_lndara_noriv_virt(&
   do ij = 1_8, nij
     if( lndara_all(ij) == 0.d0 )then
       if( lndara_river(ij) > 0.d0 .or. lndara_noriv_real(ij) > 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  lndara_all == 0.0 .and. (lndara_river > 0.0 .or. lndara_noriv_real > 0.0)'//&
-                '\n  ij: '//str(ij)//&
-                '\n  lndara_all       : '//str(lndara_all(ij),'es20.13')//&
-                '\n  lndara_river     : '//str(lndara_river(ij),'es20.13')//&
-                '\n  lndara_noriv_real: '//str(lndara_noriv_real(ij),'es20.13'))
+        call errend(msg_unexpected_condition()//&
+                  '\n  lndara_all == 0.0 .and. (lndara_river > 0.0 .or. lndara_noriv_real > 0.0)'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  lndara_all       : '//str(lndara_all(ij),'es20.13')//&
+                  '\n  lndara_river     : '//str(lndara_river(ij),'es20.13')//&
+                  '\n  lndara_noriv_real: '//str(lndara_noriv_real(ij),'es20.13'))
       endif
     else
       if( lndara_all(ij) < lndara_river(ij) + lndara_noriv_real(ij) )then
@@ -1425,15 +1430,15 @@ subroutine calc_lndara_noriv_virt(&
           = ((lndara_river(ij) + lndara_noriv_real(ij)) - lndara_all(ij)) &
             / lndara_all(ij)
         if( lndfrc_excess > opt_thresh_lndfrc_excess )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  lndfrc_excess > threshold'//&
-                  '\n  ij: '//str(ij)//&
-                  '\n  lndara_all       : '//str(lndara_all(ij),'es20.13')//&
-                  '\n  lndara_river     : '//str(lndara_river(ij),'es20.13')//&
-                  '\n  lndara_noriv_real: '//str(lndara_noriv_real(ij),'es20.13')//&
-                  '\n  lndara_real      : '//str(lndara_river(ij)+lndara_noriv_real(ij),'es20.13')//&
-                  '\n  lndfrc_excess    : '//str(lndfrc_excess,'es20.13')//&
-                  '\n  threshold        : '//str(opt_thresh_lndfrc_excess,'es20.13'))
+          call errend(msg_unexpected_condition()//&
+                    '\n  lndfrc_excess > threshold'//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  lndara_all       : '//str(lndara_all(ij),'es20.13')//&
+                    '\n  lndara_river     : '//str(lndara_river(ij),'es20.13')//&
+                    '\n  lndara_noriv_real: '//str(lndara_noriv_real(ij),'es20.13')//&
+                    '\n  lndara_real      : '//str(lndara_river(ij)+lndara_noriv_real(ij),'es20.13')//&
+                    '\n  lndfrc_excess    : '//str(lndfrc_excess,'es20.13')//&
+                    '\n  threshold        : '//str(opt_thresh_lndfrc_excess,'es20.13'))
         endif
       endif
     endif
@@ -1446,10 +1451,10 @@ subroutine calc_lndara_noriv_virt(&
   imin = minloc(lndara_noriv_virt,1,mask=lndara_noriv_virt/=0.d0)
   imax = maxloc(lndara_noriv_virt,1,mask=lndara_noriv_virt/=0.d0)
 
-  call edbg('min: '//str(vmin)//' ('//str(vmin/grdara(imin),'es12.5')//')'//&
-          '\nmax: '//str(vmax)//' ('//str(vmax/grdara(imax),'es12.5')//')')
+  call logmsg('min: '//str(vmin)//' ('//str(vmin/grdara(imin),'es12.5')//')'//&
+            '\nmax: '//str(vmax)//' ('//str(vmax/grdara(imax),'es12.5')//')')
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine calc_lndara_noriv_virt
 !===============================================================
 !
@@ -1459,6 +1464,7 @@ subroutine calc_lndara_noriv(&
     lndara_noriv_real, lndara_noriv_virt, &
     grdara)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_lndara_noriv'
   real(8), intent(out) :: lndara_noriv(:)
   real(8), intent(in)  :: lndara_noriv_real(:)
   real(8), intent(in)  :: lndara_noriv_virt(:)
@@ -1467,7 +1473,7 @@ subroutine calc_lndara_noriv(&
   real(8)    :: vmin, vmax
   integer(8) :: imin, imax
 
-  call echo(code%bgn, 'calc_lndara_noriv')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1478,10 +1484,10 @@ subroutine calc_lndara_noriv(&
   imin = minloc(lndara_noriv,1,mask=lndara_noriv/=0.d0)
   imax = maxloc(lndara_noriv,1,mask=lndara_noriv/=0.d0)
 
-  call edbg('min: '//str(vmin)//' ('//str(vmin/grdara(imin),'es12.5')//')'//&
-          '\nmax: '//str(vmax)//' ('//str(vmax/grdara(imax),'es12.5')//')')
+  call logmsg('min: '//str(vmin)//' ('//str(vmin/grdara(imin),'es12.5')//')'//&
+            '\nmax: '//str(vmax)//' ('//str(vmax/grdara(imax),'es12.5')//')')
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine calc_lndara_noriv
 !===============================================================
 !
@@ -1498,6 +1504,7 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
   use c2_rt_main_io, only: &
         read_rt_main
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_lsm_noriv_virt_to_agcm'
   type(rt_main_), intent(inout), target :: rtmi_ro_a   ! rt_in%rm_ocean_to_agcm
   type(rt_main_), intent(inout), target :: rtmo_lnv_a  ! rt_out%lsm_noriv_virt_to_agcm
   integer(8)    , intent(in)            :: grdidx(:)
@@ -1513,13 +1520,13 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
   real(8)    :: lndfrc_noriv_virt
   real(8)    :: ocnara_real_sum
 
-  call echo(code%bgn, 'make_rt_lsm_noriv_virt_to_agcm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading rti_rm_ocean_to_agcm')
+  call logent('Reading rti_rm_ocean_to_agcm', PRCNAM, MODNAM)
 
-  call read_rt_main(rtmi_ro_a)
+  call traperr( read_rt_main(rtmi_ro_a) )
 
 !  rtmi_ro_a%ijsize = rtmi_ro_a%nij
 !  allocate(rtmi_ro_a%sidx(rtmi_ro_a%ijsize))
@@ -1527,24 +1534,24 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
 !  allocate(rtmi_ro_a%area(rtmi_ro_a%ijsize))
 
 !  f => rtmi_ro_a%f%sidx
-!  call edbg('Reading sidx')
+!  call logmsg('Reading sidx')
 !  call rbin(rtmi_ro_a%sidx, f%path, f%dtype, f%endian, f%rec)
 
 !  f => rtmi_ro_a%f%tidx
-!  call edbg('Reading tidx')
+!  call logmsg('Reading tidx')
 !  call rbin(rtmi_ro_a%tidx, f%path, f%dtype, f%endian, f%rec)
 
 !  f => rtmi_ro_a%f%area
-!  call edbg('Reading area')
+!  call logmsg('Reading area')
 !  call rbin(rtmi_ro_a%area, f%path, f%dtype, f%endian, f%rec)
 
 !  call get_rt_main_stats(rtmi_ro_a)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rt_lsm_noriv_virt_to_agcm')
+  call logent('Making rt_lsm_noriv_virt_to_agcm', PRCNAM, MODNAM)
 
   rtmo_lnv_a%ijsize = rtm_ijsize_init
   rtmo_lnv_a%nij = 0_8
@@ -1560,16 +1567,16 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
     if( lndfrc_noriv_virt < opt_thresh_lndfrc_noriv_virt_min ) cycle
 
     aidx = grdidx(aij)
-    !call edbg('aidx '//str(aidx)//&
+    !call logmsg('aidx '//str(aidx)//&
     !          ' lndara_noriv_virt '//str(lndara_noriv_virt)//&
     !          ' lndfrc_noriv_virt '//str(lndfrc_noriv_virt))
     !call echo(code%set, '+x2')
 
     call search(aidx, rtmi_ro_a%tidx, loc)
     if( loc == 0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  loc == 0'//&
-              '\n  aidx: '//str(aidx))
+      call errend(msg_unexpected_condition()//&
+                '\n  loc == 0'//&
+                '\n  aidx: '//str(aidx))
     endif
 
     ijs_ro_a = loc
@@ -1594,9 +1601,9 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
 
     if( (lndara_noriv_virt(aij) - ocnara_real_sum) / grdara(aij) &
           > opt_thresh_lndfrc_noriv_virt_excess )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  (lndara_noriv_virt - ocnara_real_sum) / grdara '//&
-                '> opt_thresh_lndfrc_noriv_virt_excess')
+      call errend(msg_unexpected_condition()//&
+                '\n  (lndara_noriv_virt - ocnara_real_sum) / grdara '//&
+                  '> opt_thresh_lndfrc_noriv_virt_excess')
     endif
 
     if( rtmo_lnv_a%nij+(ije_ro_a-ijs_ro_a+1_8) > rtmo_lnv_a%ijsize )then
@@ -1617,21 +1624,21 @@ subroutine make_rt_lsm_noriv_virt_to_agcm(&
     !call echo(code%set, '-x2')
   enddo  ! aij/
 
-  call edbg('Length of remapping table from LSM (noriv-virt) to AGCM: '//str(rtmo_lnv_a%nij))
+  call logmsg('Length of remapping table from LSM (noriv-virt) to AGCM: '//str(rtmo_lnv_a%nij))
   rtmo_lnv_a%ijsize = rtmo_lnv_a%nij
   call realloc(rtmo_lnv_a%sidx, rtmo_lnv_a%ijsize, clear=.false.)
   call realloc(rtmo_lnv_a%tidx, rtmo_lnv_a%ijsize, clear=.false.)
   call realloc(rtmo_lnv_a%area, rtmo_lnv_a%ijsize, clear=.false.)
 
-  call get_rt_main_stats(rtmo_lnv_a)
+  call traperr( get_rt_main_stats(rtmo_lnv_a) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main(rtmi_ro_a)
+  call traperr( free_rt_main(rtmi_ro_a) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rt_lsm_noriv_virt_to_agcm
 !===============================================================
 !
@@ -1645,6 +1652,7 @@ subroutine make_rt_lsm_noriv_to_agcm(&
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_lsm_noriv_to_agcm'
   type(rt_main_), intent(inout), target :: rtmi_rn_a
   type(rt_main_), intent(inout), target :: rtmo_lnv_a
   type(rt_main_), intent(inout), target :: rtmo_ln_a
@@ -1654,7 +1662,7 @@ subroutine make_rt_lsm_noriv_to_agcm(&
 
   type(file_), pointer :: f
 
-  call echo(code%bgn, 'make_rt_lsm_noriv_to_agcm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1666,31 +1674,31 @@ subroutine make_rt_lsm_noriv_to_agcm(&
   call realloc(rtmo_ln_a%coef, rtmo_ln_a%ijsize)
 
   f => rtmi_rn_a%f%sidx
-  call edbg('Reading sidx')
-  call rbin(rtmo_ln_a%sidx(:rtmi_rn_a%nij), f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading sidx')
+  call traperr( rbin(rtmo_ln_a%sidx(:rtmi_rn_a%nij), f%path, f%dtype, f%endian, f%rec) )
 
   f => rtmi_rn_a%f%tidx
-  call edbg('Reading tidx')
-  call rbin(rtmo_ln_a%tidx(:rtmi_rn_a%nij), f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading tidx')
+  call traperr( rbin(rtmo_ln_a%tidx(:rtmi_rn_a%nij), f%path, f%dtype, f%endian, f%rec) )
 
   f => rtmi_rn_a%f%area
-  call edbg('Reading area')
-  call rbin(rtmo_ln_a%area(:rtmi_rn_a%nij), f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading area')
+  call traperr( rbin(rtmo_ln_a%area(:rtmi_rn_a%nij), f%path, f%dtype, f%endian, f%rec) )
 
   rtmo_ln_a%sidx(rtmi_rn_a%nij+1_8:) = rtmo_lnv_a%sidx(:)
   rtmo_ln_a%tidx(rtmi_rn_a%nij+1_8:) = rtmo_lnv_a%tidx(:)
   rtmo_ln_a%area(rtmi_rn_a%nij+1_8:) = rtmo_lnv_a%area(:)
 
   if( rtmo_ln_a%opt_coef%is_sum_modify_enabled )then
-    call calc_rt_coef_sum_modify_enabled(rtmo_ln_a)
+    call traperr( calc_rt_coef_sum_modify_enabled(rtmo_ln_a) )
   else
-    call calc_rt_coef_sum_modify_not_enabled(&
-           rtmo_ln_a, grdidx, grdidxarg, grdara)
+    call traperr( calc_rt_coef_sum_modify_not_enabled(&
+           rtmo_ln_a, grdidx, grdidxarg, grdara) )
   endif
 
-  call get_rt_main_stats(rtmo_ln_a)
+  call traperr( get_rt_main_stats(rtmo_ln_a) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rt_lsm_noriv_to_agcm
 !===============================================================
 !
@@ -1709,6 +1717,7 @@ subroutine make_rt_lsm_ocean_to_agcm(&
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_lsm_ocean_to_agcm'
   type(rt_main_), intent(inout), target :: rtmi_ro_a  ! rt_in%rm_ocean_to_agcm
   type(rt_main_), intent(inout)         :: rtmo_lo_a  ! rt_out%lsm_ocean_to_agcm
   integer(8)    , intent(in) :: grdidx(:)
@@ -1725,13 +1734,13 @@ subroutine make_rt_lsm_ocean_to_agcm(&
   real(8) :: ocnara_real_sum
   real(8) :: ocnara_frac
 
-  call echo(code%bgn, 'make_rt_lsm_ocean_to_agcm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Read rtmi_ro_a
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading rti_rm_ocean_to_agcm')
+  call logent('Reading rti_rm_ocean_to_agcm', PRCNAM, MODNAM)
 
-  call read_rt_main(rtmi_ro_a)
+  call traperr( read_rt_main(rtmi_ro_a) )
 
 !  rtmi_ro_a%ijsize = rtmi_ro_a%nij
 !  allocate(rtmi_ro_a%sidx(rtmi_ro_a%ijsize))
@@ -1739,24 +1748,24 @@ subroutine make_rt_lsm_ocean_to_agcm(&
 !  allocate(rtmi_ro_a%area(rtmi_ro_a%ijsize))
 
 !  f => rtmi_ro_a%f%sidx
-!  call edbg('Reading sidx')
+!  call logmsg('Reading sidx')
 !  call rbin(rtmi_ro_a%sidx, f%path, f%dtype, f%endian, f%rec)
 
 !  f => rtmi_ro_a%f%tidx
-!  call edbg('Reading tidx')
+!  call logmsg('Reading tidx')
 !  call rbin(rtmi_ro_a%tidx, f%path, f%dtype, f%endian, f%rec)
 
 !  f => rtmi_ro_a%f%area
-!  call edbg('Reading area')
+!  call logmsg('Reading area')
 !  call rbin(rtmi_ro_a%area, f%path, f%dtype, f%endian, f%rec)
 
 !  call get_rt_main_stats(rtmi_ro_a)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make rtmo_lo_a
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making rtmo_lsm_ocean_to_agcm')
+  call logent('Making rtmo_lsm_ocean_to_agcm', PRCNAM, MODNAM)
 
   rtmo_lo_a%ijsize = rtm_ijsize_init
   rtmo_lo_a%nij = 0_8
@@ -1773,12 +1782,12 @@ subroutine make_rt_lsm_ocean_to_agcm(&
 
     call search(aidx, rtmi_ro_a%tidx, loc)
     if( loc == 0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  loc == 0'//&
-              '\n  aidx: '//str(aidx)//&
-              '\n  grdara     : '//str(grdara(aij))//&
-              '\n  lndara_ogcm: '//str(lndara_ogcm(aij))//&
-              '\n  abs((ldara_ogcm-grdara)-1): '//str(abs(lndara_ogcm(aij)/grdara(aij)-1)))
+      call errend(msg_unexpected_condition()//&
+                '\n  loc == 0'//&
+                '\n  aidx: '//str(aidx)//&
+                '\n  grdara     : '//str(grdara(aij))//&
+                '\n  lndara_ogcm: '//str(lndara_ogcm(aij))//&
+                '\n  abs((ldara_ogcm-grdara)-1): '//str(abs(lndara_ogcm(aij)/grdara(aij)-1)))
     endif
 
     ijs_ro_a = loc
@@ -1826,27 +1835,28 @@ subroutine make_rt_lsm_ocean_to_agcm(&
   call realloc(rtmo_lo_a%coef, rtmo_lo_a%ijsize, clear=.false.)
 
   if( rtmo_lo_a%opt_coef%is_sum_modify_enabled )then
-    call calc_rt_coef_sum_modify_enabled(rtmo_lo_a)
+    call traperr( calc_rt_coef_sum_modify_enabled(rtmo_lo_a) )
   else
-    call calc_rt_coef_sum_modify_not_enabled(&
-           rtmo_lo_a, grdidx, grdidxarg, grdara)
+    call traperr( calc_rt_coef_sum_modify_not_enabled(&
+           rtmo_lo_a, grdidx, grdidxarg, grdara) )
   endif
 
-  call get_rt_main_stats(rtmo_lo_a)
+  call traperr( get_rt_main_stats(rtmo_lo_a) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call free_rt_main(rtmi_ro_a)
+  call traperr( free_rt_main(rtmi_ro_a) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rt_lsm_ocean_to_agcm
 !===============================================================
 !
 !===============================================================
 subroutine make_grdidx_lsm(grdidx, idx, grdara, idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx_lsm'
   integer(8), intent(out)   :: grdidx(:)
   integer(8), intent(inout) :: idx
   real(8)   , intent(in)    :: grdara(:)
@@ -1854,7 +1864,7 @@ subroutine make_grdidx_lsm(grdidx, idx, grdara, idx_miss)
 
   integer(8) :: nij, ij
 
-  call echo(code%bgn, 'make_grdidx_lsm', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   nij = size(grdidx)
 
@@ -1867,20 +1877,21 @@ subroutine make_grdidx_lsm(grdidx, idx, grdara, idx_miss)
     endif
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_grdidx_lsm
 !===============================================================
 !
 !===============================================================
 subroutine make_grdidx_bnd_lsm(grdidx_bnd, grdidx, idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx_bnd_lsm'
   integer(8), intent(out) :: grdidx_bnd(:)
   integer(8), intent(in)  :: grdidx(:)
   integer(8), intent(in)  :: idx_miss
 
   integer(8) :: nij, ij
 
-  call echo(code%bgn, 'make_grdidx_bnd_lsm', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   nij = size(grdidx_bnd)
 
@@ -1892,20 +1903,21 @@ subroutine make_grdidx_bnd_lsm(grdidx_bnd, grdidx, idx_miss)
     grdidx_bnd(ij) = ij
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_grdidx_bnd_lsm
 !===============================================================
 !
 !===============================================================
 subroutine make_grdmsk(grdmsk, grdidx, idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdmsk'
   integer(1), intent(out) :: grdmsk(:)
   integer(8), intent(in)  :: grdidx(:)
   integer(8), intent(in)  :: idx_miss
 
   integer(8) :: nij, ij
 
-  call echo(code%bgn, 'make_grdmsk', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   nij = size(grdmsk)
 
@@ -1916,7 +1928,7 @@ subroutine make_grdmsk(grdmsk, grdidx, idx_miss)
     endif
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_grdmsk
 !===============================================================
 !
@@ -1931,6 +1943,7 @@ subroutine make_rt_lsm_river_to_agcm(&
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_lsm_river_to_agcm'
   type(rt_main_), intent(inout), target :: rtm_rr_a
   type(rt_main_), intent(inout), target :: rtm_lr_a
   type(lsm_)    , intent(in)            :: lsm
@@ -1938,7 +1951,7 @@ subroutine make_rt_lsm_river_to_agcm(&
 
   type(file_), pointer :: f
 
-  call echo(code%bgn, 'make_rt_lsm_river_to_agcm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1956,35 +1969,35 @@ subroutine make_rt_lsm_river_to_agcm(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading rt_rm_river_to_agcm')
+  call logent('Reading rt_rm_river_to_agcm', PRCNAM, MODNAM)
 
   f => rtm_rr_a%f%sidx
-  call edbg('Reading sidx')
-  call rbin(rtm_rr_a%sidx, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading sidx')
+  call traperr( rbin(rtm_rr_a%sidx, f%path, f%dtype, f%endian, f%rec) )
 
   f => rtm_rr_a%f%tidx
-  call edbg('Reading tidx')
-  call rbin(rtm_rr_a%tidx, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading tidx')
+  call traperr( rbin(rtm_rr_a%tidx, f%path, f%dtype, f%endian, f%rec) )
 
   f => rtm_rr_a%f%area
-  call edbg('Reading area')
-  call rbin(rtm_rr_a%area, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading area')
+  call traperr( rbin(rtm_rr_a%area, f%path, f%dtype, f%endian, f%rec) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Copying')
+  call logent('Copying', PRCNAM, MODNAM)
 
   rtm_lr_a%sidx(:) = rtm_rr_a%sidx(:)
   rtm_lr_a%tidx(:) = rtm_rr_a%tidx(:)
   rtm_lr_a%area(:) = rtm_rr_a%area(:)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying index')
+  call logent('Modifying index', PRCNAM, MODNAM)
 
 !  do ij = 1_8, rtm_rr_a%nij
 !    call search(rtm_rr_a%sidx(ij), rm%grdidx_river, rm%grdidxarg_river, gij)
@@ -1993,26 +2006,26 @@ subroutine make_rt_lsm_river_to_agcm(&
 
   call modify_idx_lsm_rt(rtm_lr_a%sidx, lsm%grdidx_river, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating coef.')
+  call logent('Calculating coef.', PRCNAM, MODNAM)
 
   if( rtm_lr_a%opt_coef%is_sum_modify_enabled )then
-    call calc_rt_coef_sum_modify_enabled(rtm_lr_a)
+    call traperr( calc_rt_coef_sum_modify_enabled(rtm_lr_a) )
   else
-    call calc_rt_coef_sum_modify_not_enabled(&
-           rtm_lr_a, agcm%grdidx, agcm%grdidxarg, agcm%grdara)
+    call traperr( calc_rt_coef_sum_modify_not_enabled(&
+           rtm_lr_a, agcm%grdidx, agcm%grdidxarg, agcm%grdara) )
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call get_rt_main_stats(rtm_lr_a)
+  call traperr( get_rt_main_stats(rtm_lr_a) )
   !-------------------------------------------------------------
-  call free_rt_main(rtm_rr_a)
+  call traperr( free_rt_main(rtm_rr_a) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rt_lsm_river_to_agcm
 !===============================================================
 !
@@ -2024,6 +2037,7 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
         calc_rt_coef_sum_modify_enabled    , &
         calc_rt_coef_sum_modify_not_enabled
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_agcm_to_lsm'
   type(rt_main_), intent(in)    :: rtm_l_a
   type(rt_main_), intent(inout) :: rtm_a_l
   integer(8)    , intent(in)    :: grdidx(:)
@@ -2031,7 +2045,7 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
 
   integer(8), allocatable :: arg(:)
 
-  call echo(code%bgn, 'make_rt_agcm_to_lsm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2047,23 +2061,24 @@ subroutine make_rt_agcm_to_lsm(rtm_l_a, rtm_a_l, grdidx, grdara)
   rtm_a_l%area(:) = rtm_l_a%area(:)
 
   if( rtm_a_l%opt_coef%is_sum_modify_enabled )then
-    call calc_rt_coef_sum_modify_enabled(rtm_a_l)
+    call traperr( calc_rt_coef_sum_modify_enabled(rtm_a_l) )
   else
     allocate(arg(size(grdidx)))
     call argsort(grdidx, arg)
-    call calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, arg, grdara)
+    call traperr( calc_rt_coef_sum_modify_not_enabled(rtm_a_l, grdidx, arg, grdara) )
     deallocate(arg)
   endif
 
-  call get_rt_main_stats(rtm_a_l)
+  call traperr( get_rt_main_stats(rtm_a_l) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rt_agcm_to_lsm
 !===============================================================
 !
 !===============================================================
 subroutine modify_idx_lsm_rt(rt_grid, grdidx, idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'modify_idx_lsm_rt'
   integer(8), intent(inout) :: rt_grid(:)
   integer(8), intent(in)    :: grdidx(:)
   integer(8), intent(in)    :: idx_miss
@@ -2071,20 +2086,20 @@ subroutine modify_idx_lsm_rt(rt_grid, grdidx, idx_miss)
   integer(8) :: rt_nij, ij
   integer(8) :: lij
 
-  call echo(code%bgn, 'modify_idx_lsm_rt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   rt_nij = size(rt_grid)
 
   do ij = 1_8, rt_nij
     lij = rt_grid(ij)
     if( grdidx(lij) == idx_miss )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  grdidx == idx_miss')
+      call errend(msg_unexpected_condition()//&
+                '\n  grdidx == idx_miss')
     endif
     rt_grid(ij) = grdidx(lij)
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine modify_idx_lsm_rt
 !===============================================================
 !
@@ -2095,6 +2110,7 @@ subroutine make_rstidx_lsm(&
     rm_grdidx, lsm_grdidx, &
     rm_idx_miss, lsm_idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rstidx_lsm'
   integer(8) , intent(out)         :: lsm_rstidx(:,:)
   type(file_), intent(in) , target :: rm_f_rstidx
   integer(8) , intent(in)          :: rm_grdidx(:)
@@ -2110,7 +2126,7 @@ subroutine make_rstidx_lsm(&
   integer(8) :: nij, ij
   integer, allocatable :: stat(:)
 
-  call echo(code%bgn, 'make_rstidx_lsm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2118,8 +2134,8 @@ subroutine make_rstidx_lsm(&
   nky = size(lsm_rstidx,2)
 
   f => rm_f_rstidx
-  call edbg('Reading rm_rstidx')
-  call rbin(lsm_rstidx, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading rm_rstidx')
+  call traperr( rbin(lsm_rstidx, f%path, f%dtype, f%endian, f%rec) )
 
   nij = size(rm_grdidx)
 
@@ -2130,7 +2146,7 @@ subroutine make_rstidx_lsm(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Converting index')
+  call logent('Converting index', PRCNAM, MODNAM)
 
   stat(:) = 1
 
@@ -2146,8 +2162,8 @@ subroutine make_rstidx_lsm(&
         rm_idx_prev = rm_idx
         call search(rm_idx, rm_grdidx, arg, loc)
         if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index of RM '//str(rm_idx)//' was not found.')
+          call errend(msg_unexpected_condition()//&
+                    '\n  Index of RM '//str(rm_idx)//' was not found.')
         endif
         stat(arg(loc)) = 0
       endif
@@ -2159,23 +2175,23 @@ subroutine make_rstidx_lsm(&
   do ij = 1_8, nij
     if( rm_grdidx(ij) == rm_idx_miss )then
       if( stat(ij) == 0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rm_idx == rm_idx_miss .and. stat == 0')
+        call errend(msg_unexpected_condition()//&
+                  '\n  rm_idx == rm_idx_miss .and. stat == 0')
       endif
     else
       if( stat(ij) == 1 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rm_idx /= rm_idx_miss .and. stat == 1')
+        call errend(msg_unexpected_condition()//&
+                  '\n  rm_idx /= rm_idx_miss .and. stat == 1')
       endif
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   deallocate(arg)
   deallocate(stat)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rstidx_lsm
 !===============================================================
 !
@@ -2186,6 +2202,7 @@ subroutine make_rstidx_bnd_lsm(&
     rm_grdidx, lsm_grdidx, &
     rm_idx_miss, lsm_idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rstidx_bnd_lsm'
   integer(8) , intent(out)         :: lsm_rstidx(:,:)
   type(file_), intent(in) , target :: rm_f_rstidx
   integer(8) , intent(in)          :: rm_grdidx(:)
@@ -2201,7 +2218,7 @@ subroutine make_rstidx_bnd_lsm(&
   integer(8) :: nij, ij
   integer, allocatable :: stat(:)
 
-  call echo(code%bgn, 'make_rstidx_bnd_lsm')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2209,8 +2226,8 @@ subroutine make_rstidx_bnd_lsm(&
   nky = size(lsm_rstidx,2)
 
   f => rm_f_rstidx
-  call edbg('Reading rm_rstidx')
-  call rbin(lsm_rstidx, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading rm_rstidx')
+  call traperr( rbin(lsm_rstidx, f%path, f%dtype, f%endian, f%rec) )
 
   nij = size(rm_grdidx)
 
@@ -2221,7 +2238,7 @@ subroutine make_rstidx_bnd_lsm(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Converting index')
+  call logent('Converting index', PRCNAM, MODNAM)
 
   stat(:) = 1
 
@@ -2237,8 +2254,8 @@ subroutine make_rstidx_bnd_lsm(&
         rm_idx_prev = rm_idx
         call search(rm_idx, rm_grdidx, arg, loc)
         if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index of RM '//str(rm_idx)//' was not found.')
+          call errend(msg_unexpected_condition()//&
+                    '\n  Index of RM '//str(rm_idx)//' was not found.')
         endif
         stat(arg(loc)) = 0
       endif
@@ -2254,23 +2271,23 @@ subroutine make_rstidx_bnd_lsm(&
   do ij = 1_8, nij
     if( rm_grdidx(ij) == rm_idx_miss )then
       if( stat(ij) == 0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rm_idx == rm_idx_miss .and. stat == 0')
+        call errend(msg_unexpected_condition()//&
+                  '\n  rm_idx == rm_idx_miss .and. stat == 0')
       endif
     else
       if( stat(ij) == 1 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rm_idx /= rm_idx_miss .and. stat == 1')
+        call errend(msg_unexpected_condition()//&
+                  '\n  rm_idx /= rm_idx_miss .and. stat == 1')
       endif
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   deallocate(arg)
   deallocate(stat)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rstidx_bnd_lsm
 !===============================================================
 !

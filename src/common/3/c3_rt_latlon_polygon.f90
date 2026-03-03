@@ -2,27 +2,31 @@ module c3_rt_latlon_polygon
   use lib_const
   use lib_base
   use lib_log
+  use lib_util
   use lib_array
   use lib_math
   use c1_const
   use c1_type_opt
   use c1_type_gs
   use c2_type_rt
+  implicit none
   private
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
   public :: make_rt_latlon_polygon
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_latlon_polygon'
+
   logical :: debug
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_latlon_polygon(s, t, rt)
+integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c1_gs_util, only: &
@@ -33,6 +37,7 @@ subroutine make_rt_latlon_polygon(s, t, rt)
         clear_rt1d  , &
         reshape_rt1d
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_latlon_polygon'
   type(gs_), intent(inout), target :: s
   type(gs_), intent(inout), target :: t
   type(rt_), intent(inout), target :: rt
@@ -58,7 +63,8 @@ subroutine make_rt_latlon_polygon(s, t, rt)
   real(8)    :: aarea
   integer(8) :: loc
 
-  call echo(code%bgn, 'make_rt_latlon_polygon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
@@ -71,9 +77,11 @@ subroutine make_rt_latlon_polygon(s, t, rt)
     a => t
     b => s
   else
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endif
 
   al => a%latlon
@@ -87,7 +95,7 @@ subroutine make_rt_latlon_polygon(s, t, rt)
 
   rtm => rt%main
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   ! Print debugging grids
   !-------------------------------------------------------------
@@ -110,10 +118,14 @@ subroutine make_rt_latlon_polygon(s, t, rt)
   ! Initialize
   !-------------------------------------------------------------
   allocate(rt1d(bp%nij))
-  call init_rt1d(rt1d)
+  if( init_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making remapping table')
+
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.true.)
   endif
@@ -125,21 +137,27 @@ subroutine make_rt_latlon_polygon(s, t, rt)
 
     bp0 => bp%polygon(bij)
 
-    call get_range_lat(al, bp0, al%lat, avi, avf)
-    call get_range_lon(al, bp0, al%lon, ahi, ahf, nar)
+    if( get_range_lat(al, bp0, al%lat, avi, avf) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( get_range_lon(al, bp0, al%lon, ahi, ahf, nar) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     if( avi == 0_8 .or. nar == 0 ) cycle
 
-!    if( tij == 1 )then
-!      call edbg('tij: '//str(tij))
-!      call edbg('  bbox: '//str((/tp%west,tp%east,tp%south,tp%north/)*r2d,'f12.7',' '))
-!      call edbg('  pos: '//str(tp%pos)//' ('//str(str_polygon_pos_long(tp%pos))//')')
-!      call edbg('  nsr: '//str(nsr))
-!      do isr = 1, nsr
-!        call edbg('  sh: '//str((/shi(isr),shf(isr)/), ' ~ '))
-!      enddo
-!      call edbg('  sv: '//str((/svi,svf/),' ~ '))
-!    endif
+    if( bp%debug )then
+      if( bp0%idx == bp%idx_debug )then
+        call logmsg('bij: '//str(bij))
+        call logmsg('  bbox: '//str((/bp0%west,bp0%east,bp0%south,bp0%north/)*r2d,'f12.7',' '))
+        call logmsg('  pos: '//str(bp0%pos)//' ('//str(str_polygon_pos_long(bp0%pos))//')')
+        call logmsg('  nsr: '//str(nar))
+        do iar = 1, nar
+          call logmsg('  ah: '//str((/ahi(iar),ahf(iar)/), ' ~ '))
+        enddo
+        call logmsg('  av: '//str((/avi,avf/),' ~ '))
+      endif
+    endif
     !-----------------------------------------------------------
     ! Prep. $rt1d
     !-----------------------------------------------------------
@@ -173,13 +191,22 @@ subroutine make_rt_latlon_polygon(s, t, rt)
             endif
           endif
 
-          area = area_sphere_intersection_latlon_polygon(&
-                   al%lon(iah-1_8), al%lon(iah), al%lat(iav-1_8), al%lat(iav), aarea, &
-                   bp0%pos, bp0%lon, bp0%lat, bp0%arctyp, bp0%a, bp0%b, bp0%c, &
-                   bp0%n_pole, bp0%convex, bp0%lontop, bp0%lattop)
+          if( area_sphere_intersection_latlon_polygon(&
+                al%lon(iah-1_8), al%lon(iah), &
+                al%lat(iav-1_8), al%lat(iav), aarea, &
+                bp0%pos, bp0%lon, bp0%lat, &
+                bp0%arctyp, bp0%a, bp0%b, bp0%c, &
+                bp0%n_pole, bp0%convex, bp0%lontop, bp0%lattop, &
+                area) /= 0 )then
+            info = 1
+            call errret('@ iah, iav = '//str((/iah,iav/),',')//&
+                        ', aidx = '//str(aidx)//&
+                      '\n  bij = '//str(bij)//', bidx = '//str(bp0%idx))
+            return
+          endif
 
           if( debug )then
-            call edbg('area: '//str(area))
+            call logmsg('area: '//str(area))
           endif
 
           if( area > 0.d0 )then
@@ -198,14 +225,24 @@ subroutine make_rt_latlon_polygon(s, t, rt)
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
 
+  call logext()
+  !-------------------------------------------------------------
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, b%is_source, rtm)
+  call logent('Reshaping remapping table')
+
+  if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  call logext()
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
   nullify(rt1)
-  call clear_rt1d(rt1d)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
   nullify(rtm)
 
   nullify(bp0)
@@ -214,19 +251,21 @@ subroutine make_rt_latlon_polygon(s, t, rt)
   nullify(al, bp)
   nullify(a, b)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt_latlon_polygon
+  call logret(PRCNAM, MODNAM)
+end function make_rt_latlon_polygon
 !===============================================================
 !
 !===============================================================
-subroutine get_range_lat(al, p, lat, avi, avf)
+integer(4) function get_range_lat(al, p, lat, avi, avf) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_range_lat'
   type(gs_latlon_), intent(in)  :: al
   type(polygon_)  , intent(in)  :: p
   real(8)         , intent(in)  :: lat(0:)
   integer(8)      , intent(out) :: avi, avf
 
-  call echo(code%bgn, 'get_range_lat', '-p')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -253,13 +292,14 @@ subroutine get_range_lat(al, p, lat, avi, avf)
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine get_range_lat
+  call logret(PRCNAM, MODNAM)
+end function get_range_lat
 !===============================================================
 !
 !===============================================================
-subroutine get_range_lon(al, p, lon, ahi, ahf, nar)
+integer(4) function get_range_lon(al, p, lon, ahi, ahf, nar) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_range_lon'
   type(gs_latlon_), intent(in)  :: al
   type(polygon_)  , intent(in)  :: p
   real(8)         , pointer     :: lon(:)   ! in
@@ -269,7 +309,8 @@ subroutine get_range_lon(al, p, lon, ahi, ahf, nar)
   integer(8) :: ahi0, ahf0
   integer(8) :: iah
 
-  call echo(code%bgn, 'get_range_lon_global', '-p')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -367,8 +408,9 @@ subroutine get_range_lon(al, p, lon, ahi, ahf, nar)
       ahi(1) = al%hi
       ahf(1) = al%hf
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  p%pos: '//str(p%pos))
+      info = 1
+      call errret(msg_invalid_value('p%pos', p%pos))
+      return
     endselect
   !-------------------------------------------------------------
   ! Case: Zone type of the LatLon grid is "Regional"
@@ -460,7 +502,9 @@ subroutine get_range_lon(al, p, lon, ahi, ahf, nar)
         !-------------------------------------------------------
         ! Case: ERROR
         else
-          call eerr(str(msg_unexpected_condition()))
+          info = 1
+          call errret(msg_unexpected_condition())
+          return
         endif
       endif
     !-----------------------------------------------------------
@@ -516,7 +560,9 @@ subroutine get_range_lon(al, p, lon, ahi, ahf, nar)
         !-------------------------------------------------------
         ! Case: ERROR
         else
-          call eerr(str(msg_unexpected_condition()))
+          info = 1
+          call errret(msg_unexpected_condition())
+          return
         endif
       !---------------------------------------------------------
       ! Case: The latlon zone intersects with lon0
@@ -552,18 +598,20 @@ subroutine get_range_lon(al, p, lon, ahi, ahf, nar)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  p%pos: '//str(p%pos))
+      info = 1
+      call errret(msg_invalid_value('p%pos', p%pos))
+      return
     endselect
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-           '\n  al%region_type: '//str(al%region_type))
+    info = 1
+    call errret(msg_invalid_value('al%region_type', al%region_type))
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine get_range_lon
+  call logret(PRCNAM, MODNAM)
+end function get_range_lon
 !===============================================================
 !
 !===============================================================

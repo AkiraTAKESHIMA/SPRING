@@ -15,11 +15,15 @@ module c3_rt_latlon_raster
   !-------------------------------------------------------------
   public :: make_rt_latlon_raster
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_latlon_raster'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_latlon_raster(s, t, rt)
+integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c2_rt1d, only: &
@@ -29,6 +33,7 @@ subroutine make_rt_latlon_raster(s, t, rt)
   use c3_rt_llbnds, only: &
         calc_relations_llbnds
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_latlon_raster'
   type(gs_), intent(in)   , target :: s
   type(gs_), intent(in)   , target :: t
   type(rt_), intent(inout), target :: rt
@@ -58,7 +63,8 @@ subroutine make_rt_latlon_raster(s, t, rt)
   real(8) :: lapara_sum_b
   integer :: case_wgtmap
 
-  call echo(code%bgn, 'make_rt_latlon_raster')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
@@ -71,9 +77,11 @@ subroutine make_rt_latlon_raster(s, t, rt)
     a => t
     b => s
   else
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endif
 
   al => a%latlon
@@ -81,19 +89,25 @@ subroutine make_rt_latlon_raster(s, t, rt)
 
   rtm => rt%main
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
-  call calc_relations_llbnds(al, br)
-  call calc_relations_llbnds(br, al)
+  if( calc_relations_llbnds(al, br) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( calc_relations_llbnds(br, al) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
   allocate(iibh(br%hi-1_8:br%hf+1_8))
 
   allocate(rt1d(al%nij))
-  call init_rt1d(rt1d)
+  if( init_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
   do aij = 1_8, al%nij
     rt1 => rt1d(aij)
     rt1%ijsize = IJSIZE_INIT
@@ -111,8 +125,10 @@ subroutine make_rt_latlon_raster(s, t, rt)
   elseif( br%status_wgtmap == GRID_STATUS__NOT_USED )then
     case_wgtmap = 2
   else
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  br%status_wgtmap: '//str(br%status_wgtmap))
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nbr%status_wgtmap == '//str(br%status_wgtmap))
+    return
   endif
   !-------------------------------------------------------------
   ! Make a remapping table
@@ -125,11 +141,11 @@ subroutine make_rt_latlon_raster(s, t, rt)
 
   do ibz = 1, br%nZone
     if( br%nZone>1 )&
-      call echo(code%ent, '("'//str(br%nam)//'") zone '//str(ibz)//' / '//str(br%nZone))
+    call logent('("'//str(br%nam)//'") zone '//str(ibz)//' / '//str(br%nZone), PRCNAM, MODNAM)
 
     brz => br%zone(ibz)
     if( .not. brz%is_valid )then
-      if( br%nZone>1 ) call echo(code%ext)
+      if( br%nZone>1 ) call logext()
       cycle
     endif
 
@@ -149,8 +165,10 @@ subroutine make_rt_latlon_raster(s, t, rt)
         aidx = al%idxmap(iah,iav)
         call search(aidx, al%grid%idx, al%grid%idxarg, loc)
         if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Index of $a, '//str(aidx)//' was not found.')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nIndex of $a, '//str(aidx)//' was not found.')
+          return
         endif
         aij = al%grid%idxarg(loc)
         rt1 => rt1d(aij)
@@ -206,21 +224,25 @@ subroutine make_rt_latlon_raster(s, t, rt)
 
       enddo  ! iav/
     enddo  ! iah/
-    if( br%nZone>1 ) call echo(code%ext)
+    if( br%nZone>1 ) call logext()
   enddo  ! ibz/
   !-------------------------------------------------------------
   if( br%debug )then
-    call edbg('lapara_sum_b: '//str(lapara_sum_b,'es20.13'))
+    call logmsg('lapara_sum_b: '//str(lapara_sum_b,'es20.13'))
   endif
 
   ! Reshape $rt1d and output intermediates
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, a%is_source, rtm)
+  if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
   nullify(rt1)
-  call clear_rt1d(rt1d)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   nullify(rtm)
 
@@ -235,12 +257,13 @@ subroutine make_rt_latlon_raster(s, t, rt)
   nullify(al, br)
   nullify(a, b)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
 subroutine update_rt1d()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_rt1d'
 
   bidx = brz%idxmap(ibh,ibv)
 
@@ -275,7 +298,7 @@ subroutine update_rt1d()
   endif
 end subroutine update_rt1d
 !---------------------------------------------------------------
-end subroutine make_rt_latlon_raster
+end function make_rt_latlon_raster
 !===============================================================
 !
 !===============================================================

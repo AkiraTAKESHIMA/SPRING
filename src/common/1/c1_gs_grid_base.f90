@@ -8,7 +8,7 @@ module c1_gs_grid_base
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: init_grid
   public :: free_grid
@@ -17,15 +17,21 @@ module c1_gs_grid_base
 
   public :: get_grid_calc_from_make
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_grid_base'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine init_grid(g)
+integer(4) function init_grid(g) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_grid'
   type(grid_), intent(inout) :: g
 
-  call echo(code%bgn, 'init_grid', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -57,16 +63,18 @@ subroutine init_grid(g)
 
   g%ij_debug = 0_8
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_grid
+  call logret(PRCNAM, MODNAM)
+end function init_grid
 !===============================================================
 !
 !===============================================================
-subroutine free_grid(grid)
+integer(4) function free_grid(grid) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_grid'
   type(grid_), intent(inout) :: grid
 
-  call echo(code%bgn, 'free_grid', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -83,18 +91,20 @@ subroutine free_grid(grid)
   call realloc(grid%lon   , 0)
   call realloc(grid%lat   , 0)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_grid
+  call logret(PRCNAM, MODNAM)
+end function free_grid
 !===============================================================
 !
 !===============================================================
-subroutine realloc_grid(&
-    grid, &
-    idx, msk, uwa, ara, wgt, xyz, lonlat, &
-    clear, &
+integer(4) function realloc_grid(&
+    grid,                                   &
+    idx, msk, uwa, ara, wgt, xyz, lonlat,   &
+    clear,                                  &
     idx_miss, uwa_miss, ara_miss, wgt_miss, &
-    xyz_miss, lonlat_miss)
+    xyz_miss, lonlat_miss                   &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'realloc_grid'
   type(grid_), intent(inout) :: grid
   logical    , intent(in)    :: clear
   logical    , intent(in)    :: idx, &
@@ -112,7 +122,8 @@ subroutine realloc_grid(&
   real(8)    :: uwa_miss_, ara_miss_, wgt_miss_, &
                 xyz_miss_, lonlat_miss_
 
-  call echo(code%bgn, 'realloc_grid', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -169,19 +180,22 @@ subroutine realloc_grid(&
     call realloc(grid%lat, grid%nij, clear=clear, fill=lonlat_miss_)
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine realloc_grid
+  call logret(PRCNAM, MODNAM)
+end function realloc_grid
 !===============================================================
 !
 !===============================================================
-subroutine free_grid_unused_comps(&
+integer(4) function free_grid_unused_comps(&
     g, &
-    idx, msk, uwa, ara, wgt, xyz, lonlat)
+    idx, msk, uwa, ara, wgt, xyz, lonlat &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_grid_unused_comps'
   type(grid_), intent(inout) :: g
   logical    , intent(in)    :: idx, msk, uwa, ara, wgt, xyz, lonlat
 
-  call echo(code%bgn, 'free_grid_unused_comps', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( .not. idx )then
     call realloc(g%idx, 0)
@@ -215,8 +229,8 @@ subroutine free_grid_unused_comps(&
     call realloc(g%lat, 0)
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_grid_unused_comps
+  call logret(PRCNAM, MODNAM)
+end function free_grid_unused_comps
 !===============================================================
 !
 !===============================================================
@@ -228,14 +242,17 @@ end subroutine free_grid_unused_comps
 !===============================================================
 !
 !===============================================================
-subroutine get_grid_calc_from_make(&
+integer(4) function get_grid_calc_from_make(&
     calc_msk, calc_uwa, calc_ara, calc_wgt, calc_xyz, calc_lonlat, &
-    make_msk, make_uwa, make_ara, make_wgt, make_xyz, make_lonlat)
+    make_msk, make_uwa, make_ara, make_wgt, make_xyz, make_lonlat  &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_grid_calc_from_make'
   logical, intent(out) :: calc_msk, calc_uwa, calc_ara, calc_wgt, calc_xyz, calc_lonlat
   logical, intent(in)  :: make_msk, make_uwa, make_ara, make_wgt, make_xyz, make_lonlat
 
-  call echo(code%bgn, 'get_grid_calc_from_make', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -246,8 +263,8 @@ subroutine get_grid_calc_from_make(&
   calc_xyz    = make_xyz .or. make_lonlat
   calc_lonlat = make_lonlat
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine get_grid_calc_from_make
+  call logret(PRCNAM, MODNAM)
+end function get_grid_calc_from_make
 !===============================================================
 !
 !===============================================================

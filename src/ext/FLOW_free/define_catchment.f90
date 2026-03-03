@@ -69,11 +69,11 @@ program main
   character(128), parameter :: wfile3 = 'tmp/map/1min/catmxy.bin'
   character(128), parameter :: wfile4 = 'tmp/map/1min/flddif.bin'
 
-  call echo(code%bgn, 'program define_catchment')
+  call logbgn('program define_catchment', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
 
   open(11, file=fparams, status='old')
 
@@ -102,19 +102,19 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading flow direction '//str(rfile1))
-  call rbin(dir, rfile1)
+  call logmsg('Reading flow direction '//str(rfile1))
+  call traperr( rbin(dir, rfile1) )
 
-  call edbg('Reading elvation       '//str(rfile2))
-  call rbin(elv, rfile2)
+  call logmsg('Reading elvation       '//str(rfile2))
+  call traperr( rbin(elv, rfile2) )
 
-  call edbg('Reading outlet pixels  '//str(rfile3))
-  call rbin(out_x, rfile3, rec=1)
-  call rbin(out_y, rfile3, rec=2)
+  call logmsg('Reading outlet pixels  '//str(rfile3))
+  call traperr( rbin(out_x, rfile3, rec=1) )
+  call traperr( rbin(out_y, rfile3, rec=2) )
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating pixel area')
+  call logent('Calculating pixel area')
 
   allocate(pixlat(0:ny))
 
@@ -129,21 +129,20 @@ program main
   case( earth_shape_ellips )
     pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth_e2) * rad_360deg/nx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth_shape: '//trim(earth_shape))
+    call errend(msg_invalid_value('earth_shape', earth_shape))
   endselect
 
   pixare(:) = pixare(:) * earth_r**2
 
   deallocate(pixlat)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-print *, 'DEFINE_CATCHMENT'
+  call logent('DEFINE_CATCHMENT')
 
-print *, '  seting outlet pixels'
+  call logent('Setting outlet pixels')
   catmXX(:,:)=-9999
   catmYY(:,:)=-9999
   do iYY=1, nYY
@@ -167,8 +166,11 @@ print *, '  seting outlet pixels'
       endif
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
-print *, '  height above channel'
+  call logent('Height above channel')
+
   flddif(:,:)=-9999
   do iYY=1, nYY
     do iXX=1, nXX
@@ -200,7 +202,10 @@ print *, '  height above channel'
     end do
   end do
 
-print *, '  defining catchment'
+  call logext()
+
+  call logent('Defining catchment')
+
   do iy=1, ny
     do ix=1, nx
       if( catmXX(ix,iy)==-9999 .and. dir(ix,iy)>=1 .and. dir(ix,iy)<=8 )then
@@ -232,11 +237,14 @@ print *, '  defining catchment'
     end do
   end do
 
-  call edbg('Writing catchment xy '//str(wfile3))
-  call wbin(catmXX, wfile3, rec=1)
-  call wbin(catmYY, wfile3, rec=2)
+  call logext()
+
+  call logmsg('Writing catchment xy '//str(wfile3))
+  call traperr( wbin(catmXX, wfile3, rec=1) )
+  call traperr( wbin(catmYY, wfile3, rec=2) )
   !-------------------------------------------------------------
-print *, '  calculating catchment area'
+  call logent('Calculating catchment area')
+
   grarea(:,:)=0
   do iy=1, ny
     do ix=1, nx
@@ -247,8 +255,10 @@ print *, '  calculating catchment area'
       endif
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
-print *, 'CALC FLOODPLAIN TOPO'
+  call logent('CALC FLOODPLAIN TOPO')
 
   do iy=1, ny
     do ix=1, nx
@@ -285,7 +295,8 @@ print *, 'CALC FLOODPLAIN TOPO'
 
   fldhgt(:,:,:) = -9999
   elv_min(:,:) = -9999
-print *, '  decide catchment pixel number'
+
+  call logent('Deciding catchment pixel number')
   nmax=0
   nall=0
   do iy=1, ny
@@ -299,12 +310,17 @@ print *, '  decide catchment pixel number'
       endif
     end do
   end do
-  print *, '  nmax=', nmax
+  call logmsg('nmax = '//str(nmax))
+  call logext()
+
+  call logext()
+  !-------------------------------------------------------------
+  call logent('Sorting by (iXX,iYY)')
+
   allocate(XYlist(nall))
   allocate(elvlist(nall))
   allocate(elvsort(nmax))
-  !-------------------------------------------------------------
-print *, '  sort by (iXX,iYY)'
+
   i=1
   do iy=1, ny
     do ix=1, nx
@@ -324,8 +340,10 @@ print *, '  sort by (iXX,iYY)'
   call sort(XYlist, arg)
   call sort(elvlist, arg)
   deallocate(arg)
+
+  call logext()
   !-------------------------------------------------------------
-print *, '  sort by elevation in grid'
+  call logent('Sorting by elevation in grid')
 
   i=1
   do while( i<=nall )
@@ -360,19 +378,23 @@ print *, '  sort by elevation in grid'
       if( fldhgt(iXX,iYY,m)<=fldhgt(iXX,iYY,m-1) ) fldhgt(iXX,iYY,m)=fldhgt(iXX,iYY,m-1)+inc_hgt
     end do
   end do
+
+  call logext()
   !-------------------------------------------------------------
-print *, 'SAVE MAPS'
+  call logent('SAVE MAPS')
 
-  call edbg('Writing catchment area          '//str(wfile1))
-  call wbin(grarea, wfile1)
+  call logmsg('Writing catchment area          '//str(wfile1))
+  call traperr( wbin(grarea, wfile1) )
 
-  call edbg('Writing floodplain topography   '//str(wfile2))
+  call logmsg('Writing floodplain topography   '//str(wfile2))
   do m=1,nflp
-    call wbin(fldhgt(:,:,m), wfile2, rec=m)
+    call traperr( wbin(fldhgt(:,:,m), wfile2, rec=m) )
   enddo
 
-  call edbg('Writing flood height difference '//str(wfile4))
-  call wbin(flddif, wfile4)
+  call logmsg('Writing flood height difference '//str(wfile4))
+  call traperr( wbin(flddif, wfile4) )
+
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

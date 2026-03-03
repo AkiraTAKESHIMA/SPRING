@@ -14,7 +14,9 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call spring_initialize(logopt='')
+  if( spring_initialize(logopt='') /= 0 )then
+    call spring_print_error_message()
+  endif
   !-------------------------------------------------------------
   ! Grid system "a" (Numerical Land Information mesh5 watersystem code)
   !-------------------------------------------------------------
@@ -32,9 +34,11 @@ program main
   read(11, rec=1) aidxmap
   close(11)
 
-  call spring_define_grdsys_raster(&
-         'NLI', nadx, nady, awest, aeast, asouth, anorth, &
-         aidxmap, aidx_miss)
+  if( spring_define_mesh_raster(&
+        'NLI', nadx, nady, awest, aeast, asouth, anorth, &
+        aidxmap, aidx_miss) /= 0 )then
+    call spring_print_error_message()
+  endif
   !-------------------------------------------------------------
   ! Grid system "b" (CaMa-Flood 1min)
   !-------------------------------------------------------------
@@ -49,32 +53,44 @@ program main
   read(11, rec=1) bidxmap
   close(11)
 
-  call spring_define_grdsys_raster(&
-         'CMF', nbdx, nbdy, idx=bidxmap, idx_miss=bidx_miss)
+  if( spring_define_mesh_raster(&
+        'CMF', nbdx, nbdy, idx=bidxmap, idx_miss=bidx_miss) /= 0 )then
+    call spring_print_error_message()
+  endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call spring_make_rmptbl('rt1', 'NLI', 'CMF')
+  if( spring_make_rmptbl('rt1', 'NLI', 'CMF') /= 0 )then
+    call spring_print_error_message()
+  endif
   !-------------------------------------------------------------
-  ! Test "clear_grdsys"
+  ! Test "clear_mesh"
   !-------------------------------------------------------------
-  call spring_print_grdsys_name()
+  call spring_print_meshes_name()
 
-  call spring_clear_grdsys('CMF')
+  if( spring_clear_mesh('CMF') /= 0 )then
+    call spring_print_error_message()
+  endif
 
-  call spring_print_grdsys_name()
+  call spring_print_meshes_name()
   !-------------------------------------------------------------
   ! Test "clear_rt"
   !-------------------------------------------------------------
-  call spring_print_rmptbl_name()
+  call spring_print_rmptbl_name() 
 
-  call spring_print_rmptbl('rt1')
+  if( spring_print_rmptbl('rt1') /= 0 )then
+    call spring_print_error_message()
+  endif
 
-  call spring_clear_rmptbl('rt1')
+  if( spring_clear_rmptbl('rt1') /= 0 )then
+    call spring_print_error_message()
+  endif
 
   call spring_print_rmptbl_name()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call spring_finalize()
+  if( spring_finalize() /= 0 )then
+    call spring_print_error_message()
+  endif
 end program main

@@ -16,11 +16,15 @@ module c2_rt_main_finish
   !-------------------------------------------------------------
   public :: finish_rt_main
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_main_finish'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine finish_rt_main(rt, s, t, output)
+integer(4) function finish_rt_main(rt, s, t, output) result(info)
   use c2_rt_stats, only: &
         get_rt_main_stats     , &
         report_rt_main_summary
@@ -34,6 +38,7 @@ subroutine finish_rt_main(rt, s, t, output)
   use c2_rt_main_io, only: &
         write_rt_main
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'finish_rt_main'
   type(rt_), intent(inout), target :: rt
   type(gs_), intent(inout), target :: s, t
   logical  , intent(in), optional :: output
@@ -45,7 +50,8 @@ subroutine finish_rt_main(rt, s, t, output)
   type(grid_)     , pointer :: g
   type(rt_main_)  , pointer :: rtm
 
-  call echo(code%bgn, 'finish_rt_main')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -60,8 +66,9 @@ subroutine finish_rt_main(rt, s, t, output)
   case( MESH__TARGET )
     a => t
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef))
+    return
   endselect
 
   ac => a%cmn
@@ -73,69 +80,91 @@ subroutine finish_rt_main(rt, s, t, output)
     !-----------------------------------------------------------
     ! Case: Empty file is allowed.
     if( rtm%allow_empty )then
-      call ewrn('No valid data exists. Empty files are generated.')
+      call logwrn('No valid data exists. Empty files are generated.')
 
-      call write_rt_main(rtm)
+      if( write_rt_main(rtm) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
-      call echo(code%ret)
+      call logret(PRCNAM, MODNAM)
       return
     !-----------------------------------------------------------
     ! Case: Empty file is not allowed.
     else
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  rtm%nij == 0')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nrtm%nij == 0')
+      return
     endif
   endif
   !-------------------------------------------------------------
   ! Modify area
   !-------------------------------------------------------------
-  call modify_rt_area(rtm, g%idx, g%idxarg, g%ara)
+  if( modify_rt_area(rtm, g%idx, g%idxarg, g%ara) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Calc. coef.
   !-------------------------------------------------------------
   allocate(rtm%coef(rtm%nij))
 
-  call calc_rt_coef(rtm, g%idx, g%idxarg, g%ara)
+  if( calc_rt_coef(rtm, g%idx, g%idxarg, g%ara) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Remove zero
   !-------------------------------------------------------------
-  call remove_zero(rtm)
+  if( remove_zero(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( rtm%ijsize == 0_8 )then
     if( rtm%allow_empty )then
-      call ewrn('The remapping table is empty.')
-      call echo(code%ret)
+      call logwrn('The remapping table is empty.')
+      call logret(PRCNAM, MODNAM)
       return
     else
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  rtm%ijsize == 0')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nrtm%ijsize == 0')
+      return
     endif
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_coef_after_modification(rtm%coef, rtm%opt_coef)
+  if( check_coef_after_modification(rtm%coef, rtm%opt_coef) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Sort
   !-------------------------------------------------------------
-  call sort_rt(rtm)
+  if( sort_rt(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Summary
   !-------------------------------------------------------------
-  call get_rt_main_stats(rtm)
+  if( get_rt_main_stats(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( output_ )then
-    call report_rt_main_summary(rtm)
+    if( report_rt_main_summary(rtm) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   !-------------------------------------------------------------
   ! Output
   !-------------------------------------------------------------
   if( output_ )then
-    call write_rt_main(rtm)
+    if( write_rt_main(rtm) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine finish_rt_main
+  call logret(PRCNAM, MODNAM)
+end function finish_rt_main
 !===============================================================
 !
 !===============================================================

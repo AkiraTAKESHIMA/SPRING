@@ -18,6 +18,8 @@ module mod_main
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_main'
+
   type layer_grid_
     integer :: n
     integer(8), pointer :: ij(:)
@@ -38,7 +40,8 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
+subroutine make_rt(&
+    rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   use c1_opt_ctrl, only: &
         get_opt_sys, &
         get_opt_log, &
@@ -56,6 +59,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
         read_rt_main , &
         write_rt_main
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt'
   type(rt_)  , intent(inout), target :: rt_in_agcm_to_ogcm
   type(rt_)  , intent(inout), target :: rt_out_lsm_to_agcm
   type(agcm_), intent(inout), target :: agcm
@@ -114,13 +118,13 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   logical :: save_area, save_coef
   real(8), parameter :: exceedance_grdara_ulim = 1d-6
 
-  call echo(code%bgn, 'make_rt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  opt%sys   = get_opt_sys()
-  opt%log   = get_opt_log()
-  opt%earth = get_opt_earth()
+  call get_opt_sys(opt%sys)
+  call get_opt_log(opt%log)
+  call get_opt_earth(opt%earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -129,7 +133,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading agcm grid data')
+  call logent('Reading agcm grid data', PRCNAM, MODNAM)
 
   allocate(agcm%idx(agcm%nij))
   allocate(agcm%ara(agcm%nij))
@@ -137,16 +141,17 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   allocate(agcm%lat(agcm%nij))
 
   call read_grid_data(&
-    agcm%f_grdidx, agcm%f_grdara, agcm%f_grdlon, agcm%f_grdlat, &
-    agcm%nij, agcm%idx, agcm%idxarg, agcm%ara, agcm%lon, agcm%lat)
+         agcm%f_grdidx, agcm%f_grdara, agcm%f_grdlon, agcm%f_grdlat, &
+         agcm%nij, agcm%idx, agcm%idxarg, agcm%ara, agcm%lon, agcm%lat)
 
-  call print_grid_stats(agcm%nij, agcm%idx, agcm%ara, agcm%lon, agcm%lat, agcm%idx_miss)
+  call print_grid_stats(&
+         agcm%nij, agcm%idx, agcm%ara, agcm%lon, agcm%lat, agcm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading lsm grid data')
+  call logent('Reading lsm grid data', PRCNAM, MODNAM)
 
   allocate(lsm%idx(lsm%nij))
   allocate(lsm%ara(lsm%nij))
@@ -154,20 +159,21 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   allocate(lsm%lat(lsm%nij))
 
   call read_grid_data(&
-    lsm%f_grdidx, lsm%f_grdara, lsm%f_grdlon, lsm%f_grdlat, &
-    lsm%nij, lsm%idx, lsm%idxarg, lsm%ara, lsm%lon, lsm%lat)
+         lsm%f_grdidx, lsm%f_grdara, lsm%f_grdlon, lsm%f_grdlat, &
+         lsm%nij, lsm%idx, lsm%idxarg, lsm%ara, lsm%lon, lsm%lat)
 
-  call print_grid_stats(lsm%nij, lsm%idx, lsm%ara, lsm%lon, lsm%lat, lsm%idx_miss)
+  call print_grid_stats(&
+         lsm%nij, lsm%idx, lsm%ara, lsm%lon, lsm%lat, lsm%idx_miss)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing layer')
+  call logent('Preparing layer', PRCNAM, MODNAM)
 
   ! Make layer
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making layer')
+  call logent('Making layer', PRCNAM, MODNAM)
 
   layer%nx = 360
   layer%ny = 180
@@ -184,11 +190,11 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
     layer%lat(ily) = (-9.d1 + ily - 0.5d0) *d2r
   enddo
 
-  call echo(code%ext)
+  call logext()
 
   ! Locate agcm grids
   !-------------------------------------------------------------
-  call echo(code%ent, 'Locate AGCM grids on layer')
+  call logent('Locate AGCM grids on layer', PRCNAM, MODNAM)
 
   allocate(layer%agcm(layer%nx,layer%ny))
 
@@ -202,11 +208,11 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 !  call wbin(agcm%ly, 'agcm_layer.bin', 2)
 !  call wbin(layer%agcm(:,:)%n, 'agcm_layer_n.bin', 1)
 
-  call echo(code%ext)
+  call logext()
 
   ! Locate lsm grids
   !-------------------------------------------------------------
-  call echo(code%ent, 'Locate LSM grids on layer')
+  call logent('Locate LSM grids on layer', PRCNAM, MODNAM)
 
   allocate(layer%lsm(layer%nx,layer%ny))
 
@@ -220,26 +226,26 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 !  call wbin(lsm%ly, 'lsm_layer.bin', 2)
 !  call wbin(layer%lsm(:,:)%n, 'lsm_layer_n.bin', 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read remapping table agcm_to_ogcm
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading remapping table '//str(rtim_a_o%id))
+  call logent('Reading remapping table '//str(rtim_a_o%id), PRCNAM, MODNAM)
 
-  call read_rt_main(rtim_a_o)
+  call traperr( read_rt_main(rtim_a_o) )
 
   rtim_a_o%mesh_sort = MESH__TARGET
-  call sort_rt(rtim_a_o)
+  call traperr( sort_rt(rtim_a_o) )
 
-  call get_rt_main_stats(rtim_a_o)
+  call traperr( get_rt_main_stats(rtim_a_o) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. lndfrc of agcm grid
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating land fraction of AGCM grid')
+  call logent('Calculating land fraction of AGCM grid', PRCNAM, MODNAM)
 
   allocate(agcm%lndfrc(agcm%nij))
 
@@ -250,42 +256,42 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
   do ij_a_o = 1_8, rtim_a_o%nij
     call search(rtim_a_o%sidx(ij_a_o), agcm%idx, agcm%idxarg, loc)
     if( loc == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  Index of AGCM '//str(rtim_a_o%sidx(ij_a_o))//' was not found.')
+      call errend(msg_unexpected_condition()//&
+                '\n  Index of AGCM '//str(rtim_a_o%sidx(ij_a_o))//' was not found.')
     endif
-    
+
     call add(agcm%lndfrc(agcm%idxarg(loc)), rtim_a_o%area(ij_a_o))
   enddo
 
   do aij = 1_8, agcm%nij
     exceedance = (agcm%lndfrc(aij) - agcm%ara(aij)) / agcm%ara(aij)
     if( exceedance > exceedance_grdara_ulim )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  exceedance > thresh @ ij '//str(aij)//&
-              '\n  exceedance = ((ocean area) - (grid area)) / (grid area)'//&
-              '\n  idx: '//str(agcm%idx(aij))//&
-              '\n  ocean area: '//str(agcm%lndfrc(aij),'es20.13')//&
-              '\n  grid area : '//str(agcm%ara(aij),'es20.13')//&
-              '\n  exceedance: '//str(exceedance,'es20.13')//&
-              '\n  thresh    : '//str(exceedance_grdara_ulim,'es20.13'))
+      call errend(msg_unexpected_condition()//&
+                '\n  exceedance > thresh @ ij '//str(aij)//&
+                '\n  exceedance = ((ocean area) - (grid area)) / (grid area)'//&
+                '\n  idx: '//str(agcm%idx(aij))//&
+                '\n  ocean area: '//str(agcm%lndfrc(aij),'es20.13')//&
+                '\n  grid area : '//str(agcm%ara(aij),'es20.13')//&
+                '\n  exceedance: '//str(exceedance,'es20.13')//&
+                '\n  thresh    : '//str(exceedance_grdara_ulim,'es20.13'))
     endif
 
     agcm%lndfrc(aij) = (agcm%ara(aij) - agcm%lndfrc(aij)) / agcm%ara(aij)
     if( agcm%lndfrc(aij) > 1.d0 )then
-      call edbg('lndfrc('//str(aij,dgt(agcm%nij))//'): 1.0 + '//str(agcm%lndfrc(aij)-1.d0))
+      call logmsg('lndfrc('//str(aij,dgt(agcm%nij))//'): 1.0 + '//str(agcm%lndfrc(aij)-1.d0))
     endif
   enddo
 
-  call edbg('lndfrc min: '//str(minval(agcm%lndfrc),'es20.13')//&
-                  ' max: '//str(maxval(agcm%lndfrc),'es20.13'))
+  call logmsg('lndfrc min: '//str(minval(agcm%lndfrc),'es20.13')//&
+                    ' max: '//str(maxval(agcm%lndfrc),'es20.13'))
 
   !call wbin(agcm%lndfrc, 'lndfrc.bin')
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making a remapping table')
+  call logent('Making a remapping table', PRCNAM, MODNAM)
 
   allocate(rto1_l_a(lsm%nij))
 
@@ -309,15 +315,12 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 
     progress = int(dble(lij) / lsm%nij * 100)
     if( progress > progress_prev )then
-      call edbg('Calculating... '//str(progress,3)//' %')
+      call logmsg('Calculating... '//str(progress,3)//' %')
       progress_prev = progress
     endif
 
-    if( debug_lsm )&
-    call echo(code%ent, 'lsm '//str(lij)//' '//str(lsm%idx(lij))//&
-              ' ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//')')
     !-----------------------------------------------------------
-    ! Find the closest agcm grid that intersects with 
+    ! Find the closest agcm grid that intersects with
     ! land grid and ocean grid
     !-----------------------------------------------------------
     irng = 0
@@ -328,14 +331,14 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 
     do  ! irng
       if( debug_lsm )&
-      call echo(code%ent, 'irng '//str(irng))
+      call logent('irng '//str(irng), PRCNAM, MODNAM)
 
       dist_new_block_min = 2.d0 * pi * opt%earth%r
       updated = .false.
       !---------------------------------------------------------
       lyi = lsm%ly(lij) - irng/3
       lyf = lsm%ly(lij) + irng/3
-      if( debug_lsm ) call edbg('ly '//str((/lyi,lyf/),' ~ '))
+      if( debug_lsm ) call logmsg('ly '//str((/lyi,lyf/),' ~ '))
 
       do iily = lyi, lyf
         if( iily < 0 .or. iily > layer%ny+1 ) cycle
@@ -354,8 +357,6 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
           lxf = lsm%lx(lij) + irng
         endif
 
-        if( debug_lsm )&
-        call echo(code%ent, 'ily '//str(ily)//' lx '//str((/lxi,lxf/),' ~ '))
 
         do iilx = lxi, lxf
           if( iilx < 1 )then
@@ -369,11 +370,6 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
           if( layer%searched(ilx,ily) ) cycle
           layer%searched(ilx,ily) = .true.
 
-          if( debug_lsm )&
-          call echo(code%ent, &
-                    'layer('//str((/ilx,ily/),', ')//') ('//&
-                    str((/layer%lon(ilx),layer%lat(ily)/)*r2d,'f12.7',', ')//&
-                    ') n_agcm '//str(layer%agcm(ilx,ily)%n))
 
           do ig = 1, layer%agcm(ilx,ily)%n
             aij = layer%agcm(ilx,ily)%ij(ig)
@@ -398,8 +394,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
               list_agcm%dist(list_agcm%n) &
                 = dist_sphere(lsm%lon(lij), lsm%lat(lij), agcm%lon(aij), agcm%lat(aij))
             case default
-              call eerr(str(msg_invalid_value())//&
-                      '\n  opt_ext%method_rivwat: '//str(opt_ext%method_rivwat))
+              call errend(msg_invalid_value('opt_ext%method_rivwat', opt_ext%method_rivwat))
             endselect
 
             dist_agcm_min = min(dist_agcm_min, list_agcm%dist(list_agcm%n))
@@ -410,10 +405,10 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
               else
                 mark = ''
               endif
-              call edbg(str(ig)//' agcm '//str(aij)//&
-                        ' ('//str((/agcm%lon(aij),agcm%lat(aij)/)*r2d,'f12.7',', ')//')'//&
-                        ' lndfrc '//str(agcm%lndfrc(aij))//&
-                        ' dist '//str(list_agcm%dist(list_agcm%n))//' '//str(mark,1))
+              call logmsg(str(ig)//' agcm '//str(aij)//&
+                          ' ('//str((/agcm%lon(aij),agcm%lat(aij)/)*r2d,'f12.7',', ')//')'//&
+                          ' lndfrc '//str(agcm%lndfrc(aij))//&
+                          ' dist '//str(list_agcm%dist(list_agcm%n))//' '//str(mark,1))
             endif
           enddo  ! ig/
           !-----------------------------------------------------
@@ -427,24 +422,23 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
             dist_new_block &
               = dist_sphere(lsm%lon(lij), lsm%lat(lij), layer%lon(ilx), layer%lat(ily))
           case default
-            call eerr(str(msg_invalid_value())//&
-                    '\n  opt_ext%method_rivwat: '//str(opt_ext%method_rivwat))
+            call errend(msg_invalid_value('opt_ext%method_rivwat', opt_ext%method_rivwat))
           endselect
           dist_new_block_min = min(dist_new_block_min, dist_new_block)
           !-----------------------------------------------------
-          if( debug_lsm ) call echo(code%ext)
+          if( debug_lsm ) call logext()
         enddo  ! iilx/
         !-------------------------------------------------------
-        if( debug_lsm ) call echo(code%ext)
+        if( debug_lsm ) call logext()
       enddo  ! iily/
 
       if( debug_lsm )then
         if( updated )then
-          call edbg('Updated.'//&
-                  '\ndist_new_block_min: '//str(dist_new_block_min)//&
-                  '\ndist_agcm_min     : '//str(dist_agcm_min))
+          call logmsg('Updated.'//&
+                    '\ndist_new_block_min: '//str(dist_new_block_min)//&
+                    '\ndist_agcm_min     : '//str(dist_agcm_min))
         else
-          call edbg('Not updated.')
+          call logmsg('Not updated.')
         endif
       endif
       !---------------------------------------------------------
@@ -452,7 +446,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
       !---------------------------------------------------------
       if( list_agcm%n > 0 .and. dist_new_block_min > dist_agcm_min )then
         if( debug_lsm )then
-          call edbg('dist_new_block_min > dist_agcm_min. Exit.')
+          call logmsg('dist_new_block_min > dist_agcm_min. Exit.')
         endif
         exit
       endif
@@ -460,14 +454,14 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
       call add(irng)
       if( irng > layer%nx/2 )then
       !if( irng > 5 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  irng > layer%nx/2'//&
-                '\n  irng: '//str(irng)//&
-                '\n  lij: '//str(lij)//&
-                '\n  (lon,lat): ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//')')
+        call errend(msg_unexpected_condition()//&
+                  '\n  irng > layer%nx/2'//&
+                  '\n  irng: '//str(irng)//&
+                  '\n  lij: '//str(lij)//&
+                  '\n  (lon,lat): ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//')')
       endif
       !---------------------------------------------------------
-      if( debug_lsm ) call echo(code%ext)
+      if( debug_lsm ) call logext()
     enddo  ! irng/
     !-----------------------------------------------------------
     ! Update dist_max
@@ -482,7 +476,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
           list_aij_dist_max(n_aij_dist_max) = list_agcm%ij(i)
         endif
       enddo
-      call edbg('dist_max: '//str(dist_max)//' n_aij_dist_max: '//str(n_aij_dist_max))
+      call logmsg('dist_max: '//str(dist_max)//' n_aij_dist_max: '//str(n_aij_dist_max))
     endif
     !-----------------------------------------------------------
     ! Make a list of aijs closest to lsm grid
@@ -494,19 +488,19 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
         list_aij_dist_min(n_aij_dist_min) = list_agcm%ij(i)
 
         if( debug_lsm )then
-          call edbg('agcm('//str(aij)//') idx: '//str(agcm%idx(aij))//&
-                    ' lndfrc: '//str(agcm%lndfrc(aij)))
+          call logmsg('agcm('//str(aij)//') idx: '//str(agcm%idx(aij))//&
+                      ' lndfrc: '//str(agcm%lndfrc(aij)))
         endif
       endif
     enddo
 
     if( n_aij_dist_min > 1 )then
-      call edbg('lij '//str(lij)//' ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//&
-                ') n '//str(n_aij_dist_min)//' dist_agcm_min '//str(dist_agcm_min))
+      call logmsg('lij '//str(lij)//' ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//&
+                  ') n '//str(n_aij_dist_min)//' dist_agcm_min '//str(dist_agcm_min))
       do i_aij_dist_min = 1, n_aij_dist_min
         aij = list_aij_dist_min(i_aij_dist_min)
-        call edbg('  agcm '//str(agcm%idx(aij))//&
-                  ' ('//str((/agcm%lon(aij),agcm%lat(aij)/)*r2d,'f12.7',', ')//')')
+        call logmsg('  agcm '//str(agcm%idx(aij))//&
+                    ' ('//str((/agcm%lon(aij),agcm%lat(aij)/)*r2d,'f12.7',', ')//')')
       enddo  ! i_aij_dist_min/
     endif
     !-----------------------------------------------------------
@@ -524,26 +518,26 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
       rto1%ara(i_aij_dist_min) = lsm%ara(lij) / n_aij_dist_min
     enddo  ! i_aij_dist_min/
     !-----------------------------------------------------------
-    if( debug_lsm ) call echo(code%ext)
+    if( debug_lsm ) call logext()
   enddo  ! lij/
 
   lij = lij_dist_max
-  call edbg('dist_max '//str(dist_max)//' @ lij '//str(lij)//' lidx '//str(lsm%idx(lij))//&
-            ' ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//')')
+  call logmsg('dist_max '//str(dist_max)//' @ lij '//str(lij)//' lidx '//str(lsm%idx(lij))//&
+              ' ('//str((/lsm%lon(lij),lsm%lat(lij)/)*r2d,'f12.7',', ')//')')
   do i_aij_dist_max = 1, n_aij_dist_max
     aij = list_aij_dist_max(i_aij_dist_max)
-    call edbg('  aij '//str(aij)//' aidx '//str(agcm%idx(aij))//&
-              ' ('//str((/agcm%lon(aij),agcm%lat(aij)/)*r2d,'f12.7',', ')//')')
+    call logmsg('  aij '//str(aij)//' aidx '//str(agcm%idx(aij))//&
+                ' ('//str((/agcm%lon(aij),agcm%lat(aij)/)*r2d,'f12.7',', ')//')')
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Reshape rt1d
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reshaping rt1d')
+  call logent('Reshaping rt1d', PRCNAM, MODNAM)
 
   rtom_l_a%nij = sum(rto1_l_a(:)%n)
-  call edbg('Length: '//str(rtom_l_a%nij))
+  call logmsg('Length: '//str(rtom_l_a%nij))
   allocate(rtom_l_a%sidx(rtom_l_a%nij))
   allocate(rtom_l_a%tidx(rtom_l_a%nij))
   allocate(rtom_l_a%area(rtom_l_a%nij))
@@ -562,11 +556,11 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 
   deallocate(rto1_l_a)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking range of lndfrc of AGCM grid in the remapping table')
+  call logent('Checking range of lndfrc of AGCM grid in the remapping table', PRCNAM, MODNAM)
 
   lndfrc_min = 1.d0
   lndfrc_max = 0.d0
@@ -578,79 +572,78 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
     lndfrc_max = max(lndfrc_max, agcm%lndfrc(loc))
   enddo  ! ij_l_a/
 
-  call edbg('lndfrc min: '//str(lndfrc_min,'es20.13')//&
-                  ' max: '//str(lndfrc_max,'es20.13'))
+  call logmsg('lndfrc min: '//str(lndfrc_min,'es20.13')//&
+                    ' max: '//str(lndfrc_max,'es20.13'))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Merge elements of same index
   !-------------------------------------------------------------
-  call echo(code%ent, 'Merging elements of same index')
+  call logent('Merging elements of same index', PRCNAM, MODNAM)
 
-  call merge_elems_same_index(&
+  call traperr( merge_elems_same_index(&
          rtom_l_a%mesh_sort, rtom_l_a%ijsize, rtom_l_a%nij, &
-         rtom_l_a%sidx, rtom_l_a%tidx, rtom_l_a%area)
+         rtom_l_a%sidx, rtom_l_a%tidx, rtom_l_a%area) )
   call realloc(rtom_l_a%coef, rtom_l_a%ijsize, clear=.true.)
 
-  call edbg('length: '//str(rtom_l_a%nij))
+  call logmsg('length: '//str(rtom_l_a%nij))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. coef.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating coef.')
+  call logent('Calculating coef.', PRCNAM, MODNAM)
 
   selectcase( rtom_l_a%mesh_coef )
   case( MESH__SOURCE )
     if( rtom_l_a%opt_coef%is_sum_modify_enabled )then
-      call calc_rt_coef_sum_modify_enabled(rtom_l_a)
+      call traperr( calc_rt_coef_sum_modify_enabled(rtom_l_a) )
     else
-      call calc_rt_coef_sum_modify_not_enabled(&
-             rtom_l_a, lsm%idx, lsm%idxarg, lsm%ara)
+      call traperr( calc_rt_coef_sum_modify_not_enabled(&
+             rtom_l_a, lsm%idx, lsm%idxarg, lsm%ara) )
     endif
   case( MESH__TARGET )
     if( rtom_l_a%opt_coef%is_sum_modify_enabled )then
-      call calc_rt_coef_sum_modify_enabled(rtom_l_a)
+      call traperr( calc_rt_coef_sum_modify_enabled(rtom_l_a) )
     else
-      call calc_rt_coef_sum_modify_not_enabled(&
-             rtom_l_a, agcm%idx, agcm%idxarg, agcm%ara)
+      call traperr( calc_rt_coef_sum_modify_not_enabled(&
+             rtom_l_a, agcm%idx, agcm%idxarg, agcm%ara) )
     endif
   case( MESH__NONE )
     rtom_l_a%coef(:) = rtom_l_a%area(:)
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtom_l_a%mesh_coef: '//str(rtom_l_a%mesh_coef))
+    call errend(msg_invalid_value('rtom_l_a%mesh_coef', rtom_l_a%mesh_coef))
   endselect
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Sort
   !-------------------------------------------------------------
-  call echo(code%ent, 'Sorting')
+  call logent('Sorting', PRCNAM, MODNAM)
 
-  call sort_rt(rtom_l_a)
+  call traperr( sort_rt(rtom_l_a) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Print summary
   !-------------------------------------------------------------
-  call echo(code%ent, 'Summary')
+  call logent('Summary', PRCNAM, MODNAM)
 
-  call get_rt_main_stats(rtom_l_a)
+  call traperr( get_rt_main_stats(rtom_l_a) )
 
   save_area = rtom_l_a%f%area%path /= ''
   save_coef = rtom_l_a%f%coef%path /= ''
-  call report_rt_main_summary(rtom_l_a, save_area, save_coef)
+  call traperr( report_rt_main_summary(rtom_l_a, save_area, save_coef) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Output
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting '//str(rtom_l_a%id))
+  call logent('Outputting '//str(rtom_l_a%id), PRCNAM, MODNAM)
 
-  call write_rt_main(rtom_l_a)
+  call traperr( write_rt_main(rtom_l_a) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   rtom_l_a%ijsize = 0_8
   deallocate(rtom_l_a%sidx)
@@ -669,7 +662,7 @@ subroutine make_rt(rt_in_agcm_to_ogcm, rt_out_lsm_to_agcm, agcm, lsm, opt_ext)
 
   deallocate(layer%lsm)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_rt
 !===============================================================
 !
@@ -678,6 +671,7 @@ subroutine read_grid_data(&
     f_idx, f_ara, f_lon, f_lat, &
     nij, idx, idxarg, ara, lon, lat)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_grid_data'
   type(file_), intent(in), target :: f_idx
   type(file_), intent(in), target :: f_ara
   type(file_), intent(in), target :: f_lon
@@ -692,7 +686,7 @@ subroutine read_grid_data(&
   type(file_), pointer :: f
   integer(8) :: ij
 
-  call echo(code%bgn, 'read_grid_data', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -700,12 +694,12 @@ subroutine read_grid_data(&
 
   f => f_idx
   if( f%path /= '' )then
-    call edbg('Reading index   '//str(fileinfo(f)))
-    call rbin(idx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading index   '//str(fileinfo(f)))
+    call traperr( rbin(idx, f%path, f%dtype, f%endian, f%rec) )
     call realloc(idxarg, size(idx))
     call argsort(idx, idxarg)
   else
-    call edbg('File of grid index was not specified. Index is automatically set.')
+    call logmsg('File of grid index was not specified. Index is automatically set.')
     do ij = 1_8, nij
       idx(ij) = ij
     enddo
@@ -713,16 +707,16 @@ subroutine read_grid_data(&
   endif
 
   f => f_ara
-  call edbg('Reading area '//str(fileinfo(f)))
-  call rbin(ara, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading area '//str(fileinfo(f)))
+  call traperr( rbin(ara, f%path, f%dtype, f%endian, f%rec) )
 
   f => f_lon
-  call edbg('Reading lon  '//str(fileinfo(f)))
-  call rbin(lon, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading lon  '//str(fileinfo(f)))
+  call traperr( rbin(lon, f%path, f%dtype, f%endian, f%rec) )
 
   f => f_lat
-  call edbg('Reading lat  '//str(fileinfo(f)))
-  call rbin(lat, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading lat  '//str(fileinfo(f)))
+  call traperr( rbin(lat, f%path, f%dtype, f%endian, f%rec) )
 
   do ij = 1_8, nij
     if( lon(ij) < rad_0deg ) call add(lon(ij), rad_360deg)
@@ -730,13 +724,14 @@ subroutine read_grid_data(&
 
   call realloc(idxarg, 0)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_grid_data
 !===============================================================
 !
 !===============================================================
 subroutine print_grid_stats(nij, idx, ara, lon, lat, idx_miss)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_grid_stats'
   integer(8), intent(in) :: nij
   integer(8), intent(in) :: idx(:)
   real(8)   , intent(in) :: ara(:)
@@ -752,47 +747,48 @@ subroutine print_grid_stats(nij, idx, ara, lon, lat, idx_miss)
              lat_min, lat_max
   integer :: stat
 
-  call echo(code%bgn, 'print_grid_stats', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   dgt_idx = max(dgt(idx,dgt_opt_max),10)
   wfmt = 'es'//str(dgt_idx)//'.3'
 
   if( all(idx == idx_miss) )then
-    call edbg('Valid index does not exist.')
-    call echo(code%ret)
+    call logmsg('Valid index does not exist.')
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  call get_stats(idx, vmin=idx_min, vmax=idx_max, mask=idx/=idx_miss, stat=stat)
+  call traperr( get_minmax(idx, stat, idx_min, idx_max, mask=idx/=idx_miss) )
   if( stat /= 0 )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  stat /= 0')
+    call errend(msg_unexpected_condition()//&
+              '\n  stat /= 0')
   endif
-  call get_stats(ara, vmin=ara_min, vmax=ara_max, mask=idx/=idx_miss)
-  call get_stats(lon, vmin=lon_min, vmax=lon_max, mask=idx/=idx_miss)
-  call get_stats(lat, vmin=lat_min, vmax=lat_max, mask=idx/=idx_miss)
+  call traperr( get_minmax(ara, stat, ara_min, ara_max, mask=idx/=idx_miss) )
+  call traperr( get_minmax(lon, stat, lon_min, lon_max, mask=idx/=idx_miss) )
+  call traperr( get_minmax(lat, stat, lat_min, lat_max, mask=idx/=idx_miss) )
 
-  call edbg('index min: '//str(idx_min,dgt_idx)//' max: '//str(idx_max,dgt_idx))
-  call edbg('area  min: '//str(ara_min,wfmt   )//' max: '//str(ara_max,wfmt   ))
-  call edbg('lon   min: '//str(lon_min,wfmt   )//' max: '//str(lon_max,wfmt   ))
-  call edbg('lat   min: '//str(lat_min,wfmt   )//' max: '//str(lat_max,wfmt   ))
+  call logmsg('index min: '//str(idx_min,dgt_idx)//' max: '//str(idx_max,dgt_idx))
+  call logmsg('area  min: '//str(ara_min,wfmt   )//' max: '//str(ara_max,wfmt   ))
+  call logmsg('lon   min: '//str(lon_min,wfmt   )//' max: '//str(lon_max,wfmt   ))
+  call logmsg('lat   min: '//str(lat_min,wfmt   )//' max: '//str(lat_max,wfmt   ))
 
-  call edbg('index '//str(idx(:3),dgt_idx,', ')//&
-           ', ..., '//str(idx(nij-2:),dgt_idx,', '))
-  call edbg('area  '//str(ara(:3),wfmt,', ')//&
-           ', ..., '//str(ara(nij-2:),wfmt,', '))
-  call edbg('lon   '//str(lon(:3),wfmt,', ')//&
-           ', ..., '//str(lon(nij-2:),wfmt,', '))
-  call edbg('lat   '//str(lat(:3),wfmt,', ')//&
-           ', ..., '//str(lat(nij-2:),wfmt,', '))
+  call logmsg('index '//str(idx(:3),dgt_idx,', ')//&
+             ', ..., '//str(idx(nij-2:),dgt_idx,', '))
+  call logmsg('area  '//str(ara(:3),wfmt,', ')//&
+             ', ..., '//str(ara(nij-2:),wfmt,', '))
+  call logmsg('lon   '//str(lon(:3),wfmt,', ')//&
+             ', ..., '//str(lon(nij-2:),wfmt,', '))
+  call logmsg('lat   '//str(lat(:3),wfmt,', ')//&
+             ', ..., '//str(lat(nij-2:),wfmt,', '))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_grid_stats
 !===============================================================
 !
 !===============================================================
 subroutine locate_grid_on_layer(nij, idx, lon, lat, idx_miss, nlx, nly, lx, ly, layer_grid)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'locate_grid_on_layer'
   integer(8)       , intent(in)  :: nij
   integer(8)       , intent(in)  :: idx(:)
   real(8)          , intent(in)  :: lon(:)
@@ -808,7 +804,7 @@ subroutine locate_grid_on_layer(nij, idx, lon, lat, idx_miss, nlx, nly, lx, ly, 
   integer :: ilx, ily
   real(8) :: lonsize, latsize
 
-  call echo(code%bgn, 'locate_grid_on_layer')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   lonsize = rad_360deg / nlx
   latsize = rad_180deg / nly
@@ -821,13 +817,13 @@ subroutine locate_grid_on_layer(nij, idx, lon, lat, idx_miss, nlx, nly, lx, ly, 
     if( idx(ij) == idx_miss ) cycle
     ilx = min(int((lon(ij)/lonsize))+1,nlx)
     ily = min(int((lat(ij)+rad_90deg)/latsize)+1,nly)
-    !call edbg(str(ij)//' ('//str((/lon(ij),lat(ij)/)*r2d,'f12.7',', ')//')')
+    !call logmsg(str(ij)//' ('//str((/lon(ij),lat(ij)/)*r2d,'f12.7',', ')//')')
     lx(ij) = ilx
     ly(ij) = ily
     call add(layer_grid(ilx,ily)%n)
   enddo
 
-  call edbg('Max. num. of grids in one layer: '//str(maxval(layer_grid%n)))
+  call logmsg('Max. num. of grids in one layer: '//str(maxval(layer_grid%n)))
 
   do ily = 1, nly
     do ilx = 1, nlx
@@ -846,13 +842,14 @@ subroutine locate_grid_on_layer(nij, idx, lon, lat, idx_miss, nlx, nly, lx, ly, 
     lg%ij(lg%n) = ij
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine locate_grid_on_layer
 !===============================================================
 !
 !===============================================================
 real(8) function weighted_dist(lon1, lat1, lon2, lat2) result(dist)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'weighted_dist'
   real(8), intent(in) :: lon1, lat1, lon2, lat2
 
   real(8) :: dist_lon, dist_lat
@@ -867,6 +864,7 @@ end function weighted_dist
 !===============================================================
 logical function is_ok_lndfrc(val) result(is_ok)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'is_ok_lndfrc'
   real(8), intent(in) :: val
 
   is_ok = 1d-2 < val .and. val < 1.d0 - 1d-2

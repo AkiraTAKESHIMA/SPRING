@@ -36,11 +36,11 @@ program main
 
   character(128), parameter :: wfile1 = 'tmp/map/visual.bin'
 
-  call echo(code%bgn, 'program visual_check')
+  call logbgn('program visual_check', '', '+tr')
   !-------------------------------------------------------------
   ! Read params.
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
   open(11, file=fparams, status='old')
 
   read(11,*) nXX
@@ -60,18 +60,18 @@ program main
   allocate(gcmx(nx,ny),gcmy(nx,ny))
   allocate(check(nx,ny))
 
-  call rbin(dir, rfile1)
+  call traperr( rbin(dir, rfile1) )
 
-  call rbin(out_x, rfile2, rec=1)
-  call rbin(out_y, rfile2, rec=2)
+  call traperr( rbin(out_x, rfile2, rec=1) )
+  call traperr( rbin(out_y, rfile2, rec=2) )
 
-  call rbin(catmXX, rfile3, rec=1)
-  call rbin(catmYY, rfile3, rec=2)
+  call traperr( rbin(catmXX, rfile3, rec=1) )
+  call traperr( rbin(catmYY, rfile3, rec=2) )
 
-  call rbin(upg, rfile4)
+  call traperr( rbin(upg, rfile4) )
 
-  call rbin(gcmx, fgcmxy, rec=1)
-  call rbin(gcmy, fgcmxy, rec=2)
+  call traperr( rbin(gcmx, fgcmxy, rec=1) )
+  call traperr( rbin(gcmy, fgcmxy, rec=2) )
 
   check(:,:)=-9999
   do iYY=1, nYY
@@ -173,7 +173,7 @@ program main
     end do
   end do
 
-  call wbin(check, wfile1)
+  call traperr( wbin(check, wfile1) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

@@ -44,11 +44,11 @@ program main
   character(128), parameter :: fgrlndf   = 'gcmmap/grlndf.bin'
   character(128), parameter :: fgrlonlat = 'gcmmap/grlonlat.bin'
 
-  call echo(code%bgn, 'program make_gcmmap')
+  call logbgn('program make_gcmmap', '', '+tr')
   !-------------------------------------------------------------
   ! Read params.
   !-------------------------------------------------------------
-  call edbg('Reading params '//str(fparams))
+  call logmsg('Reading params '//str(fparams))
   open(11, file=fparams, status='old')
 
   read(11,*) nXX
@@ -79,7 +79,7 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating gcmx and gcmy')
+  call logent('Calculating gcmx and gcmy')
 
   if( fgcmidx == '' )then
     do iYY = 1, nYY
@@ -96,8 +96,8 @@ program main
     enddo
   else
     allocate(gcmidx(nx,ny))
-    call rbin(gcmidx, fgcmidx)
-    call edbg('idx min: '//str(minval(gcmidx))//', max: '//str(maxval(gcmidx)))
+    call traperr( rbin(gcmidx, fgcmidx) )
+    call logmsg('idx min: '//str(minval(gcmidx))//', max: '//str(maxval(gcmidx)))
 
     do iy = 1, ny
       do ix = 1, nx
@@ -110,18 +110,18 @@ program main
     deallocate(gcmidx)
   endif
 
-  call edbg('x: '//str(minval(gcmx))//' - '//str(maxval(gcmx)))
-  call edbg('y: '//str(minval(gcmy))//' - '//str(maxval(gcmy)))
+  call logmsg('x: '//str(minval(gcmx))//' - '//str(maxval(gcmx)))
+  call logmsg('y: '//str(minval(gcmy))//' - '//str(maxval(gcmy)))
 
-  call edbg('Writing gcmxy '//str(fgcmxy))
-  call wbin(gcmx, fgcmxy, rec=1)
-  call wbin(gcmy, fgcmxy, rec=2)
+  call logmsg('Writing gcmxy '//str(fgcmxy))
+  call traperr( wbin(gcmx, fgcmxy, rec=1) )
+  call traperr( wbin(gcmy, fgcmxy, rec=2) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating pixel lonlat')
+  call logent('Calculating pixel lonlat')
 
   do ix = 0, nx
     pixlon(ix) = -rad_180deg + rad_360deg*(dble(ix)/nx)
@@ -133,11 +133,11 @@ program main
   enddo
   pixlat(ny) = -rad_90deg
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating pixel area')
+  call logent('Calculating pixel area')
 
   selectcase( earth_shape )
   case( earth_shape_sphere )
@@ -145,20 +145,19 @@ program main
   case( earth_shape_ellips )
     pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth_e2) * rad_360deg/nx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth_shape: '//trim(earth_shape))
+    call errend(msg_invalid_value('earth_shape', earth_shape))
   endselect
 
   pixare(:) = pixare(:) * earth_r**2
   
-  call edbg('surface area: '//str(sum(pixare)*nx*1d-6)//' km2')
+  call logmsg('surface area: '//str(sum(pixare)*nx*1d-6)//' km2')
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading land mask '//trim(flmask))
-  call rbin(lmask, flmask)
+  call logmsg('Reading land mask '//trim(flmask))
+  call traperr( rbin(lmask, flmask) )
 
   pixnum(:,:) = 0
   lndnum(:,:) = 0
@@ -167,7 +166,7 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating pixel number, land area and land fraction')
+  call logent('Calculating pixel number, land area and land fraction')
 
   do iy = 1, ny
     do ix = 1, nx
@@ -181,8 +180,8 @@ program main
       endif
     enddo
   enddo
-  call edbg('Total grid area '//str(sum(grdare)*1d-6)//' km2')
-  call edbg('Total land area '//str(sum(lndare)*1d-6)//' km2')
+  call logmsg('Total grid area '//str(sum(grdare)*1d-6)//' km2')
+  call logmsg('Total land area '//str(sum(lndare)*1d-6)//' km2')
 
   do iYY = 1, nYY
     do iXX = 1, nXX
@@ -193,23 +192,23 @@ program main
       endif
     enddo
   enddo
-  call edbg('pixnum min '//str(minval(pixnum))//' max '//str(maxval(pixnum)))
-  call edbg('grlndf min '//str(minval(grlndf))//' max '//str(maxval(grlndf)))
+  call logmsg('pixnum min '//str(minval(pixnum))//' max '//str(maxval(pixnum)))
+  call logmsg('grlndf min '//str(minval(grlndf))//' max '//str(maxval(grlndf)))
 
-  call edbg('Writing pixel number  '//str(fpixnum))
-  call wbin(pixnum, fpixnum)
+  call logmsg('Writing pixel number  '//str(fpixnum))
+  call traperr( wbin(pixnum, fpixnum) )
 
-  call edbg('Writing land area     '//str(flndare))
-  call wbin(lndare, flndare)
+  call logmsg('Writing land area     '//str(flndare))
+  call traperr( wbin(lndare, flndare) )
 
-  call edbg('Writing land fraction '//str(fgrlndf))
-  call wbin(grlndf, fgrlndf)
+  call logmsg('Writing land fraction '//str(fgrlndf))
+  call traperr( wbin(grlndf, fgrlndf) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating grid lonlat')
+  call logent('Calculating grid lonlat')
 
   grlon(:,:) = 0.0
   grlat(:,:) = 0.0
@@ -225,14 +224,14 @@ program main
   grlon(:,:) = grlon(:,:) * d2r
   grlat(:,:) = grlat(:,:) * d2r
 
-  call edbg('grlon min '//str(minval(grlon))//' max '//str(maxval(grlon)))
-  call edbg('grlat min '//str(minval(grlat))//' max '//str(maxval(grlat)))
+  call logmsg('grlon min '//str(minval(grlon))//' max '//str(maxval(grlon)))
+  call logmsg('grlat min '//str(minval(grlat))//' max '//str(maxval(grlat)))
 
-  call edbg('Writing grid lonlat '//trim(fgrlonlat))
-  call wbin(grlon, fgrlonlat, rec=1)
-  call wbin(grlat, fgrlonlat, rec=2)
+  call logmsg('Writing grid lonlat '//trim(fgrlonlat))
+  call traperr( wbin(grlon, fgrlonlat, rec=1) )
+  call traperr( wbin(grlat, fgrlonlat, rec=2) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -252,5 +251,5 @@ program main
   deallocate(grlon)
   deallocate(grlat)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

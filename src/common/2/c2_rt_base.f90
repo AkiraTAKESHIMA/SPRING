@@ -9,7 +9,7 @@ module c2_rt_base
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: init_rt
   public :: init_rt_main
@@ -44,37 +44,51 @@ module c2_rt_base
   public :: set_action_rt_main_file
   public :: apply_oldfiles_rt_main_file
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_base'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine init_rt(rt)
+integer(4) function init_rt(rt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt'
   type(rt_), intent(out) :: rt
 
-  call echo(code%bgn, 'init_rt', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   rt%id = ''
   rt%nam = ''
   rt%snam = ''
   rt%tnam = ''
 
-  call init_rt_main(rt%main)
-  call init_rt_vrf(rt%vrf_src)
-  call init_rt_vrf(rt%vrf_tgt)
+  if( init_rt_main(rt%main) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt_vrf(rt%vrf_src) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt_vrf(rt%vrf_tgt) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   rt%status = RT_STATUS__MAKE
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt
+  call logret(PRCNAM, MODNAM)
+end function init_rt
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_main(rtm)
+integer(4) function init_rt_main(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt_main'
   type(rt_main_), intent(out) :: rtm
 
-  call echo(code%bgn, 'init_rt_main', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   rtm%id = ''
 
@@ -82,25 +96,37 @@ subroutine init_rt_main(rtm)
   rtm%mesh_sort = MESH__NONE
   rtm%allow_empty = .true.
 
-  call init_rt_main_data(rtm)
+  if( init_rt_main_data(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   rtm%nij = 0_8
 
-  call init_file_rt_main(rtm%f)
+  if( init_file_rt_main(rtm%f) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call init_opt_rt_area(rtm%opt_area)
-  call init_opt_rt_coef(rtm%opt_coef)
+  if( init_opt_rt_area(rtm%opt_area) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_opt_rt_coef(rtm%opt_coef) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt_main
+  call logret(PRCNAM, MODNAM)
+end function init_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_main_data(rtm)
+integer(4) function init_rt_main_data(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt_main_data'
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%ent, 'init_rt_main_data', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   rtm%is_sorted_by_sidx = .false.
   rtm%is_sorted_by_tidx = .false.
@@ -129,47 +155,53 @@ subroutine init_rt_main_data(rtm)
   rtm%coef_imin = 0_8
   rtm%coef_imax = 0_8
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt_main_data
+  call logret(PRCNAM, MODNAM)
+end function init_rt_main_data
 !===============================================================
 !
 !===============================================================
-subroutine init_file_rt_main(f)
+integer(4) function init_file_rt_main(f) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_file_rt_main'
   type(file_rt_main_), intent(out) :: f
 
-  call echo(code%bgn, 'init_file_rt_main', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   f%sidx = file('')
   f%tidx = file('')
   f%area = file('')
   f%coef = file('')
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_file_rt_main
+  call logret(PRCNAM, MODNAM)
+end function init_file_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine init_opt_rt_area(opt)
+integer(4) function init_opt_rt_area(opt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_opt_rt_area'
   type(opt_rt_area_), intent(out) :: opt
 
-  call echo(code%bgn, 'init_opt_rt_area', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   opt%is_ratio_zero_negative_enabled = .true.
   opt%ratio_zero_negative = 0.d0
   opt%allow_le_ratio_zero_negative = .true.
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_opt_rt_area
+  call logret(PRCNAM, MODNAM)
+end function init_opt_rt_area
 !===============================================================
 !
 !===============================================================
-subroutine init_opt_rt_coef(opt)
+integer(4) function init_opt_rt_coef(opt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_opt_rt_coef'
   type(opt_rt_coef_), intent(out) :: opt
 
-  call echo(code%bgn, 'init_opt_rt_coef', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   opt%is_sum_modify_enabled = .true.
   opt%sum_modify = 0.d0
@@ -188,16 +220,18 @@ subroutine init_opt_rt_coef(opt)
   opt%is_sum_error_excess_enabled = .true.
   opt%sum_error_excess = 0.d0
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_opt_rt_coef
+  call logret(PRCNAM, MODNAM)
+end function init_opt_rt_coef
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_vrf(rtv)
+integer(4) function init_rt_vrf(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt_vrf'
   type(rt_vrf_), intent(out) :: rtv
 
-  call echo(code%bgn, 'init_rt_vrf', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   rtv%id = ''
 
@@ -205,17 +239,24 @@ subroutine init_rt_vrf(rtv)
   rtv%dval_miss = 0.d0
   rtv%ival_miss = 0_8
 
-  call init_rt_vrf_grid(rtv)
-  call init_rt_vrf_raster(rtv)
+  if( init_rt_vrf_grid(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt_vrf_raster(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine init_rt_vrf
+  call logret(PRCNAM, MODNAM)
+end function init_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_vrf_grid(rtv)
+integer(4) function init_rt_vrf_grid(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt_vrf_grid'
   type(rt_vrf_), intent(inout) :: rtv
+
+  info = 0
 
   nullify(rtv%grdidx)
   nullify(rtv%grdara_true)
@@ -238,17 +279,20 @@ subroutine init_rt_vrf_grid(rtv)
   rtv%idx_rerr_grdara_max = 0_8
   rtv%idx_grdnum_min      = 0_8
   rtv%idx_grdnum_max      = 0_8
-end subroutine init_rt_vrf_grid
+end function init_rt_vrf_grid
 !===============================================================
 !
 !===============================================================
-subroutine init_rt_vrf_raster(rtv)
+integer(4) function init_rt_vrf_raster(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_rt_vrf_raster'
   type(rt_vrf_), intent(inout) :: rtv
+
+  info = 0
 
   nullify(rtv%iarea_sum)
   nullify(rtv%iratio_sum)
-end subroutine init_rt_vrf_raster
+end function init_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
@@ -260,26 +304,36 @@ end subroutine init_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
-subroutine free_rt(rt)
+integer(4) function free_rt(rt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_rt'
   type(rt_), intent(inout) :: rt
 
-  call echo(code%bgn, 'free_rt', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call free_rt_main(rt%main)
-  call free_rt_vrf(rt%vrf_src)
-  call free_rt_vrf(rt%vrf_tgt)
+  if( free_rt_main(rt%main) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( free_rt_vrf(rt%vrf_src) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( free_rt_vrf(rt%vrf_tgt) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_rt
+  call logret(PRCNAM, MODNAM)
+end function free_rt
 !===============================================================
 !
 !===============================================================
-subroutine free_rt_main(rtm)
+integer(4) function free_rt_main(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_rt_main'
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'free_rt_main', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   rtm%is_sorted_by_sidx = .false.
   rtm%is_sorted_by_tidx = .false.
@@ -289,45 +343,57 @@ subroutine free_rt_main(rtm)
   call realloc(rtm%area, 0)
   call realloc(rtm%coef, 0)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_rt_main
+  call logret(PRCNAM, MODNAM)
+end function free_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine free_rt_vrf(rtv)
+integer(4) function free_rt_vrf(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_rt_vrf'
   type(rt_vrf_), intent(inout) :: rtv
 
-  call echo(code%bgn, 'free_rt_vrf', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call free_rt_vrf_grid(rtv)
-  call free_rt_vrf_raster(rtv)
+  if( free_rt_vrf_grid(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( free_rt_vrf_raster(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_rt_vrf
+  call logret(PRCNAM, MODNAM)
+end function free_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine free_rt_vrf_grid(rtv)
+integer(4) function free_rt_vrf_grid(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_rt_vrf_grid'
   type(rt_vrf_), intent(inout) :: rtv
+
+  info = 0
 
   call realloc(rtv%grdidx     , 0)
   call realloc(rtv%grdara_true, 0)
   call realloc(rtv%grdara_rt  , 0)
   call realloc(rtv%rerr_grdara, 0)
   call realloc(rtv%grdnum     , 0)
-end subroutine free_rt_vrf_grid
+end function free_rt_vrf_grid
 !===============================================================
 !
 !===============================================================
-subroutine free_rt_vrf_raster(rtv)
+integer(4) function free_rt_vrf_raster(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_rt_vrf_raster'
   type(rt_vrf_), intent(inout) :: rtv
+
+  info = 0
 
   call realloc(rtv%iarea_sum , 0)
   call realloc(rtv%iratio_sum, 0)
-end subroutine free_rt_vrf_raster
+end function free_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
@@ -339,59 +405,83 @@ end subroutine free_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
-subroutine clear_rt(rt)
+integer(4) function clear_rt(rt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_rt'
   type(rt_), intent(inout) :: rt
 
-  call echo(code%bgn, 'clear_rt', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call free_rt(rt)
-  call init_rt(rt)
+  if( free_rt(rt) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt(rt) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine clear_rt
+  call logret(PRCNAM, MODNAM)
+end function clear_rt
 !===============================================================
 !
 !===============================================================
-subroutine clear_rt_main_data(rtm)
+integer(4) function clear_rt_main_data(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_rt_main_data'
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'clear_rt_main_data', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call free_rt_main(rtm)
-  call init_rt_main(rtm)
+  if( free_rt_main(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt_main(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine clear_rt_main_data
+  call logret(PRCNAM, MODNAM)
+end function clear_rt_main_data
 !===============================================================
 !
 !===============================================================
-subroutine clear_rt_vrf_grid(rtv)
+integer(4) function clear_rt_vrf_grid(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_rt_vrf_grid'
   type(rt_vrf_), intent(inout) :: rtv
 
-  call echo(code%bgn, 'clear_rt_vrf_grid', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call free_rt_vrf_grid(rtv)
-  call init_rt_vrf_grid(rtv)
+  if( free_rt_vrf_grid(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt_vrf_grid(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine clear_rt_vrf_grid
+  call logret(PRCNAM, MODNAM)
+end function clear_rt_vrf_grid
 !===============================================================
 !
 !===============================================================
-subroutine clear_rt_vrf_raster(rtv)
+integer(4) function clear_rt_vrf_raster(rtv) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_rt_vrf_raster'
   type(rt_vrf_), intent(inout) :: rtv
 
-  call echo(code%bgn, 'clear_rt_vrf_raster', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call free_rt_vrf_raster(rtv)
-  call init_rt_vrf_raster(rtv)
+  if( free_rt_vrf_raster(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( init_rt_vrf_raster(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine clear_rt_vrf_raster
+  call logret(PRCNAM, MODNAM)
+end function clear_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
@@ -403,33 +493,42 @@ end subroutine clear_rt_vrf_raster
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt(&
+integer(4) function set_default_values_rt(&
     rt, &
-    status)
+    status) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_rt'
   type(rt_), intent(inout) :: rt
   character(*), intent(in), optional :: status
 
-  call echo(code%bgn, 'set_default_values_rt', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call set_default_values_rt_main(rt%main, rt%id)
+  if( set_default_values_rt_main(rt%main, rt%id) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( present(status) ) rt%status = status
 
-  call set_default_values_rt_vrf(rt%vrf_src, .true. , rt%id)
-  call set_default_values_rt_vrf(rt%vrf_tgt, .false., rt%id)
+  if( set_default_values_rt_vrf(rt%vrf_src, .true. , rt%id) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( set_default_values_rt_vrf(rt%vrf_tgt, .false., rt%id) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_rt
+  call logret(PRCNAM, MODNAM)
+end function set_default_values_rt
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt_main(&
+integer(4) function set_default_values_rt_main(&
     rtm, &
     id, &
     mode, mesh_coef, mesh_sort, allow_empty, &
-    mesh_sorted, nij)
+    mesh_sorted, nij) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_rt_main'
   type(rt_main_), intent(inout) :: rtm
   character(*), intent(in), optional :: id
   character(*), intent(in), optional :: mode
@@ -447,7 +546,10 @@ subroutine set_default_values_rt_main(&
   character(CLEN_KEY) :: mesh_sorted_
   integer(8)          :: nij_
 
-  call echo(code%bgn, 'set_default_values_rt_main', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   id_ = 'rt'
   mode_ = REMAP_MODE_1ST_ORDER_CONSERVATIVE
@@ -485,7 +587,9 @@ subroutine set_default_values_rt_main(&
     rtm%is_sorted_by_sidx = .false.
     rtm%is_sorted_by_tidx = .false.
   case default
-    call eerr('Invalid value in $mesh_sorted: '//str(mesh_sorted_))
+    info = 1
+    call errret(msg_invalid_value('mesh_sorted', mesh_sorted_))
+    return
   endselect
 
   rtm%ijsize = 0_8
@@ -514,21 +618,31 @@ subroutine set_default_values_rt_main(&
   rtm%coef_imin = 0_8
   rtm%coef_imax = 0_8
 
-  call set_default_values_rt_main_file(rtm)
+  if( set_default_values_rt_main_file(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call set_default_values_opt_rt_area(rtm%opt_area)
-  call set_default_values_opt_rt_coef(rtm%opt_coef)
+  if( set_default_values_opt_rt_area(rtm%opt_area) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( set_default_values_opt_rt_coef(rtm%opt_coef) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_rt_main
+  call logret(PRCNAM, MODNAM)
+end function set_default_values_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt_main_file(rtm)
+integer(4) function set_default_values_rt_main_file(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_rt_main_file'
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'set_default_values_rt_main_file', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   rtm%f%sidx = file(dtype=DTYPE_INT4, rec=1, id=trim(rtm%id)//'%f%sidx')
   rtm%f%tidx = file(dtype=DTYPE_INT4, rec=2, id=trim(rtm%id)//'%f%tidx')
@@ -536,31 +650,39 @@ subroutine set_default_values_rt_main_file(rtm)
   rtm%f%coef = file(dtype=DTYPE_DBLE, rec=1, id=trim(rtm%id)//'%f%coef')
   call reset_file_default()
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_rt_main_file
+  call logret(PRCNAM, MODNAM)
+end function set_default_values_rt_main_file
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_opt_rt_area(opt)
+integer(4) function set_default_values_opt_rt_area(opt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_opt_rt_area'
   type(opt_rt_area_), intent(inout) :: opt
 
-  call echo(code%bgn, 'set_default_values_opt_rt_area', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   opt%is_ratio_zero_negative_enabled = .true.
   opt%ratio_zero_negative = -1d-16
   opt%allow_le_ratio_zero_negative = .true.
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_opt_rt_area
+  call logret(PRCNAM, MODNAM)
+end function set_default_values_opt_rt_area
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_opt_rt_coef(opt)
+integer(4) function set_default_values_opt_rt_coef(opt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_opt_rt_coef'
   type(opt_rt_coef_), intent(inout) :: opt
 
-  call echo(code%bgn, 'set_default_values_opt_rt_coef', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   opt%is_sum_modify_enabled = .false.
   opt%sum_modify = 0.d0
@@ -579,18 +701,22 @@ subroutine set_default_values_opt_rt_coef(opt)
   opt%is_sum_error_excess_enabled = .false.
   opt%sum_error_excess = 0.d0
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_opt_rt_coef
+  call logret(PRCNAM, MODNAM)
+end function set_default_values_opt_rt_coef
 !===============================================================
 !
 !===============================================================
-subroutine set_default_values_rt_vrf(rtv, is_source, id_rt)
+integer(4) function set_default_values_rt_vrf(rtv, is_source, id_rt) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_default_values_rt_vrf'
   type(rt_vrf_), intent(inout), target :: rtv
   logical      , intent(in)            :: is_source
   character(*) , intent(in)            :: id_rt
 
-  call echo(code%bgn, 'set_default_values_rt_vrf', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
   !-------------------------------------------------------------
   if( is_source )then
     rtv%id = trim(id_rt)//'%vrf_src'
@@ -619,8 +745,8 @@ subroutine set_default_values_rt_vrf(rtv, is_source, id_rt)
   nullify(rtv%rerr_grdara)
   nullify(rtv%grdnum)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_default_values_rt_vrf
+  call logret(PRCNAM, MODNAM)
+end function set_default_values_rt_vrf
 !===============================================================
 !
 !===============================================================
@@ -632,13 +758,15 @@ end subroutine set_default_values_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine set_endian_rt_main_file(&
-    f_rtm, endian)
+integer(4) function set_endian_rt_main_file(&
+    f_rtm, endian) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_endian_rt_main_file'
   type(file_rt_main_), intent(inout) :: f_rtm
   character(*), intent(in) :: endian
 
-  call echo(code%bgn, 'set_endian_rt_main_file', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -647,18 +775,20 @@ subroutine set_endian_rt_main_file(&
   f_rtm%area%endian = endian
   f_rtm%coef%endian = endian
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_endian_rt_main_file
+  call logret(PRCNAM, MODNAM)
+end function set_endian_rt_main_file
 !===============================================================
 !
 !===============================================================
-subroutine set_status_rt_main_file(&
-    f_rtm, status)
+integer(4) function set_status_rt_main_file(&
+    f_rtm, status) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_status_rt_main_file'
   type(file_rt_main_), intent(inout) :: f_rtm
   character(*), intent(in) :: status
 
-  call echo(code%bgn, 'set_status_rt_main_file', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -667,18 +797,20 @@ subroutine set_status_rt_main_file(&
   f_rtm%area%status = status
   f_rtm%coef%status = status
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_status_rt_main_file
+  call logret(PRCNAM, MODNAM)
+end function set_status_rt_main_file
 !===============================================================
 !
 !===============================================================
-subroutine set_action_rt_main_file(&
-    f_rtm, action)
+integer(4) function set_action_rt_main_file(&
+    f_rtm, action) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_action_rt_main_file'
   type(file_rt_main_), intent(inout) :: f_rtm
   character(*), intent(in) :: action
 
-  call echo(code%bgn, 'set_action_rt_main_file', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -687,20 +819,23 @@ subroutine set_action_rt_main_file(&
   f_rtm%area%action = action
   f_rtm%coef%action = action
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_action_rt_main_file
+  call logret(PRCNAM, MODNAM)
+end function set_action_rt_main_file
 !===============================================================
 !
 !===============================================================
-subroutine apply_oldfiles_rt_main_file(rt, opt_old_files)
+integer(4) function apply_oldfiles_rt_main_file(&
+    rt, opt_old_files) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'apply_oldfiles_rt_main_file'
   type(rt_), intent(inout), target :: rt
   character(*), intent(in), optional :: opt_old_files
 
   type(file_rt_main_), pointer :: f_rtm
   character(CLEN_KEY) :: status, action
 
-  call echo(code%bgn, 'apply_oldfiles_rt_main_file', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -717,15 +852,13 @@ subroutine apply_oldfiles_rt_main_file(rt, opt_old_files)
       status = STATUS_UNKNOWN
       action = ACTION_READWRITE
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  Invalid value in $opt_old_files: '//str(opt_old_files))
+      call errret(msg_invalid_value('opt_old_files', opt_old_files))
     endselect
   case( RT_STATUS__READ )
     status = STATUS_OLD
     action = ACTION_READ
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  Invalid value in $rt%status: '//str(rt%status))
+    call errret(msg_invalid_value('rt%status', rt%status))
   endselect
 
   f_rtm => rt%main%f
@@ -742,8 +875,8 @@ subroutine apply_oldfiles_rt_main_file(rt, opt_old_files)
 
   nullify(f_rtm)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine apply_oldfiles_rt_main_file
+  call logret(PRCNAM, MODNAM)
+end function apply_oldfiles_rt_main_file
 !===============================================================
 !
 !===============================================================

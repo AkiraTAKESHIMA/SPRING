@@ -11,7 +11,7 @@ module c1_set
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: open_setting_file
   public :: close_setting_file
@@ -58,8 +58,10 @@ module c1_set
     module procedure read_value__fbin
   end interface
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_set'
+
   character(CLEN_VAR), parameter :: BLOCK_END = 'end'
   character(CLEN_VAR), parameter :: KEY_PATH_REPORT = 'path_report'
 
@@ -70,7 +72,7 @@ module c1_set
   integer, parameter :: BARLEN_DEFAULT = 64
   integer :: barlen = BARLEN_DEFAULT
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
   type input_val_nokey_
     character(CLEN_LINE) :: val
@@ -94,7 +96,7 @@ module c1_set
     integer :: n
   end type
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
   integer                 :: un
   character(CLEN_PATH)    :: path_report
@@ -112,16 +114,19 @@ contains
 !===============================================================
 subroutine open_setting_file()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'open_setting_file'
+
   integer :: cl
   character(:), allocatable :: path
 
-  call echo(code%bgn, 'open_setting_file', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( argnum() /= 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\nUsage: ./main <setting_file>')
+    call errend(msg_syntax_error()//&
+              '\nUsage: <program> <setting_file>')
+    stop
   endif
 
   allocate(character(1) :: path)
@@ -129,36 +134,45 @@ subroutine open_setting_file()
 
   cl = len_trim(path)
   if( cl == 0 )then
-    call eerr(str(msg_syntax_error())//&
-            '\nUsage: ./main <setting_file>')
+    call errend(msg_syntax_error()//&
+              '\nUsage: <program> <setting_file>')
+    stop
   endif
 
   if( path(cl:cl) == '/' )then
-    call eerr(str(msg_unexpected_condition())//&
-             '\nA directory "'//str(path)//'" was specified for setting file.')
+    call errend(msg_unexpected_condition()//&
+              '\nDirectory "'//str(path)//'" was specified for setting file.')
+    stop
   endif
 
   un = unit_number()
-  call edbg('Open '//str(un)//' '//str(path))
+  call logmsg('Open '//str(un)//' '//str(path))
   open(un, file=path, action='read', status='old')
 
   iLine = 0
 
   deallocate(path)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine open_setting_file
 !===============================================================
 !
 !===============================================================
 subroutine close_setting_file()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'close_setting_file'
 
-  call echo(code%bgn, 'close_setting_file', '-p -x2')
+  integer :: ios
+
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
-  close(un)
+  close(un, iostat=ios)
+  if( ios /= 0 )then
+    call errend('Failed to close a file. Unit number: '//str(un))
+    stop
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine close_setting_file
 !===============================================================
 !
@@ -189,29 +203,32 @@ end function key
 !===============================================================
 subroutine read_path_report()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_path_report'
 
-  call echo(code%bgn, 'read_path_report', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call read_input()
 
   if( input%key /= KEY_PATH_REPORT )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nPath of the report file is not given.')
+    call errend(msg_io_error(i=iLine)//&
+              '\nInvalid input. '//&
+                'Path of the report file was not given.')
+    stop
   endif
 
   call read_value(path_report, is_path=.true.)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_path_report
 !===============================================================
 !
 !===============================================================
-character(CLEN_PATH) function get_path_report() result(ret)
+character(CLEN_PATH) function get_path_report() result(res)
   implicit none
 
-  ret = path_report
+  res = path_report
 end function get_path_report
 !===============================================================
 !
@@ -226,13 +243,14 @@ end function get_path_report
 !===============================================================
 subroutine find_block(res)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'find_block'
   character(*), intent(out) :: res
 
   character(clen_line) :: line
   integer :: cl
   integer :: ios
 
-  call echo(code%bgn, 'find_block', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   block_name_prev = block_name
 
@@ -256,37 +274,40 @@ subroutine find_block(res)
       block_name = ''
       exit
     case default
-      call eerr(str(msg_io_error())//&
-              '\n  @ line '//str(iLine)//', iostat = '//str(ios))
+      call errend(msg_io_error(i=iLine)//&
+                '\nAn unknown reading error.')
+      stop
     endselect
   enddo
 
   res = block_name
   iLine_block_head = iLine
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine find_block
 !===============================================================
 !
 !===============================================================
 subroutine back_to_block_head()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'back_to_block_end'
   integer :: il
   integer :: ios
 
-  call echo(code%bgn, 'back_to_block_head', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   do il = 1, iLine-iLine_block_head
     backspace(un,iostat=ios)
     if( ios /= 0 )then
-      call eerr(str(msg_io_error())//&
-              '\n  iLine: '//str(iLine)//&
-              '\n  iLine_block_head: '//str(iLine_block_head))
+      call errend(msg_io_error()//&
+                '\n  iLine: '//str(iLine)//&
+                '\n  iLine_block_head: '//str(iLine_block_head))
+      stop
     endif
     call add(iLine, -1)
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine back_to_block_head
 !===============================================================
 !
@@ -301,18 +322,20 @@ end subroutine back_to_block_head
 !===============================================================
 subroutine read_input()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_input'
 
   character(CLEN_LINE) :: line
   character(CLEN_LINE) :: line_concat
   character(CLEN_LINE) :: contents
+  character(CLEN_LINE) :: line_
   integer :: cl
   integer :: ival
   integer :: ic0_val, ic1_val, ic
   integer :: ios
 
-  call echo(code%bgn, 'read_input', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  ! 
+  !
   !-------------------------------------------------------------
   call clear_input()
 
@@ -324,13 +347,19 @@ subroutine read_input()
     case( 0 )
       continue
     case( -1 )
-      call eerr('Invalid input @ line '//str(iLine)//&
-              '\nUnexpectedly reached the end of the file.')
+      call errend(msg_io_error(i=iLine)//&
+                '\nUnexpectedly reached the end of file.')
+      stop
     case default
-      call eerr('An unknown reading error @ line '//str(iLine)//'.')
+      call errend(msg_io_error(i=iLine)//&
+                '\nAn unknown reading error.')
+      stop
     endselect
     !-----------------------------------------------------------
-    call remove_comment(line, sgn='#')
+    if( remove_comment(line, sgn='#') /= 0 )then
+      call errend(msg_io_error(i=iLine))
+      stop
+    endif
 
     if( line == '' ) cycle
 
@@ -339,7 +368,7 @@ subroutine read_input()
     !-----------------------------------------------------------
     ! Successfully reached the end of the block
     if( is_block_tail(line) )then
-      call echo(code%ret)
+      call logret(PRCNAM, MODNAM)
       return
     endif
     !-----------------------------------------------------------
@@ -354,16 +383,20 @@ subroutine read_input()
       case( 0 )
         continue
       case( -1 )
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nUnexpectedly reached the end of the file.')
+        call errend(msg_io_error(i=iLine)//&
+                  '\nUnexpectedly reached the end of file.')
+        stop
       case default
-        call eerr('An unknown reading error @ line '//str(iLine)//'.')
+        call errend(msg_io_error(i=iLine)//&
+                  '\nAn unknown reading error.')
+        stop
       endselect
       !---------------------------------------------------------
       ! ERROR: Unexpectedly reached the end of the block
       if( is_block_tail(line) )then
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nNo line follows the comma.')
+        call errend(msg_io_error(i=iLine)//&
+                  '\nNo line follows the comma.')
+        stop
       endif
       !---------------------------------------------------------
       line_concat = trim(line_concat)//adjustl(line)
@@ -377,14 +410,29 @@ subroutine read_input()
   !-------------------------------------------------------------
   ! Separate the line into a key and contents.
   !-------------------------------------------------------------
-  input%key = lower(splitted(line, trim(DELIM_INPUT), 1, QUOTE_BOTH))
-  contents = splitted(line, trim(DELIM_INPUT), 2, QUOTE_BOTH)
+  line_ = line
+  if( split(line_, trim(DELIM_INPUT), 1, QUOTE_BOTH) /= 0 )then
+    call errend(msg_io_error(i=iLine))
+    stop
+  endif
+  input%key = lower(line_)
+
+  line_ = line
+  if( split(line_, trim(DELIM_INPUT), 2, QUOTE_BOTH) /= 0 )then
+    call errend(msg_io_error(i=iLine))
+    stop
+  endif
+  contents = line_
   if( contents == '' )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nNo value is given for the keyword "'//str(input%key)//'".')
+    call errret(msg_io_error(i=iLine)//&
+              '\nNo value is given for the keyword "'//str(input%key)//'".')
+    stop
   endif
 
-  call count_word(contents, DELIM_CONTENTS, input%nval, quoteIgnored=QUOTE_BOTH)
+  if( count_word(contents, DELIM_CONTENTS, input%nval, quoteIgnored=QUOTE_BOTH) /= 0 )then
+    call errend(msg_io_error(i=iLine))
+    stop
+  endif
   input%nval = input%nval + 1
   allocate(input%val_nokey(input%nval))
   allocate(input%val_key(input%nval))
@@ -395,21 +443,29 @@ subroutine read_input()
   do ival = 1, input%nval
     if( ival < input%nval )then
       ! Find the next comma @ ic1_val+1
-      call search_word(contents(ic0_val:), DELIM_CONTENTS, ic, quoteIgnored=QUOTE_BOTH)
+      if( search_word(contents(ic0_val:), DELIM_CONTENTS, ic, quoteIgnored=QUOTE_BOTH) /= 0 )then
+        call errend(msg_io_error(i=iLine))
+        stop
+      endif
       ic1_val = ic0_val + ic - 2
     else
       ic1_val = len_trim(contents)
     endif
 
-    call search_word(contents(ic0_val:ic1_val), DELIM_POSVAL, ic, quoteIgnored=QUOTE_BOTH)
+    if( search_word(contents(ic0_val:ic1_val), DELIM_POSVAL, ic, quoteIgnored=QUOTE_BOTH) /= 0 )then
+      call errend(msg_io_error(i=iLine))
+      stop
+    endif
     !-----------------------------------------------------------
     ! Case: A value without a keyword
     if( ic == 0 )then
       !---------------------------------------------------------
       ! ERROR: Value without keywords after values with keywords
       if( input%nval_key > 0 )then
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nValues without keywords must precede values with keywords.')
+        call errend(msg_io_error(i=iLine)//&
+                  '\nValues without keywords cannot be put '//&
+                    'after those with keywords.')
+        stop
       endif
 
       call add(input%nval_nokey)
@@ -426,7 +482,7 @@ subroutine read_input()
     ic0_val = ic1_val + 2
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_input
 !===============================================================
 !
@@ -446,17 +502,21 @@ end subroutine clear_input
 !===============================================================
 logical function is_block_tail(line) result(res)
   implicit none
-  character(*), intent(in) :: line
+  character(CLEN_PROC), parameter :: PRCNAM = 'is_block_tail'
+  character(*), intent(in)  :: line
 
   character(len_trim(line)) :: line_
   character(len_trim(line)) :: block_name
   integer :: cl
 
-  call echo(code%bgn, 'is_block_tail', '-p')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   line_ = adjustl(line)
 
-  call remove_comment(line_)
+  if( remove_comment(line_) /= 0 )then
+    call errend(msg_io_error(i=iLine))
+    stop
+  endif
 
   cl = len_trim(line_)
 
@@ -465,15 +525,16 @@ logical function is_block_tail(line) result(res)
     if( block_name == BLOCK_END )then
       res = .true.
     else
-      call eerr('Invalid input @ line '//str(iLine)//&
-              '\nBlock "'//str(block_name)//'" appeared before '//&
-                'the current block "'//str(block_name_prev)//'" was closed.')
+      call errend(msg_io_error(i=iLine)//&
+                '\nBlock "'//str(block_name)//'" appeared before '//&
+                  'the current block "'//str(block_name_prev)//'" was closed.')
+      stop
     endif
   else
     res = .false.
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end function is_block_tail
 !===============================================================
 !
@@ -489,6 +550,7 @@ end function is_block_tail
 subroutine read_value__char(&
     val, pos, key, is_keyword, is_path, dir, found)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__char'
   character(*), intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
@@ -507,7 +569,7 @@ subroutine read_value__char(&
   integer :: ival
   integer :: cl
 
-  call echo(code%bgn, 'read_value__char', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -523,8 +585,9 @@ subroutine read_value__char(&
   if( present(dir) ) dir_ = dir
 
   if( is_keyword_ .and. is_path_ )then
-    call eerr('!!! INTERNAL ERROR !!!'//&
-            '\n  is_keyword_ .and. is_path_')
+    call errend(msg_unexpected_condition()//&
+              '\n  is_keyword_ .and. is_path_')
+    stop
   endif
   !-------------------------------------------------------------
   !
@@ -534,11 +597,12 @@ subroutine read_value__char(&
     val = input%val_nokey(pos_)%val
   else
     if( key_ == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  pos_ > input%nval_key .and. key_ == ""'//&
-              '\n  iLine         : '//str(iLine)//&
-              '\n  pos_          : '//str(pos_)//&
-              '\n  input%nval_key: '//str(input%nval_key))
+      call errend(msg_unexpected_condition()//&
+                '\n  pos_ > input%nval_key .and. key_ == ""'//&
+                '\n  iLine         : '//str(iLine)//&
+                '\n  pos_          : '//str(pos_)//&
+                '\n  input%nval_key: '//str(input%nval_key))
+      stop
     endif
 
     found_ = .false.
@@ -553,13 +617,14 @@ subroutine read_value__char(&
     if( .not. found_ )then
       if( present(found) )then
         found = found_
-        call echo(code%ret)
+        call logret(PRCNAM, MODNAM)
         return
       else
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nFailed to get value.'//&
-                '\n  Default position: '//str(pos_)//&
-                '\n  Keyword         : '//str(key_))
+        call errend(msg_io_error(i=iLine)//&
+                  '\nFailed to get value due to invalid input.'//&
+                  '\n  Default position: '//str(pos_)//&
+                  '\n  Keyword         : '//str(key_))
+        stop
       endif
     endif
   endif
@@ -573,16 +638,15 @@ subroutine read_value__char(&
   ! Case: Path
   if( is_path_ )then
     if( val == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  len_trim(val) == 0 '//&
-              '\n  iLine     : '//str(iLine)//&
-              '\n  block_name: '//str(block_name)//&
-              '\n  keyword   : '//str(input%key))
+      call errend(msg_io_error(i=iLine)//&
+                '\nPath is empty.')
+      stop
     elseif( .not. ( &
               (val(1:1) == "'" .and. val(cl:cl) == "'") .or. &
               (val(1:1) == '"' .and. val(cl:cl) == '"') ) )then
-      call eerr('Invalid input @ line '//str(iLine)//&
-              '\nPath must be quoted.')
+      call errend(msg_io_error(i=iLine)//&
+                '\nPaths must be quoted.')
+      stop
     endif
     val = val(2:cl-1)
     val = joined(dir_, val)
@@ -590,21 +654,27 @@ subroutine read_value__char(&
   ! Case: Keyword
   elseif( is_keyword_ )then
     val = lower(val)
-    call remove_quotes(val)
+    if( remove_quotes(val) /= 0 )then
+      call errend(msg_io_error(i=iLine))
+      stop
+    endif
   !-------------------------------------------------------------
   ! Case: Neither keyword or path
   else
-    call remove_quotes(val)
+    if( remove_quotes(val) /= 0 )then
+      call errend(msg_io_error(i=iLine))
+      stop
+    endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__char
 !===============================================================
 !
 !===============================================================
-subroutine read_value__log(&
-    val, pos, key, found)
+subroutine read_value__log(val, pos, key, found)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__log'
   logical     , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
@@ -616,7 +686,7 @@ subroutine read_value__log(&
 
   integer :: ival
 
-  call echo(code%bgn, 'read_value__log', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -629,21 +699,22 @@ subroutine read_value__log(&
   !-------------------------------------------------------------
   if( input%nval_nokey >= pos_ )then
     found_ = .true.
-    call read_this(input%val_nokey(pos_)%val)
+    call read_cval(input%val_nokey(pos_)%val, pos_, key_, l=val)
   else
     if( key_ == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  pos_ > input%nval_key .and. key_ == ""'//&
-              '\n  iLine         : '//str(iLine)//&
-              '\n  pos_          : '//str(pos_)//&
-              '\n  input%nval_key: '//str(input%nval_key))
+      call errend(msg_unexpected_condition()//&
+                '\n  pos_ > input%nval_key .and. key_ == ""'//&
+                '\n  iLine         : '//str(iLine)//&
+                '\n  pos_          : '//str(pos_)//&
+                '\n  input%nval_key: '//str(input%nval_key))
+      stop
     endif
 
     found_ = .false.
     do ival = 1, input%nval_key
       if( key_ == input%val_key(ival)%key )then
         found_ = .true.
-        call read_this(input%val_key(ival)%val)
+        call read_cval(input%val_key(ival)%val, pos_, key_, l=val)
         exit
       endif
     enddo  ! ival/
@@ -651,53 +722,28 @@ subroutine read_value__log(&
     if( .not. found_ )then
       if( present(found) )then
         found = found_
-        call echo(code%ret)
+        call logret(PRCNAM, MODNAM)
         return
       else
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nFailed to get value.'//&
-                '\n  Default position: '//str(pos_)//&
-                '\n  Keyword         : '//str(key_))
+        call errend(msg_invalid_input(iLine)//&
+                  '\nFailed to get value.'//&
+                  '\n  Default position: '//str(pos_)//&
+                  '\n  Keyword         : '//str(key_))
+        stop
       endif
     endif
   endif
 
   if( present(found) ) found = found_
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ret)
-  !-------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine read_this(cval)
-  implicit none
-  character(*), intent(in) :: cval
-
-  selectcase( lower(cval) )
-  case( '.true.', 'true', 't' )
-    val = .true.
-  case( '.false.', 'false', 'f' )
-    val = .false.
-  case default
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nBoolean (logical) value must be given by'//&
-              '".true.", "true" or "t" for true and '//&
-              '".false.", "false" or "f" for false '//&
-              '(not case-sensitive).'//&
-            '\n  Default position: '//str(pos_)//&
-            '\n  Keyword         : '//str(key_)//&
-            '\n  Value           : '//str(cval))
-  endselect
-end subroutine read_this
-!---------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__log
 !===============================================================
 !
 !===============================================================
-subroutine read_value__int4(&
-    val, pos, key, found)
+subroutine read_value__int4(val, pos, key, found)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__int4'
   integer(4)  , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
@@ -709,7 +755,7 @@ subroutine read_value__int4(&
 
   integer :: ival
 
-  call echo(code%bgn, 'read_value__int4', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -722,21 +768,22 @@ subroutine read_value__int4(&
   !-------------------------------------------------------------
   if( input%nval_nokey >= pos_ )then
     found_ = .true.
-    call read_this(input%val_nokey(pos_)%val)
+    call read_cval(input%val_nokey(pos_)%val, pos_, key_, i4=val)
   else
     if( key_ == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  pos_ > input%nval_key .and. key_ == ""'//&
-              '\n  iLine         : '//str(iLine)//&
-              '\n  pos_          : '//str(pos_)//&
-              '\n  input%nval_key: '//str(input%nval_key))
+      call errend(msg_unexpected_condition()//&
+                '\n  pos_ > input%nval_key .and. key_ == ""'//&
+                '\n  iLine         : '//str(iLine)//&
+                '\n  pos_          : '//str(pos_)//&
+                '\n  input%nval_key: '//str(input%nval_key))
+      stop
     endif
 
     found_ = .false.
     do ival = 1, input%nval_key
       if( key_ == input%val_key(ival)%key )then
         found_ = .true.
-        call read_this(input%val_key(ival)%val)
+        call read_cval(input%val_key(ival)%val, pos_, key_, i4=val)
         exit
       endif
     enddo  ! ival/
@@ -744,48 +791,28 @@ subroutine read_value__int4(&
     if( .not. found_ )then
       if( present(found) )then
         found = found_
-        call echo(code%ret)
+        call logret(PRCNAM, MODNAM)
         return
       else
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nFailed to get value.'//&
-                '\n  Default position: '//str(pos_)//&
-                '\n  Keyword         : '//str(key_))
+        call errend(msg_invalid_input(iLine)//&
+                  '\nFailed to get value.'//&
+                  '\n  Default position: '//str(pos_)//&
+                  '\n  Keyword         : '//str(key_))
+        stop
       endif
     endif
   endif
 
   if( present(found) ) found = found_
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ret)
-  !-------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine read_this(cval)
-  implicit none
-  character(*), intent(in) :: cval
-
-  integer :: ios
-
-  read(cval,*,iostat=ios) val
-  if( ios /= 0 )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nFailed to read the 4-byte integer argument.'//&
-            '\n  Default position: '//str(pos_)//&
-            '\n  Keyword         : '//str(key_)//&
-            '\n  Value           : '//str(cval))
-  endif
-end subroutine read_this
-!---------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__int4
 !===============================================================
 !
 !===============================================================
-subroutine read_value__int8(&
-    val, pos, key, found)
+subroutine read_value__int8(val, pos, key, found)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__int8'
   integer(8)  , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
@@ -797,7 +824,7 @@ subroutine read_value__int8(&
 
   integer :: ival
 
-  call echo(code%bgn, 'read_value__int8', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -810,21 +837,22 @@ subroutine read_value__int8(&
   !-------------------------------------------------------------
   if( input%nval_nokey >= pos_ )then
     found_ = .true.
-    call read_this(input%val_nokey(pos_)%val)
+    call read_cval(input%val_nokey(pos_)%val, pos_, key_, i8=val)
   else
     if( key_ == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  pos_ > input%nval_key .and. key_ == ""'//&
-              '\n  iLine         : '//str(iLine)//&
-              '\n  pos_          : '//str(pos_)//&
-              '\n  input%nval_key: '//str(input%nval_key))
+      call errend(msg_unexpected_condition()//&
+                '\n  pos_ > input%nval_key .and. key_ == ""'//&
+                '\n  iLine         : '//str(iLine)//&
+                '\n  pos_          : '//str(pos_)//&
+                '\n  input%nval_key: '//str(input%nval_key))
+      stop
     endif
 
     found_ = .false.
     do ival = 1, input%nval_key
       if( key_ == input%val_key(ival)%key )then
         found_ = .true.
-        call read_this(input%val_key(ival)%val)
+        call read_cval(input%val_key(ival)%val, pos_, key_, i8=val)
         exit
       endif
     enddo  ! ival/
@@ -832,48 +860,28 @@ subroutine read_value__int8(&
     if( .not. found_ )then
       if( present(found) )then
         found = found_
-        call echo(code%ret)
+        call logret(PRCNAM, MODNAM)
         return
       else
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nFailed to get value.'//&
-                '\n  Default position: '//str(pos_)//&
-                '\n  Keyword         : '//str(key_))
+        call errend(msg_invalid_input(iLine)//&
+                  '\nFailed to get value.'//&
+                  '\n  Default position: '//str(pos_)//&
+                  '\n  Keyword         : '//str(key_))
+        stop
       endif
     endif
   endif
 
   if( present(found) ) found = found_
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ret)
-  !-------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine read_this(cval)
-  implicit none
-  character(*), intent(in) :: cval
-
-  integer :: ios
-
-  read(cval,*,iostat=ios) val
-  if( ios /= 0 )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nFailed to read the 8-byte integer argument.'//&
-            '\n  Default position: '//str(pos_)//&
-            '\n  Keyword         : '//str(key_)//&
-            '\n  Value           : '//str(cval))
-  endif
-end subroutine read_this
-!---------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__int8
 !===============================================================
 !
 !===============================================================
-subroutine read_value__real(&
-    val, pos, key, found)
+subroutine read_value__real(val, pos, key, found)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__real'
   real(4)     , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
@@ -885,7 +893,7 @@ subroutine read_value__real(&
 
   integer :: ival
 
-  call echo(code%bgn, 'read_value__real', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -898,21 +906,22 @@ subroutine read_value__real(&
   !-------------------------------------------------------------
   if( input%nval_nokey >= pos_ )then
     found_ = .true.
-    call read_this(input%val_nokey(pos_)%val)
+    call read_cval(input%val_nokey(pos_)%val, pos_, key_, r4=val)
   else
     if( key_ == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  pos_ > input%nval_key .and. key_ == ""'//&
-              '\n  iLine         : '//str(iLine)//&
-              '\n  pos_          : '//str(pos_)//&
-              '\n  input%nval_key: '//str(input%nval_key))
+      call errend(msg_unexpected_condition()//&
+                '\n  pos_ > input%nval_key .and. key_ == ""'//&
+                '\n  iLine         : '//str(iLine)//&
+                '\n  pos_          : '//str(pos_)//&
+                '\n  input%nval_key: '//str(input%nval_key))
+      stop
     endif
 
     found_ = .false.
     do ival = 1, input%nval_key
       if( key_ == input%val_key(ival)%key )then
         found_ = .true.
-        call read_this(input%val_key(ival)%val)
+        call read_cval(input%val_key(ival)%val, pos_, key_, r4=val)
         exit
       endif
     enddo  ! ival/
@@ -920,48 +929,28 @@ subroutine read_value__real(&
     if( .not. found_ )then
       if( present(found) )then
         found = found_
-        call echo(code%ret)
+        call logret(PRCNAM, MODNAM)
         return
       else
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nFailed to get value.'//&
-                '\n  Default position: '//str(pos_)//&
-                '\n  Keyword         : '//str(key_))
+        call errend(msg_invalid_input(iLine)//&
+                  '\nFailed to get value.'//&
+                  '\n  Default position: '//str(pos_)//&
+                  '\n  Keyword         : '//str(key_))
+        stop
       endif
     endif
   endif
 
   if( present(found) ) found = found_
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ret)
-  !-------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine read_this(cval)
-  implicit none
-  character(*), intent(in) :: cval
-
-  integer :: ios
-
-  read(cval,*,iostat=ios) val
-  if( ios /= 0 )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nFailed to read the 4-byte float (real) argument.'//&
-            '\n  Default position: '//str(pos_)//&
-            '\n  Keyword         : '//str(key_)//&
-            '\n  Value           : '//str(cval))
-  endif
-end subroutine read_this
-!---------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__real
 !===============================================================
 !
 !===============================================================
-subroutine read_value__dble(&
-    val, pos, key, found)
+subroutine read_value__dble(val, pos, key, found)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__dble'
   real(8)     , intent(inout) :: val
   integer     , intent(in) , optional :: pos
   character(*), intent(in) , optional :: key
@@ -973,7 +962,7 @@ subroutine read_value__dble(&
 
   integer :: ival
 
-  call echo(code%bgn, 'read_value__dble', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -986,21 +975,22 @@ subroutine read_value__dble(&
   !-------------------------------------------------------------
   if( input%nval_nokey >= pos_ )then
     found_ = .true.
-    call read_this(input%val_nokey(pos_)%val)
+    call read_cval(input%val_nokey(pos_)%val, pos_, key_, r8=val)
   else
     if( key_ == '' )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  pos_ > input%nval_key .and. key_ == ""'//&
-              '\n  iLine         : '//str(iLine)//&
-              '\n  pos_          : '//str(pos_)//&
-              '\n  input%nval_key: '//str(input%nval_key))
+      call errend(msg_unexpected_condition()//&
+                '\n  pos_ > input%nval_key .and. key_ == ""'//&
+                '\n  iLine         : '//str(iLine)//&
+                '\n  pos_          : '//str(pos_)//&
+                '\n  input%nval_key: '//str(input%nval_key))
+      stop
     endif
 
     found_ = .false.
     do ival = 1, input%nval_key
       if( key_ == input%val_key(ival)%key )then
         found_ = .true.
-        call read_this(input%val_key(ival)%val)
+        call read_cval(input%val_key(ival)%val, pos_, key_, r8=val)
         exit
       endif
     enddo  ! ival/
@@ -1008,48 +998,28 @@ subroutine read_value__dble(&
     if( .not. found_ )then
       if( present(found) )then
         found = found_
-        call echo(code%ret)
+        call logret(PRCNAM, MODNAM)
         return
       else
-        call eerr('Invalid input @ line '//str(iLine)//&
-                '\nFailed to get value.'//&
-                '\n  Default position: '//str(pos_)//&
-                '\n  Keyword         : '//str(key_))
+        call errend(msg_invalid_input(iLine)//&
+                  '\nFailed to get value.'//&
+                  '\n  Default position: '//str(pos_)//&
+                  '\n  Keyword         : '//str(key_))
+        stop
       endif
     endif
   endif
 
   if( present(found) ) found = found_
   !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call echo(code%ret)
-  !-------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine read_this(cval)
-  implicit none
-  character(*), intent(in) :: cval
-
-  integer :: ios
-
-  read(cval,*,iostat=ios) val
-  if( ios /= 0 )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nFailed to read the 8-byte float (real) argument.'//&
-            '\n  Default position: '//str(pos_)//&
-            '\n  Keyword         : '//str(key_)//&
-            '\n  Value           : '//str(cval))
-  endif
-end subroutine read_this
-!---------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__dble
 !===============================================================
 !
 !===============================================================
-subroutine read_value__fbin(&
-    val, dir, getlen)
+subroutine read_value__fbin(val, dir, getlen)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_value__fbin'
   type(file_) , intent(inout) :: val
   character(*), intent(in), optional :: dir
   logical     , intent(in), optional :: getlen
@@ -1059,7 +1029,7 @@ subroutine read_value__fbin(&
 
   logical :: found
 
-  call echo(code%bgn, 'read_value__fbin', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1072,22 +1042,152 @@ subroutine read_value__fbin(&
   !-------------------------------------------------------------
   call read_value__char(val%path, is_path=.true., pos=1, key='path', found=found)
   if( .not. found )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\n  Path is not given.')
+    call errend(msg_io_error(i=iLine)//&
+              '\nPath was not given.')
+    stop
   endif
   val%path = joined(dir_, val%path)
 
   call read_value__char(val%dtype, pos=2, key='dtype', found=found, is_keyword=.true.)
   call read_value__int4(val%rec, pos=3, key='rec', found=found)
-  call read_value__char (val%endian, pos=4, key='endian', found=found)
+  call read_value__char(val%endian, pos=4, key='endian', found=found)
   call read_value__int8(val%length, pos=5, key='length', found=found)
   if( .not. getlen_ .and. found )then
-    call eerr('Invalid input @ line '//str(iLine)//&
-            '\nLength of data cannot be given for this argument.')
+    call errend(msg_invalid_input(iLine)//&
+              '\nLength of data cannot be given for this argument.')
+    stop
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_value__fbin
+!===============================================================
+!
+!===============================================================
+subroutine read_cval(cval, pos, key, l, i4, i8, r4, r8)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_cval'
+  character(*), intent(in) :: cval
+  integer     , intent(in) :: pos
+  character(*), intent(in) :: key  
+  logical     , intent(out), optional :: l
+  integer(4)  , intent(out), optional :: i4
+  integer(8)  , intent(out), optional :: i8
+  real(4)     , intent(out), optional :: r4
+  real(8)     , intent(out), optional :: r8
+
+  integer :: ios
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  ! Case: logical
+  if( present(l) )then
+    selectcase( lower(cval) )
+    case( '.true.', 'true', 't' )
+      l = .true.
+    case( '.false.', 'false', 'f' )
+      l = .false.
+    case default
+      call errend(msg_invalid_input(iLine)//&
+                  msg_main()//&
+                '\nBoolean value must be given by'//&
+                  '".true.", "true" or "t" for true and '//&
+                  '".false.", "false" or "f" for false '//&
+                  '(not case-sensitive).'//&
+                  msg_info())
+      stop
+    endselect
+  !-------------------------------------------------------------
+  ! Case: int4
+  elseif( present(i4) )then
+    read(cval,*,iostat=ios) i4
+    if( ios /= 0 )then
+      call errend(msg_invalid_input(iLine)//&
+                  msg_main()//&
+                  msg_info())
+      stop
+    endif
+  !-------------------------------------------------------------
+  ! Case: int8
+  elseif( present(i8) )then
+    read(cval,*,iostat=ios) i8
+    if( ios /= 0 )then
+      call errend(msg_invalid_input(iLine)//&
+                  msg_main()//&
+                  msg_info())
+      stop
+    endif
+  !-------------------------------------------------------------
+  ! Case: real
+  elseif( present(r4) )then
+    read(cval,*,iostat=ios) r4
+    if( ios /= 0 )then
+      call errend(msg_invalid_input(iLine)//&
+                  msg_main()//&
+                  msg_info())
+      stop
+    endif
+  !-------------------------------------------------------------
+  ! Case: dble
+  elseif( present(r8) )then
+    read(cval,*,iostat=ios) r8
+    if( ios /= 0 )then
+      call errend(msg_invalid_input(iLine)//&
+                  msg_main()//&
+                  msg_info())
+      stop
+    endif
+  !-------------------------------------------------------------
+  ! Case: ERROR
+  else
+    call errend(msg_unexpected_condition()//&
+              '\nNot matched any case.')
+    stop
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+!---------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+function msg_main() result(res)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = '__IP__msg_main'
+  character(:), allocatable :: res
+
+  character(32) :: dtype
+
+  if( present(l) )then
+    dtype = 'a logical'
+  elseif( present(i4) )then
+    dtype = 'a 4-byte integer'
+  elseif( present(i8) )then
+    dtype = 'an 8-byte integer'
+  elseif( present(r4) )then
+    dtype = 'a 4-byte float'
+  elseif( present(r8) )then
+    dtype = 'an 8-byte float'
+  else
+    call errend(msg_unexpected_condition()//&
+              '\nNot matched any case.', &
+                PRCNAM, MODNAM)
+    stop
+  endif
+
+  allocate(character(1) :: res)
+  res = '\nFailed to read the input value as '//str(dtype)//'.'
+end function msg_main
+!---------------------------------------------------------------
+function msg_info() result(res)
+  implicit none
+  character(:), allocatable :: res
+
+  res = '\n  Default position: '//str(pos)//&
+        '\n  Keyword         : '//str(key)//&
+        '\n  Value           : '//str(cval)
+end function msg_info
+!---------------------------------------------------------------
+end subroutine read_cval
 !===============================================================
 !
 !===============================================================
@@ -1104,10 +1204,10 @@ subroutine alloc_keynum()
 
   type(keydict_), pointer :: kd
   integer :: ikey
-  integer, parameter :: nkey_init = 16
+  integer, parameter :: NKEY_INIT = 16
 
-  allocate(keydict(nkey_init))
-  nkey = nkey_init
+  allocate(keydict(NKEY_INIT))
+  nkey = NKEY_INIT
 
   do ikey = 1, nkey
     kd => keydict(ikey)
@@ -1132,6 +1232,7 @@ end subroutine free_keynum
 !===============================================================
 subroutine set_keynum(key, llim, ulim)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_keynum'
   character(*), intent(in) :: key
   integer     , intent(in) :: llim, ulim
 
@@ -1139,17 +1240,18 @@ subroutine set_keynum(key, llim, ulim)
   type(keydict_), allocatable :: keydict_copy(:)
   integer :: ikey
 
-  call echo(code%bgn, 'set_keynum', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   do ikey = 1, nkey
     kd => keydict(ikey)
     if( kd%key == trim(key) )then
-      call eerr('!!! INTERNAL ERROR !!!'//&
-              '\n  keydict(ikey)%key == trim(key)'//&
-              '\n  block_name: '//str(block_name)//&
-              '\n  key: '//str(key))
+      call errend(msg_unexpected_condition()//&
+                '\n  keydict(ikey)%key == trim(key)'//&
+                '\n  block_name: '//str(block_name)//&
+                '\n  key: '//str(key))
+      stop
     endif
 
     if( kd%key == '' ) exit
@@ -1183,7 +1285,7 @@ subroutine set_keynum(key, llim, ulim)
   kd%n_ulim = ulim
   nullify(kd)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine set_keynum
 !===============================================================
 !
@@ -1202,16 +1304,17 @@ end subroutine reset_keynum
 !===============================================================
 subroutine update_keynum()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_keynum'
 
   type(keydict_), pointer :: kd
   integer :: ikey
 
-  call echo(code%bgn, 'update_keynum', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   ! Update the counter of keywords
   !-------------------------------------------------------------
   if( input%key == '' )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
@@ -1222,25 +1325,27 @@ subroutine update_keynum()
   enddo
 
   if( .not. associated(kd) )then
-    call eerr(str(msg_invalid_input())//&
-            '\n@ line '//str(line_number())//': key "'//str(input%key)//'" is invalid.')
+    call errend(msg_io_error(i=iLine)//&
+              '\nKey "'//str(input%key)//'" is invalid.')
+    stop
   endif
 
   call add(kd%n)
   nullify(kd)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine update_keynum
 !===============================================================
 !
 !===============================================================
 subroutine check_keynum()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_keynum'
 
   type(keydict_), pointer :: kd
   integer :: ikey
 
-  call echo(code%bgn, 'check_keynum', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1250,50 +1355,54 @@ subroutine check_keynum()
 
     if( kd%n_llim >= 0 )then
       if( kd%n < kd%n_llim )then
-        call eerr('Invalid input in block "'//str(block_name)//&
-                  '" which starts from line '//str(iLine_block_head)//'.'//&
-                '\nThe number of arguments given by the keyword "'//str(kd%key)//&
-                  '" is below the lower limit of '//str(kd%n_llim)//'.')
+        call errend('Invalid input in block "'//str(block_name)//&
+                    '" which starts from line '//str(iLine_block_head)//'.'//&
+                  '\nThe number of arguments given by the keyword "'//str(kd%key)//&
+                    '" is below the lower limit of '//str(kd%n_llim)//'.')
+        stop
       endif
     endif
     if( kd%n_ulim >= 0 )then
       if( kd%n > kd%n_ulim )then
-        call eerr('Invalid input in block "'//str(block_name)//&
-                  '" which starts from line '//str(iLine_block_head)//'.'//&
-                '\nThe number of arguments given by the keyword "'//str(kd%key)//&
-                  '" is above the upper limit of '//str(kd%n_ulim)//'.')
+        call errend('Invalid input in block "'//str(block_name)//&
+                    '" which starts from line '//str(iLine_block_head)//'.'//&
+                  '\nThe number of arguments given by the keyword "'//str(kd%key)//&
+                    '" is above the upper limit of '//str(kd%n_ulim)//'.')
+        stop
       endif
     endif
   enddo
 
   nullify(kd)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_keynum
 !===============================================================
 !
 !===============================================================
 integer function keynum(key) result(n)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'keynum'
   character(*), intent(in) :: key
 
   integer :: ikey
 
-  call echo(code%bgn, 'keynum', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   n = 0
   do ikey = 1, nkey
     if( keydict(ikey)%key == key )then
       n = keydict(ikey)%n
-      call echo(code%ret)
+      call logret(PRCNAM, MODNAM)
       return
     endif
   enddo
 
-  call eerr('!!! INTERNAL ERROR !!!'//&
-          '\nKeyword "'//str(key)//'" is not found.')
+  call errend(msg_unexpected_condition()//&
+            '\nKeyword "'//str(key)//'" is not found.')
+  stop
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end function keynum
 !===============================================================
 !
@@ -1308,13 +1417,14 @@ end function keynum
 !===============================================================
 subroutine check_num_of_key(n, key, nmin, nmax)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_num_of_key'
   integer     , intent(in) :: n
   character(*), intent(in) :: key
   integer     , intent(in) :: nmin, nmax
 
   character(32) :: c_nmin, c_nmax
 
-  call echo(code%bgn, 'check_num_of_key', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( (nmin > 0 .and. n < nmin) .or. &
       (nmax > 0 .and. n > nmax) )then
@@ -1330,15 +1440,16 @@ subroutine check_num_of_key(n, key, nmin, nmax)
       c_nmax = '(unlimited)'
     endif
 
-    call eerr(str(msg_invalid_input())//&
-            '\n  The number of times the key was specified is out of range.'//&
-            '\n  key          : "'//str(key)//'"'//&
-            '\n  num. of times: '//str(n)//&
-            '\n  min          : '//str(c_nmin)//&
-            '\n  max          : '//str(c_nmax))
+    call errend(msg_invalid_input()//&
+              '\nThe number of times the key was specified is out of range.'//&
+              '\n  key          : "'//str(key)//'"'//&
+              '\n  num. of times: '//str(n)//&
+              '\n  min          : '//str(c_nmin)//&
+              '\n  max          : '//str(c_nmax))
+    stop
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_num_of_key
 !===============================================================
 !
@@ -1370,11 +1481,12 @@ end subroutine init_barlen
 !===============================================================
 character(CLEN_VAR) function bar(s)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'bar'
   character(*), intent(in) :: s
 
   integer :: cl_left, cl_right
 
-  call echo(code%bgn, 'print_bar', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   ! Case: Tail
   if( s == '' )then
@@ -1395,7 +1507,7 @@ character(CLEN_VAR) function bar(s)
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end function bar
 !===============================================================
 !
@@ -1410,44 +1522,57 @@ end function bar
 !===============================================================
 subroutine raise_error_invalid_key()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'raise_error_invalid_key'
 
-  call echo(code%bgn, 'raise_error_invalid_key', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
-  call eerr('Invalid input @ line '//str(iLine)//&
-          '\n  Keyword "'//str(input%key)//&
-            '" is invalid for block "'//str(block_name)//'".')
+  call errend(msg_invalid_input(iLine)//&
+            '\nKeyword "'//str(input%key)//&
+              '" is invalid for block "'//str(block_name)//'".')
+  stop
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine raise_error_invalid_key
 !===============================================================
 !
 !===============================================================
 subroutine raise_warning_invalid_key()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'raise_warning_invalid_key'
 
-  call echo(code%bgn, 'raise_warning_invalid_key', '-p -x2')
-  !-------------------------------------------------------------
-  call ewrn('Invalid input @ line '//str(iLine)//&
-          '\n  Keyword "'//str(input%key)//&
-            '" is invalid for block "'//str(block_name)//'".')
-  !-------------------------------------------------------------
-  call echo(code%ret)
+  call logwrn(msg_invalid_input(iLine)//&
+            '\nKeyword "'//str(input%key)//&
+              '" is invalid for block "'//str(block_name)//'".')
 end subroutine raise_warning_invalid_key
 !===============================================================
 !
 !===============================================================
-character(CLEN_MSG+CLEN_VAR) function msg_invalid_input() result(msg)
+function msg_invalid_input(iLine) result(msg)
   implicit none
+  integer, intent(in), optional :: iLine
+  character(:), allocatable :: msg
 
-  msg = 'Invalid input in block "'//str(block_name)//'"'
+  allocate(character(1) :: msg)
+  if( present(iLine) )then
+    msg = 'Invalid input @ line '//str(iLine)
+  else
+    msg = 'Invalid input.'
+  endif
 end function msg_invalid_input
 !===============================================================
 !
 !===============================================================
-character(CLEN_MSG+CLEN_VAR) function msg_undesirable_input() result(msg)
+function msg_undesirable_input(iLine) result(msg)
   implicit none
+  integer, intent(in), optional :: iLine
+  character(:), allocatable :: msg
 
-  msg = 'Undesirable input in block "'//str(block_name)//'"'
+  allocate(character(1) :: msg)
+  if( present(iLine) )then
+    msg = 'Undesirable input @ line '//str(iLine)
+  else
+    msg = 'Undesirable input.'
+  endif
 end function msg_undesirable_input
 !===============================================================
 !
