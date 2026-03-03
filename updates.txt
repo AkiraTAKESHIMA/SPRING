@@ -27,6 +27,14 @@ src/main/std/rasterize/mod_rasterize_raster.f90
 
 Fixed a bug of allocation and deallocation of the pointers.
 #---------------------------------------------------------------
+[2026/03/01] Bug fix
+#---------------------------------------------------------------
+src/main/std/remap
+
+1) Adjusted handling of functions so that errors are correctly 
+trapped.
+2) Fixed a bug of initialization and finalization.
+#---------------------------------------------------------------
 [2026/02/27] Modification
 #---------------------------------------------------------------
 Renamed setting files for remapping of MIRA meshes, 
