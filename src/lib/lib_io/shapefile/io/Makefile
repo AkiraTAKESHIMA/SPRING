@@ -24,7 +24,7 @@ MODS = \
 .PHONY: all
 all:
 	$(MAKE) $(OBJS)
-	$(INSTALL) $(OBJS) $(MODS) ../..
+	$(CP) $(CPFLAGS) $(OBJS) $(MODS) ../..
 
 .PHONY: clean
 clean:

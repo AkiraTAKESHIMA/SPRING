@@ -16,7 +16,7 @@ OBJS = \
 .PHONY: all
 all:
 	$(MAKE) $(OBJS)
-	$(INSTALL) $(OBJS) ../..
+	$(CP) $(CPFLAGS) $(OBJS) ../..
 
 .PHONY: clean
 clean:
