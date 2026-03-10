@@ -41,7 +41,7 @@ module lib_io_arg_parser
 
   integer, parameter :: CLEN_DTYPE_DESC = 16
   character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_FLAG = 'flag'
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_STR  = 'string'
+  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_CHAR = 'char'
   character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_INT4 = '4-byte integer'
   character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_INT8 = '8-byte integer'
   character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_REAL = '4-byte float'
@@ -124,7 +124,7 @@ module lib_io_arg_parser
     integer :: narg
     type(arg_char_), pointer :: arg(:)
     character(4) :: typename = 'char'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_STR
+    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_CHAR
   end type
 
   type arglst_int4_
