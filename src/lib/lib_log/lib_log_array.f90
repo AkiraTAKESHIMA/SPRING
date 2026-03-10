@@ -87,9 +87,9 @@ subroutine showarr__int1_1d(x, nam, d, n, c_l, c_r)
   endif
 
   if( n_*2+1 >= n1 )then
-    call edbg(c_l_//str(x,d_)//c_r_)
+    call logmsg(c_l_//str(x,d_)//c_r_)
   else
-    call edbg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
+    call logmsg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
   endif
 end subroutine showarr__int1_1d
 !===============================================================
@@ -182,9 +182,9 @@ subroutine showarr__int1_2d(x, nam, d, n, c_l, c_r, ismtx)
       call showarr__int1_1d(x(:,i2), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
     enddo
     if( ismtx_ )then
-      call edbg(get_str_omitted_row__2d(abs(d_), n_, n1))
+      call logmsg(get_str_omitted_row__2d(abs(d_), n_, n1))
     else
-      call edbg(str('',clen_l-1)//'...')
+      call logmsg(str('',clen_l-1)//'...')
     endif
     do i2 = n2-n_+1, n2
       call get_c_edge__2d(&
@@ -283,16 +283,16 @@ subroutine showarr__int1_3d(x, nam, d, n, c_l, c_r, ismtx)
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int1_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      call edbg('')
+      call logmsg('')
     enddo
-    call edbg(str('',clen_l-2)//'...')
-    call edbg('')
+    call logmsg(str('',clen_l-2)//'...')
+    call logmsg('')
     do i3 = n3-n_+1, n3
       call get_c_edge__3d(&
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int1_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      if( i3/=n3 ) call edbg('')
+      if( i3/=n3 ) call logmsg('')
     enddo
   endif
 end subroutine showarr__int1_3d
@@ -340,9 +340,9 @@ subroutine showarr__int2_1d(x, nam, d, n, c_l, c_r)
   endif
 
   if( n_*2+1 >= n1 )then
-    call edbg(c_l_//str(x,d_)//c_r_)
+    call logmsg(c_l_//str(x,d_)//c_r_)
   else
-    call edbg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
+    call logmsg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
   endif
 end subroutine showarr__int2_1d
 !===============================================================
@@ -435,9 +435,9 @@ subroutine showarr__int2_2d(x, nam, d, n, c_l, c_r, ismtx)
       call showarr__int2_1d(x(:,i2), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
     enddo
     if( ismtx_ )then
-      call edbg(get_str_omitted_row__2d(abs(d_), n_, n1))
+      call logmsg(get_str_omitted_row__2d(abs(d_), n_, n1))
     else
-      call edbg(str('',clen_l-1)//'...')
+      call logmsg(str('',clen_l-1)//'...')
     endif
     do i2 = n2-n_+1, n2
       call get_c_edge__2d(&
@@ -536,16 +536,16 @@ subroutine showarr__int2_3d(x, nam, d, n, c_l, c_r, ismtx)
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int2_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      call edbg('')
+      call logmsg('')
     enddo
-    call edbg(str('',clen_l-2)//'...')
-    call edbg('')
+    call logmsg(str('',clen_l-2)//'...')
+    call logmsg('')
     do i3 = n3-n_+1, n3
       call get_c_edge__3d(&
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int2_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      if( i3/=n3 ) call edbg('')
+      if( i3/=n3 ) call logmsg('')
     enddo
   endif
 end subroutine showarr__int2_3d
@@ -593,9 +593,9 @@ subroutine showarr__int4_1d(x, nam, d, n, c_l, c_r)
   endif
 
   if( n_*2+1 >= n1 )then
-    call edbg(c_l_//str(x,d_)//c_r_)
+    call logmsg(c_l_//str(x,d_)//c_r_)
   else
-    call edbg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
+    call logmsg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
   endif
 end subroutine showarr__int4_1d
 !===============================================================
@@ -688,9 +688,9 @@ subroutine showarr__int4_2d(x, nam, d, n, c_l, c_r, ismtx)
       call showarr__int4_1d(x(:,i2), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
     enddo
     if( ismtx_ )then
-      call edbg(get_str_omitted_row__2d(abs(d_), n_, n1))
+      call logmsg(get_str_omitted_row__2d(abs(d_), n_, n1))
     else
-      call edbg(str('',clen_l-1)//'...')
+      call logmsg(str('',clen_l-1)//'...')
     endif
     do i2 = n2-n_+1, n2
       call get_c_edge__2d(&
@@ -789,16 +789,16 @@ subroutine showarr__int4_3d(x, nam, d, n, c_l, c_r, ismtx)
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int4_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      call edbg('')
+      call logmsg('')
     enddo
-    call edbg(str('',clen_l-2)//'...')
-    call edbg('')
+    call logmsg(str('',clen_l-2)//'...')
+    call logmsg('')
     do i3 = n3-n_+1, n3
       call get_c_edge__3d(&
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int4_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      if( i3/=n3 ) call edbg('')
+      if( i3/=n3 ) call logmsg('')
     enddo
   endif
 end subroutine showarr__int4_3d
@@ -846,9 +846,9 @@ subroutine showarr__int8_1d(x, nam, d, n, c_l, c_r)
   endif
 
   if( n_*2+1 >= n1 )then
-    call edbg(c_l_//str(x,d_)//c_r_)
+    call logmsg(c_l_//str(x,d_)//c_r_)
   else
-    call edbg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
+    call logmsg(c_l_//str(x(:n_),d_)//' ... '//str(x(n1-n_+1:),d_)//c_r_)
   endif
 end subroutine showarr__int8_1d
 !===============================================================
@@ -941,9 +941,9 @@ subroutine showarr__int8_2d(x, nam, d, n, c_l, c_r, ismtx)
       call showarr__int8_1d(x(:,i2), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
     enddo
     if( ismtx_ )then
-      call edbg(get_str_omitted_row__2d(abs(d_), n_, n1))
+      call logmsg(get_str_omitted_row__2d(abs(d_), n_, n1))
     else
-      call edbg(str('',clen_l-1)//'...')
+      call logmsg(str('',clen_l-1)//'...')
     endif
     do i2 = n2-n_+1, n2
       call get_c_edge__2d(&
@@ -1042,16 +1042,16 @@ subroutine showarr__int8_3d(x, nam, d, n, c_l, c_r, ismtx)
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int8_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      call edbg('')
+      call logmsg('')
     enddo
-    call edbg(str('',clen_l-2)//'...')
-    call edbg('')
+    call logmsg(str('',clen_l-2)//'...')
+    call logmsg('')
     do i3 = n3-n_+1, n3
       call get_c_edge__3d(&
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__int8_2d(x(:,:,i3), d=d_, n=n_, c_l=c_l_, c_r=c_r_)
-      if( i3/=n3 ) call edbg('')
+      if( i3/=n3 ) call logmsg('')
     enddo
   endif
 end subroutine showarr__int8_3d
@@ -1091,9 +1091,9 @@ subroutine showarr__real_1d(x, nam, fmt, n, c_l, c_r)
   endif
 
   if( n_*2+1 >= n1 )then
-    call edbg(c_l_//str(x,fmt_)//c_r_)
+    call logmsg(c_l_//str(x,fmt_)//c_r_)
   else
-    call edbg(c_l_//str(x(:n_),fmt_)//' ... '//str(x(n1-n_+1:),fmt_)//c_r_)
+    call logmsg(c_l_//str(x(:n_),fmt_)//' ... '//str(x(n1-n_+1:),fmt_)//c_r_)
   endif
 end subroutine showarr__real_1d
 !===============================================================
@@ -1164,9 +1164,9 @@ subroutine showarr__real_2d(x, nam, fmt, n, c_l, c_r, ismtx)
       call showarr__real_1d(x(:,i2), fmt=fmt_, n=n_, c_l=c_l_, c_r=c_r_)
     enddo
     if( ismtx_ )then
-      call edbg(get_str_omitted_row__2d(cl(fmt_), n_, n1))
+      call logmsg(get_str_omitted_row__2d(cl(fmt_), n_, n1))
     else
-      call edbg(str('',clen_l-1)//'...')
+      call logmsg(str('',clen_l-1)//'...')
     endif
     do i2 = n2-n_+1, n2
       call get_c_edge__2d(&
@@ -1226,16 +1226,16 @@ subroutine showarr__real_3d(x, nam, fmt, n)
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__real_2d(x(:,:,i3), fmt=fmt_, n=n_, c_l=c_l_, c_r=c_r_)
-      call edbg('')
+      call logmsg('')
     enddo
-    call edbg(str('',clen_l-2)//'...')
-    call edbg('')
+    call logmsg(str('',clen_l-2)//'...')
+    call logmsg('')
     do i3 = n3-n_+1, n3
       call get_c_edge__3d(&
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__real_2d(x(:,:,i3), fmt=fmt_, n=n_, c_l=c_l_, c_r=c_r_)
-      if( i3/=n3 ) call edbg('')
+      if( i3/=n3 ) call logmsg('')
     enddo
   endif
 end subroutine showarr__real_3d
@@ -1275,9 +1275,9 @@ subroutine showarr__dble_1d(x, nam, fmt, n, c_l, c_r)
   endif
 
   if( n_*2+1 >= n1 )then
-    call edbg(c_l_//str(x,fmt_)//c_r_)
+    call logmsg(c_l_//str(x,fmt_)//c_r_)
   else
-    call edbg(c_l_//str(x(:n_),fmt_)//' ... '//str(x(n1-n_+1:),fmt_)//c_r_)
+    call logmsg(c_l_//str(x(:n_),fmt_)//' ... '//str(x(n1-n_+1:),fmt_)//c_r_)
   endif
 end subroutine showarr__dble_1d
 !===============================================================
@@ -1339,9 +1339,9 @@ subroutine showarr__dble_2d(x, nam, fmt, n, c_l, c_r, ismtx)
       call showarr__dble_1d(x(:,i2), fmt=fmt_, n=n_, c_l=c_l_, c_r=c_r_)
     enddo
     if( ismtx_ )then
-      call edbg(get_str_omitted_row__2d(cl(fmt_), n_, n1))
+      call logmsg(get_str_omitted_row__2d(cl(fmt_), n_, n1))
     else
-      call edbg(str('',clen_r-1)//'...')
+      call logmsg(str('',clen_r-1)//'...')
     endif
     do i2 = n2-n_+1, n2
       call get_c_edge()
@@ -1439,16 +1439,16 @@ subroutine showarr__dble_3d(x, nam, fmt, n)
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__dble_2d(x(:,:,i3), fmt=fmt_, n=n_, c_l=c_l_, c_r=c_r_)
-      call edbg('')
+      call logmsg('')
     enddo
-    call edbg(str('',clen_l-2)//'...')
-    call edbg('')
+    call logmsg(str('',clen_l-2)//'...')
+    call logmsg('')
     do i3 = n3-n_+1, n3
       call get_c_edge__3d(&
              .false., '', .false., '', clen_l, clen_r, i3, n3, &
              c_l_, c_r_)
       call showarr__dble_2d(x(:,:,i3), fmt=fmt_, n=n_, c_l=c_l_, c_r=c_r_)
-      if( i3/=n3 ) call edbg('')
+      if( i3/=n3 ) call logmsg('')
     enddo
   endif
 end subroutine showarr__dble_3d
@@ -1668,11 +1668,11 @@ subroutine show_basic_info(nam, shp, smin, smax)
   character(*), intent(in) :: smin, smax
 
   if( nam == '' )then
-    call edbg('('//str(shp,', ')//')'//&
-              ' (min,max): ('//smin//', '//smax//')')
+    call logmsg('('//str(shp,', ')//')'//&
+                ' (min,max): ('//smin//', '//smax//')')
   else
-    call edbg(str(nam)//' ('//str(shp,', ')//')'//&
-              ' (min,max): ('//smin//', '//smax//')')
+    call logmsg(str(nam)//' ('//str(shp,', ')//')'//&
+                ' (min,max): ('//smin//', '//smax//')')
   endif
 end subroutine show_basic_info
 !===============================================================
