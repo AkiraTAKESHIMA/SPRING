@@ -2,175 +2,38 @@ module lib_io_arg_parser
   use lib_const
   use lib_base
   use lib_log
+  use lib_util
   use lib_array
-  use lib_io_system
+  use lib_math
+  use lib_io_arg_base
   implicit none
   private
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
   public :: addarg
+
   public :: parsearg
+
+  public :: arg_flag
+  public :: arg_char
+  public :: arg_int4
+
   public :: showarg
-  public :: getarg
-  public :: checkparsed
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
   interface addarg
-    module procedure addarg__flag
-    module procedure addarg__char
-    module procedure addarg__int4
-    module procedure addarg__int8
-    module procedure addarg__real
-    module procedure addarg__dble
-  end interface
-
-  interface getarg
-    module procedure getarg__flag
-    module procedure getarg__char
-    module procedure getarg__int4
-    module procedure getarg__int8
-    module procedure getarg__real
-    module procedure getarg__dble
+    module procedure addarg__positional__char
+    module procedure addarg__positional__int4
+    module procedure addarg__optional__flag
+    module procedure addarg__optional__char
+    module procedure addarg__optional__int4
   end interface
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
   character(CLEN_PROC), parameter :: MODNAM = 'lib_io_arg_parser'
-
-  integer, parameter :: CLEN_DTYPE_DESC = 16
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_FLAG = 'flag'
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_CHAR = 'char'
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_INT4 = '4-byte integer'
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_INT8 = '8-byte integer'
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_REAL = '4-byte float'
-  character(CLEN_DTYPE_DESC), parameter :: DTYPE_DESC_DBLE = '8-byte float'
-
-  type arg_flag_
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    logical :: val_default
-    logical :: val
-    logical :: required
-    character(:), allocatable :: description
-    integer :: ntimes    ! Num. of inputs of argument
-    integer :: nget = 0  ! Num. of times that getarg was called. For debugging
-  end type
-
-  type arg_char_
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    character(:), allocatable :: val_default
-    character(:), allocatable :: val
-    logical :: required
-    character(:), allocatable :: description
-    integer :: ntimes
-    integer :: nget = 0
-  end type
-
-  type arg_int4_
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    integer(4) :: val_default
-    integer(4) :: val
-    logical :: required
-    character(:), allocatable :: description
-    integer :: ntimes
-    integer :: nget = 0
-  end type
-
-  type arg_int8_
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    integer(8) :: val_default
-    integer(8) :: val
-    logical :: required
-    character(:), allocatable :: description
-    integer :: ntimes
-    integer :: nget = 0
-  end type
-
-  type arg_real_
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    real(4) :: val_default
-    real(4) :: val
-    logical :: required
-    character(:), allocatable :: description
-    integer :: ntimes
-    integer :: nget = 0
-  end type
-
-  type arg_dble_
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    real(8) :: val_default
-    real(8) :: val
-    logical :: required
-    character(:), allocatable :: description
-    integer :: ntimes
-    integer :: nget = 0
-  end type
-
-  type arglst_flag_
-    integer :: narg
-    type(arg_flag_), pointer :: arg(:)
-    character(4) :: typename = 'flag'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_FLAG
-  end type
-
-  type arglst_char_
-    integer :: narg
-    type(arg_char_), pointer :: arg(:)
-    character(4) :: typename = 'char'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_CHAR
-  end type
-
-  type arglst_int4_
-    integer :: narg
-    type(arg_int4_), pointer :: arg(:)
-    character(4) :: typename = 'int4'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_INT4
-  end type
-
-  type arglst_int8_
-    integer :: narg
-    type(arg_int8_), pointer :: arg(:)
-    character(4) :: typename = 'int8'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_INT8
-  end type
-
-  type arglst_real_
-    integer :: narg
-    type(arg_real_), pointer :: arg(:)
-    character(4) :: typename = 'real'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_REAL
-  end type
-
-  type arglst_dble_
-    integer :: narg
-    type(arg_dble_), pointer :: arg(:)
-    character(4) :: typename = 'dble'
-    character(CLEN_DTYPE_DESC) :: dtype_desc = DTYPE_DESC_DBLE
-  end type
-
-  type argdct_
-    integer :: narg
-    integer, pointer :: typ(:)
-    integer, pointer :: idx(:)
-    type(arglst_flag_) :: arglst_flag
-    type(arglst_char_) :: arglst_char
-    type(arglst_int4_) :: arglst_int4
-    type(arglst_int8_) :: arglst_int8
-    type(arglst_real_) :: arglst_real
-    type(arglst_dble_) :: arglst_dble
-  end type
-
-  type(argdct_), target :: argdct
-
-  integer, parameter :: CLENMAX_KEY = 32
-  integer, parameter :: NARG_INIT = 64
 
   integer, parameter :: ITYPE_FLAG = 1
   integer, parameter :: ITYPE_CHAR = 2
@@ -181,1014 +44,1197 @@ module lib_io_arg_parser
   integer, parameter :: ITYPE_REAL = 7
   integer, parameter :: ITYPE_DBLE = 8
 
-  character(2), parameter :: KEY_HELP_SHORT = '-h'
-  character(6), parameter :: KEY_HELP_LONG  = '--help'
-  character(64), parameter :: DESCRIPTION_HELP = 'Show this message and stop program'
+  character(CLEN_KEY), parameter :: STYPE_FLAG = 'flag'
+  character(CLEN_KEY), parameter :: STYPE_CHAR = 'string'
+  character(CLEN_KEY), parameter :: STYPE_INT1 = '1 byte int'
+  character(CLEN_KEY), parameter :: STYPE_INT2 = '2 byte int'
+  character(CLEN_KEY), parameter :: STYPE_INT4 = '4 byte int'
+  character(CLEN_KEY), parameter :: STYPE_INT8 = '8 byte int'
+  character(CLEN_KEY), parameter :: STYPE_REAL = '4 byte float'
+  character(CLEN_KEY), parameter :: STYPE_DBLE = '8 byte float'
+
+  character(8), parameter :: KEY_HELP_SHORT = '-h'
+  character(8), parameter :: KEY_HELP_LONG  = '--help'
+
+  ! Definitions of arguments
+  type arg_flag_
+    logical :: positional
+    logical :: val
+    logical :: used
+    character(:), allocatable :: name
+    character(:), allocatable :: key_short
+    character(:), allocatable :: key_long
+    character(:), allocatable :: description
+    logical :: required
+  end type
+
+  type arg_char_
+    logical :: positional
+    character(:), allocatable :: val
+    logical :: used
+    character(:), allocatable :: name
+    character(:), allocatable :: key_short
+    character(:), allocatable :: key_long
+    character(:), allocatable :: description
+    logical :: required
+  end type
+
+  type arg_int4_
+    logical :: positional
+    integer(4) :: val
+    logical :: used
+    character(:), allocatable :: name
+    character(:), allocatable :: key_short
+    character(:), allocatable :: key_long
+    character(:), allocatable :: description
+    logical :: required
+  end type
+
+  type arg_
+    integer, pointer :: typ(:)
+    integer, pointer :: idx(:)
+    integer, pointer :: typ_positional(:)
+    integer, pointer :: idx_positional(:)
+    integer, pointer :: typ_optional(:)
+    integer, pointer :: idx_optional(:)
+    integer :: nall = 0
+    integer :: nflag = 0
+    integer :: nchar = 0
+    integer :: nint4 = 0
+    integer :: n_positional = 0
+    integer :: n_optional = 0
+    type(arg_flag_), pointer :: lst_flag(:)
+    type(arg_char_), pointer :: lst_char(:)
+    type(arg_int4_), pointer :: lst_int4(:)
+  end type
+
+
+  ! Input arguments
+!  type argin
+  
+!  end type
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  type(arg_) :: ad
+
+  integer :: clenmax_key_short = 0
+  integer :: clenmax_key_long  = 0
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine addarg__flag(&
-    key_short, key_long, required, default_value, description)
+subroutine addarg__positional__char(&
+    name, v, description)
   implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  logical     , intent(in) :: required
-  logical     , intent(in) :: default_value
+  character(*), intent(in) :: name
+  character(*), intent(in) :: v  ! for distinction
   character(*), intent(in) :: description
 
-  type(arg_flag_), pointer :: arg
-  type(arglst_flag_), pointer :: lst
-  type(arg_flag_), allocatable :: argtmp(:)
+  type(arg_char_), pointer :: a
 
-  lst => argdct%arglst_flag
-
-  if( lst%narg == 0 )then
-    allocate(lst%arg(NARG_INIT))
-  elseif( lst%narg == size(lst%arg) )then
-    allocate(argtmp(lst%narg))
-    argtmp = lst%arg
-    deallocate(lst%arg)
-    allocate(lst%arg(lst%narg*2))
-    lst%arg(:lst%narg) = argtmp
-    deallocate(argtmp)
-  endif
-  lst%narg = lst%narg + 1
-
-  call update_argdct(ITYPE_FLAG, lst%narg)
-
-  arg => lst%arg(lst%narg)
-  arg%key_short = trim(key_short)
-  arg%key_long = trim(key_long)
-  arg%required = required
-  arg%val_default = default_value
-  arg%val = default_value
-  arg%description = description_default(description)
-  arg%ntimes = 0
-
-  nullify(arg)
-  nullify(lst)
-end subroutine addarg__flag
-!===============================================================
-!
-!===============================================================
-subroutine addarg__char(&
-    key_short, key_long, required, default_value, description)
-  implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  logical     , intent(in) :: required
-  character(*), intent(in) :: default_value
-  character(*), intent(in) :: description
-
-  type(arg_char_), pointer :: arg
-  type(arglst_char_), pointer :: lst
-  type(arg_char_), allocatable :: argtmp(:)
-
-  lst => argdct%arglst_char
-
-  if( lst%narg == 0 )then
-    allocate(lst%arg(NARG_INIT))
-  elseif( lst%narg == size(lst%arg) )then
-    allocate(argtmp(lst%narg))
-    argtmp = lst%arg
-    deallocate(lst%arg)
-    allocate(lst%arg(lst%narg*2))
-    lst%arg(:lst%narg) = argtmp
-    deallocate(argtmp)
-  endif
-  lst%narg = lst%narg + 1
-
-  call update_argdct(ITYPE_CHAR, lst%narg)
-
-  arg => argdct%arglst_char%arg(argdct%arglst_char%narg)
-  arg%key_short = trim(key_short)
-  arg%key_long = trim(key_long)
-  arg%required = required
-  arg%val_default = trim(default_value)
-  arg%val = trim(default_value)
-  arg%description = description_default(description)
-  arg%ntimes = 0
-
-  nullify(arg)
-  nullify(lst)
-end subroutine addarg__char
-!===============================================================
-!
-!===============================================================
-subroutine addarg__int4(&
-    key_short, key_long, required, default_value, description)
-  implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  logical     , intent(in) :: required
-  integer(4)  , intent(in) :: default_value
-  character(*), intent(in) :: description
-
-  type(arg_int4_), pointer :: arg
-  type(arglst_int4_), pointer :: lst
-  type(arg_int4_), allocatable :: argtmp(:)
-
-  lst => argdct%arglst_int4
-
-  if( lst%narg == 0 )then
-    allocate(lst%arg(NARG_INIT))
-  elseif( lst%narg == size(lst%arg) )then
-    allocate(argtmp(lst%narg))
-    argtmp = lst%arg
-    deallocate(lst%arg)
-    allocate(lst%arg(lst%narg*2))
-    lst%arg(:lst%narg) = argtmp
-    deallocate(argtmp)
-  endif
-  lst%narg = lst%narg + 1
-
-  call update_argdct(ITYPE_INT4, lst%narg)
-
-  arg => argdct%arglst_int4%arg(argdct%arglst_int4%narg)
-  arg%key_short = trim(key_short)
-  arg%key_long = trim(key_long)
-  arg%required = required
-  arg%val_default = default_value
-  arg%val = default_value
-  arg%description = description_default(description)
-  arg%ntimes = 0
-
-  nullify(arg)
-  nullify(lst)
-end subroutine addarg__int4
-!===============================================================
-!
-!===============================================================
-subroutine addarg__int8(&
-    key_short, key_long, required, default_value, description)
-  implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  logical     , intent(in) :: required
-  integer(8)  , intent(in) :: default_value
-  character(*), intent(in) :: description
-
-  type(arg_int8_), pointer :: arg
-  type(arglst_int8_), pointer :: lst
-  type(arg_int8_), allocatable :: argtmp(:)
-
-  lst => argdct%arglst_int8
-
-  if( lst%narg == 0 )then
-    allocate(lst%arg(NARG_INIT))
-  elseif( lst%narg == size(lst%arg) )then
-    allocate(argtmp(lst%narg))
-    argtmp = lst%arg
-    deallocate(lst%arg)
-    allocate(lst%arg(lst%narg*2))
-    lst%arg(:lst%narg) = argtmp
-    deallocate(argtmp)
-  endif
-  lst%narg = lst%narg + 1
-
-  call update_argdct(ITYPE_INT8, lst%narg)
-
-  arg => argdct%arglst_int8%arg(argdct%arglst_int8%narg)
-  arg%key_short = trim(key_short)
-  arg%key_long = trim(key_long)
-  arg%required = required
-  arg%val_default = default_value
-  arg%val = default_value
-  arg%description = description_default(description)
-  arg%ntimes = 0
-
-  nullify(arg)
-  nullify(lst)
-end subroutine addarg__int8
-!===============================================================
-!
-!===============================================================
-subroutine addarg__real(&
-    key_short, key_long, required, default_value, description)
-  implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  logical     , intent(in) :: required
-  real(4)     , intent(in) :: default_value
-  character(*), intent(in) :: description
-
-  type(arg_real_), pointer :: arg
-  type(arglst_real_), pointer :: lst
-  type(arg_real_), allocatable :: argtmp(:)
-
-  lst => argdct%arglst_real
-
-  if( lst%narg == 0 )then
-    allocate(lst%arg(NARG_INIT))
-  elseif( lst%narg == size(lst%arg) )then
-    allocate(argtmp(lst%narg))
-    argtmp = lst%arg
-    deallocate(lst%arg)
-    allocate(lst%arg(lst%narg*2))
-    lst%arg(:lst%narg) = argtmp
-    deallocate(argtmp)
-  endif
-  lst%narg = lst%narg + 1
-
-  call update_argdct(ITYPE_REAL, lst%narg)
-
-  arg => argdct%arglst_real%arg(argdct%arglst_real%narg)
-  arg%key_short = trim(key_short)
-  arg%key_long = trim(key_long)
-  arg%required = required
-  arg%val_default = default_value
-  arg%val = default_value
-  arg%description = description_default(description)
-  arg%ntimes = 0
-
-  nullify(arg)
-  nullify(lst)
-end subroutine addarg__real
-!===============================================================
-!
-!===============================================================
-subroutine addarg__dble(&
-    key_short, key_long, required, default_value, description)
-  implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  logical     , intent(in) :: required
-  real(8)     , intent(in) :: default_value
-  character(*), intent(in) :: description
-
-  type(arg_dble_), pointer :: arg
-  type(arglst_dble_), pointer :: lst
-  type(arg_dble_), allocatable :: argtmp(:)
-
-  lst => argdct%arglst_dble
-
-  if( lst%narg == 0 )then
-    allocate(lst%arg(NARG_INIT))
-  elseif( lst%narg == size(lst%arg) )then
-    allocate(argtmp(lst%narg))
-    argtmp = lst%arg
-    deallocate(lst%arg)
-    allocate(lst%arg(lst%narg*2))
-    lst%arg(:lst%narg) = argtmp
-    deallocate(argtmp)
-  endif
-  lst%narg = lst%narg + 1
-
-  call update_argdct(ITYPE_DBLE, lst%narg)
-
-  arg => argdct%arglst_dble%arg(argdct%arglst_dble%narg)
-  arg%key_short = trim(key_short)
-  arg%key_long = trim(key_long)
-  arg%required = required
-  arg%val_default = default_value
-  arg%val = default_value
-  arg%description = description_default(description)
-  arg%ntimes = 0
-
-  nullify(arg)
-  nullify(lst)
-end subroutine addarg__dble
-!===============================================================
-!
-!===============================================================
-subroutine update_argdct(itype, narg)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'update_argdct'
-  integer, intent(in) :: itype
-  integer, intent(in) :: narg
-
-  if( argdct%narg == 0 )then
-    allocate(argdct%typ(NARG_INIT))
-    allocate(argdct%idx(NARG_INIT))
-  elseif( argdct%narg == size(argdct%typ) )then
-    call realloc(argdct%typ, argdct%narg*2, clear=.false.)
-    call realloc(argdct%idx, argdct%narg*2, clear=.false.)
-  endif
-  argdct%narg = argdct%narg + 1
-  argdct%typ(argdct%narg) = itype
-  argdct%idx(argdct%narg) = narg
-end subroutine update_argdct
-!===============================================================
-!
-!===============================================================
-function description_default(description) result(res)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'description_default'
-  character(*), intent(in) :: description
-  character(:), allocatable :: res
-
-  if( description == '' )then
-    res = '(TBD)'
-  else
-    res = trim(description)
-  endif
-end function description_default
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine parsearg()
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'parsearg'
-  type(arg_flag_), pointer :: argflag
-  type(arg_char_), pointer :: argchar
-  type(arg_int4_), pointer :: argint4
-  type(arg_int8_), pointer :: argint8
-  type(arg_real_), pointer :: argreal
-  type(arg_dble_), pointer :: argdble
-  character(CLENMAX_KEY) :: key
-  character(:), allocatable :: val
-  integer :: narg, iarg
-  integer :: iargflag, iargchar, &
-             iargint4, iargint8, &
-             iargreal, iargdble
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__positional__char'
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  narg = command_argument_count()
+  call inc_n_arg(.true., ITYPE_CHAR)
 
-  iarg = 0
-  loop_outer:&
-  do while( iarg < narg )
-    iarg = iarg + 1
-    call get_command_argument(iarg, key)
-    !-----------------------------------------------------------
-    !
-    !-----------------------------------------------------------
-    if( key == KEY_HELP_SHORT .or. key == KEY_HELP_LONG )then
-      call showarg(.true., .false.)
-      call logret(PRCNAM, MODNAM)
-      return
+  ad%typ(ad%nall) = ITYPE_CHAR
+  ad%idx(ad%nall) = ad%nchar
+  ad%typ_positional(ad%n_positional) = ITYPE_CHAR
+  ad%idx_positional(ad%n_positional) = ad%nchar
+
+  a => ad%lst_char(ad%nchar)
+
+  a%positional = .true.
+  a%name = trim(name)
+  a%description = trim(description)
+
+  nullify(a)
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine addarg__positional__char
+!===============================================================
+!
+!===============================================================
+subroutine addarg__positional__int4(&
+    name, v, description)
+  implicit none
+  character(*), intent(in) :: name
+  integer(4)  , intent(in) :: v  ! for distinction
+  character(*), intent(in) :: description
+
+  type(arg_int4_), pointer :: a
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__positional__int4'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  call inc_n_arg(.true., ITYPE_INT4)
+
+  ad%typ(ad%nall) = ITYPE_INT4
+  ad%idx(ad%nall) = ad%nint4
+  ad%typ_positional(ad%n_positional) = ITYPE_INT4
+  ad%idx_positional(ad%n_positional) = ad%nint4
+
+  a => ad%lst_int4(ad%nint4)
+
+  a%positional = .true.
+  a%name = trim(name)
+  a%description = trim(description)
+
+  nullify(a)
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine addarg__positional__int4
+!===============================================================
+!
+!===============================================================
+subroutine addarg__optional__flag(&
+    key_short, key_long, val_default, required, description)
+  implicit none
+  character(*), intent(in) :: key_short
+  character(*), intent(in) :: key_long
+  logical     , intent(in) :: val_default
+  logical     , intent(in) :: required
+  character(*), intent(in) :: description
+
+  type(arg_flag_), pointer :: a
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__flag'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( key_short == '' .and. key_long == '' )then
+    call errend('Key is empty.')
+  endif
+
+  call inc_n_arg(.false., ITYPE_FLAG)
+
+  ad%typ(ad%nall) = ITYPE_FLAG
+  ad%idx(ad%nall) = ad%nflag
+  ad%typ_optional(ad%n_optional) = ITYPE_FLAG
+  ad%idx_optional(ad%n_optional) = ad%nflag
+
+  a => ad%lst_flag(ad%nflag)
+
+  a%val = val_default
+
+  a%positional  = .false.
+  a%key_short   = trim(key_short)
+  a%key_long    = trim(key_long)
+  a%required    = required
+  a%description = trim(description)
+
+  nullify(a)
+
+  clenmax_key_short = max(len_trim(key_short), clenmax_key_short)
+  clenmax_key_long  = max(len_trim(key_long ), clenmax_key_long )
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine addarg__optional__flag
+!===============================================================
+!
+!===============================================================
+subroutine addarg__optional__char(&
+    key_short, key_long, val_default, required, description)
+  implicit none
+  character(*), intent(in) :: key_short
+  character(*), intent(in) :: key_long
+  character(*), intent(in) :: val_default
+  logical     , intent(in) :: required
+  character(*), intent(in) :: description
+
+  type(arg_char_), pointer :: a
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__char'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( key_short == '' .and. key_long == '' )then
+    call errend('Key is empty.')
+  endif
+
+  call inc_n_arg(.false., ITYPE_CHAR)
+
+  ad%typ(ad%nall) = ITYPE_CHAR
+  ad%idx(ad%nall) = ad%nchar
+  ad%typ_optional(ad%n_optional) = ITYPE_CHAR
+  ad%idx_optional(ad%n_optional) = ad%nchar
+
+  a => ad%lst_char(ad%nchar)
+
+  ! a%val has already been allocated when initialized
+  a%val = val_default
+
+  a%positional  = .false.
+  a%key_short   = trim(key_short)
+  a%key_long    = trim(key_long)
+  a%required    = required
+  a%description = trim(description)
+
+  nullify(a)
+
+  clenmax_key_short = max(len_trim(key_short), clenmax_key_short)
+  clenmax_key_long  = max(len_trim(key_long ), clenmax_key_long )
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine addarg__optional__char
+!===============================================================
+!
+!===============================================================
+subroutine addarg__optional__int4(&
+    key_short, key_long, val_default, required, description)
+  implicit none
+  character(*), intent(in) :: key_short
+  character(*), intent(in) :: key_long
+  integer(4)  , intent(in) :: val_default
+  logical     , intent(in) :: required
+  character(*), intent(in) :: description
+
+  type(arg_int4_), pointer :: a
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__int4'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( key_short == '' .and. key_long == '' )then
+    call errend('Key is empty.')
+  endif
+
+  call inc_n_arg(.false., ITYPE_INT4)
+
+  ad%typ(ad%nall) = ITYPE_INT4
+  ad%idx(ad%nall) = ad%nint4
+  ad%typ_optional(ad%n_optional) = ITYPE_INT4
+  ad%idx_optional(ad%n_optional) = ad%nint4
+
+  a => ad%lst_int4(ad%nint4)
+
+  a%val = val_default
+
+  a%positional  = .false.
+  a%key_short   = trim(key_short)
+  a%key_long    = trim(key_long)
+  a%required    = required
+  a%description = trim(description)
+
+  nullify(a)
+
+  clenmax_key_short = max(len_trim(key_short), clenmax_key_short)
+  clenmax_key_long  = max(len_trim(key_long ), clenmax_key_long )
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine addarg__optional__int4
+!===============================================================
+!
+!===============================================================
+subroutine inc_n_arg(positional, itype)
+  implicit none
+  logical, intent(in) :: positional
+  integer, intent(in) :: itype
+
+  integer :: i
+
+  integer, parameter :: NMAX_ALL_INIT = 64
+  integer, parameter :: NMAX_LST_INIT = 32
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'inc_n_arg'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  ! Update length of the list of data types and indices
+  !-------------------------------------------------------------
+  if( ad%nall == 0 )then
+    allocate(ad%typ(NMAX_ALL_INIT))
+    allocate(ad%idx(NMAX_ALL_INIT))
+    allocate(ad%typ_positional(NMAX_ALL_INIT))
+    allocate(ad%idx_positional(NMAX_ALL_INIT))
+    allocate(ad%typ_optional(NMAX_ALL_INIT))
+    allocate(ad%idx_optional(NMAX_ALL_INIT))
+  elseif( ad%nall == size(ad%typ) )then
+    call realloc(ad%typ, ad%nall*2, clear=.false.)
+    call realloc(ad%idx, ad%nall*2, clear=.false.)
+    call realloc(ad%typ_positional, ad%nall*2, clear=.false.)
+    call realloc(ad%idx_positional, ad%nall*2, clear=.false.)
+    call realloc(ad%typ_optional, ad%nall*2, clear=.false.)
+    call realloc(ad%idx_optional, ad%nall*2, clear=.false.)
+  endif
+  call add(ad%nall)
+
+  if( positional )then
+    call add(ad%n_positional)
+  else
+    call add(ad%n_optional)
+  endif
+  !-------------------------------------------------------------
+  ! Update length of the list correspondent to the type of the 
+  !   element
+  !-------------------------------------------------------------
+  selectcase( itype )
+
+  case( ITYPE_FLAG )
+    if( ad%nflag == 0 )then
+      allocate(ad%lst_flag(NMAX_LST_INIT))
+      do i = 1, NMAX_LST_INIT
+        call init_arg_flag(ad%lst_flag(i))
+      enddo
     endif
+    call add(ad%nflag)
+
+  case( ITYPE_CHAR )
+    if( ad%nchar == 0 )then
+      allocate(ad%lst_char(NMAX_LST_INIT))
+      do i = 1, NMAX_LST_INIT
+        call init_arg_char(ad%lst_char(i))
+      enddo
+    endif
+    call add(ad%nchar)
+
+  case( ITYPE_INT4 )
+    if( ad%nint4 == 0 )then
+      allocate(ad%lst_int4(NMAX_LST_INIT))
+      do i = 1, NMAX_LST_INIT
+        call init_arg_int4(ad%lst_int4(i))
+      enddo
+    endif
+    call add(ad%nint4)
+
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine inc_n_arg
+!===============================================================
+!
+!===============================================================
+subroutine init_arg_flag(a)
+  implicit none
+  type(arg_flag_), intent(out) :: a
+
+  allocate(character(1) :: a%key_short)
+  allocate(character(1) :: a%key_long)
+  allocate(character(1) :: a%name)
+  allocate(character(1) :: a%description)
+
+  a%used = .false.
+  a%val = .false.
+
+  a%positional = .false.
+  a%key_short = ''
+  a%key_long = ''
+  a%required = .false.
+  a%name = ''
+  a%description = ''
+end subroutine init_arg_flag
+!===============================================================
+!
+!===============================================================
+subroutine init_arg_char(a)
+  implicit none
+  type(arg_char_), intent(out) :: a
+
+  allocate(character(1) :: a%key_short)
+  allocate(character(1) :: a%key_long)
+  allocate(character(1) :: a%name)
+  allocate(character(1) :: a%description)
+
+  a%used = .false.
+  allocate(character(1) :: a%val)
+  a%val = ''
+
+  a%positional = .false.
+  a%key_short = ''
+  a%key_long = ''
+  a%required = .false.
+  a%name = ''
+  a%description = ''
+end subroutine init_arg_char
+!===============================================================
+!
+!===============================================================
+subroutine init_arg_int4(a)
+  implicit none
+  type(arg_int4_), intent(out) :: a
+
+  allocate(character(1) :: a%key_short)
+  allocate(character(1) :: a%key_long)
+  allocate(character(1) :: a%name)
+  allocate(character(1) :: a%description)
+
+  a%used = .false.
+  a%val = 0
+
+  a%positional = .false.
+  a%key_short = ''
+  a%key_long = ''
+  a%required = .false.
+  a%name = ''
+  a%description = ''
+end subroutine init_arg_int4
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine parsearg(istart, iend)
+  implicit none
+  integer, intent(in), optional :: istart, iend
+
+  integer :: istart_, iend_
+
+  integer :: narg
+  character(CLEN_LINE) :: key
+  logical :: is_ok
+  integer :: i, ii, j, jj
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'parsearg'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  narg = argnum()
+
+  istart_ = 1
+  iend_ = narg
+  if( present(istart) ) istart_ = istart
+  if( present(iend) ) iend_ = iend
+  !-------------------------------------------------------------
+  ! Read positional arguments
+  !-------------------------------------------------------------
+  do i = istart_, min(ad%n_positional, iend_)
+    if( argument(i) == KEY_HELP_SHORT .or. argument(i) == KEY_HELP_LONG )then
+      call showarg()
+      stop
+    endif
+
+    if( i > narg )then
+      call errend('Positional argument is missing.')
+    endif
+
+    ii = ad%idx_positional(i)
+
+    selectcase( ad%typ_positional(i) )
     !-----------------------------------------------------------
-    ! Look in FLAG list
+    ! Case: Char
+    case( ITYPE_CHAR )
+      call update_arg_pos_char(ad%lst_char(ii), ii)
     !-----------------------------------------------------------
-    do iargflag = 1, argdct%arglst_flag%narg
-      argflag => argdct%arglst_flag%arg(iargflag)
-      if( key == argflag%key_short .or. key == argflag%key_long )then
-        if( argflag%ntimes == 0 )then
-          argflag%val = .not. argflag%val
+    ! Case: Int4
+    case( ITYPE_INT4 )
+      call update_arg_pos_int4(ad%lst_int4(ii), ii)
+    !-----------------------------------------------------------
+    ! Case: ERROR
+    case default
+      call errend(msg_invalid_value(&
+             'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+    endselect
+  enddo
+  !-------------------------------------------------------------
+  ! Read optional arguments
+  !-------------------------------------------------------------
+  ! -- Return of TRUE by `update_arg_opt_*` means the value was 
+  !    updated.
+  i = ad%n_positional
+  do while( i < min(narg, iend_) )
+    i = i + 1
+    key = argument(i)
+
+    if( key == KEY_HELP_SHORT .or. key == KEY_HELP_LONG )then
+      call showarg()
+      stop
+    endif
+
+    is_ok = .false.
+    do j = 1, ad%n_optional
+      jj = ad%idx_optional(j)
+
+      selectcase( ad%typ_optional(j) )
+      !---------------------------------------------------------
+      ! Case: Flag
+      case( ITYPE_FLAG )
+        if( update_arg_opt_flag(ad%lst_flag(jj), key) )then
+          is_ok = .true.
+          exit
         endif
-        argflag%ntimes = argflag%ntimes + 1
-        cycle loop_outer
-      endif
+      !---------------------------------------------------------
+      ! Case: Char
+      case( ITYPE_CHAR )
+        if( update_arg_opt_char(ad%lst_char(jj), key, i, narg) )then
+          i = i + 1
+          is_ok = .true.
+          exit
+        endif
+      !---------------------------------------------------------
+      ! Case: Int4
+      case( ITYPE_INT4 )
+        if( update_arg_opt_int4(ad%lst_int4(jj), key, i, narg) )then
+          i = i + 1
+          is_ok = .true.
+          exit
+        endif
+      !---------------------------------------------------------
+      ! Case: ERROR
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_optional('//str(j)//')', ad%typ_optional(j)))
+      endselect
     enddo
-    !-----------------------------------------------------------
-    ! Look in CHAR list
-    !-----------------------------------------------------------
-    do iargchar = 1, argdct%arglst_char%narg
-      argchar => argdct%arglst_char%arg(iargchar)
-      if( key == argchar%key_short .or. key == argchar%key_long )then
-        call assert_nextarg_exist(narg, iarg, key)
-        iarg = iarg + 1
-        call get_command_argument_extend(iarg, val)
-        argchar%val = trim(val)
-        argchar%ntimes = argchar%ntimes + 1
-        deallocate(val)
-        cycle loop_outer
-      endif
-    enddo
-    !-----------------------------------------------------------
-    ! Look in INT4 list
-    !-----------------------------------------------------------
-    do iargint4 = 1, argdct%arglst_int4%narg
-      argint4 => argdct%arglst_int4%arg(iargint4)
-      if( key == argint4%key_short .or. key == argint4%key_long )then
-        call assert_nextarg_exist(narg, iarg, key)
-        iarg = iarg + 1
-        call get_command_argument_extend(iarg, val)
-        read(val,*) argint4%val
-        argint4%ntimes = argint4%ntimes + 1
-        deallocate(val)
-        cycle loop_outer
-      endif
-    enddo
-    !-----------------------------------------------------------
-    ! Look in INT8 list
-    !-----------------------------------------------------------
-    do iargint8 = 1, argdct%arglst_int8%narg
-      argint8 => argdct%arglst_int8%arg(iargint8)
-      if( key == argint8%key_short .or. key == argint8%key_long )then
-        call assert_nextarg_exist(narg, iarg, key)
-        iarg = iarg + 1
-        call get_command_argument_extend(iarg, val)
-        read(val,*) argint8%val
-        argint8%ntimes = argint8%ntimes + 1
-        deallocate(val)
-        cycle loop_outer
-      endif
-    enddo
-    !-----------------------------------------------------------
-    ! Look in REAL list
-    !-----------------------------------------------------------
-    do iargreal = 1, argdct%arglst_real%narg
-      argreal => argdct%arglst_real%arg(iargreal)
-      if( key == argreal%key_short .or. key == argreal%key_long )then
-        call assert_nextarg_exist(narg, iarg, key)
-        iarg = iarg + 1
-        call get_command_argument_extend(iarg, val)
-        read(val,*) argreal%val
-        argreal%ntimes = argreal%ntimes + 1
-        deallocate(val)
-        cycle loop_outer
-      endif
-    enddo
-    !-----------------------------------------------------------
-    ! Look in DBLE list
-    !-----------------------------------------------------------
-    do iargdble = 1, argdct%arglst_dble%narg
-      argdble => argdct%arglst_dble%arg(iargdble)
-      if( key == argdble%key_short .or. key == argdble%key_long )then
-        call assert_nextarg_exist(narg, iarg, key)
-        iarg = iarg + 1
-        call get_command_argument_extend(iarg, val)
-        read(val,*) argdble%val
-        argdble%ntimes = argdble%ntimes + 1
-        deallocate(val)
-        cycle loop_outer
-      endif
-    enddo
-    !-----------------------------------------------------------
-    ! Not found in the list
-    !-----------------------------------------------------------
-    call errend('Invalid argument: '//str(key))
-    !-----------------------------------------------------------
-  enddo& ! while( iarg < narg )/
-  loop_outer
+
+    if( .not. is_ok )then
+      call errend('Key "'//str(key)//'" is invalid.')
+    endif
+  enddo
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine parsearg
 !===============================================================
 !
 !===============================================================
-subroutine get_command_argument_extend(i, arg)
+subroutine update_arg_pos_char(a, i)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'get_command_argument_extend'
-  integer, intent(in) :: i
-  character(:), allocatable, intent(out) :: arg
+  type(arg_char_), intent(inout) :: a
+  integer        , intent(in) :: i
 
-  integer :: cl
-  character(:), allocatable :: tmp
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_pos_char'
 
-  cl = 128
-  do
-    allocate(character(cl) :: tmp)
-    call get_command_argument(i, tmp)
-    if( tmp(cl:cl) == ' ' ) exit
-    cl = cl * 2
-    deallocate(tmp)
-  enddo
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  if( a%used )then
+    call errend_pos_already_input(a%name, i)
+  endif
 
-  cl = len_trim(tmp)
-  allocate(character(cl) :: arg)
-  arg = trim(tmp)
-end subroutine get_command_argument_extend
+  a%used = .true.
+
+  a%val = trim(argument(i))
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine update_arg_pos_char
 !===============================================================
 !
 !===============================================================
-subroutine checkparsed()
+subroutine update_arg_pos_int4(a, i)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'checkparsed'
-  type(arg_flag_), pointer :: argflag
-  type(arg_char_), pointer :: argchar
-  type(arg_int4_), pointer :: argint4
-  type(arg_int8_), pointer :: argint8
-  type(arg_real_), pointer :: argreal
-  type(arg_dble_), pointer :: argdble
-  integer :: iargflag, iargchar, &
-             iargint4, iargint8, &
-             iargreal, iargdble
+  type(arg_int4_), intent(inout) :: a
+  integer        , intent(in) :: i
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_pos_int4'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  if( a%used )then
+    call errend_pos_already_input(a%name, i)
+  endif
+
+  a%used = .true.
+
+  if( c2v(argument(i), a%val) /= 0 )then
+    call errend_pos_reading_failure(a%name, i)
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine update_arg_pos_int4
+!===============================================================
+!
+!===============================================================
+subroutine errend_pos_already_input(name, i)
+  implicit none
+  character(*), intent(in) :: name
+  integer     , intent(in) :: i
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'errend_pos_reading_failure'
+
+  call errend(msg_internal_error()//' The usage status of the '//&
+              ordinal(i)//' positional argument is "used".')
+end subroutine errend_pos_already_input
+!===============================================================
+!
+!===============================================================
+subroutine errend_pos_reading_failure(name, i)
+  implicit none
+  character(*), intent(in) :: name
+  integer     , intent(in) :: i
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'errend_pos_reading_failure'
+
+  call errend(msg_io_error()//' Failed to read the '//ordinal(i)//&
+              ' positional argument `'//trim(name)//'`.', &
+              PRCNAM, MODNAM)
+end subroutine errend_pos_reading_failure
+!===============================================================
+!
+!===============================================================
+logical function update_arg_opt_flag(a, key) result(res)
+  implicit none
+  type(arg_flag_), intent(inout) :: a
+  character(*), intent(in) :: key
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_opt_flag'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  res = a%key_short == key .or. a%key_long == key
+  if( .not. res )then
+    call logret(PRCNAM, MODNAM)
+    return
+  endif
+
+  if( a%used )then
+    call errend_opt_duplicated_input(a%key_short, a%key_long)
+  endif
+
+  a%used = .true.
+
+  a%val = .not. a%val
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function update_arg_opt_flag
+!===============================================================
+!
+!===============================================================
+logical function update_arg_opt_char(a, key, i, narg) result(res)
+  implicit none
+  type(arg_char_), intent(inout) :: a
+  character(*), intent(in) :: key
+  integer, intent(in) :: i
+  integer, intent(in) :: narg
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_opt_char'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  res = a%key_short == key .or. a%key_long == key
+  if( .not. res )then
+    call logret(PRCNAM, MODNAM)
+    return
+  endif
+
+  if( a%used )then
+    call errend_opt_duplicated_input(a%key_short, a%key_long)
+  endif
+
+  a%used = .true.
+
+  if( i == narg )then
+    call errend_opt_no_value(a%key_short, a%key_long)
+  endif
+
+  a%val = trim(argument(i+1))
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function update_arg_opt_char
+!===============================================================
+!
+!===============================================================
+logical function update_arg_opt_int4(a, key, i, narg) result(res)
+  implicit none
+  type(arg_int4_), intent(inout) :: a
+  character(*), intent(in) :: key
+  integer, intent(in) :: i
+  integer, intent(in) :: narg
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_opt_int4'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  res = a%key_short == key .or. a%key_long == key
+  if( .not. res )then
+    call logret(PRCNAM, MODNAM)
+    return
+  endif
+
+  if( a%used )then
+    call errend_opt_duplicated_input(a%key_short, a%key_long)
+  endif
+
+  a%used = .true.
+
+  if( i == narg )then
+    call errend_opt_no_value(a%key_short, a%key_long)
+  endif
+
+  if( c2v(argument(i+1), a%val) /= 0 )then
+    call errend_opt_reading_failure(a%key_short, a%key_long)
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function update_arg_opt_int4
+!===============================================================
+!
+!===============================================================
+subroutine errend_opt_duplicated_input(keys, keyl)
+  implicit none
+  character(*), intent(in) :: keys, keyl
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'errend_opt_duplicated_input'
+
+  call errend('Duplicated input of the argument, '//&
+              'that is specified by "'//&
+              trim(keys)//'" or "'//trim(keyl)//'".', &
+              PRCNAM, MODNAM)
+end subroutine errend_opt_duplicated_input
+!===============================================================
+!
+!===============================================================
+subroutine errend_opt_no_value(keys, keyl)
+  implicit none
+  character(*), intent(in) :: keys, keyl
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'errend_opt_no_value'
+
+  call errend('No value was given for the optional argument, '//&
+              'that is specified by "'//&
+              trim(keys)//'" or "'//trim(keyl)//'".', &
+              PRCNAM, MODNAM)
+end subroutine errend_opt_no_value
+!===============================================================
+!
+!===============================================================
+subroutine errend_opt_reading_failure(keys, keyl)
+  implicit none
+  character(*), intent(in) :: keys, keyl
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'errend_opt_reading_failure'
+
+  call errend('Failed to read the value of the optional argument, '//&
+              'that is specified by "'//&
+              trim(keys)//'" or "'//trim(keyl)//'".', &
+              PRCNAM, MODNAM)
+end subroutine errend_opt_reading_failure
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+logical(4) function arg_flag(s) result(v)
+  implicit none
+  character(*), intent(in) :: s
+
+  type(arg_flag_), pointer :: a
   logical :: is_ok
+  integer :: i
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'arg_flag'
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  is_ok = .true.
+  if( s == '' )then
+    call errend('No input.')
+  !-------------------------------------------------------------
+  ! Case: Optional
+  ! -- $s is key.
+  elseif( s(1:1) == '-' )then
+    is_ok = .false.
+    do i = 1, ad%n_optional
+      selectcase( ad%typ_optional(i) )
+      case( ITYPE_FLAG )
+        a => ad%lst_flag(ad%idx_optional(i))
+        if( a%key_short == s .or. a%key_long == s )then
+          v = a%val
+          is_ok = .true.
+          exit
+        endif
+      case( ITYPE_CHAR, &
+            ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        continue
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+      endselect
+    enddo
 
-  do iargflag = 1, argdct%arglst_flag%narg
-    argflag => argdct%arglst_flag%arg(iargflag)
-    if( argflag%nget == 0 )then
-      call update_errmsg(argflag%key_short, argflag%key_long)
+    if( .not. is_ok )then
+      call errend('The key "'//trim(s)//'" is invalid.')
     endif
-  enddo
+  !-------------------------------------------------------------
+  ! Case: Positional
+  ! -- $s is name.
+  else
+    is_ok = .false.
+    do i = 1, ad%n_positional
+      selectcase( ad%typ_positional(i) )
+      case( ITYPE_FLAG )
+        a => ad%lst_flag(ad%idx_positional(i))
+        if( a%name == s )then
+          v = a%val
+          is_ok = .true.
+          exit
+        endif
+      case( ITYPE_CHAR, &
+            ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        continue
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+      endselect
+    enddo
 
-  do iargchar = 1, argdct%arglst_char%narg
-    argchar => argdct%arglst_char%arg(iargchar)
-    if( argchar%nget == 0 )then
-      call update_errmsg(argchar%key_short, argchar%key_long)
+    if( .not. is_ok )then
+      call errend('The name "'//trim(s)//'" is invalid.')
     endif
-  enddo
-
-  do iargint4 = 1, argdct%arglst_int4%narg
-    argint4 => argdct%arglst_int4%arg(iargint4)
-    if( argint4%nget == 0 )then
-      call update_errmsg(argint4%key_short, argint4%key_long)
-    endif
-  enddo
-
-  do iargint8 = 1, argdct%arglst_int8%narg
-    argint8 => argdct%arglst_int8%arg(iargint8)
-    if( argint8%nget == 0 )then
-      call update_errmsg(argint8%key_short, argint8%key_long)
-    endif
-  enddo
-
-  do iargreal = 1, argdct%arglst_real%narg
-    argreal => argdct%arglst_real%arg(iargreal)
-    if( argreal%nget == 0 )then
-      call update_errmsg(argreal%key_short, argreal%key_long)
-    endif
-  enddo
-
-  do iargdble = 1, argdct%arglst_dble%narg
-    argdble => argdct%arglst_dble%arg(iargdble)
-    if( argdble%nget == 0 )then
-      call update_errmsg(argdble%key_short, argdble%key_long)
-    endif
-  enddo
-
-  if( .not. is_ok )then
-    call errend('')
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine update_errmsg(key_short, key_long)
+end function arg_flag
+!===============================================================
+!
+!===============================================================
+character(CLEN_PATH) function arg_char(s) result(v)
   implicit none
-  character(*), intent(in) :: key_short, key_long
+  character(*), intent(in) :: s
 
-  logical :: newline
+  type(arg_char_), pointer :: a
+  logical :: is_ok
+  integer :: i
 
-  if( is_ok )then
-    is_ok = .false.
-    call erradd('')
-    newline = .false.
-  else
-    newline = .true.
-  endif
+  character(CLEN_PROC), parameter :: PRCNAM = 'arg_char'
 
-  call errapd('Failed to parse the argument "'//str(key_short)//&
-              '", "'//str(key_long)//'".', &
-              newline=newline)
-end subroutine update_errmsg
-!---------------------------------------------------------------
-end subroutine checkparsed
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine showarg(help, debug)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'showarg'
-  logical, intent(in) :: help
-  logical, intent(in) :: debug
-  type(arg_flag_), pointer :: argflag
-  type(arg_char_), pointer :: argchar
-  type(arg_int4_), pointer :: argint4
-  type(arg_int8_), pointer :: argint8
-  type(arg_real_), pointer :: argreal
-  type(arg_dble_), pointer :: argdble
-  integer :: iarg
-  integer :: clenmax_key_short, clenmax_key_long
-  integer :: dgt_narg, dgt_size
-  integer :: ncol_keys
-  integer :: ncol_terminal
-
-  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( get_terminal_width(ncol_terminal) /= 0 )then
-    ncol_terminal = NCOL_TERMINAL_DEFAULT
+  if( s == '' )then
+    call errend('No input.')
+  !-------------------------------------------------------------
+  ! Case: Optional
+  ! -- $s is key.
+  elseif( s(1:1) == '-' )then
+    is_ok = .false.
+    do i = 1, ad%n_optional
+      selectcase( ad%typ_optional(i) )
+      case( ITYPE_CHAR )
+        a => ad%lst_char(ad%idx_optional(i))
+        if( a%key_short == s .or. a%key_long == s )then
+          v = a%val
+          is_ok = .true.
+          exit
+        endif
+      case( ITYPE_FLAG, &
+            ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        continue
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+      endselect
+    enddo
+
+    if( .not. is_ok )then
+      call errend('The key "'//trim(s)//'" is invalid.')
+    endif
+  !-------------------------------------------------------------
+  ! Case: Positional
+  ! -- $s is name.
+  else
+    is_ok = .false.
+    do i = 1, ad%n_positional
+      selectcase( ad%typ_positional(i) )
+      case( ITYPE_CHAR )
+        a => ad%lst_char(ad%idx_positional(i))
+        if( a%name == s )then
+          v = a%val
+          is_ok = .true.
+          exit
+        endif
+      case( ITYPE_FLAG, &
+            ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        continue
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+      endselect
+    enddo
+
+    if( .not. is_ok )then
+      call errend('The name "'//trim(s)//'" is invalid.')
+    endif
   endif
-
-  if( debug )then
-    call logmsg('Terminal width: '//str(ncol_terminal))
-    dgt_narg = max(4,dgt(argdct%narg))
-    dgt_size = max(4,dgt(size(argdct%typ)))
-
-    call logmsg('     '//str('narg',dgt_narg)//' '//str('size',dgt_size))
-    call logmsg('all  '//str(argdct%narg,dgt_narg)//' '//str(size(argdct%typ),dgt_size))
-    call logmsg('flag '//str(argdct%arglst_flag%narg,dgt_narg)//&
-              ' '//str(size(argdct%arglst_flag%arg),dgt_size))
-    call logmsg('char '//str(argdct%arglst_char%narg,dgt_narg)//&
-              ' '//str(size(argdct%arglst_char%arg),dgt_size))
-    call logmsg('int4 '//str(argdct%arglst_int4%narg,dgt_narg)//&
-              ' '//str(size(argdct%arglst_int4%arg),dgt_size))
-    call logmsg('int8 '//str(argdct%arglst_int8%narg,dgt_narg)//&
-              ' '//str(size(argdct%arglst_int8%arg),dgt_size))
-    call logmsg('real '//str(argdct%arglst_real%narg,dgt_narg)//&
-              ' '//str(size(argdct%arglst_real%arg),dgt_size))
-    call logmsg('dble '//str(argdct%arglst_dble%narg,dgt_narg)//&
-              ' '//str(size(argdct%arglst_dble%arg),dgt_size))
-  endif
-
-  clenmax_key_short = len_trim(KEY_HELP_SHORT)
-  clenmax_key_long  = len_trim(KEY_HELP_LONG)
-  do iarg = 1, argdct%narg
-    selectcase( argdct%typ(iarg) )
-    case( ITYPE_FLAG )
-      call check_idx(argdct%idx(iarg), iarg, argdct%arglst_flag%narg, argdct%arglst_flag%typename)
-      argflag => argdct%arglst_flag%arg(argdct%idx(iarg))
-      clenmax_key_short = max(len_trim(argflag%key_short), clenmax_key_short)
-      clenmax_key_long  = max(len_trim(argflag%key_long ), clenmax_key_long )
-    case( ITYPE_CHAR )
-      call check_idx(argdct%idx(iarg), iarg, argdct%arglst_char%narg, argdct%arglst_char%typename)
-      argchar => argdct%arglst_char%arg(argdct%idx(iarg))
-      clenmax_key_short = max(len_trim(argchar%key_short), clenmax_key_short)
-      clenmax_key_long  = max(len_trim(argchar%key_long ), clenmax_key_long )
-    case( ITYPE_INT4 )
-      call check_idx(argdct%idx(iarg), iarg, argdct%arglst_int4%narg, argdct%arglst_int4%typename)
-      argint4 => argdct%arglst_int4%arg(argdct%idx(iarg))
-      clenmax_key_short = max(len_trim(argint4%key_short), clenmax_key_short)
-      clenmax_key_long  = max(len_trim(argint4%key_long ), clenmax_key_long )
-    case( ITYPE_INT8 )
-      call check_idx(argdct%idx(iarg), iarg, argdct%arglst_int8%narg, argdct%arglst_int8%typename)
-      argint8 => argdct%arglst_int8%arg(argdct%idx(iarg))
-      clenmax_key_short = max(len_trim(argint8%key_short), clenmax_key_short)
-      clenmax_key_long  = max(len_trim(argint8%key_long ), clenmax_key_long )
-    case( ITYPE_REAL )
-      call check_idx(argdct%idx(iarg), iarg, argdct%arglst_real%narg, argdct%arglst_real%typename)
-      argreal => argdct%arglst_real%arg(argdct%idx(iarg))
-      clenmax_key_short = max(len_trim(argreal%key_short), clenmax_key_short)
-      clenmax_key_long  = max(len_trim(argreal%key_long ), clenmax_key_long )
-    case( ITYPE_DBLE )
-      call check_idx(argdct%idx(iarg), iarg, argdct%arglst_dble%narg, argdct%arglst_dble%typename)
-      argdble => argdct%arglst_dble%arg(argdct%idx(iarg))
-      clenmax_key_short = max(len_trim(argdble%key_short), clenmax_key_short)
-      clenmax_key_long  = max(len_trim(argdble%key_long ), clenmax_key_long )
-    case default
-      call errend(msg_invalid_value('argdct%typ('//str(iarg)//')', argdct%typ(iarg)))
-    endselect
-  enddo
-  ncol_keys = clenmax_key_short + clenmax_key_long + 3
-
-  call logmsg(get_full_description(KEY_HELP_SHORT, KEY_HELP_LONG, &
-                DESCRIPTION_HELP, '', '', &
-                '', 0), &
-              opt='x1')
-  do iarg = 1, argdct%narg
-    selectcase( argdct%typ(iarg) )
-    case( ITYPE_FLAG )
-      argflag => argdct%arglst_flag%arg(argdct%idx(iarg))
-      call logmsg(get_full_description(&
-                    argflag%key_short, argflag%key_long, &
-                    argflag%description, str(argflag%val_default), str(argflag%val), &
-                    argdct%arglst_flag%dtype_desc, argflag%ntimes), &
-                  opt='x1')
-    case( ITYPE_CHAR )
-      argchar => argdct%arglst_char%arg(argdct%idx(iarg))
-      call logmsg(get_full_description(&
-                    argchar%key_short, argchar%key_long, &
-                    argchar%description, str(argchar%val_default), str(argchar%val), &
-                    argdct%arglst_char%dtype_desc, argchar%ntimes), &
-                  opt='x1')
-    case( ITYPE_INT4 )
-      argint4 => argdct%arglst_int4%arg(argdct%idx(iarg))
-      call logmsg(get_full_description(&
-                    argint4%key_short, argint4%key_long, &
-                    argint4%description, str(argint4%val_default), str(argint4%val), &
-                    argdct%arglst_int4%dtype_desc, argint4%ntimes), &
-                  opt='x1')
-    case( ITYPE_INT8 )
-      argint8 => argdct%arglst_int8%arg(argdct%idx(iarg))
-      call logmsg(get_full_description(&
-                    argint8%key_short, argint8%key_long, &
-                    argint8%description, str(argint8%val_default), str(argint8%val), &
-                    argdct%arglst_int8%dtype_desc, argint8%ntimes), &
-                  opt='x1')
-    case( ITYPE_REAL )
-      argreal => argdct%arglst_real%arg(argdct%idx(iarg))
-      call logmsg(get_full_description(&
-                    argreal%key_short, argreal%key_long, &
-                    argreal%description, str(argreal%val_default), str(argreal%val), &
-                    argdct%arglst_real%dtype_desc, argreal%ntimes), &
-                  opt='x1')
-    case( ITYPE_DBLE )
-      argdble => argdct%arglst_dble%arg(argdct%idx(iarg))
-      call logmsg(get_full_description(&
-                    argdble%key_short, argdble%key_long, &
-                    argdble%description, str(argdble%val_default), str(argdble%val), &
-                    argdct%arglst_dble%dtype_desc, argdble%ntimes), &
-                  opt='x1')
-    endselect
-  enddo
-
-  if( help ) stop
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine check_idx(idx, iarg, narg, nam)
+end function arg_char
+!===============================================================
+!
+!===============================================================
+integer(4) function arg_int4(s) result(v)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = '__IP__check_idx'
-  integer, intent(in) :: idx, iarg, narg
-  character(*), intent(in) :: nam
+  character(*), intent(in) :: s
 
-  if( idx < 1 .or. idx > narg )then
-    call errend(msg_internal_error()//&
-              '\nIndex is invalid.'//&
-              '\nargdct%idx('//str(iarg)//'): '//str(idx)//&
-              '\nargdct%arglst_'//str(nam)//'%narg: '//str(narg), &
-                '', PRCNAM, MODNAM)
-  endif
-end subroutine check_idx
-!---------------------------------------------------------------
-function get_full_description(&
-    key_short, key_long, description, str_val_default, str_val, &
-    dtype_desc, ntimes) result(msg)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = '__IP__get_full_description'
-  character(*), intent(in) :: key_short, key_long
-  character(*), intent(in) :: description
-  character(*), intent(in) :: str_val_default
-  character(*), intent(in) :: str_val
-  character(*), intent(in) :: dtype_desc
-  integer     , intent(in) :: ntimes
-  character(:), allocatable :: msg
-
-  integer :: ncol, ncol_this
-  integer :: clen_left, clen_out
+  type(arg_int4_), pointer :: a
+  logical :: is_ok
   integer :: i
-  character(2) :: br
-  integer :: clen_br
-  character(:), allocatable :: c
 
-  ! An allocatable character $c is used only for avoiding the annoying message
-  ! "‘.__var_3_realloc_string’ may be used uninitialized in this function [-Wmaybe-uninitialized]",
-  ! which appears even if it is actually initialized.
-  allocate(character(1) :: c)
+  character(CLEN_PROC), parameter :: PRCNAM = 'arg_int4'
 
-  msg = str(key_short,clenmax_key_short)//' '//str(key_long,clenmax_key_long)//':'
-
-  if( ncol_terminal > 0 )then
-
-    ! indent, keys of arguments
-    ncol = ncol_terminal - 1 - ncol_keys
-    clen_left = len_trim(description)
-    clen_out = 0
-    br = ''
-    clen_br = 1
-    do while( clen_left > 0 )
-      if( ncol >= clen_left )then
-        msg = trim(msg)//str(br,clen_br)//description(clen_out+1:)
-        clen_left = 0
-      else
-        ncol_this = 0
-        do i = clen_out+ncol, clen_out+1, -1
-          if( description(i:i) == '' )then
-            ncol_this = i - clen_out
-            exit
-          endif
-        enddo
-        if( ncol_this == 0 ) ncol_this = ncol
-
-        msg = trim(msg)//str(br,clen_br)//description(clen_out+1:clen_out+ncol_this)
-
-        clen_left = clen_left - ncol_this
-        clen_out = clen_out + ncol_this
-      endif
-
-      br = '\n'
-      clen_br = 2+ncol_keys
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( s == '' )then
+    call errend('No input.')
+  !-------------------------------------------------------------
+  ! Case: Optional
+  ! -- $s is key.
+  elseif( s(1:1) == '-' )then
+    is_ok = .false.
+    do i = 1, ad%n_optional
+      selectcase( ad%typ_optional(i) )
+      case( ITYPE_INT4 )
+        a => ad%lst_int4(ad%idx_optional(i))
+        if( a%key_short == s .or. a%key_long == s )then
+          v = a%val
+          is_ok = .true.
+          exit
+        endif
+      case( ITYPE_FLAG, &
+            ITYPE_CHAR, &
+            ITYPE_INT1, ITYPE_INT2, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        continue
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+      endselect
     enddo
+
+    if( .not. is_ok )then
+      call errend('The key "'//trim(s)//'" is invalid.')
+    endif
+  !-------------------------------------------------------------
+  ! Case: Positional
+  ! -- $s is name.
   else
-    c = trim(msg)
-    msg = trim(c)//' '//description
-  endif
+    is_ok = .false.
+    do i = 1, ad%n_positional
+      selectcase( ad%typ_positional(i) )
+      case( ITYPE_INT4 )
+        a => ad%lst_int4(ad%idx_positional(i))
+        if( a%name == s )then
+          v = a%val
+          is_ok = .true.
+          exit
+        endif
+      case( ITYPE_FLAG, &
+            ITYPE_CHAR, &
+            ITYPE_INT1, ITYPE_INT2, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        continue
+      case default
+        call errend(msg_invalid_value(&
+               'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+      endselect
+    enddo
 
-  c = trim(msg)
-  selectcase( dtype_desc )
-  case( '', DTYPE_DESC_FLAG )
-    msg = trim(c)
-  case default
-    msg = trim(c)//'\n'//str('',ncol_keys)//&
-          '(data type: '//str(dtype_desc)//', default value: '//str_val_default//')'
-  endselect
-
-  if( debug )then
-    c = trim(msg)
-    msg = trim(c)//'\n'//str('',ncol_keys)//&
-          'ntimes: '//str(ntimes)//' val: '//str_val
+    if( .not. is_ok )then
+      call errend('The name "'//trim(s)//'" is invalid.')
+    endif
   endif
-  deallocate(c)
-end function get_full_description
-!---------------------------------------------------------------
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function arg_int4
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine showarg()
+  implicit none
+
+  type(arg_flag_), pointer :: aflag
+  type(arg_char_), pointer :: achar
+  type(arg_int4_), pointer :: aint4
+  integer :: i
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'showarg'
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  ! Positional arguments
+  !-------------------------------------------------------------
+  do i = 1, ad%n_positional
+    selectcase( ad%typ_positional(i) )
+    !-----------------------------------------------------------
+    ! Case: Flag
+    ! -- No positional arguments
+    case( ITYPE_FLAG )
+      call errend(msg_unexpected_condition()//&
+                '\n  ad%typ_positional('//str(i)//') == ITYPE_FLAG')
+    !-----------------------------------------------------------
+    ! Case: Char
+    case( ITYPE_CHAR )
+      achar => ad%lst_char(ad%idx_positional(i))
+      call logmsg(str_val_positional(&
+             achar%name, achar%description,            &
+             ITYPE_CHAR, achar%val        , achar%used ))
+    !-----------------------------------------------------------
+    ! Case: Int4
+    case( ITYPE_INT4 )
+      aint4 => ad%lst_int4(ad%idx_positional(i))
+      call logmsg(str_val_positional(&
+             aint4%name, aint4%description,            &
+             ITYPE_INT4, str(aint4%val)   , aint4%used ))
+    !-----------------------------------------------------------
+    case default
+      call errend(msg_invalid_value(&
+             'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+    endselect
+  enddo
+  !-------------------------------------------------------------
+  ! Optional arguments
+  !-------------------------------------------------------------
+  do i = 1, ad%n_optional
+    selectcase( ad%typ_optional(i) )
+    !-----------------------------------------------------------
+    ! Case: Flag
+    case( ITYPE_FLAG )
+      aflag => ad%lst_flag(ad%idx_optional(i))
+      call logmsg(str_val_optional(&
+             aflag%key_short, aflag%key_long, aflag%description, &
+             ITYPE_FLAG     , str(aflag%val), aflag%required   , &
+             aflag%used ))
+    !-----------------------------------------------------------
+    ! Case: Char
+    case( ITYPE_CHAR )
+      achar => ad%lst_char(ad%idx_optional(i))
+      call logmsg(str_val_optional(&
+             achar%key_short, achar%key_long, achar%description, &
+             ITYPE_CHAR     , achar%val     , achar%required   , &
+             achar%used ))
+    !-----------------------------------------------------------
+    ! Case: Int4
+    case( ITYPE_INT4 )
+      aint4 => ad%lst_int4(ad%idx_optional(i))
+      call logmsg(str_val_optional(&
+             aint4%key_short, aint4%key_long, aint4%description, &
+             ITYPE_INT4     , str(aint4%val), aint4%required   , &
+             aint4%used  ))
+    !-----------------------------------------------------------
+    ! Case: ERROR
+    case default
+      call errend(msg_invalid_value(&
+             'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+    endselect
+  enddo
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  nullify(aflag, aint4)
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
 end subroutine showarg
 !===============================================================
 !
 !===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine getarg__flag(key, val)
+function str_val_positional(&
+    name, description, ityp, sval, used) result(s)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'getarg__flag'
-  character(*), intent(in)  :: key
-  logical     , intent(out) :: val
+  character(*), intent(in) :: name
+  character(*), intent(in) :: description
+  integer     , intent(in) :: ityp
+  character(*), intent(in) :: sval
+  logical     , intent(in) :: used
 
-  type(arg_flag_), pointer :: arg
-  integer :: iarg
+  character(:), allocatable :: s
 
-  do iarg = 1, argdct%narg
-    if( argdct%typ(iarg) /= ITYPE_FLAG ) cycle
+  allocate(character(1) :: s)
 
-    arg => argdct%arglst_flag%arg(argdct%idx(iarg))
-    if( arg%key_short == key .or. arg%key_long == key )then
-      val = arg%val
-      arg%nget = arg%nget + 1
-      return
-    endif
-  enddo
-
-  call errend(msg_internal_error()//&
-            '\nThe option "'//str(key)//'" is invalid for FLAG argument.', &
-              '', PRCNAM, MODNAM)
-end subroutine getarg__flag
+  s = '*Positional* '//trim(name)//&
+    '\n  '//trim(description)//&
+    '\n  value='//sval//&
+      ' (type='//styp(ityp)//', input='//str(used)//')'
+end function str_val_positional
 !===============================================================
 !
 !===============================================================
-subroutine getarg__char(key, val)
+function str_val_optional(&
+    key_short, key_long, description, ityp, sval, &
+    required, used) result(s)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'getarg__char'
-  character(*), intent(in)  :: key
-  character(*), intent(out) :: val
+  character(*), intent(in) :: key_short
+  character(*), intent(in) :: key_long
+  character(*), intent(in) :: description
+  integer     , intent(in) :: ityp
+  character(*), intent(in) :: sval
+  logical     , intent(in) :: required
+  logical     , intent(in) :: used
 
-  type(arg_char_), pointer :: arg
-  integer :: iarg
+  character(:), allocatable :: s
 
-  do iarg = 1, argdct%narg
-    if( argdct%typ(iarg) /= ITYPE_CHAR ) cycle
+  allocate(character(1) :: s)
 
-    arg => argdct%arglst_char%arg(argdct%idx(iarg))
-    if( arg%key_short == key .or. arg%key_long == key )then
-      val = arg%val
-      arg%nget = arg%nget + 1
-      return
-    endif
-  enddo
-
-  call errend(msg_internal_error()//&
-            '\nThe option "'//str(key)//'" is invalid for FLAG argument.', &
-              '', PRCNAM, MODNAM)
-end subroutine getarg__char
+  s = '*Optional* '//str(key_short,clenmax_key_short)//&
+      ' '//str(key_long,clenmax_key_long)//&
+    '\n  '//trim(description)//&
+    '\n  value='//sval//&
+      ' (type='//styp(ityp)//', required='//str(required)//&
+      ', input='//str(used)//')'
+end function str_val_optional
 !===============================================================
 !
 !===============================================================
-subroutine getarg__int4(key, val)
+function styp(ityp) result(s)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'getarg__int4'
-  character(*), intent(in)  :: key
-  integer(4)  , intent(out) :: val
+  integer, intent(in) :: ityp
+  character(:), allocatable :: s
 
-  type(arg_int4_), pointer :: arg
-  integer :: iarg
+  character(CLEN_PROC), parameter :: PRCNAM = 'styp'
 
-  do iarg = 1, argdct%narg
-    if( argdct%typ(iarg) /= ITYPE_INT4 ) cycle
+  allocate(character(1) :: s)
 
-    arg => argdct%arglst_int4%arg(argdct%idx(iarg))
-    if( arg%key_short == key .or. arg%key_long == key )then
-      val = arg%val
-      arg%nget = arg%nget + 1
-      return
-    endif
-  enddo
-
-  call errend(msg_internal_error()//&
-            '\nThe option "'//str(key)//'" is invalid for FLAG argument.', &
-              '', PRCNAM, MODNAM)
-end subroutine getarg__int4
-!===============================================================
-!
-!===============================================================
-subroutine getarg__int8(key, val)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'getarg__int8'
-  character(*), intent(in)  :: key
-  integer(8)  , intent(out) :: val
-
-  type(arg_int8_), pointer :: arg
-  integer :: iarg
-
-  do iarg = 1, argdct%narg
-    if( argdct%typ(iarg) /= ITYPE_INT8 ) cycle
-
-    arg => argdct%arglst_int8%arg(argdct%idx(iarg))
-    if( arg%key_short == key .or. arg%key_long == key )then
-      val = arg%val
-      arg%nget = arg%nget + 1
-      return
-    endif
-  enddo
-
-  call errend(msg_internal_error()//&
-            '\nThe option "'//str(key)//'" is invalid for FLAG argument.', &
-              '', PRCNAM, MODNAM)
-end subroutine getarg__int8
-!===============================================================
-!
-!===============================================================
-subroutine getarg__real(key, val)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'getarg__real'
-  character(*), intent(in)  :: key
-  real(4)     , intent(out) :: val
-
-  type(arg_real_), pointer :: arg
-  integer :: iarg
-
-  do iarg = 1, argdct%narg
-    if( argdct%typ(iarg) /= ITYPE_REAL ) cycle
-
-    arg => argdct%arglst_real%arg(argdct%idx(iarg))
-    if( arg%key_short == key .or. arg%key_long == key )then
-      val = arg%val
-      arg%nget = arg%nget + 1
-      return
-    endif
-  enddo
-
-  call errend(msg_internal_error()//&
-            '\nThe option "'//str(key)//'" is invalid for FLAG argument.', &
-              '', PRCNAM, MODNAM)
-end subroutine getarg__real
-!===============================================================
-!
-!===============================================================
-subroutine getarg__dble(key, val)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'getarg__dble'
-  character(*), intent(in)  :: key
-  real(8)     , intent(out) :: val
-
-  type(arg_dble_), pointer :: arg
-  integer :: iarg
-
-  do iarg = 1, argdct%narg
-    if( argdct%typ(iarg) /= ITYPE_DBLE ) cycle
-
-    arg => argdct%arglst_dble%arg(argdct%idx(iarg))
-    if( arg%key_short == key .or. arg%key_long == key )then
-      val = arg%val
-      arg%nget = arg%nget + 1
-      return
-    endif
-  enddo
-
-  call errend(msg_internal_error()//&
-            '\nThe option "'//str(key)//'" is invalid for FLAG argument.', &
-              '', PRCNAM, MODNAM)
-end subroutine getarg__dble
-!===============================================================
-!
-!===============================================================
-!
-!
-!
-!
-!
-!===============================================================
-!
-!===============================================================
-subroutine assert_nextarg_exist(narg, iarg, key)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'assert_nextarg_exist'
-  integer     , intent(in) :: narg, iarg
-  character(*), intent(in) :: key
-
-  if( iarg == narg )then
-    call errend('Option "'//str(key)//'" requires an argument', &
-                '', PRCNAM, MODNAM)
-  endif
-end subroutine assert_nextarg_exist
+  selectcase( ityp )
+  case( ITYPE_FLAG )
+    s = trim(STYPE_FLAG)
+  case( ITYPE_CHAR )
+    s = trim(STYPE_CHAR)
+  case( ITYPE_INT1 )
+    s = trim(STYPE_INT1)
+  case( ITYPE_INT2 )
+    s = trim(STYPE_INT2)
+  case( ITYPE_INT4 )
+    s = trim(STYPE_INT4)
+  case( ITYPE_INT8 )
+    s = trim(STYPE_INT8)
+  case( ITYPE_REAL )
+    s = trim(STYPE_REAL)
+  case( ITYPE_DBLE )
+    s = trim(STYPE_DBLE)
+  case default
+    call errend(msg_invalid_value('ityp', ityp))
+  endselect
+end function styp
 !===============================================================
 !
 !===============================================================

@@ -7,8 +7,15 @@ module lib_base_char
   !------------------------------------------------------------
   public :: lower
   public :: upper
+
+  public :: ordinal
   !------------------------------------------------------------
-  !
+  ! Interfaces
+  !------------------------------------------------------------
+  interface ordinal
+    module procedure ordinal__int4
+    module procedure ordinal__int8
+  end interface
   !------------------------------------------------------------
 contains
 !==============================================================
@@ -93,6 +100,57 @@ pure function upper(c_in) result(c_out)
     endselect
   enddo
 end function upper
+!==============================================================
+!
+!==============================================================
+function ordinal__int4(i) result(s)
+  implicit none
+  integer(4), intent(in) :: i
+  character(:), allocatable :: s
+
+  allocate(character(1) :: s)
+  s = ordinal__int8(int(i,8))
+end function ordinal__int4
+!==============================================================
+!
+!==============================================================
+function ordinal__int8(i) result(s)
+  implicit none
+  integer(8), intent(in) :: i
+  character(:), allocatable :: s
+
+  character(64) :: c
+  integer(8) :: i1, i10, i100
+
+  allocate(character(1) :: s)
+
+  write(c,"(i0)") i
+
+  i1 = mod(i, 10_8)
+  i10 = i / 10_8
+  i100 = i / 100_8
+
+  selectcase( i1 )
+  case( 1 )
+    s = trim(c)//'th'
+  case( 2 )
+    selectcase( i100 )
+    case( 12 )
+      s = trim(c)//'th'
+    case default
+      s = trim(c)//'nd'
+    endselect
+  case( 3 )
+    selectcase( i100 )
+    case( 13 )
+      s = trim(c)//'th'
+    case default
+      s = trim(c)//'rd'
+    endselect
+  case default
+    s = trim(c)//'th'
+  endselect
+end function ordinal__int8
 !==============================================================
 !
 !==============================================================

@@ -28,15 +28,21 @@ end function argnum
 !===============================================================
 !
 !===============================================================
-character(CLEN_LINE) function argument(i)
+function argument(i) result(res)
   implicit none
   integer, intent(in) :: i
+  character(:), allocatable :: res
+
+  character(CLEN_LINE) :: s
 
 #ifdef OPT_NO_F23
-  call getarg(i, argument)
+  call getarg(i, s)
 #else
-  call get_command_argument(i, argument)
+  call get_command_argument(i, s)
 #endif
+
+  allocate(character(1) :: res)
+  res = trim(s)
 end function argument
 !===============================================================
 !

@@ -9,14 +9,14 @@ module lib_const
   !=============================================================
   ! Length of string
   !=============================================================
-  integer, parameter :: clen_path = 1024
-  integer, parameter :: clen_key  = 64
-  integer, parameter :: clen_msg  = 32
-  integer, parameter :: clen_proc = 128
-  integer, parameter :: clen_line = 1024
-  integer, parameter :: clen_var  = 64
-  integer, parameter :: clen_wfmt = 64
-  integer, parameter :: clen_opt_error = 16
+  integer, parameter :: CLEN_PATH = 1024
+  integer, parameter :: CLEN_KEY  = 64
+  integer, parameter :: CLEN_MSG  = 32
+  integer, parameter :: CLEN_PROC = 128
+  integer, parameter :: CLEN_LINE = 1024
+  integer, parameter :: CLEN_VAR  = 64
+  integer, parameter :: CLEN_WFMT = 64
+  integer, parameter :: CLEN_OPT_ERROR = 16
 
   integer, parameter :: MAXDGT_INT1 =  3
   integer, parameter :: MAXDGT_INT2 =  5

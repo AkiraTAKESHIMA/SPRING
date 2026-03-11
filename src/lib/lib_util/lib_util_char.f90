@@ -19,7 +19,7 @@ module lib_util_char
   public :: real_char
   public :: dble_char
 
-  public :: char_to_val
+  public :: c2v
 
   public :: remove_quoted
   public :: remove_quotes
@@ -34,14 +34,15 @@ module lib_util_char
   !------------------------------------------------------------
   ! Interfaces
   !------------------------------------------------------------
-  interface char_to_val
-    module procedure char_to_log4
-    module procedure char_to_int1
-    module procedure char_to_int2
-    module procedure char_to_int4
-    module procedure char_to_int8
-    module procedure char_to_real
-    module procedure char_to_dble
+  interface c2v
+    module procedure c2v__char
+    module procedure c2v__log4
+    module procedure c2v__int1
+    module procedure c2v__int2
+    module procedure c2v__int4
+    module procedure c2v__int8
+    module procedure c2v__real
+    module procedure c2v__dble
   end interface
   !------------------------------------------------------------
   ! Private module variables
@@ -145,10 +146,9 @@ logical(4) function log4_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an logical(4).'//&
               '\n  Variable name: '//str(varname_))
-    res = .true.
   endif
 
   deallocate(varname_)
@@ -181,10 +181,9 @@ integer(1) function int1_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an integer(1).'//&
               '\n  Variable name: '//str(varname_))
-    res = 0_1
   endif
 
   deallocate(varname_)
@@ -217,10 +216,9 @@ integer(2) function int2_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an integer(2).'//&
               '\n  Variable name: '//str(varname_))
-    res = 0_2
   endif
 
   deallocate(varname_)
@@ -253,10 +251,9 @@ integer(4) function int4_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an integer(4).'//&
               '\n  Variable name: '//str(varname_))
-    res = 0_4
   endif
 
   deallocate(varname_)
@@ -289,10 +286,9 @@ integer(8) function int8_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an integer(8).'//&
               '\n  Variable name: '//str(varname_))
-    res = 0_8
   endif
 
   deallocate(varname_)
@@ -326,10 +322,9 @@ real(4) function real_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an real(4).'//&
               '\n  Variable name: '//str(varname_))
-    res = 0.0
   endif
 
   deallocate(varname_)
@@ -363,10 +358,9 @@ real(8) function dble_char(c, varname) result(res)
   read(c,*,iostat=ios) res
 
   if( ios /= 0 )then
-    call logerr(msg_io_error()//&
+    call errend(msg_io_error()//&
               '\nFailed to read "'//str(c)//'" as an real(8).'//&
               '\n  Variable name: '//str(varname_))
-    res = 0.d0
   endif
 
   deallocate(varname_)
@@ -384,204 +378,174 @@ end function dble_char
 !==============================================================
 !
 !==============================================================
-subroutine char_to_log4(v, c)
+integer(4) function c2v__char(c, v) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_log4'
+  character(*), intent(in)  :: c
+  character(*), intent(out) :: v
+
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__char'
+
+  info = 0
+  if( len(v) < len(c) )then
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\n  len(v) < len(c)', &
+                PRCNAM, MODNAM)
+    return
+  endif
+
+  v = c
+end function c2v__char
+!==============================================================
+!
+!==============================================================
+integer(4) function c2v__log4(c, v) result(info)
+  implicit none
+  character(*), intent(in)  :: c
   logical(4)  , intent(out) :: v
-  character(*), intent(in) :: c
 
-  integer :: ios
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__log4'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  read(c,*,iostat=ios) v
+  read(c, *, iostat=info) v
 
-  if( ios /= 0 )then
-    call logerr(msg_io_error()//&
-              '\nFailed to convert "'//str(c)//'" to logical(4).')
-    v = .true.
+  if( info /= 0 )then
+    call errret(msg_io_error()//&
+              '\nFailed to convert "'//str(c)//'" to logical(4).', &
+                PRCNAM, MODNAM)
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_log4
+end function c2v__log4
 !===============================================================
 !
 !===============================================================
-subroutine char_to_int1(v, c)
+integer(4) function c2v__int1(c, v) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_int1'
+  character(*), intent(in)  :: c
   integer(1)  , intent(out) :: v
-  character(*), intent(in) :: c
-  integer :: ios
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  read(c,*,iostat=ios) v
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__int1'
 
-  if( ios /= 0 )then
-    call logerr(msg_io_error()//&
-              '\nFailed to convert "'//str(c)//'" to integer(1).')
-    v = 0_1
+  read(c, *, iostat=info) v
+
+  if( info /= 0 )then
+    call errret(msg_io_error()//&
+              '\nFailed to convert "'//str(c)//'" to integer(1).', &
+                PRCNAM, MODNAM)
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_int1
+end function c2v__int1
 !==============================================================
 !
 !==============================================================
-subroutine char_to_int2(v, c)
+integer(4) function c2v__int2(c, v) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_int2'
+  character(*), intent(in)  :: c
   integer(2)  , intent(out) :: v
-  character(*), intent(in) :: c
 
-  integer :: ios
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__int2'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  read(c,*,iostat=ios) v
+  read(c, *, iostat=info) v
 
-  if( ios /= 0 )then
-    call logerr(msg_io_error()//&
-              '\nFailed to convert "'//str(c)//'" to integer(2).')
-    v = 0_2
+  if( info /= 0 )then
+    call errret(msg_io_error()//&
+              '\nFailed to convert "'//str(c)//'" to integer(2).', &
+                PRCNAM, MODNAM)
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_int2
+end function c2v__int2
 !==============================================================
 !
 !==============================================================
-subroutine char_to_int4(v, c, ios)
+integer(4) function c2v__int4(c, v) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_int4'
+  character(*), intent(in)  :: c
   integer(4)  , intent(out) :: v
-  character(*), intent(in) :: c
-  integer     , intent(out), optional :: ios
 
-  integer :: ios_
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__int4'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  read(c,*,iostat=ios_) v
+  read(c, *, iostat=info) v
 
-  if( ios_ /= 0 )then
-    if( present(ios) )then
-      ios = ios_
-    else
-      call logerr(msg_io_error()//&
-                '\nFailed to convert "'//str(c)//'" to integer(4).')
-      v = 0_4
-    endif
+  if( info /= 0 )then
+    call errret(msg_io_error()//&
+              '\nFailed to convert "'//str(c)//'" to integer(4).', &
+                PRCNAM, MODNAM)
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_int4
+end function c2v__int4
 !==============================================================
 !
 !==============================================================
-subroutine char_to_int8(v, c)
+integer(4) function c2v__int8(c, v) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_int8'
+  character(*), intent(in)  :: c
   integer(8)  , intent(out) :: v
-  character(*), intent(in) :: c
 
-  integer :: ios
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__int8'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  read(c,*,iostat=ios) v
+  read(c, *, iostat=info) v
 
-  if( ios /= 0 )then
-    call logerr(msg_io_error()//&
-              '\nFailed to convert "'//str(c)//'" to integer(8).')
-    v = 0_8
+  if( info /= 0 )then
+    call errret(msg_io_error()//&
+              '\nFailed to convert "'//str(c)//'" to integer(8).', &
+                PRCNAM, MODNAM)
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_int8
+end function c2v__int8
 !==============================================================
 !
 !==============================================================
-subroutine char_to_real(v, c, fmt)
+integer(4) function c2v__real(c, v, fmt) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_real'
+  character(*), intent(in)  :: c
   real(4)     , intent(out) :: v
-  character(*), intent(in)  :: c
   character(*), intent(in), optional :: fmt
 
-  integer :: ios
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__real'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
   if( present(fmt) )then
-    read(c, fmt, iostat=ios) v
+    read(c, fmt, iostat=info) v
   else
-    read(c, *, iostat=ios) v
+    read(c, *, iostat=info) v
   endif
 
-  if( ios /= 0 )then
+  if( info /= 0 )then
     if( present(fmt) )then
-      call logerr(msg_io_error()//&
+      call errret(msg_io_error()//&
                 '\nFailed to convert "'//str(c)//'" to real(4) '//&
-                 'in the format of "'//str(fmt)//'".')
+                 'in the format of "'//str(fmt)//'".', &
+                  PRCNAM, MODNAM)
     else
-      call logerr(msg_io_error()//&
-                '\n  Failed to convert "'//str(c)//'" to real(4).')
+      call errret(msg_io_error()//&
+                '\nFailed to convert "'//str(c)//'" to real(4).', &
+                  PRCNAM, MODNAM)
     endif
-    v = 0.0
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_real
+end function c2v__real
 !==============================================================
 !
 !==============================================================
-subroutine char_to_dble(v, c, fmt)
+integer(4) function c2v__dble(c, v, fmt) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'char_to_dble'
-  real(8)     , intent(out) :: v
   character(*), intent(in)  :: c
+  real(8)     , intent(out) :: v
   character(*), intent(in), optional :: fmt
 
-  integer :: ios
+  character(CLEN_PROC), parameter :: PRCNAM = 'c2v__dble'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
   if( present(fmt) )then
-    read(c, fmt, iostat=ios) v
+    read(c, fmt, iostat=info) v
   else
-    read(c, *, iostat=ios) v
+    read(c, *, iostat=info) v
   endif
 
-  if( ios /= 0 )then
+  if( info /= 0 )then
     if( present(fmt) )then
-      call logerr(msg_io_error()//&
+      call errret(msg_io_error()//&
                 '\nFailed to convert "'//str(c)//'" to real(4) '//&
-                 'in the format of "'//str(fmt)//'".')
+                 'in the format of "'//str(fmt)//'".', &
+                  PRCNAM, MODNAM)
     else
-      call logerr(msg_io_error()//&
-                '\n  Failed to convert "'//str(c)//'" to real(4).')
+      call errret(msg_io_error()//&
+                '\nFailed to convert "'//str(c)//'" to real(4).', &
+                  PRCNAM, MODNAM)
     endif
-    v = 0.d0
   endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine char_to_dble
+end function c2v__dble
 !==============================================================
 !
 !==============================================================
