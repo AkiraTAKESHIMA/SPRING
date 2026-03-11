@@ -1,7 +1,7 @@
 TOPSRCDIR = ../..
 include $(TOPSRCDIR)/Mkinclude
-include $(MKINCLUDE)
 
+.SUFFIXES:
 .SUFFIXES: .f90
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c $<

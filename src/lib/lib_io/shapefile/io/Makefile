@@ -1,6 +1,7 @@
 TOPSRCDIR = ../../../..
 include $(TOPSRCDIR)/Mkinclude
 
+.SUFFIXES:
 .SUFFIXES: .f90 .F90 .c
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c $<
@@ -24,7 +25,7 @@ MODS = \
 .PHONY: all
 all:
 	$(MAKE) $(OBJS)
-	$(CP) $(CPFLAGS) $(OBJS) $(MODS) ../..
+	$(INSTALL) $(OBJS) $(MODS) ../..
 
 .PHONY: clean
 clean:

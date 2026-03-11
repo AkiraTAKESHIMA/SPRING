@@ -1,6 +1,8 @@
 TOPSRCDIR = ..
 include $(TOPSRCDIR)/Mkinclude
 
+.SUFFIXES:
+
 TARGET = $(LIB)
 
 OBJ =\
@@ -41,23 +43,6 @@ all:
 	$(INSTALL) $(LIBDIR_PROJ)/*.mod   $(MODDIR)/.
 
 	$(MAKE) $(MKFLAGS) $(TARGET)
-
-.PHONY: install
-install:
-	$(RM) $(RMFLAGS) $(MODDIR)/*.mod
-	$(INSTALL) $(LIBDIR_CONST)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_BASE)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_TIME)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_LOG)/*.mod    $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_UTIL)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_ARRAY)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_MATH)/*.mod   $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_STATS)/*.mod  $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_IO)/*.mod     $(MODDIR)/.
-	$(INSTALL) $(LIBDIR_PROJ)/*.mod   $(MODDIR)/.
-
-	$(MAKE) $(MKFLAGS) $(TARGET)
-
 
 $(TARGET): $(OBJ)
 	$(AR) $(ARFLAGS) $@ $^

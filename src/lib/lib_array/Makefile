@@ -1,6 +1,7 @@
 TOPSRCDIR = ../..
 include $(TOPSRCDIR)/Mkinclude
 
+.SUFFIXES:
 .SUFFIXES: .f90 .o .mod
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c -o $@ $< -I$(LIBDIR_CONST) -I$(LIBDIR_BASE) -I$(LIBDIR_LOG)
