@@ -22,10 +22,9 @@ src/lib/lib_io/lib_io_arg_parser.f90
 
 Renewed the module.
 #---------------------------------------------------------------
-[2026/03/10] Modification
+[2026/03/11] Improvement
 #---------------------------------------------------------------
-Replaced `$(INSTALL)` command with `$(CP)` command that is 
-used to copy *.mod files of the library.
+Added `.SUFFIXES` to Makefile files for safety.
 #---------------------------------------------------------------
 [2026/03/03] Modification
 #---------------------------------------------------------------
