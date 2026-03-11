@@ -42,14 +42,14 @@ endif
 # Set compile options
 #==============================================================
 ifdef ILS_SYS
-  DEBUG=$(ILS_DEBUG)
+  SPRING_DEBUG=$(ILS_DEBUG)
   FCFLAGS_FAST  = $(FFLAGS_SPRING_FAST)
   FCFLAGS_DEBUG = $(FFLAGS_SPRING_DEBUG)
   CCFLAGS_FAST  = $(CFLAGS_FAST)
   CCFLAGS_DEBUG = $(CFLAGS_DEBUG)
 endif
 
-ifeq ($(DEBUG), T)
+ifeq ($(SPRING_DEBUG), T)
   FCFLAGS = $(FCFLAGS_DEBUG)
   CCFLAGS = $(CCFLAGS_DEBUG)
 else
