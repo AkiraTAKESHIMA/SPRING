@@ -1096,16 +1096,20 @@ subroutine showarg()
     ! Case: Char
     case( ITYPE_CHAR )
       achar => ad%lst_char(ad%idx_positional(i))
-      call logmsg(str_val_positional(&
-             achar%name, achar%description,            &
-             ITYPE_CHAR, achar%val        , achar%used ))
+      call logmsg(&
+             str_val_positional(&
+               achar%name, achar%description,              &
+               ITYPE_CHAR, achar%val        , achar%used), &
+             opt='x1')
     !-----------------------------------------------------------
     ! Case: Int4
     case( ITYPE_INT4 )
       aint4 => ad%lst_int4(ad%idx_positional(i))
-      call logmsg(str_val_positional(&
-             aint4%name, aint4%description,            &
-             ITYPE_INT4, str(aint4%val)   , aint4%used ))
+      call logmsg(&
+             str_val_positional(&
+               aint4%name, aint4%description,              &
+               ITYPE_INT4, str(aint4%val)   , aint4%used), &
+             opt='x1')
     !-----------------------------------------------------------
     case default
       call errend(msg_invalid_value(&
@@ -1121,18 +1125,22 @@ subroutine showarg()
     ! Case: Flag
     case( ITYPE_FLAG )
       aflag => ad%lst_flag(ad%idx_optional(i))
-      call logmsg(str_val_optional(&
-             aflag%key_short, aflag%key_long, aflag%description, &
-             ITYPE_FLAG     , str(aflag%val), aflag%required   , &
-             aflag%used ))
+      call logmsg(&
+             str_val_optional(&
+               aflag%key_short, aflag%key_long, aflag%description, &
+               ITYPE_FLAG     , str(aflag%val), aflag%required   , &
+               aflag%used)                                       , &
+             opt='x1')
     !-----------------------------------------------------------
     ! Case: Char
     case( ITYPE_CHAR )
       achar => ad%lst_char(ad%idx_optional(i))
-      call logmsg(str_val_optional(&
-             achar%key_short, achar%key_long, achar%description, &
-             ITYPE_CHAR     , achar%val     , achar%required   , &
-             achar%used ))
+      call logmsg(&
+             str_val_optional(&
+               achar%key_short, achar%key_long, achar%description, &
+               ITYPE_CHAR     , achar%val     , achar%required   , &
+               achar%used)                                       , &
+             opt='x1')
     !-----------------------------------------------------------
     ! Case: Int4
     case( ITYPE_INT4 )
@@ -1140,7 +1148,8 @@ subroutine showarg()
       call logmsg(str_val_optional(&
              aint4%key_short, aint4%key_long, aint4%description, &
              ITYPE_INT4     , str(aint4%val), aint4%required   , &
-             aint4%used  ))
+             aint4%used)                                       , &
+           opt='x1')
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
