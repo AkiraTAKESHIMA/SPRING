@@ -429,18 +429,12 @@ subroutine logret(prc, mod)
   !-------------------------------------------------------------
   ! Print the message
   !-------------------------------------------------------------
-allocate(character(1) :: mod_, prc_)
-mod_ = set%mod(depth)
-prc_ = set%prc(depth)
-if( present(mod) ) mod_ = trim(mod)
-if( present(prc) ) prc_ = trim(prc)
-
   if( set%echoPrc(depth) )then
-!    allocate(character(1) :: mod_, prc_)
-!    mod_ = set%mod(depth)
-!    prc_ = set%prc(depth)
-!    if( present(mod) ) mod_ = trim(mod)
-!    if( present(prc) ) prc_ = trim(prc)
+    allocate(character(1) :: mod_, prc_)
+    mod_ = set%mod(depth)
+    prc_ = set%prc(depth)
+    if( present(mod) ) mod_ = trim(mod)
+    if( present(prc) ) prc_ = trim(prc)
 
     if( set%msrTime(depth) )then
       allocate(character(8) :: c_)
@@ -452,6 +446,8 @@ if( present(prc) ) prc_ = trim(prc)
       c = '[- '//strprc(prc_, mod_)//']'
     endif
     call echo_lines(c, STDOUT, set%indent(depth), .true.)
+
+    deallocate(mod_, prc_)
   endif
   !-------------------------------------------------------------
   ! Update the status
@@ -1182,6 +1178,12 @@ recursive subroutine errend(msg, stp, prc, mod, opt)
     call echo_lines(strstp(err(i)%stp, err(i)%prc, err(i)%mod), &
                     STDOUT, 0, .true.)
     call echo_lines(err(i)%msg, STDOUT, 2, .true.)
+  enddo
+
+  write(STDOUT, "(a)") '------ PROCESSES ------'
+  do i = 1, depth
+    call echo_lines(strstp(set%stp(i), set%prc(i), set%mod(i)), &
+                    STDOUT, 0, .true.)
   enddo
   !-------------------------------------------------------------
   ! Clear stored error messages
