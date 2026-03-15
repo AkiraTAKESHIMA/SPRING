@@ -1,4 +1,4 @@
-module c3_rt_raster_raster
+module mod_rt_raster_raster
   use lib_const
   use lib_base
   use lib_log
@@ -17,7 +17,7 @@ module c3_rt_raster_raster
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_raster_raster'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_raster_raster'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -28,7 +28,7 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
         init_rt1d   , &
         clear_rt1d  , &
         reshape_rt1d
-  use c3_rt_llbnds, only: &
+  use c2_rt_llbnds, only: &
         calc_relations_llbnds
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_raster_raster'
@@ -318,4 +318,4 @@ end function make_rt_raster_raster
 !===============================================================
 !
 !===============================================================
-end module c3_rt_raster_raster
+end module mod_rt_raster_raster

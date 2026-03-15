@@ -1,22 +1,44 @@
-module c3_rt_polygon_polygon_regions
+module mod_rt_polygon_polygon
   use lib_const
   use lib_base
   use lib_log
   use lib_array
-  use lib_io
   use lib_math
+  use lib_io
   use c1_const
+  use c1_type_opt
   use c1_type_gs
+  use c2_type_rt
   implicit none
   private
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: set_regions_polygon_polygon
+  public :: make_rt_polygon_polygon
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_polygon_polygon_regions'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_polygon_polygon'
+
+  logical :: debug
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  type list_iRegion_
+    integer :: nRegions
+    integer, pointer :: list_iRegion(:)
+  end type
+
+  type region_
+    integer(8) :: maij, mbij
+    integer(8), pointer :: list_aij(:), list_bij(:)
+  end type
+
+  type regions_
+    integer :: nRegions
+    type(region_), pointer :: region(:)
+    type(list_iRegion_), pointer :: a(:), b(:)
+  end type
 
   type region_tree_
     real(8) :: west, east, south, north
@@ -27,20 +49,262 @@ module c3_rt_polygon_polygon_regions
     integer :: rank
   end type
 
-  integer, parameter :: nRegions_undef = -9
-  integer, parameter :: nRegions_empty = -1
-  integer, parameter :: nRegions_nodiv = 0
+  integer, parameter :: NREGIONS_UNDEF = -9
+  integer, parameter :: NREGIONS_EMPTY = -1
+  integer, parameter :: NREGIONS_NODIV = 0
 
-  real(8), parameter :: ratio_thresh = 0.5d0
+  real(8), parameter :: RATIO_THRESH = 0.5d0
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-integer(4) function set_regions_polygon_polygon(&
+integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
+  use c1_opt_ctrl, only: &
+        get_opt_earth
+  use c1_gs_util, only: &
+        print_polygon
+  use c2_rt1d, only: &
+        init_rt1d   , &
+        clear_rt1d  , &
+        reshape_rt1d
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_polygon_polygon'
+  type(gs_), intent(inout), target :: s, t
+  type(rt_), intent(inout), target :: rt
+
+  type(gs_)        , pointer :: a, b
+  type(gs_polygon_), pointer :: ap, bp
+  type(grid_)      , pointer :: ag, bg
+  type(rt_main_)   , pointer :: rtm
+  type(polygon_)   , pointer :: ap0, bp0
+
+  type(opt_earth_) :: earth
+  type(rt1d_), pointer :: rt1d(:), rt1
+  type(regions_)          :: regions
+  type(region_) , pointer :: region
+  integer(8) :: aaij, aij, bbij, bij
+  integer :: iRegion
+  real(8) :: aarea, barea
+  real(8) :: area
+  integer(8) :: IJSIZE_INIT = 4_8
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  ! Set pointers
+  !-------------------------------------------------------------
+  if( s%typ /= MESHTYPE__POLYGON .or. &
+      t%typ /= MESHTYPE__POLYGON )then
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
+  endif
+
+  a => s
+  b => t
+
+  ap => a%polygon
+  bp => b%polygon
+
+  ag => ap%grid
+  bg => bp%grid
+
+  rtm => rt%main
+
+  call get_opt_earth(earth)
+  !-------------------------------------------------------------
+  ! Print debugging grids
+  !-------------------------------------------------------------
+  debug = ap%debug .or. bp%debug
+
+  if( ap%debug ) call print_polygon(ap%polygon(ap%grid%ij_debug), ap%coord_miss_s)
+  if( bp%debug ) call print_polygon(bp%polygon(bp%grid%ij_debug), bp%coord_miss_s)
+  !-------------------------------------------------------------
+  ! Set regions
+  !-------------------------------------------------------------
+  if( make_regions(ap, bp, regions) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  !-------------------------------------------------------------
+  ! Initialize
+  !-------------------------------------------------------------
+  allocate(rt1d(bp%nij))
+  if( init_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  do bij = bp%ijs, bp%ije
+    rt1 => rt1d(bij)
+    rt1%mij = 0_8
+    rt1%ijsize = IJSIZE_INIT
+    allocate(rt1%idx(rt1%ijsize))
+    allocate(rt1%ara(rt1%ijsize))
+  enddo
+
+  if( debug )then
+    call set_modvar_lib_math_sphere(debug=.true.)
+  endif
+
+  !-------------------------------------------------------------
+  ! Make a remapping table
+  !-------------------------------------------------------------
+  rtm%nij = 0_8
+
+  do iRegion = 1, regions%nRegions
+    region => regions%region(iRegion)
+
+    do bbij = 1_8, region%mbij
+      bij = region%list_bij(bbij)
+      if( .not. bg%msk(bij) ) cycle
+
+      bp0 => bp%polygon(bij)
+
+      barea = bg%ara(bij) / earth%r**2
+
+      rt1 => rt1d(bij)
+      rt1%idx_self = bp0%idx
+
+      do aaij = 1_8, region%maij
+        aij = region%list_aij(aaij)
+        if( .not. ag%msk(aij) ) cycle
+
+        ap0 => ap%polygon(aij)
+
+        if( is_skipped(iRegion, regions%a(aij), regions%b(bij)) ) cycle
+
+        if( .not. bboxes_intersect(&
+              bp0%south, bp0%north, bp0%west, bp0%east, bp0%pos==POLYGON_POSITION_LON0, &
+              ap0%south, ap0%north, ap0%west, ap0%east, ap0%pos==POLYGON_POSITION_LON0) )then
+          cycle
+        endif
+
+        aarea = ag%ara(aij) / earth%r**2
+
+        if( debug )then
+          if( .not. bp%debug ) call print_polygon(bp0, bp%coord_miss_s)
+          if( .not. ap%debug ) call print_polygon(ap0, ap%coord_miss_s)
+        endif
+
+        if( area_sphere_intersection_polygon_polygon(&
+              ap0%pos   , ap0%x, ap0%y, ap0%z, ap0%lon, ap0%lat,    &
+              ap0%arctyp, ap0%a, ap0%b, ap0%c,                      &
+              ap0%n_pole, ap0%convex  , ap0%lontop    , ap0%lattop, &
+              aarea     ,                                           &
+              bp0%pos   , bp0%x, bp0%y, bp0%z, bp0%lon, bp0%lat,    &
+              bp0%arctyp, bp0%a, bp0%b, bp0%c,                      &
+              bp0%n_pole, bp0%convex  , bp0%lontop    , bp0%lattop, &
+              barea     ,                                           &
+              area) /= 0 )then
+          info = 1
+          call errret('@ aij = '//str(aij)//', bij = '//str(bij))
+          return
+        endif
+
+        if( debug )then
+          call logmsg('  intersection area: '//str(area,'es22.15')//&
+                    ' ('//str(area/barea*1d2,'f8.3')//' % of T, '//&
+                          str(area/aarea*1d2,'f8.3')//' % of S)')
+        endif
+
+        if( area <= 0.d0 ) cycle
+
+        if( rt1%mij == rt1%ijsize )then
+          call mul(rt1%ijsize, 2)
+          call realloc(rt1%idx, rt1%ijsize, clear=.false.)
+          call realloc(rt1%ara, rt1%ijsize, clear=.false.)
+        endif
+        call add(rt1%mij)
+        rt1%idx(rt1%mij) = ap0%idx
+        rt1%ara(rt1%mij) = area
+
+      enddo  ! ssij/
+    enddo  ! ttij/
+  enddo  ! iRegion/
+
+  ! Reshape 1d-remapping table
+  !-------------------------------------------------------------
+  if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  if( debug )then
+    call set_modvar_lib_math_sphere(debug=.false.)
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  nullify(rt1)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  nullify(rtm)
+
+  nullify(region)
+  if( clear_regions(regions) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  nullify(ap0, bp0)
+  nullify(ag, bg)
+  nullify(ap, bp)
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function make_rt_polygon_polygon
+!===============================================================
+!
+!===============================================================
+logical function is_skipped(iRegion, s_rgn, t_rgn)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'is_skipped'
+  integer, intent(in) :: iRegion
+  type(list_iRegion_), intent(in) :: s_rgn, t_rgn
+
+  integer :: iiRegion_s, iRegion_s, iiRegion_t, iRegion_t
+
+  is_skipped = .false.
+
+  if( s_rgn%nRegions > 1 .and. t_rgn%nRegions > 1 .and. &
+      s_rgn%list_iRegion(1) /= iRegion .and. t_rgn%list_iRegion(1) /= iRegion )then
+    iiRegion_s = 1
+    iiRegion_t = 1
+    do while( iiRegion_s <= s_rgn%nRegions .and. iiRegion_t <= t_rgn%nRegions )
+      iRegion_s = s_rgn%list_iRegion(iiRegion_s)
+      iRegion_t = t_rgn%list_iRegion(iiRegion_t)
+      if( iRegion_s < iRegion_t )then
+        call add(iiRegion_s)
+      elseif( iRegion_s > iRegion_t )then
+        call add(iiRegion_t)
+      else
+        is_skipped = iRegion_s /= iRegion
+        if( is_skipped )then
+          !call add(n_loop_skipped)
+          !call logmsg('iRegion '//str(iRegion)//' s('//str(sij)//') and t('//str(tij)//')'//&
+          !          ' has already been investigated in iRegion '//str(iRegion_s))
+        endif
+        exit
+      endif
+    enddo
+  endif
+end function is_skipped
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+integer(4) function make_regions(&
     agp, bgp, regions) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'set_regions_polygon_polygon'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_regions'
   type(gs_polygon_), intent(in)  :: agp, bgp
   type(regions_)   , intent(out) :: regions
 
@@ -76,7 +340,7 @@ integer(4) function set_regions_polygon_polygon(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call logent('Making region tree', PRCNAM, MODNAM)
+  call logent('Making region tree')
 
   regions%nRegions = 0
   nullify(rgn%rgn)
@@ -91,7 +355,7 @@ integer(4) function set_regions_polygon_polygon(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call logent('Removing ineffective divisions', PRCNAM, MODNAM)
+  call logent('Removing ineffective divisions')
 
   if( remove_ineffective_divisions(rgn, regions%nRegions) /= 0 )then
     info = 1; call errret(); return
@@ -112,7 +376,7 @@ integer(4) function set_regions_polygon_polygon(&
     un = unit_number()
     path = joined(dir, &
                   'regions_'//str(agp%nam)//'_to_'//str(bgp%nam)//'_'//&
-                  str(ratio_thresh,'f3.1')//'.txt')
+                  str(RATIO_THRESH,'f3.1')//'.txt')
     call logmsg('Write '//str(path))
     open(un, file=path, status='replace')
     write(un,"(2(1x,a,1x,i0))") 'naij', rgn%maij, 'nbij', rgn%mbij
@@ -145,14 +409,14 @@ integer(4) function set_regions_polygon_polygon(&
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end function set_regions_polygon_polygon
+end function make_regions
 !===============================================================
 !
 !===============================================================
 integer(4) recursive function make_region_tree(&
     rgn, agp, bgp, nRegions) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'set_regions_polygon_polygon'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_region_tree'
   type(region_tree_), intent(inout) :: rgn
   type(gs_polygon_) , intent(in)    :: agp, bgp
   integer           , intent(inout) :: nRegions
@@ -187,7 +451,7 @@ integer(4) recursive function make_region_tree(&
   endif
 
   if( rgn%maij == 0_8 .or. rgn%mbij == 0_8 )then
-    rgn%nRegions = nRegions_empty
+    rgn%nRegions = NREGIONS_EMPTY
     return
   endif
 
@@ -218,8 +482,8 @@ integer(4) recursive function make_region_tree(&
       east = min(rgn%east, ap%east)
     case default
       info = 1
-      call erradd(msg_invalid_value('ap%pos', ap%pos), &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_invalid_value('ap%pos', ap%pos), &
+                  PRCNAM, MODNAM)
       return
     endselect
 
@@ -228,17 +492,17 @@ integer(4) recursive function make_region_tree(&
 
     if( west > east )then
       info = 1
-      call erradd(msg_unexpected_condition()//&
-                '\nwest > east', &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_unexpected_condition()//&
+                '\n  west > east', &
+                  PRCNAM, MODNAM)
       return
     endif
 
     if( south > north )then
       info = 1
-      call erradd(msg_unexpected_condition()//&
-                '\nsouth > north', &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_unexpected_condition()//&
+                '\n  south > north', &
+                  PRCNAM, MODNAM)
       return
     endif
 
@@ -279,8 +543,8 @@ integer(4) recursive function make_region_tree(&
       east = min(rgn%east, bp%east)
     case default
       info = 1
-      call erradd(msg_invalid_value('bp%pos', bp%pos), &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_invalid_value('bp%pos', bp%pos), &
+                  PRCNAM, MODNAM)
       return
     endselect
 
@@ -289,17 +553,17 @@ integer(4) recursive function make_region_tree(&
 
     if( west > east )then
       info = 1
-      call erradd(msg_unexpected_condition()//&
-                '\nwest > east', &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_unexpected_condition()//&
+                '\n  west > east', &
+                  PRCNAM, MODNAM)
       return
     endif
 
     if( south > north )then
       info = 1
-      call erradd(msg_unexpected_condition()//&
-                '\nsouth > north', &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_unexpected_condition()//&
+                '\n  south > north', &
+                  PRCNAM, MODNAM)
       return
     endif
 
@@ -316,7 +580,7 @@ integer(4) recursive function make_region_tree(&
   ! Return if no valid zone exist
   !-------------------------------------------------------------
   if( maij == 0_8 .or. mbij == 0_8 )then
-    rgn%nRegions = nRegions_empty
+    rgn%nRegions = NREGIONS_EMPTY
     return
   endif
   !-------------------------------------------------------------
@@ -341,9 +605,9 @@ integer(4) recursive function make_region_tree(&
   endif
 
   divide_by_horizontal_line &
-    = ratio_sgrid_latsize < ratio_thresh .and. ratio_tgrid_latsize < ratio_thresh
+    = ratio_sgrid_latsize < RATIO_THRESH .and. ratio_tgrid_latsize < RATIO_THRESH
   divide_by_vertical_line &
-    = ratio_sgrid_lonsize < ratio_thresh .and. ratio_tgrid_latsize < ratio_thresh
+    = ratio_sgrid_lonsize < RATIO_THRESH .and. ratio_tgrid_lonsize < RATIO_THRESH
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -354,49 +618,64 @@ integer(4) recursive function make_region_tree(&
     rgn%nRegions = 4
     allocate(rgn%rgn(rgn%nRegions))
 
-    rgn%rgn(:)%west  = rgn%west
-    rgn%rgn(:)%east  = rgn%east
-    rgn%rgn(:)%south = rgn%south
-    rgn%rgn(:)%north = rgn%north
-
-    rgn%rgn(1)%east  = lon_center  ! lower left
+    ! lower left
+    rgn%rgn(1)%west  = rgn%west
+    rgn%rgn(1)%east  = lon_center
+    rgn%rgn(1)%south = rgn%south
     rgn%rgn(1)%north = lat_center
 
-    rgn%rgn(2)%east  = lon_center  ! upper left
+    ! upper left
+    rgn%rgn(2)%west  = rgn%west
+    rgn%rgn(2)%east  = lon_center
     rgn%rgn(2)%south = lat_center
+    rgn%rgn(2)%north = rgn%north
 
-    rgn%rgn(3)%west  = lon_center  ! lower right
+    ! lower right 
+    rgn%rgn(3)%west  = lon_center
+    rgn%rgn(3)%east  = rgn%east
+    rgn%rgn(3)%south = rgn%south
     rgn%rgn(3)%north = lat_center
 
-    rgn%rgn(4)%west  = lon_center  ! upper right
+    ! upper right
+    rgn%rgn(4)%west  = lon_center
+    rgn%rgn(4)%east  = rgn%east
     rgn%rgn(4)%south = lat_center
+    rgn%rgn(4)%north = rgn%north
 
   elseif( divide_by_horizontal_line )then
     rgn%nRegions = 2
     allocate(rgn%rgn(rgn%nRegions))
 
-    rgn%rgn(:)%west  = rgn%west
-    rgn%rgn(:)%east  = rgn%east
-    rgn%rgn(:)%south = rgn%south
-    rgn%rgn(:)%north = rgn%north
+    ! lower
+    rgn%rgn(1)%west  = rgn%west
+    rgn%rgn(1)%east  = rgn%east
+    rgn%rgn(1)%south = rgn%south
+    rgn%rgn(1)%north = lat_center
 
-    rgn%rgn(1)%north = lat_center  ! lower
-    rgn%rgn(2)%south = lat_center  ! upper
+    ! upper
+    rgn%rgn(2)%west  = rgn%west
+    rgn%rgn(2)%east  = rgn%east
+    rgn%rgn(2)%south = lat_center
+    rgn%rgn(2)%north = rgn%north
 
   elseif( divide_by_vertical_line )then
     rgn%nRegions = 2
     allocate(rgn%rgn(rgn%nRegions))
 
-    rgn%rgn(:)%west  = rgn%west
-    rgn%rgn(:)%east  = rgn%east
-    rgn%rgn(:)%south = rgn%south
-    rgn%rgn(:)%north = rgn%north
+    ! left
+    rgn%rgn(1)%west  = rgn%west
+    rgn%rgn(1)%east  = lon_center
+    rgn%rgn(1)%south = rgn%south
+    rgn%rgn(1)%north = rgn%north
 
-    rgn%rgn(1)%east = lon_center  ! left
-    rgn%rgn(2)%west = lon_center  ! right
+    ! right
+    rgn%rgn(2)%west  = lon_center
+    rgn%rgn(2)%east  = rgn%east
+    rgn%rgn(2)%south = rgn%south
+    rgn%rgn(2)%north = rgn%north
 
   else
-    rgn%nRegions = nRegions_nodiv
+    rgn%nRegions = NREGIONS_NODIV
   endif
 
   if( debug )then
@@ -404,14 +683,14 @@ integer(4) recursive function make_region_tree(&
     call logmsg('            vertical   line: '//str(divide_by_vertical_line))
   endif
 
-  if( rgn%nRegions == nRegions_nodiv )then
+  if( rgn%nRegions == NREGIONS_NODIV )then
     call add(nRegions)
     return
   endif
 
   do iRegion = 1, rgn%nRegions
     rgn_child => rgn%rgn(iRegion)
-    rgn_child%nRegions = nRegions_undef
+    rgn_child%nRegions = NREGIONS_UNDEF
     nullify(rgn_child%rgn)
   enddo
 
@@ -437,7 +716,7 @@ integer(4) recursive function make_region_tree(&
 
       if( bboxes_intersect(&
             rgn_child%south, rgn_child%north, rgn_child%west, rgn_child%east, .false., &
-            ap%south, ap%north, ap%west, ap%east, ap%pos==polygon_position_lon0) )then
+            ap%south, ap%north, ap%west, ap%east, ap%pos==POLYGON_POSITION_LON0) )then
         call add(rgn_child%maij)
         rgn_child%list_aij(rgn_child%maij) = aij
       endif
@@ -452,7 +731,7 @@ integer(4) recursive function make_region_tree(&
 
       if( bboxes_intersect(&
             rgn_child%south, rgn_child%north, rgn_child%west, rgn_child%east, .false., &
-            bp%south, bp%north, bp%west, bp%east, bp%pos==polygon_position_lon0) )then
+            bp%south, bp%north, bp%west, bp%east, bp%pos==POLYGON_POSITION_LON0) )then
         call add(rgn_child%mbij)
         rgn_child%list_bij(rgn_child%mbij) = bij
       endif
@@ -488,9 +767,7 @@ integer(4) recursive function make_region_tree(&
   !-------------------------------------------------------------
   do iRegion = 1, rgn%nRegions
     if( make_region_tree(rgn%rgn(iRegion), agp, bgp, nRegions) /= 0 )then
-      info = 1
-      call erradd('', '', PRCNAM, MODNAM)
-      return
+      info = 1; call errret('', PRCNAM, MODNAM); return
     endif
   enddo
   !-------------------------------------------------------------
@@ -516,27 +793,29 @@ integer(4) recursive function remove_ineffective_divisions(&
 
   do iRegion = 1, rgn%nRegions
     selectcase( rgn%rgn(iRegion)%nRegions )
-    case( nRegions_undef )
+    case( NREGIONS_UNDEF )
       info = 1
-      call erradd(msg_unexpected_condition()//&
-                '\nnRegions: '//str(rgn%rgn(iRegion)%nRegions), &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_unexpected_condition()//&
+                '\n  nRegions == NREGIONS_UNDEF'//&
+                '\n  rank: '//str(rgn%rank)//&
+                '\n  iRegion: '//str(iRegion), &
+                  PRCNAM, MODNAM)
       return
-    case( nRegions_empty )
+    case( NREGIONS_EMPTY )
       continue
-    case( nRegions_nodiv )
+    case( NREGIONS_NODIV )
       continue
     case( 1: )
       if( remove_ineffective_divisions(rgn%rgn(iRegion), nRegions) /= 0 )then
-        info = 1
-        call erradd('', '', PRCNAM, MODNAM)
-        return
+        info = 1; call errret('', PRCNAM, MODNAM); return
       endif
     case default
       info = 1
-      call erradd(msg_unexpected_condition()//&
-                '\nnRegions: '//str(rgn%rgn(iRegion)%nRegions), &
-                  '', PRCNAM, MODNAM)
+      call errret(msg_invalid_value(&
+                    'rgn%rgn('//str(iRegion)//')%nRegions', &
+                    rgn%rgn(iRegion)%nRegions)//&
+                '\n  rank: '//str(rgn%rank), &
+                  PRCNAM, MODNAM)
       return
     endselect
   enddo
@@ -550,12 +829,12 @@ integer(4) recursive function remove_ineffective_divisions(&
 !               '\n  rank: '//str(rgn%rank)//&
 !               '\n  mij self: '//str(mij_self)//', child: '//str(mij_child))
       do iRegion = 1, rgn%nRegions
-        if( rgn%rgn(iRegion)%nRegions == nRegions_nodiv )then
+        if( rgn%rgn(iRegion)%nRegions == NREGIONS_NODIV )then
           call add(nRegions, -1)
         endif
       enddo
       call add(nRegions)
-      rgn%nRegions = nRegions_nodiv
+      rgn%nRegions = NREGIONS_NODIV
     endif
   endif
   !-------------------------------------------------------------
@@ -563,72 +842,30 @@ end function remove_ineffective_divisions
 !===============================================================
 !
 !===============================================================
-integer(4) recursive function write_regions(rgn, un) result(info)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'set_regions_polygon_polygon'
-  type(region_tree_), intent(in) :: rgn
-  integer, intent(in) :: un
-
-  integer :: iRegion
-
-  info = 0
-  !-------------------------------------------------------------
-  selectcase( rgn%nRegions )
-  case( nRegions_undef )
-    info = 1
-    call erradd(msg_unexpected_condition()//&
-              '\nrgn%nRegions: '//str(rgn%nRegions), &
-                '', PRCNAM, MODNAM)
-    return
-  case( nRegions_empty )
-    continue
-  case( nRegions_nodiv )
-    write(un,"(1x,i6,4(1x,es15.8),2(1x,i8),1x,i2)") &
-          rgn%rank, rgn%west, rgn%east, rgn%south, rgn%north, &
-          rgn%maij, rgn%mbij, rgn%nRegions
-  case( 1: )
-    do iRegion = 1, rgn%nRegions
-      if( write_regions(rgn%rgn(iRegion), un) /= 0 )then
-        info = 1
-        call erradd('', '', PRCNAM, MODNAM)
-        return
-      endif
-    enddo
-  case default
-    info = 1
-    call erradd(msg_invalid_value('rgn%nRegions', rgn%nRegions), &
-                '', PRCNAM, MODNAM)
-    return
-  endselect
-  !-------------------------------------------------------------
-end function write_regions
-!===============================================================
-!
-!===============================================================
 integer(4) recursive function make_region_1d(&
     rgn, regions) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'set_regions_polygon_polygon'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_region_1d'
   type(region_tree_), intent(in)    :: rgn
   type(regions_)    , intent(inout) :: regions
 
   type(region_), pointer :: region
   integer :: iRegion
 
-  character(clen_var), parameter :: proc = 'make_region_1d'
-
   info = 0
   !-------------------------------------------------------------
   selectcase( rgn%nRegions )
-  case( nRegions_undef )
+  case( NREGIONS_UNDEF )
     info = 1
-    call erradd(msg_unexpected_condition()//&
-              '\nrgn%nRegions: '//str(rgn%nRegions), &
-                '', PRCNAM, MODNAM)
+    call errret(msg_unexpected_condition()//&
+              '\n  nRegions == NREGIONS_UNDEF'//&
+              '\n  rank: '//str(rgn%rank)//&
+              '\n  iRegion: '//str(iRegion), &
+                PRCNAM, MODNAM)
     return
-  case( nRegions_empty )
+  case( NREGIONS_EMPTY )
     continue
-  case( nRegions_nodiv )
+  case( NREGIONS_NODIV )
     call add(regions%nRegions)
     region => regions%region(regions%nRegions)
     region%maij = rgn%maij
@@ -640,69 +877,20 @@ integer(4) recursive function make_region_1d(&
   case( 1: )
     do iRegion = 1, rgn%nRegions
       if( make_region_1d(rgn%rgn(iRegion), regions) /= 0 )then
-        info = 1
-        call erradd('', '', PRCNAM, MODNAM)
-        return
+        info = 1; call errret('', PRCNAM, MODNAM); return
       endif
     enddo
   case default
     info = 1
-    call erradd(msg_invalid_value('rgn%nRegions', rgn%nRegions), &
-                '', PRCNAM, MODNAM)
+    call errret(msg_invalid_value(&
+                  'rgn%rgn('//str(iRegion)//')%nRegions', &
+                  rgn%rgn(iRegion)%nRegions)//&
+              '\n  rank: '//str(rgn%rank), &
+                PRCNAM, MODNAM)
     return
   endselect
   !-------------------------------------------------------------
 end function make_region_1d
-!===============================================================
-!
-!===============================================================
-integer(4) recursive function free_region_tree(rgn) result(info)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'set_regions_polygon_polygon'
-  type(region_tree_), intent(inout) :: rgn
-
-  integer :: iRegion
-
-  info = 0
-  !-------------------------------------------------------------
-  selectcase( rgn%nRegions )
-  case( nRegions_undef )
-    info = 1
-    call erradd(msg_unexpected_condition()//&
-              '\nnRegions: '//str(rgn%nRegions), &
-                '', PRCNAM, MODNAM)
-    return
-  case( nRegions_empty )
-    continue
-  case( nRegions_nodiv )
-    if( associated(rgn%rgn) )then
-      do iRegion = 1, size(rgn%rgn)
-        if( free_region_tree(rgn%rgn(iRegion)) /= 0 )then
-          info = 1
-          call erradd('', '', PRCNAM, MODNAM)
-          return
-        endif
-      enddo
-    endif
-  case( 1: )
-    do iRegion = 1, rgn%nRegions
-      if( free_region_tree(rgn%rgn(iRegion)) /= 0 )then
-        info = 1
-        call erradd('', '', PRCNAM, MODNAM)
-        return
-      endif
-    enddo
-  case default
-    info = 1
-    call erradd(msg_invalid_value('nRegions', rgn%nRegions), &
-                '', PRCNAM, MODNAM)
-    return
-  endselect
-
-  deallocate(rgn%list_aij)
-  deallocate(rgn%list_bij)
-  !-------------------------------------------------------------
-end function free_region_tree
 !===============================================================
 !
 !===============================================================
@@ -717,7 +905,7 @@ integer(4) function make_lists_iRegion(maij, mbij, regions) result(info)
   integer :: iRegion
   integer(8) :: aaij, aij, bbij, bij
   integer :: iiRegion_a, iRegion_a, iiRegion_b, iRegion_b
-  logical :: to_be_skipped
+  logical :: is_skipped
   integer(8) :: n_loop, n_loop_skipped
 
   info = 0
@@ -744,7 +932,7 @@ integer(4) function make_lists_iRegion(maij, mbij, regions) result(info)
   enddo
 
   call logmsg('nRegions max a: '//str(maxval(regions%a(:)%nRegions))//&
-                       ', b: '//str(maxval(regions%b(:)%nRegions)))
+                         ', b: '//str(maxval(regions%b(:)%nRegions)))
 
   do aij = 1_8, maij
     allocate(regions%a(aij)%list_iRegion(regions%a(aij)%nRegions))
@@ -795,7 +983,7 @@ integer(4) function make_lists_iRegion(maij, mbij, regions) result(info)
 
         if( a_rgn%nRegions > 1 .and. b_rgn%nRegions > 1 .and. &
             a_rgn%list_iRegion(1) /= iRegion .and. b_rgn%list_iRegion(1) /= iRegion )then
-          to_be_skipped = .false.
+          is_skipped = .false.
           iiRegion_a = 1
           iiRegion_b = 1
           do while( iiRegion_a <= a_rgn%nRegions .and. iiRegion_b <= b_rgn%nRegions )
@@ -806,8 +994,8 @@ integer(4) function make_lists_iRegion(maij, mbij, regions) result(info)
             elseif( iRegion_a > iRegion_b )then
               call add(iiRegion_b)
             else
-              to_be_skipped = iRegion_a /= iRegion
-              if( to_be_skipped )then
+              is_skipped = iRegion_a /= iRegion
+              if( is_skipped )then
                 call add(n_loop_skipped)
                 !call logmsg('iRegion '//str(iRegion)//' s('//str(aij)//') and t('//str(bij)//')'//&
                 !          ' has already been investigated in iRegion '//str(iRegion_a))
@@ -816,17 +1004,159 @@ integer(4) function make_lists_iRegion(maij, mbij, regions) result(info)
             endif
           enddo
 
-          if( to_be_skipped ) cycle
+          if( is_skipped ) cycle
         endif
       enddo  ! aaij/
     enddo  ! bbij/
   enddo  ! iRegion/
 
   call logmsg(str(dble(n_loop_skipped)/n_loop*1d2,'f7.2')//&
-              ' % of loop was skipped')
+              ' % of loops were skipped')
   !-------------------------------------------------------------
 end function make_lists_iRegion
 !===============================================================
 !
 !===============================================================
-end module c3_rt_polygon_polygon_regions
+integer(4) recursive function free_region_tree(rgn) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_region_tree'
+  type(region_tree_), intent(inout) :: rgn
+
+  integer :: iRegion
+
+  info = 0
+  !-------------------------------------------------------------
+  selectcase( rgn%nRegions )
+  case( NREGIONS_UNDEF )
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\n  nRegions == NREGIONS_UNDEF'//&
+              '\n  rank: '//str(rgn%rank)//&
+              '\n  iRegion: '//str(iRegion), &
+                PRCNAM, MODNAM)
+    return
+  case( NREGIONS_EMPTY )
+    continue
+  case( NREGIONS_NODIV )
+    if( associated(rgn%rgn) )then
+      do iRegion = 1, size(rgn%rgn)
+        if( free_region_tree(rgn%rgn(iRegion)) /= 0 )then
+          info = 1; call errret('', PRCNAM, MODNAM); return
+        endif
+      enddo
+    endif
+  case( 1: )
+    do iRegion = 1, rgn%nRegions
+      if( free_region_tree(rgn%rgn(iRegion)) /= 0 )then
+        info = 1; call errret('', PRCNAM, MODNAM); return
+      endif
+    enddo
+  case default
+    info = 1
+    call errret(msg_invalid_value(&
+                  'rgn%rgn('//str(iRegion)//')%nRegions', &
+                  rgn%rgn(iRegion)%nRegions)//&
+              '\n  rank: '//str(rgn%rank), &
+                PRCNAM, MODNAM)
+    return
+  endselect
+
+  deallocate(rgn%list_aij)
+  deallocate(rgn%list_bij)
+  !-------------------------------------------------------------
+end function free_region_tree
+!===============================================================
+!
+!===============================================================
+integer(4) function clear_regions(regions) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_regions'
+  type(regions_), intent(inout), target :: regions
+
+  type(region_), pointer :: region
+  type(list_iRegion_), pointer :: list_iRegion
+  integer :: iRegion
+  integer(8) :: ij
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  do iRegion = 1, regions%nRegions
+    region => regions%region(iRegion)
+    if( region%maij > 0 )then
+      region%maij = 0
+      call realloc(region%list_aij, 0)
+    endif
+    if( region%mbij > 0 )then
+      region%mbij = 0
+      call realloc(region%list_bij, 0)
+    endif
+  enddo
+
+  do ij = 1, size(regions%a)
+    list_iRegion => regions%a(ij)
+    if( list_iRegion%nRegions > 0 )then
+      list_iRegion%nRegions = 0
+      call realloc(list_iRegion%list_iRegion, 0)
+    endif
+  enddo
+
+  do ij = 1_8, size(regions%b)
+    list_iRegion => regions%b(ij)
+    if( list_iRegion%nRegions > 0 )then
+      list_iRegion%nRegions = 0
+      call realloc(list_iRegion%list_iRegion, 0)
+    endif
+  enddo
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function clear_regions
+!===============================================================
+!
+!===============================================================
+integer(4) recursive function write_regions(rgn, un) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'write_regions'
+  type(region_tree_), intent(in) :: rgn
+  integer, intent(in) :: un
+
+  integer :: iRegion
+
+  info = 0
+  !-------------------------------------------------------------
+  selectcase( rgn%nRegions )
+  case( NREGIONS_UNDEF )
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nrgn%nRegions: '//str(rgn%nRegions), &
+                PRCNAM, MODNAM)
+    return
+  case( NREGIONS_EMPTY )
+    continue
+  case( NREGIONS_NODIV )
+    write(un,"(1x,i6,4(1x,es15.8),2(1x,i8),1x,i2)") &
+          rgn%rank, rgn%west, rgn%east, rgn%south, rgn%north, &
+          rgn%maij, rgn%mbij, rgn%nRegions
+  case( 1: )
+    do iRegion = 1, rgn%nRegions
+      if( write_regions(rgn%rgn(iRegion), un) /= 0 )then
+        info = 1; call errret('', PRCNAM, MODNAM); return
+      endif
+    enddo
+  case default
+    info = 1
+    call errret(msg_invalid_value(&
+                  'rgn%rgn('//str(iRegion)//')%nRegions', &
+                  rgn%rgn(iRegion)%nRegions)//&
+              '\n  rank: '//str(rgn%rank), &
+                PRCNAM, MODNAM)
+    return
+  endselect
+  !-------------------------------------------------------------
+end function write_regions
+!===============================================================
+!
+!===============================================================
+end module mod_rt_polygon_polygon

@@ -29,7 +29,8 @@ c2_rt_main_coef.o\
 c2_rt_main_finish.o\
 c2_rt_vrf_core.o\
 c2_rt_vrf_driv.o\
-c2_rt_vrf_io.o
+c2_rt_vrf_io.o\
+c2_rt_llbnds.o
 
 OBJ_CMN = $(OBJ_F)
 

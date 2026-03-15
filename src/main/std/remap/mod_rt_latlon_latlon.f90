@@ -1,4 +1,4 @@
-module c3_rt_latlon_latlon
+module mod_rt_latlon_latlon
   use lib_const
   use lib_base
   use lib_log
@@ -16,7 +16,7 @@ module c3_rt_latlon_latlon
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_latlon_latlon'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_latlon_latlon'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -27,7 +27,7 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
         init_rt1d   , &
         clear_rt1d  , &
         reshape_rt1d
-  use c3_rt_llbnds, only: &
+  use c2_rt_llbnds, only: &
         calc_relations_llbnds
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_latlon_latlon'
@@ -190,4 +190,4 @@ end function make_rt_latlon_latlon
 !===============================================================
 !
 !===============================================================
-end module c3_rt_latlon_latlon
+end module mod_rt_latlon_latlon

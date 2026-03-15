@@ -1,4 +1,4 @@
-module c3_rt_latlon_polygon
+module mod_rt_latlon_polygon
   use lib_const
   use lib_base
   use lib_log
@@ -18,7 +18,7 @@ module c3_rt_latlon_polygon
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_latlon_polygon'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_latlon_polygon'
 
   logical :: debug
   !-------------------------------------------------------------
@@ -615,4 +615,4 @@ end function get_range_lon
 !===============================================================
 !
 !===============================================================
-end module c3_rt_latlon_polygon
+end module mod_rt_latlon_polygon

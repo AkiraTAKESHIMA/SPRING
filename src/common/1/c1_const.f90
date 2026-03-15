@@ -9,11 +9,11 @@ module c1_const
   integer, parameter :: MESH_STATUS__INITIALIZED = 1
   integer, parameter :: MESH_STATUS__MODIFIED    = 2
 
-  character(CLEN_KEY), parameter :: MESHTYPE__LATLON      = 'latlon'
-  character(CLEN_KEY), parameter :: MESHTYPE__RASTER      = 'raster'
-  character(CLEN_KEY), parameter :: MESHTYPE__POLYGON     = 'polygon'
-  character(CLEN_KEY), parameter :: MESHTYPE__UNSPECIFIED = 'unspecified'
-  character(CLEN_KEY), parameter :: MESHTYPE__UNDEFINED   = 'undefined'
+  character(CLEN_KEY), parameter :: MESHTYPE__LATLON  = 'latlon'
+  character(CLEN_KEY), parameter :: MESHTYPE__RASTER  = 'raster'
+  character(CLEN_KEY), parameter :: MESHTYPE__POLYGON = 'polygon'
+  character(CLEN_KEY), parameter :: MESHTYPE__UNSPEC  = 'unspecified'
+  character(CLEN_KEY), parameter :: MESHTYPE__UNDEF   = 'undefined'
 
   character(CLEN_KEY), parameter :: MESH__NONE   = 'none'
   character(CLEN_KEY), parameter :: MESH__SOURCE = 'source'

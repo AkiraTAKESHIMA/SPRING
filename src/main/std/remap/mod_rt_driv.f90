@@ -1,4 +1,4 @@
-module c3_rt_driv
+module mod_rt_driv
   use lib_const
   use lib_base
   use lib_log
@@ -18,7 +18,7 @@ module c3_rt_driv
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_driv'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_driv'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -34,18 +34,6 @@ integer(4) function make_rt(&
         make_wgtmap_gs, &
         make_grdidx_gs, &
         make_grdara_gs
-  use c3_rt_latlon_latlon, only: &
-        make_rt_latlon_latlon
-  use c3_rt_latlon_raster, only: &
-        make_rt_latlon_raster
-  use c3_rt_latlon_polygon, only: &
-        make_rt_latlon_polygon
-  use c3_rt_raster_raster, only: &
-        make_rt_raster_raster
-  use c3_rt_raster_polygon, only: &
-        make_rt_raster_polygon
-  use c3_rt_polygon_polygon, only: &
-        make_rt_polygon_polygon
   use c2_rt_main_finish, only: &
         finish_rt_main
   use c2_rt_vrf_driv, only: &
@@ -54,6 +42,18 @@ integer(4) function make_rt(&
         write_rt_main
   use c2_rt_vrf_io, only: &
         write_rt_vrf
+  use mod_rt_latlon_latlon, only: &
+        make_rt_latlon_latlon
+  use mod_rt_latlon_raster, only: &
+        make_rt_latlon_raster
+  use mod_rt_latlon_polygon, only: &
+        make_rt_latlon_polygon
+  use mod_rt_raster_raster, only: &
+        make_rt_raster_raster
+  use mod_rt_raster_polygon, only: &
+        make_rt_raster_polygon
+  use mod_rt_polygon_polygon, only: &
+        make_rt_polygon_polygon
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt'
   type(gs_), intent(inout) :: s
@@ -201,4 +201,4 @@ end function make_rt
 !===============================================================
 !
 !===============================================================
-end module c3_rt_driv
+end module mod_rt_driv

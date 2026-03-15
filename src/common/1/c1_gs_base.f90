@@ -101,7 +101,7 @@ integer(4) function init_mesh(a) result(info)
   a%id = ''
   a%nam = ''
   a%is_valid = .false.
-  a%typ = MESHTYPE__UNSPECIFIED
+  a%typ = MESHTYPE__UNSPEC
   a%is_source = .true.
 
   nullify(a%latlon)
@@ -1482,7 +1482,7 @@ integer(4) function clear_mesh(a) result(info)
     nullify(a%polygon)
   !-------------------------------------------------------------
   ! Case: Unspecified
-  case( MESHTYPE__UNSPECIFIED )
+  case( MESHTYPE__UNSPEC )
     continue
   !-------------------------------------------------------------
   ! Case: ERROR
@@ -1498,7 +1498,7 @@ integer(4) function clear_mesh(a) result(info)
   deallocate(a%id)
   deallocate(a%nam)
   a%is_valid = .false.
-  a%typ = MESHTYPE__UNDEFINED
+  a%typ = MESHTYPE__UNDEF
   a%is_source = .true.
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)

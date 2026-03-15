@@ -179,9 +179,33 @@ subroutine read_settings(s, t, rt)
 
   call logext()
   !-------------------------------------------------------------
-  ! Check inputs
+  ! Detect conflictions
   !-------------------------------------------------------------
-  call check_input(s, t, rt, opt%earth)
+  call logent('Detecting conflictions', PRCNAM, MODNAM)
+
+  rtm => rt%main
+
+  ! Earth's shape
+  !-------------------------------------------------------------
+  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
+    do iGs = 1, 2
+      call select_gs(iGs, s, t, a)
+
+      selectcase( a%typ )
+      case( MESHTYPE__LATLON, &
+            MESHTYPE__RASTER )
+        continue
+      case( MESHTYPE__POLYGON )
+        call errend(msg_unexpected_condition()//&
+                  '\n  opt%earth%shp == '//str(opt%earth%shp)//&
+                    ' .and. '//str(a%id)//'%typ == '//str(a%typ)//&
+                  '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
+                    ' for '//str(a%typ)//' meshes.')
+      endselect
+    enddo
+  endif
+
+  call logext()
   !-------------------------------------------------------------
   ! Set some variables
   !-------------------------------------------------------------
@@ -1944,103 +1968,6 @@ end subroutine skip_unused_block
 !
 !
 !
-!===============================================================
-!
-!===============================================================
-subroutine check_input(&
-    s, t, rt, opt_earth)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'check_input'
-  type(gs_), intent(in), target :: s, t
-  type(rt_), intent(in) :: rt
-  type(opt_earth_), intent(in) :: opt_earth
-
-  type(gs_), pointer :: a
-  type(gs_latlon_), pointer :: al
-  type(gs_raster_), pointer :: ar
-  type(gs_polygon_), pointer :: ap
-  integer :: iMesh
-
-  call logbgn(PRCNAM, MODNAM)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  selectcase( rt%status )
-  case( RT_STATUS__MAKE )
-    do iMesh = 1, 2
-      call select_gs(iMesh, s, t, a)
-
-      selectcase( a%typ )
-      case( MESHTYPE__LATLON )
-        al => a%latlon
-        if( al%nx == 0_8 )then
-          call errend(msg_unexpected_condition()//&
-                    '\n  al%nx == 0'//&
-                    '\n  Mesh name: '//str(al%nam)//&
-                    '\nMesh is not defined.')
-        endif
-
-      case( MESHTYPE__RASTER )
-        ar => a%raster
-        if( ar%nx == 0_8 )then
-          call errend(msg_unexpected_condition()//&
-                    '\n  ar%nx == 0'//&
-                    '\n  Mesh name: '//str(ar%nam)//&
-                    '\nMesh is not defined.')
-        endif
-
-      case( MESHTYPE__POLYGON )
-        ap => a%polygon
-        if( ap%nij == 0_8 )then
-          call errend(msg_unexpected_condition()//&
-                    '\n  ap%nij == 0'//&
-                    '\n  Mesh name: '//str(ap%nam)//&
-                    '\nMesh is not defined.')
-        endif
-
-      case( MESHTYPE__UNDEF )
-        call errend(msg_unexpected_condition()//&
-                  '\n  a%typ == MESHTYPE__UNDEF'//&
-                  '\n  Mesh name: '//str(a%nam))
-
-      case default
-        call errend(msg_invalid_value('a%typ', a%typ)//&
-                  '\n  Mesh name: '//str(a%nam))
-      endselect
-    enddo  ! iMesh/
-  case( RT_STATUS__READ )
-
-  case( RT_STATUS__NONE )
-    call errend(msg_unexpected_condition()//&
-              '\n  rt%status == RT_STATUS__NONE')
-
-  case( RT_STATUS__UNDEF )
-    call errend(msg_unexpected_condition()//&
-              '\n  rt%status == RT_STATUS__UNDEF')
-
-  case default
-    call errend(msg_invalid_value('rt%status', rt%status))
-
-  endselect
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  if( opt_earth%shp == EARTH_SHAPE_ELLIPS )then
-    do iMesh = 1, 2
-      call select_gs(iMesh, s, t, a)
-
-      if( a%typ == MESHTYPE__POLYGON )then
-        call errend(msg_unexpected_condition()//&
-                  '\n  opt%earth%shp == '//str(opt_earth%shp)//&
-                    ' and '//str(a%id)//'%typ == '//str(a%typ)//&
-                  '\nEarth shape "'//str(opt_earth%shp)//'" is '//&
-                    'not implemented yet for '//str(a%typ)//' meshes.')
-      endif
-    enddo
-  endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine check_input
 !===============================================================
 !
 !===============================================================
