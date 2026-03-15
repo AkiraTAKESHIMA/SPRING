@@ -4,33 +4,25 @@ include $(TOPSRCDIR)/Mkinclude
 .SUFFIXES:
 .SUFFIXES: .f90 .F90 .c
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR1) -I$(MODDIR)
+	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 %.o: %.F90
-	$(FC) $(FCFLAGS) $(FOPT_USE_C) $(FOPT_TERMINAL_WIDTH) -c $< -I$(CMNDIR1) -I$(MODDIR)
+	$(FC) $(FCFLAGS) $(FOPT_USE_C) $(FOPT_TERMINAL_WIDTH) -c $< -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 %.o: %.c
-	$(CC) $(CCFLAGS) -c $< -I$(CMNDIR1) -I$(MODDIR)
+	$(CC) $(CCFLAGS) -c $< -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 %.mod: %.f90 %.o
 	@:
 
-TARGET = c2.a
+TARGET = c3.a
 
 OBJ_F = \
-c2_type_rt.o\
-c2_type_rst.o\
-c2_rt1d.o\
-c2_area_raster.o\
-c2_area_raster_polygon.o\
-c2_rt_base.o\
-c2_rt_set.o\
-c2_rt_stats.o\
-c2_rt_error.o\
-c2_rt_main_io.o\
-c2_rt_main_util.o\
-c2_rt_main_coef.o\
-c2_rt_main_finish.o\
-c2_rt_vrf_core.o\
-c2_rt_vrf_driv.o\
-c2_rt_vrf_io.o
+c3_rt_llbnds.o\
+c3_rt_latlon_latlon.o\
+c3_rt_latlon_raster.o\
+c3_rt_latlon_polygon.o\
+c3_rt_raster_raster.o\
+c3_rt_raster_polygon.o\
+c3_rt_polygon_polygon.o\
+c3_rt_driv.o
 
 OBJ_CMN = $(OBJ_F)
 
@@ -51,7 +43,7 @@ $(TARGET): $(OBJ_CMN)
 	$(AR) $(ARFLAGS) $@ $^
 	$(RANLIB) $@
 
-$(TESTPROGRAM): $(OBJ_TEST) $(OBJ_CMN) $(CMNDIR1)/c1.a $(LIB)
+$(TESTPROGRAM): $(OBJ_TEST) $(OBJ_CMN) $(CMNDIR2)/c2.a $(CMNDIR1)/c1.a $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
 .PHONY: clean

@@ -1,7 +1,14 @@
 TOPSRCDIR = ..
 include $(TOPSRCDIR)/Mkinclude
 
-SPRINGLIB = libspring.a
+.SUFFIXES: 
+.SUFFIXES: .o .f90
+%.o: %.f90
+	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR3) -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
+%.mod: %.f90 %.o
+	@:
+
+TARGET = libspring.a
 
 OBJ_F = \
 ls_base.o\
@@ -12,25 +19,19 @@ ls_manage.o\
 ls_log.o\
 ls.o
 
-OBJS = $(OBJ_F)
+OBJ_ALL = $(OBJ_F)
 
+.PHONY: all
 all:
-	$(MAKE) $(OBJ_F)
-	$(MAKE) $(SPRINGLIB)
+	$(MAKE) $(OBJ_ALL)
+	$(MAKE) $(TARGET)
 
-$(SPRINGLIB): $(OBJS) $(CMNDIR1)/c1.a $(CMNDIR2)/c2.a $(CMNDIR3)/c3.a $(LIB)
+$(TARGET): $(OBJ_ALL) $(CMNDIR3)/*.o $(CMNDIR2)/*.o $(CMNDIR1)/*.o $(LIB)
 	$(RM) $(RMFLAGS) $@
 	$(AR) cqT $@ $^
 	printf "create $@\naddlib $@\nsave\nend\n" | ar -M
 
+.PHONY: clean
 clean:
 	$(RM) $(RMFLAGS) *.o *.mod *.a core *~ *trace temp* $(TARGET)
 
-.SUFFIXES: 
-.SUFFIXES: .o .f90 .mod
-
-.f90.o:
-	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR3) -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
-
-%.mod: %.f90
-	$(MAKE) $(patsubst %.f90,%.o,%<)

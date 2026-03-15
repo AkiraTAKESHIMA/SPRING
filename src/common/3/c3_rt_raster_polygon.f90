@@ -1,4 +1,4 @@
-module mod_rt_raster_polygon
+module c3_rt_raster_polygon
   use lib_const
   use lib_base
   use lib_time
@@ -19,7 +19,7 @@ module mod_rt_raster_polygon
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_raster_polygon'
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_raster_polygon'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -318,4 +318,4 @@ end function make_rt_raster_polygon
 !===============================================================
 !
 !===============================================================
-end module mod_rt_raster_polygon
+end module c3_rt_raster_polygon

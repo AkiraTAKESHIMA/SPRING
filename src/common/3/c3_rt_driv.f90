@@ -1,4 +1,4 @@
-module mod_rt_driv
+module c3_rt_driv
   use lib_const
   use lib_base
   use lib_log
@@ -18,7 +18,7 @@ module mod_rt_driv
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_driv'
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_driv'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -42,17 +42,17 @@ integer(4) function make_rt(&
         write_rt_main
   use c2_rt_vrf_io, only: &
         write_rt_vrf
-  use mod_rt_latlon_latlon, only: &
+  use c3_rt_latlon_latlon, only: &
         make_rt_latlon_latlon
-  use mod_rt_latlon_raster, only: &
+  use c3_rt_latlon_raster, only: &
         make_rt_latlon_raster
-  use mod_rt_latlon_polygon, only: &
+  use c3_rt_latlon_polygon, only: &
         make_rt_latlon_polygon
-  use mod_rt_raster_raster, only: &
+  use c3_rt_raster_raster, only: &
         make_rt_raster_raster
-  use mod_rt_raster_polygon, only: &
+  use c3_rt_raster_polygon, only: &
         make_rt_raster_polygon
-  use mod_rt_polygon_polygon, only: &
+  use c3_rt_polygon_polygon, only: &
         make_rt_polygon_polygon
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt'
@@ -201,4 +201,4 @@ end function make_rt
 !===============================================================
 !
 !===============================================================
-end module mod_rt_driv
+end module c3_rt_driv

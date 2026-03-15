@@ -10,11 +10,11 @@ program main
   use c2_type_rt
   use c2_rt_main_io, only: &
         read_rt_main
+  use c3_rt_driv, only: &
+        make_rt
   use def_type
   use mod_set, only: &
         read_settings
-  use mod_rt_driv, only: &
-        make_rt
   use mod_remap, only: &
         remap
   use mod_finalize, only: &

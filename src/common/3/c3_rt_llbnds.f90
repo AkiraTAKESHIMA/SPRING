@@ -1,4 +1,4 @@
-module c2_rt_llbnds
+module c3_rt_llbnds
   use lib_const
   use lib_base
   use lib_log
@@ -23,7 +23,7 @@ module c2_rt_llbnds
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_llbnds'
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_llbnds'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -866,4 +866,4 @@ end function calc_relations_llbnds_core
 !===============================================================
 !
 !===============================================================
-end module c2_rt_llbnds
+end module c3_rt_llbnds

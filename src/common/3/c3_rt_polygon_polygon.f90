@@ -1,4 +1,4 @@
-module mod_rt_polygon_polygon
+module c3_rt_polygon_polygon
   use lib_const
   use lib_base
   use lib_log
@@ -18,7 +18,7 @@ module mod_rt_polygon_polygon
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_polygon_polygon'
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_polygon_polygon'
 
   logical :: debug
   !-------------------------------------------------------------
@@ -1159,4 +1159,4 @@ end function write_regions
 !===============================================================
 !
 !===============================================================
-end module mod_rt_polygon_polygon
+end module c3_rt_polygon_polygon

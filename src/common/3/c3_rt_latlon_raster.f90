@@ -1,4 +1,4 @@
-module mod_rt_latlon_raster
+module c3_rt_latlon_raster
   use lib_const
   use lib_base
   use lib_log
@@ -17,7 +17,7 @@ module mod_rt_latlon_raster
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'mod_rt_latlon_raster'
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_latlon_raster'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -30,7 +30,7 @@ integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
         init_rt1d   , &
         clear_rt1d  , &
         reshape_rt1d
-  use c2_rt_llbnds, only: &
+  use c3_rt_llbnds, only: &
         calc_relations_llbnds
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_latlon_raster'
@@ -302,4 +302,4 @@ end function make_rt_latlon_raster
 !===============================================================
 !
 !===============================================================
-end module mod_rt_latlon_raster
+end module c3_rt_latlon_raster
