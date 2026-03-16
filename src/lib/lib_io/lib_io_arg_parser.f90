@@ -519,14 +519,14 @@ subroutine parsearg(istart, iend)
   !-------------------------------------------------------------
   ! Read positional arguments
   !-------------------------------------------------------------
+  if( narg < min(ad%n_positional, iend_) )then
+    call errend('Positional argument is missing.')
+  endif
+
   do i = istart_, min(ad%n_positional, iend_)
     if( argument(i) == KEY_HELP_SHORT .or. argument(i) == KEY_HELP_LONG )then
       call showarg()
       stop
-    endif
-
-    if( i > narg )then
-      call errend('Positional argument is missing.')
     endif
 
     ii = ad%idx_positional(i)
