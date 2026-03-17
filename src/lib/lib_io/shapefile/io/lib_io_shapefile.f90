@@ -124,7 +124,6 @@ module lib_io_shapefile
     function c_shpopen(f) bind(c,name='shpopen')
       import
       integer(c_int) :: c_shpopen
-      !character(c_char), intent(in) :: f(*)
       character(c_char), intent(in) :: f
     end function
 
@@ -177,7 +176,7 @@ module lib_io_shapefile
     function c_dbfopen(f) bind(c,name='dbfopen')
       import
       integer(c_int) :: c_dbfopen
-      character(c_char), intent(in) :: f(*)
+      character(c_char), intent(in) :: f
     end function
 
     function c_dbfclose() bind(c,name='dbfclose')
@@ -297,7 +296,7 @@ integer function shp_get_info__structure(shp) result(info)
 
   if( info /= 0 )then
     call raise_error_proc('FUNCTION shp_get_info__structure')
-    write(0,*) 'Reading error.'
+    write(0,"(a)") 'Reading error.'
     return
   endif
 
@@ -325,7 +324,7 @@ integer function shp_get_info__components(&
 
   if( info /= 0 )then
     call raise_error_proc('FUNCTION shp_get_info__components')
-    write(0,*) 'Reading error'
+    write(0,"(a)") 'Reading error'
     return
   endif
 
@@ -357,7 +356,7 @@ integer function shp_get_entity_info__structure(iEntity, entity) result(info)
            entity%mmin, entity%mmax)
   if( info /= 0 )then
     call raise_error_proc('FUNCTION shp_get_entity_info__structure')
-    write(0,*) 'Reading error'
+    write(0,"(a)") 'Reading error'
     return
   endif
 end function shp_get_entity_info__structure
@@ -389,7 +388,7 @@ integer function shp_get_entity_info__components(&
 
   if( info /= 0 )then
     call raise_error_proc('FUNCTION shp_get_entity_info__components')
-    write(0,*) 'Reading error.'
+    write(0,"(a)") 'Reading error.'
     return
   endif
 
@@ -494,7 +493,7 @@ logical function read_error()
   read_error = .false.
   if( info /= 0 )then    
     call raise_error_proc('FUNCTION shp_get_entity')
-    write(0,*) 'Reading error.'
+    write(0,"(a)") 'Reading error.'
     read_error = .true.
   endif
 end function read_error
@@ -526,7 +525,7 @@ logical function read_error()
   read_error = .false.
   if( info /= 0 )then
     call raise_error_proc('FUNCTION shp_get_all')
-    write(0,*) 'Reading error.'
+    write(0,"(a)") 'Reading error.'
     read_error = .true.
   endif
 end function read_error
@@ -588,11 +587,11 @@ integer function dbf_open(f) result(info)
   implicit none
   character(*), intent(in) :: f
 
-  info = c_dbfopen(f)
+  info = c_dbfopen(cchar(f))
 
   if( info /= 0 )then
     call raise_error_proc('FUNCTION dbf_open')
-    write(0,*) 'Failed to open file: '//trim(f)
+    write(0,"(a)") 'Failed to open: '//trim(f)
     return
   endif
 end function dbf_open
@@ -606,7 +605,7 @@ integer function dbf_close() result(info)
 
   if( info /= 0 )then
     call raise_error_proc('FUNCTION dbf_close')
-    write(0,*) 'File is not opened.'
+    write(0,"(a)") 'File is not opened.'
     return
   endif
 end function dbf_close
@@ -640,7 +639,7 @@ integer function dbf_get_info__structure(dbf) result(info)
              field%width, field%decimals)
     if( info /= 0 )then
       call raise_error_proc('FUNCTION dbf_get_info__structure')
-      write(0,*) 'Reading error.'
+      write(0,"(a)") 'Reading error.'
       return
     endif
   enddo
@@ -719,7 +718,7 @@ integer function dbf_get_info__components(&
              title_, width_, decimals_)
     if( info /= 0 )then
       call raise_error_proc('FUNCTION dbf_get_info__components')
-      write(0,*) 'Reading error.'
+      write(0,"(a)") 'Reading error.'
       return
     endif
 
@@ -782,7 +781,7 @@ logical function read_error()
   read_error = .false.
   if( info /= 0 )then
     call raise_error_proc('FUNCTION dbf_get_record')
-    write(0,*) 'Reading error.'
+    write(0,"(a)") 'Reading error.'
     read_error = .true.
   endif
 end function read_error
@@ -811,7 +810,7 @@ logical function read_error()
   read_error = .false.
   if( info /= 0 )then
     call raise_error_proc('FUNCTION dbf_get_all')
-    write(0,*) 'Reading error.'
+    write(0,"(a)") 'Reading error.'
     read_error = .true.
   endif
 end function read_error
@@ -862,7 +861,7 @@ subroutine raise_error_proc(proc)
   implicit none
   character(*), intent(in) :: proc
 
-  write(0,*) '*** @ '//trim(PROCMOD)//' '//trim(proc)//' ***'
+  write(0,"(a)") '*** @ '//trim(PROCMOD)//' '//trim(proc)//' ***'
 end subroutine raise_error_proc
 !===============================================================
 !

@@ -1699,7 +1699,6 @@ integer(4) function mkdir(dir, output, hut) result(info)
   logical :: output_
   character(:), allocatable :: hut_
   character(len_trim(dir)+9) :: command
-  integer :: cl
   integer, parameter :: nmax = 30
   integer, save      :: n = 0
   integer            :: i
@@ -1865,7 +1864,6 @@ integer(4) function make_empty_file(path, remove) result(info)
   logical     , intent(in) , optional :: remove
 
   logical :: remove_
-  integer :: cl
   integer :: un
   integer :: ios
 
