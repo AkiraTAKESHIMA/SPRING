@@ -1707,7 +1707,7 @@ integer(4) function mkdir(dir, output, hut) result(info)
   logical, save :: is_first = .true.
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !------------------------------------------------------------
   !
   !------------------------------------------------------------
