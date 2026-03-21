@@ -3,12 +3,19 @@
 
 - Shapefile input
 #===============================================================
-# v02.04.09
+# v02.05.01
 #===============================================================
+#---------------------------------------------------------------
+[2026/03/21] Improvement
+#---------------------------------------------------------------
+Earth's constants and related procedures including python 
+scripts in `src/run` and configuration files in `run`.
+
+Modified earth's constants and way of setting them.
 #---------------------------------------------------------------
 [2026/03/17] Bug fix
 #---------------------------------------------------------------
-src/lib/lib_io/shapefile/lib_io_shapefile.f90
+I/O library for handling shapefile
 
 Argument of c_dbfopen was modified from Fortran string to 
 C string.
