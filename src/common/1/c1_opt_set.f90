@@ -30,18 +30,24 @@ module c1_opt_set
   public :: key_remove_intermediates
   public :: key_memory_ulim
 
-  public :: key_earth_shape
-  public :: key_earth_r
-  public :: key_earth_e2
+  public :: KEY_EARTH_GEOSYS
+  public :: KEY_EARTH_RTYP
+  public :: KEY_EARTH_R
+  public :: KEY_EARTH_FINV
+  public :: KEY_EARTH_F
+  public :: KEY_EARTH_E2
   !-------------------------------------------------------------
-  character(clen_var), parameter :: key_old_files            = 'old_files'
-  character(clen_var), parameter :: key_dir_intermediates    = 'dir_intermediates'
-  character(clen_var), parameter :: key_remove_intermediates = 'remove_intermediates'
-  character(clen_var), parameter :: key_memory_ulim          = 'memory_ulim'
+  character(CLEN_VAR), parameter :: key_old_files            = 'old_files'
+  character(CLEN_VAR), parameter :: key_dir_intermediates    = 'dir_intermediates'
+  character(CLEN_VAR), parameter :: key_remove_intermediates = 'remove_intermediates'
+  character(CLEN_VAR), parameter :: key_memory_ulim          = 'memory_ulim'
 
-  character(clen_var), parameter :: key_earth_shape = 'earth_shape'
-  character(clen_var), parameter :: key_earth_r     = 'earth_r'
-  character(clen_var), parameter :: key_earth_e2    = 'earth_e2'
+  character(CLEN_VAR), parameter :: KEY_EARTH_GEOSYS = 'earth_geosys'
+  character(CLEN_VAR), parameter :: KEY_EARTH_RTYP   = 'earth_rtyp'
+  character(CLEN_VAR), parameter :: KEY_EARTH_R      = 'earth_r'
+  character(CLEN_VAR), parameter :: KEY_EARTH_FINV   = 'earth_finv'
+  character(CLEN_VAR), parameter :: KEY_EARTH_F      = 'earth_f'
+  character(CLEN_VAR), parameter :: KEY_EARTH_E2     = 'earth_e2'
   !-----------------------------------------------------------
   ! Private module variables
   !-----------------------------------------------------------
@@ -96,9 +102,13 @@ subroutine set_default_values_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  earth%shp = EARTH_SHAPE_SPHERE
-  earth%r   = EARTH_WGS84ELLIPS_R_VOLMETRIC
-  earth%e2  = 0.d0
+  earth%geosys = EARTH_GEOSYS__DEFAULT
+  earth%rtyp   = EARTH_RTYP__DEFAULT
+  earth%shptyp = ''
+  earth%r    = 0.d0
+  earth%finv = 0.d0
+  earth%f    = 0.d0
+  earth%e2   = 0.d0
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine set_default_values_opt_earth
@@ -106,44 +116,145 @@ end subroutine set_default_values_opt_earth
 !
 !===============================================================
 integer(4) function set_values_opt_earth(&
-    earth, n_earth_r, n_earth_e2) result(info)
+    earth, n_r, n_finv, n_f, n_e2) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'set_values_opt_earth'
   type(opt_earth_), intent(inout) :: earth
-  integer         , intent(in)    :: n_earth_r, n_earth_e2
+  integer         , intent(in)    :: n_r, n_f, n_finv, n_e2
 
   info = 0
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( earth%shp )
+  if( earth%geosys == '' )then
+    call logmsg('Default value was set for %geosys, geodesic system.')
+    earth%geosys = EARTH_GEOSYS__DEFAULT
+  endif
+  
+  selectcase( earth%geosys )
   !-------------------------------------------------------------
-  ! Case: Sphere
-  case( earth_shape_sphere )
-    if( n_earth_e2 == 1 )then
-      info = 1
-      call errret(msg_unexpected_condition()//&
-                '\n"'//str(key_earth_e2)//'" (square of eccentricity) was specified'//&
-                  ' although shape of the earth is "'//str(earth%shp)//'".')
-      return
-    endif
-  !-------------------------------------------------------------
-  ! Case: Ellipsoid
-  case( earth_shape_ellips )
-    if( n_earth_r == 0 )then
-      earth%r = earth_wgs84ellips_r_semimajor
+  ! Case: Geosys = WGS84
+  case( EARTH_GEOSYS__WGS84 )
+    if( earth%rtyp == '' )then
+      call logmsg('Default value was set for %rtyp, type of radious.')
+      earth%rtyp = EARTH_RTYP__DEFAULT
     endif
 
-    if( n_earth_e2 == 0 )then
-      earth%e2 = earth_wgs84ellips_e2
+    selectcase( earth%rtyp )
+
+    case( EARTH_RTYP__ELLIPS )
+      earth%shptyp = EARTH_SHPTYP__ELLIPS
+      earth%r = EARTH_CONST__WGS84_R_SEMIMAJOR
+
+    case( EARTH_RTYP__MEAN )
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+      earth%r = EARTH_CONST__WGS84_R_MEAN
+
+    case( EARTH_RTYP__VOLMETRIC )
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+      earth%r = EARTH_CONST__WGS84_R_VOLMETRIC
+
+    case( EARTH_RTYP__AUTHALIC )
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+      earth%r = EARTH_CONST__WGS84_R_AUTHALIC
+
+    case default
+      info = 1
+      call errret(msg_invalid_value('earth%rtyp', earth%rtyp))
+      return
+    endselect
+
+    selectcase( earth%shptyp )
+    case( EARTH_SHPTYP__SPHERE )
+      earth%finv = 0.d0
+      earth%f    = 0.d0
+      earth%e2   = 0.d0
+    case( EARTH_SHPTYP__ELLIPS )
+      earth%finv = EARTH_CONST__WGS84_FINV
+      earth%f    = EARTH_CONST__WGS84_F
+      earth%e2   = EARTH_CONST__WGS84_E2
+    endselect
+  !-------------------------------------------------------------
+  ! Case: Geosys = GRS80
+  case( EARTH_GEOSYS__GRS80 )
+
+  !-------------------------------------------------------------
+  ! Case: Geosys = other
+  case( EARTH_GEOSYS__OTHER )
+    if( n_r == 0 )then
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nRadius was not specified.'//&
+                '\nExplicit specification of constants is required '//&
+                  'when geodesic system is "'//str(earth%geosys)//'".')
+      return
     endif
+    if( n_finv == 0 .and. n_f == 0 .and. n_e2 == 0 )then
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nFlattening was not specified.'//&
+                '\nExplicit specification of constants is required '//&
+                  'when geodesic system is "'//str(earth%geosys)//'".')
+      return
+    endif
+
+    ! Set flattening
+
+    ! Case: Both finv and f were given
+    if( n_finv > 0 .and. n_f > 0 )then
+      call logwrn(msg_undesirable_condition()//&
+                '\nBoth finv and f were specified.')
+
+    ! Case: Only finv was given
+    elseif( n_finv > 0 .and. n_f == 0 )then
+      if( earth%finv == 0.d0 )then
+        call logwrn(msg_undesirable_condition()//&
+                  '\n  finv == 0'//&
+                  '\nThis is interpreted as flattening f being 0.')
+        earth%f = 0.d0
+      else
+        earth%f = 1.d0 / earth%finv
+      endif
+
+    ! Case: Only f was given
+    elseif( n_f > 0 .and. n_finv == 0 )then
+      if( earth%f == 0.d0 )then
+        earth%finv = 0.d0
+      else
+        earth%finv = 1.d0 / earth%f
+      endif
+
+    ! Case: Neither finv or f was given
+    elseif( n_finv == 0 .and. n_f == 0 )then
+      if( earth%e2 == 0.d0 )then
+        earth%finv = 0.d0
+        earth%f    = 0.d0
+      else
+        earth%finv = (1.d0 + sqrt(1.d0 - earth%e2)) / earth%e2
+        earth%f    = ((1-sqrt(1.d0-earth%e2))**2 + earth%e2) * 0.5d0
+      endif
+    endif
+
+    ! Set eccentricity
+    if( n_e2 == 0 )then
+      earth%e2 = earth%f * (2.d0 - earth%f)
+    endif
+
+    ! Shape type
+    if( earth%f == 0.d0 )then
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+    else
+      earth%shptyp = EARTH_SHPTYP__ELLIPS
+    endif
+
+    ! Radius type (not used)
+    earth%rtyp = ''
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
     info = 1
-    call errret(msg_invalid_value('earth%shp', earth%shp)//&
-              '\nCheck the value of "'//str(key_earth_shape)//'".')
+    call errret(msg_invalid_value('earth%geosys', earth%geosys))
     return
   endselect
   !-------------------------------------------------------------
@@ -204,16 +315,19 @@ subroutine echo_settings_opt_earth(earth)
   !
   !-------------------------------------------------------------
   call logmsg('Earth')
-  call logmsg('  Shape: '//str(earth%shp))
-  selectcase( earth%shp )
-  case( EARTH_SHAPE_SPHERE )
-    call logmsg('  Radius: '//str(earth%r)//' m')
-  case( EARTH_SHAPE_ELLIPS )
-    call logmsg('  Semi-major axis       : '//str(earth%r,'es20.13')//' m')
-    call logmsg('  Square of eccentricity: '//str(earth%e2,'es20.13'))
+  call logmsg('  Geodesic system: '//str(earth%geosys))
+  call logmsg('  Shape          : '//str(earth%shptyp))
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
+    call logmsg('  Radius: '//str(earth%r,'es22.15')//' m')
+
+  case( EARTH_SHPTYP__ELLIPS )
+    call logmsg('  Semi-major axis       : '//str(earth%r,'es22.15')//' m')
+    call logmsg('  Inverse of flattening : '//str(earth%finv,'es22.15'))
+    call logmsg('  Flattening            : '//str(earth%f,'es22.15'))
+    call logmsg('  Square of eccentricity: '//str(earth%e2,'es22.15'))
   case default
-    call errend(msg_invalid_value('earth%shp', earth%shp))
-    stop
+    call errend(msg_invalid_value('earth%shptyp', earth%shptyp))
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)

@@ -8,15 +8,6 @@ module mod_set
   use c1_const
   use c1_type_opt
   use c1_type_gs
-  use c1_opt_set, only: &
-        KEY_OLD_FILES           , &
-        KEY_DIR_INTERMEDIATES   , &
-        KEY_REMOVE_INTERMEDIATES, &
-        KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
-        KEY_EARTH_R             , &
-        KEY_EARTH_E2
-  ! this
   use def_type
   implicit none
   private
@@ -70,12 +61,12 @@ subroutine read_settings(a)
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'mesh_latlon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'mesh_raster'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'mesh_polygon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OPT        = 'options'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_POLYGON = 'mesh_polygon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT          = 'options'
 
-  character(CLEN_VAR) :: block_name
+  character(CLEN_VAR) :: blockName
   !-------------------------------------------------------------
   type(gs_common_), pointer :: ac
   type(opt_) :: opt
@@ -112,37 +103,37 @@ subroutine read_settings(a)
   call init_counter()
 
   do
-    call find_block(block_name)
+    call find_block(blockName)
 
-    selectcase( block_name )
+    selectcase( blockName )
     !-------------------------------------------------------------
     ! Case: No more block
     case( '' )
       exit
     !-------------------------------------------------------------
     ! Case: gs_latlon
-    case( BLOCK_NAME_GS_LATLON )
-      call update_counter(counter%gs, block_name)
+    case( BLOCKNAME__MESH_LATLON )
+      call update_counter(counter%gs, blockName)
       call read_settings_gs_latlon(a)
     !-------------------------------------------------------------
     ! Case: gs_raster
-    case( BLOCK_NAME_GS_RASTER )
-      call update_counter(counter%gs, block_name)
+    case( BLOCKNAME__MESH_RASTER )
+      call update_counter(counter%gs, blockName)
       call read_settings_gs_raster(a)
     !-------------------------------------------------------------
     ! Case: gs_polygon
-    case( BLOCK_NAME_GS_POLYGON )
-      call update_counter(counter%gs, block_name)
+    case( BLOCKNAME__MESH_POLYGON )
+      call update_counter(counter%gs, blockName)
       call read_settings_gs_polygon(a)
     !-------------------------------------------------------------
     ! Case: opt
-    case( BLOCK_NAME_OPT )
-      call update_counter(counter%opt, block_name)
+    case( BLOCKNAME__OPT )
+      call update_counter(counter%opt, blockName)
       call read_settings_opt(opt)
     !-------------------------------------------------------------
     ! Case: ERROR
     case default
-      call errend(msg_invalid_value('block_name', block_name)//&
+      call errend(msg_invalid_value('blockName', blockName)//&
                 '\nCheck the name of block.')
     endselect
   enddo
@@ -153,25 +144,9 @@ subroutine read_settings(a)
 
   call logext()
   !-------------------------------------------------------------
-  ! Detect conflictions
+  ! Check inputs
   !-------------------------------------------------------------
-  call logent('Detecting conflictions', PRCNAM, MODNAM)
-
-  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
-    selectcase( a%typ )
-    case( MESHTYPE__LATLON, &
-          MESHTYPE__RASTER )
-      continue
-    case( MESHTYPE__POLYGON )
-      call errend(msg_unexpected_condition()//&
-                '\n  opt%earth%shp == '//str(opt%earth%shp)//&
-                  ' .and. '//str(a%id)//'%typ == '//str(a%typ)//&
-                '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                  ' for '//str(a%typ)//' meshes.')
-    endselect
-  endif
-
-  call logext()
+  call check_input(a, opt%earth)
   !-------------------------------------------------------------
   ! Set the values
   !-------------------------------------------------------------
@@ -240,28 +215,28 @@ subroutine init_counter()
   counter%opt = 0
 end subroutine init_counter
 !---------------------------------------------------------------
-subroutine update_counter(n, block_name)
+subroutine update_counter(n, blockName)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'update_counter'
   integer, intent(inout) :: n
-  character(*), intent(in) :: block_name
+  character(*), intent(in) :: blockName
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   n = n + 1
 
-  selectcase( block_name )
-  case( BLOCK_NAME_GS_LATLON, &
-        BLOCK_NAME_GS_RASTER, &
-        BLOCK_NAME_GS_POLYGON )
+  selectcase( blockName )
+  case( BLOCKNAME__MESH_LATLON, &
+        BLOCKNAME__MESH_RASTER, &
+        BLOCKNAME__MESH_POLYGON )
     if( n > 1 )then
       call errend(msg_invalid_input(line_number())//&
                 '\nBlocks of mesh appeared more than once.')
     endif
-  case( BLOCK_NAME_OPT )
-    call check_num_of_key(n, block_name, 0, 1)
+  case( BLOCKNAME__OPT )
+    call check_num_of_key(n, blockName, 0, 1)
   case default
-    call errend(msg_invalid_value('block_name', block_name))
+    call errend(msg_invalid_value('blockName', blockName))
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
@@ -278,7 +253,7 @@ subroutine check_number_of_blocks()
               '\nBlocks of mesh appeared more than once.')
   endif
 
-  call check_num_of_key(counter%opt, BLOCK_NAME_OPT, 0, 1)
+  call check_num_of_key(counter%opt, BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks
@@ -1505,6 +1480,16 @@ subroutine read_settings_opt(opt)
         msg_invalid_input      , &
         msg_undesirable_input
   use c1_opt_set, only: &
+        KEY_OLD_FILES           , &
+        KEY_DIR_INTERMEDIATES   , &
+        KEY_REMOVE_INTERMEDIATES, &
+        KEY_MEMORY_ULIM         , &
+        KEY_EARTH_GEOSYS        , &
+        KEY_EARTH_RTYP          , &
+        KEY_EARTH_R             , &
+        KEY_EARTH_FINV          , &
+        KEY_EARTH_F             , &
+        KEY_EARTH_E2            , &
         set_values_opt_earth
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_opt'
@@ -1517,13 +1502,18 @@ subroutine read_settings_opt(opt)
   call logent('Setting the limits. of the number of each keyword', PRCNAM, MODNAM)
 
   call alloc_keynum()
-  call set_keynum('old_files'           , 0, 1)
-  call set_keynum('dir_intermediates'   , 0, 1)
-  call set_keynum('remove_intermediates', 0, 1)
-  call set_keynum('memory_ulim'         , 0, 1)
-  call set_keynum('earth_shape', 0, 1)
-  call set_keynum('earth_r'    , 0, 1)
-  call set_keynum('earth_e2'   , 0, 1)
+
+  call set_keynum(KEY_OLD_FILES           , 0, 1)
+  call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
+  call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
+  call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
+
+  call set_keynum(KEY_EARTH_GEOSYS, 0, 1)
+  call set_keynum(KEY_EARTH_RTYP  , 0, 1)
+  call set_keynum(KEY_EARTH_R     , 0, 1)
+  call set_keynum(KEY_EARTH_FINV  , 0, 1)
+  call set_keynum(KEY_EARTH_F     , 0, 1)
+  call set_keynum(KEY_EARTH_E2    , 0, 1)
 
   call logext()
   !-------------------------------------------------------------
@@ -1547,27 +1537,31 @@ subroutine read_settings_opt(opt)
       exit
     !-----------------------------------------------------------
     ! Files
-    case( 'old_files' )
+    case( KEY_OLD_FILES )
       call read_value(opt%sys%old_files, is_keyword=.true.)
 
-    case( 'dir_intermediates' )
+    case( KEY_DIR_INTERMEDIATES )
       call read_value(opt%sys%dir_im, is_keyword=.false.)
 
-    case( 'remove_intermediates' )
+    case( KEY_REMOVE_INTERMEDIATES )
       call read_value(opt%sys%remove_im)
     !-----------------------------------------------------------
     ! System
-    case( 'key_memory_ulim' )
+    case( KEY_MEMORY_ULIM )
       call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
-    ! The Earth
-    case( 'earth_shape' )
-      call read_value(opt%earth%shp, is_keyword=.true.)
-
-    case( 'earth_r' )
+    ! Earth's shape
+    case( KEY_EARTH_GEOSYS )
+      call read_value(opt%earth%geosys, is_keyword=.true.)
+    case( KEY_EARTH_RTYP )
+      call read_value(opt%earth%rtyp, is_keyword=.true.)
+    case( KEY_EARTH_R )
       call read_value(opt%earth%r)
-
-    case( 'earth_e2' )
+    case( KEY_EARTH_FINV )
+      call read_value(opt%earth%finv)
+    case( KEY_EARTH_F )
+      call read_value(opt%earth%f)
+    case( KEY_EARTH_E2 )
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
     ! ERROR
@@ -1576,14 +1570,7 @@ subroutine read_settings_opt(opt)
     endselect
   enddo
 
-  call logext()
-  !-------------------------------------------------------------
-  ! Check the number of each keyword
-  !-------------------------------------------------------------
-  call logent('Checking the number of each keyword', PRCNAM, MODNAM)
-
   call check_keynum()
-  call check_keynum_relations()
 
   call logext()
   !-------------------------------------------------------------
@@ -1601,7 +1588,9 @@ subroutine read_settings_opt(opt)
   call logent('Setting the related values', PRCNAM, MODNAM)
 
   call traperr( set_values_opt_earth(&
-         opt%earth, keynum('earth_r'), keynum('earth_e2')) )
+         opt%earth, &
+         keynum(KEY_EARTH_R), keynum(KEY_EARTH_FINV), &
+         keynum(KEY_EARTH_F), keynum(KEY_EARTH_E2)) )
 
   call logext()
   !-------------------------------------------------------------
@@ -1610,26 +1599,6 @@ subroutine read_settings_opt(opt)
   call free_keynum()
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-!---------------------------------------------------------------
-contains
-!---------------------------------------------------------------
-subroutine check_keynum_relations()
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'check_keynum_relations'
-
-  call logbgn(PRCNAM, MODNAM, '-p -x2')
-  !--------------------------------------------------------------
-  !
-  !--------------------------------------------------------------
-  if( opt%earth%shp == EARTH_SHAPE_SPHERE .and. keynum('earth_e2') == 1 )then
-    call logwrn(msg_undesirable_input()//&
-              '\n  Input for "earth_e2" is ignored when the value of '//&
-                '"earth_shape" is "'//str(EARTH_SHAPE_SPHERE)//'".')
-  endif
-  !--------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine check_keynum_relations
-!---------------------------------------------------------------
 end subroutine read_settings_opt
 !===============================================================
 !
@@ -1639,6 +1608,31 @@ end subroutine read_settings_opt
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine check_input(a, opt_earth)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input'
+  type(gs_), intent(in), target :: a
+  type(opt_earth_), intent(in) :: opt_earth
+
+  call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( opt_earth%shptyp == EARTH_SHPTYP__ELLIPS )then
+    if( a%typ == MESHTYPE__POLYGON )then
+      call errend(msg_unexpected_condition()//&
+                '\n  opt%earth%shptyp == '//str(opt_earth%shptyp)//&
+                  ' and '//str(a%id)//'%typ == '//str(a%typ)//&
+                '\nEarth shape "'//str(opt_earth%shptyp)//'" is '//&
+                  'not implemented yet for '//str(a%typ)//' meshes.')
+    endif
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input
 !===============================================================
 !
 !===============================================================

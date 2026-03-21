@@ -52,10 +52,22 @@ def run_FLOW(cnf, update_data):
     fp.write(f'\
 {cnf[f"{k.m}"]["RM"]["nx_grid"]}  ! nXX\n\
 {cnf[f"{k.m}"]["RM"]["ny_grid"]}  ! nYY\n\
-""  ! fgcmidx\n\
-{cnf[f"{k.opt}"]["Earth"]["shape"]}  ! earth\'s shape\n\
-{cnf[f"{k.opt}"]["Earth"]["diameter"]}  ! earth\'s diameter [m]\n\
-0.d0  ! square of the earth\'s eccentricity\n')
+""  ! fgcmidx\n')
+
+    e = cnf[k.opt]['Earth']
+#    fp.write(f'\
+#{cnf[f"{k.opt}"]["Earth"]["geosys"]}  ! geodesic system\n'
+    fp.write(f'\
+{e["geosys"]}\n')
+    if e['geosys'] != 'other':
+        fp.write(f'\
+{e["rtyp"]}\n')
+    else:
+        fp.write(f'\
+{e["r"]}\n\
+{e["finv"]}\n')
+#{cnf[f"{k.opt}"]["Earth"]["r"]}  ! radius [m]\n\
+#0.d0  ! square of the earth\'s eccentricity\n')
     fp.close()
 
     #

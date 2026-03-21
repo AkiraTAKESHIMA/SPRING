@@ -15,6 +15,7 @@ module lib_base_message
   public :: msg_io_error
   public :: msg_internal_error
   public :: msg_not_implemented
+  public :: msg_undesirable_condition
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
@@ -275,6 +276,16 @@ function msg_not_implemented() result(res)
   allocate(character(1) :: res)
   res = 'Not implemented yet.'
 end function msg_not_implemented
+!===============================================================
+!
+!===============================================================
+function msg_undesirable_condition() result(res)
+  implicit none
+  character(:), allocatable :: res
+
+  allocate(character(1) :: res)
+  res = 'Undesirable condition.'
+end function msg_undesirable_condition
 !===============================================================
 !
 !===============================================================

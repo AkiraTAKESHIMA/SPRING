@@ -137,16 +137,46 @@ module lib_const
 
   real(8), parameter :: dc_0k = -273.15d0  ! Zero Kelvin in degree C
   !=============================================================
-  ! Earth constans
-  ! Cited: Moritz, H. (1980). Geodetic Reference System 1980.
+  ! Earth' shape and constans
   !=============================================================
-  real(8), parameter :: earth_WGS84Ellips_r_semimajor = 6378137.d0
-  real(8), parameter :: earth_WGS84Ellips_r_semiminor = 6356752.3142d0
-  real(8), parameter :: earth_WGS84Ellips_r_mean      = 6371008.7714d0
-  real(8), parameter :: earth_WGS84Ellips_r_authalic  = 6371007.1810d0
-  real(8), parameter :: earth_WGS84Ellips_r_volmetric = 6371000.7900d0
+  character(CLEN_VAR), parameter :: EARTH_GEOSYS__WGS84 = 'wgs84'
+  character(CLEN_VAR), parameter :: EARTH_GEOSYS__GRS80 = 'grs80'
+  character(CLEN_VAR), parameter :: EARTH_GEOSYS__OTHER = 'other'
+  character(CLEN_VAR), parameter :: EARTH_GEOSYS__DEFAULT = EARTH_GEOSYS__WGS84
 
-  real(8), parameter :: earth_WGS84Ellips_e2 = 0.00669437999014d0
+  character(CLEN_VAR), parameter :: EARTH_RTYP__ELLIPS    = 'ellips'
+  character(CLEN_VAR), parameter :: EARTH_RTYP__MEAN      = 'mean'
+  character(CLEN_VAR), parameter :: EARTH_RTYP__VOLMETRIC = 'volmetric'
+  character(CLEN_VAR), parameter :: EARTH_RTYP__AUTHALIC  = 'authalic'
+  character(CLEN_VAR), parameter :: EARTH_RTYP__DEFAULT = EARTH_RTYP__VOLMETRIC
+
+  character(CLEN_VAR), parameter :: EARTH_SHPTYP__SPHERE = 'sphere'
+  character(CLEN_VAR), parameter :: EARTH_SHPTYP__ELLIPS = 'ellips'
+  !-------------------------------------------------------------
+  ! WGS84
+  ! -- Office of Geomatics
+  !    https://earth-info.nga.mil/?dir=wgs84&action=wgs84
+  !-------------------------------------------------------------
+  real(8), parameter :: EARTH_CONST__WGS84_R_SEMIMAJOR = 6378137.d0
+  real(8), parameter :: EARTH_CONST__WGS84_R_SEMIMINOR = 6356752.31424518d0
+  real(8), parameter :: EARTH_CONST__WGS84_R_MEAN      = 6371008.7714d0
+  real(8), parameter :: EARTH_CONST__WGS84_R_VOLMETRIC = 6371000.7900d0
+  real(8), parameter :: EARTH_CONST__WGS84_R_AUTHALIC  = 6371007.1809d0
+  real(8), parameter :: EARTH_CONST__WGS84_FINV = 298.257223563d0
+  real(8), parameter :: EARTH_CONST__WGS84_F    = 0.00335281066474d0
+  real(8), parameter :: EARTH_CONST__WGS84_E2   = 0.00669437999013d0
+  !-------------------------------------------------------------
+  ! GRS80
+  ! -- Moritz, H. (1980). Geodetic Reference System 1980
+  !-------------------------------------------------------------
+  real(8), parameter :: EARTH_CONST__GRS80_R_SEMIMAJOR = 6378137.d0
+  real(8), parameter :: EARTH_CONST__GRS80_R_SEMIMINOR = 6356752.314140356d0
+  real(8), parameter :: EARTH_CONST__GRS80_R_MEAN      = 6371008.7714d0
+  real(8), parameter :: EARTH_CONST__GRS80_R_VOLMETRIC = 6371000.7900d0
+  real(8), parameter :: EARTH_CONST__GRS80_R_AUTHALIC  = 6371007.1810d0
+  real(8), parameter :: EARTH_CONST__GRS80_FINV = 298.257222101d0
+  real(8), parameter :: EARTH_CONST__GRS80_F    = 0.00335281068118d0
+  real(8), parameter :: EARTH_CONST__GRS80_E2   = 0.00669438002290d0
   !=============================================================
   ! PNG
   !=============================================================
@@ -184,9 +214,6 @@ module lib_const
   character(clen_key), parameter :: interp_method_linear   = 'linear'
   character(clen_key), parameter :: interp_method_bilinear = 'bilinear'
   character(clen_key), parameter :: interp_method_cubic    = 'cubic'
-
-  character(clen_key), parameter :: earth_shape_sphere = 'sphere'
-  character(clen_key), parameter :: earth_shape_ellips = 'ellips'
 
   character(clen_key), parameter :: unit_degree    = 'degree'
   character(clen_key), parameter :: unit_radian    = 'radian'

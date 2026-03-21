@@ -84,9 +84,9 @@ program main
 
   read(11,*) nXX
   read(11,*) nYY
-  read(11,*) ! earth_shape
-  read(11,*) ! earth_r
-  read(11,*) ! earth_e2
+  !read(11,*) fgcmidx
+
+  !call read_conf_earth(earth, 11)
 
   close(11)
   !-------------------------------------------------------------

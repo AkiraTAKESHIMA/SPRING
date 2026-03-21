@@ -67,15 +67,13 @@ subroutine read_settings(&
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_AGCM_TO_OGCM &
-                                            = 'input_rt_agcm_to_ogcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_AGCM = 'input_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_LSM  = 'input_lsm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_TO_AGCM &
-                                            = 'output_rt_lsm_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OPTIONS = 'options'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RT_A2O  = 'input_rt_agcm_to_ogcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_AGCM    = 'input_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_LSM     = 'input_lsm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_L2A = 'output_rt_lsm_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT        = 'options'
 
-  character(CLEN_VAR) :: block_name
+  character(CLEN_VAR) :: blockName
   type(opt_) :: opt
 
   call logbgn(PRCNAM, MODNAM)
@@ -114,38 +112,38 @@ subroutine read_settings(&
   call init_counter()
 
   do
-    call find_block(block_name)
+    call find_block(blockName)
 
-    selectcase( block_name )
+    selectcase( blockName )
     !-----------------------------------------------------------
     ! No more block
     case( '' )
      exit
     !-----------------------------------------------------------
     !
-    case( block_name_input_rt_agcm_to_ogcm )
+    case( BLOCKNAME__IN_RT_A2O )
       call update_counter(counter%input_rt_agcm_to_ogcm)
       call read_settings_input_rt(rt_in_agcm_to_ogcm)
 
-    case( block_name_input_agcm )
+    case( BLOCKNAME__IN_AGCM )
       call update_counter(counter%input_agcm)
       call read_settings_input_agcm(agcm)
 
-    case( block_name_input_lsm )
+    case( BLOCKNAME__IN_LSM )
       call update_counter(counter%input_lsm)
       call read_settings_input_lsm(lsm)
 
-    case( block_name_output_rt_lsm_to_agcm )
+    case( BLOCKNAME__OUT_RT_L2A )
       call update_counter(counter%output_rt_lsm_to_agcm)
       call read_settings_output_rt(rt_out_lsm_to_agcm)
 
-    case( block_name_options )
+    case( BLOCKNAME__OPT )
       call update_counter(counter%options)
       call read_settings_opt(opt, opt_ext)
     !-----------------------------------------------------------
     ! ERROR
     case default
-      call errend(msg_invalid_value('block_name', block_name)//&
+      call errend(msg_invalid_value('blockName', blockName)//&
                 '\nCheck the name of the block.')
     endselect
   enddo
@@ -156,7 +154,7 @@ subroutine read_settings(&
 
   call logext()
   !-------------------------------------------------------------
-  ! Detect conflictions
+  ! Check inputs
   !-------------------------------------------------------------
   !-------------------------------------------------------------
   ! Set some variables
@@ -171,15 +169,12 @@ subroutine read_settings(&
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
-
   call echo_settings_input_rt(rt_in_agcm_to_ogcm)
   call echo_settings_input_agcm(agcm)
   call echo_settings_input_lsm(lsm)
   call echo_settings_output_rt(rt_out_lsm_to_agcm)
   call echo_settings_opt(opt, opt_ext)
   call logmsg(str(bar('')))
-
-  call logext()
   !-------------------------------------------------------------
   ! Check paths
   !-------------------------------------------------------------
@@ -211,23 +206,23 @@ subroutine update_counter(n)
 
   call check_num_of_key(&
          counter%input_rt_agcm_to_ogcm, &
-         BLOCK_NAME_INPUT_RT_AGCM_TO_OGCM, 0, 1)
+         BLOCKNAME__IN_RT_A2O, 0, 1)
 
   call check_num_of_key(&
          counter%input_agcm, &
-         BLOCK_NAME_INPUT_AGCM, 0, 1)
+         BLOCKNAME__IN_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_lsm, &
-         BLOCK_NAME_INPUT_LSM, 0, 1)
+         BLOCKNAME__IN_LSM, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_TO_AGCM, 0, 1)
+         BLOCKNAME__OUT_RT_L2A, 0, 1)
 
   call check_num_of_key(&
          counter%options, &
-         BLOCK_NAME_OPTIONS, 0, 1)
+         BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine update_counter
@@ -240,23 +235,23 @@ subroutine check_number_of_blocks()
   !-------------------------------------------------------------
   call check_num_of_key(&
          counter%input_rt_agcm_to_ogcm, &
-         BLOCK_NAME_INPUT_RT_AGCM_TO_OGCM, 1, 1)
+         BLOCKNAME__IN_RT_A2O, 1, 1)
 
   call check_num_of_key(&
          counter%input_agcm, &
-         BLOCK_NAME_INPUT_AGCM, 1, 1)
+         BLOCKNAME__IN_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_lsm, &
-         BLOCK_NAME_INPUT_LSM, 1, 1)
+         BLOCKNAME__IN_LSM, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_TO_AGCM, 1, 1)
+         BLOCKNAME__OUT_RT_L2A, 1, 1)
 
   call check_num_of_key(&
          counter%options, &
-         BLOCK_NAME_OPTIONS, 0, 1)
+         BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks
@@ -877,8 +872,11 @@ subroutine read_settings_opt(opt, opt_ext)
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
         KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_GEOSYS        , &
+        KEY_EARTH_RTYP          , &
         KEY_EARTH_R             , &
+        KEY_EARTH_FINV          , &
+        KEY_EARTH_F             , &
         KEY_EARTH_E2
   use c1_opt_set, only: &
         set_values_opt_earth
@@ -901,9 +899,13 @@ subroutine read_settings_opt(opt, opt_ext)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
   call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
-  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
-  call set_keynum(KEY_EARTH_R    , 0, 1)
-  call set_keynum(KEY_EARTH_E2   , 0, 1)
+
+  call set_keynum(KEY_EARTH_GEOSYS, 0, 1)
+  call set_keynum(KEY_EARTH_RTYP  , 0, 1)
+  call set_keynum(KEY_EARTH_R     , 0, 1)
+  call set_keynum(KEY_EARTH_FINV  , 0, 1)
+  call set_keynum(KEY_EARTH_F     , 0, 1)
+  call set_keynum(KEY_EARTH_E2    , 0, 1)
 
   call set_keynum('method_rivwat', 0, 1)
 
@@ -937,10 +939,16 @@ subroutine read_settings_opt(opt, opt_ext)
       call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
     ! Earth's shape
-    case( KEY_EARTH_SHAPE )
-      call read_value(opt%earth%shp, is_keyword=.true.)
+    case( KEY_EARTH_GEOSYS )
+      call read_value(opt%earth%geosys, is_keyword=.true.)
+    case( KEY_EARTH_RTYP )
+      call read_value(opt%earth%rtyp, is_keyword=.true.)
     case( KEY_EARTH_R )
       call read_value(opt%earth%r)
+    case( KEY_EARTH_FINV )
+      call read_value(opt%earth%finv)
+    case( KEY_EARTH_F )
+      call read_value(opt%earth%f)
     case( KEY_EARTH_E2 )
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
@@ -971,7 +979,10 @@ subroutine read_settings_opt(opt, opt_ext)
   !-------------------------------------------------------------
   call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call traperr( set_values_opt_earth(opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2)) )
+  call traperr( set_values_opt_earth(&
+         opt%earth, &
+         keynum(KEY_EARTH_R), keynum(KEY_EARTH_FINV), &
+         keynum(KEY_EARTH_F), keynum(KEY_EARTH_E2)) )
 
   call logext()
   !-------------------------------------------------------------

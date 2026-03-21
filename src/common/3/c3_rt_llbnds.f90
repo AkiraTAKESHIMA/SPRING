@@ -545,8 +545,8 @@ integer(4) function calc_relations_llbnds_core(&
 
   lapara_1rad_sum = 0.d0
 
-  selectcase( earth%shp )
-  case( earth_shape_sphere )
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
     do isv = svi, svf
       svr => svrel(isv)
       if( svr%mv > 0_8 )then
@@ -555,7 +555,7 @@ integer(4) function calc_relations_llbnds_core(&
         lapara_1rad_sum = lapara_1rad_sum + sum(svr%lapara_1rad)
       endif
     enddo
-  case( earth_shape_ellips )
+  case( EARTH_SHPTYP__ELLIPS )
     do isv = svi, svf
       svr => svrel(isv)
       if( svr%mv > 0_8 )then
@@ -566,8 +566,7 @@ integer(4) function calc_relations_llbnds_core(&
     enddo
   case default
     info = 1
-    call errret(str(msg_invalid_value())//&
-            '\n  earth%shp: '//str(earth%shp))
+    call errret(msg_invalid_value('earth%shptyp', earth%shptyp))
     return
   endselect
 

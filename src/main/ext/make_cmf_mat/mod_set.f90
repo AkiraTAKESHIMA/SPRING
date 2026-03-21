@@ -119,31 +119,9 @@ subroutine read_settings(cmn, cmf, mat, opt)
 
   call logext()
   !-------------------------------------------------------------
-  ! Detect confliction
+  ! Check inputs
   !-------------------------------------------------------------
-  call logent('Detecting confliction', PRCNAM, MODNAM)
-
-  if( mat%f_grdidx_river%path /= '' )then
-    if( cmf%f_grdidx_river%path == '' )then
-      call errend(msg_unexpected_condition()//&
-                '\n  mat%f_grdidx_river%path /= "" .and. cmf%f_grdidx_river%path == ""'//&
-                '\n"f_grdidx_river" in the block "'//str(BLOCK_NAME_CMF)//&
-                  '" must be given when "f_grdidx_river" in the block "'//&
-                  str(BLOCK_NAME_MAT)//'" is given.')
-    endif
-  endif
-
-  if( mat%f_grdidx_noriv%path /= '' )then
-    if( cmf%f_grdidx_noriv%path == '' )then
-      call errend(msg_unexpected_condition()//&
-                '\n  mat%f_grdidx_noriv%path /= "" .and. cmf%f_grdidx_noriv%path == ""'//&
-                '\n"f_grdidx_noriv" in the block "'//str(BLOCK_NAME_CMF)//&
-                  '" must be given when "f_grdidx_noriv" in the block "'//&
-                  str(BLOCK_NAME_MAT)//'" is given.')
-    endif
-  endif
-
-  call logext()
+  call check_input(cmf, mat)
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
@@ -1389,9 +1367,12 @@ subroutine read_settings_opt(opt)
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
         KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_GEOSYS        , &
+        KEY_EARTH_RTYP          , &
         KEY_EARTH_R             , &
-        KEY_EARTH_E2
+        KEY_EARTH_FINV          , &
+        KEY_EARTH_F             , &
+        KEY_EARTH_E2            
   use c1_opt_set, only: &
         set_values_opt_earth
   implicit none
@@ -1408,9 +1389,14 @@ subroutine read_settings_opt(opt)
   call alloc_keynum()
 
   call set_keynum(KEY_OLD_FILES, 0, 1)
-  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
-  call set_keynum(KEY_EARTH_R    , 0, 1)
-  call set_keynum(KEY_EARTH_E2   , 0, 1)
+
+  call set_keynum(KEY_EARTH_GEOSYS, 0, 1)
+  call set_keynum(KEY_EARTH_RTYP  , 0, 1)
+  call set_keynum(KEY_EARTH_R     , 0, 1)
+  call set_keynum(KEY_EARTH_FINV  , 0, 1)
+  call set_keynum(KEY_EARTH_F     , 0, 1)
+  call set_keynum(KEY_EARTH_E2    , 0, 1)
+
   call set_keynum('save_memory', 0, 1)
 
   call logext()
@@ -1434,10 +1420,16 @@ subroutine read_settings_opt(opt)
       call read_value(opt%sys%old_files, is_keyword=.true.)
     !-----------------------------------------------------------
     ! Earth's shape
-    case( KEY_EARTH_SHAPE )
-      call read_value(opt%earth%shp, is_keyword=.true.)
+    case( KEY_EARTH_GEOSYS )
+      call read_value(opt%earth%geosys, is_keyword=.true.)
+    case( KEY_EARTH_RTYP )
+      call read_value(opt%earth%rtyp, is_keyword=.true.)
     case( KEY_EARTH_R )
       call read_value(opt%earth%r)
+    case( KEY_EARTH_FINV )
+      call read_value(opt%earth%finv)
+    case( KEY_EARTH_F )
+      call read_value(opt%earth%f)
     case( KEY_EARTH_E2 )
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
@@ -1460,7 +1452,10 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call traperr( set_values_opt_earth(opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2)) )
+  call traperr( set_values_opt_earth(&
+         opt%earth, &
+         keynum(KEY_EARTH_R), keynum(KEY_EARTH_FINV), &
+         keynum(KEY_EARTH_F), keynum(KEY_EARTH_E2)) )
 
   call logext()
   !-------------------------------------------------------------
@@ -1961,6 +1956,41 @@ end subroutine echo_settings_opt
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine check_input(cmf, mat)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input'
+  type(cmf_), intent(in) :: cmf
+  type(mat_), intent(in) :: mat
+
+  call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( mat%f_grdidx_river%path /= '' )then
+    if( cmf%f_grdidx_river%path == '' )then
+      call errend(msg_unexpected_condition()//&
+                '\n  mat%f_grdidx_river%path /= "" .and. cmf%f_grdidx_river%path == ""'//&
+                '\n"f_grdidx_river" in the block "'//str(BLOCK_NAME_CMF)//&
+                  '" must be given when "f_grdidx_river" in the block "'//&
+                  str(BLOCK_NAME_MAT)//'" is given.')
+    endif
+  endif
+
+  if( mat%f_grdidx_noriv%path /= '' )then
+    if( cmf%f_grdidx_noriv%path == '' )then
+      call errend(msg_unexpected_condition()//&
+                '\n  mat%f_grdidx_noriv%path /= "" .and. cmf%f_grdidx_noriv%path == ""'//&
+                '\n"f_grdidx_noriv" in the block "'//str(BLOCK_NAME_CMF)//&
+                  '" must be given when "f_grdidx_noriv" in the block "'//&
+                  str(BLOCK_NAME_MAT)//'" is given.')
+    endif
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input
 !===============================================================
 !
 !===============================================================

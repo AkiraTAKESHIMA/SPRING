@@ -167,8 +167,8 @@
   },
   "options": {
     "Earth": {
-      "shape": "sphere",
-      "diameter": 6713e+3
+      "geosys": "WGS84",
+      "rtyp": "volmetric"
     }
   }
 }

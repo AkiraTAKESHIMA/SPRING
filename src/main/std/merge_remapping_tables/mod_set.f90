@@ -10,10 +10,7 @@ module mod_set
         KEY_OLD_FILES           , &
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
-        KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
-        KEY_EARTH_R             , &
-        KEY_EARTH_E2
+        KEY_MEMORY_ULIM
   use c2_type_rt
   use c2_rt_set, only: &
         KEY_OPT_COEF_SUM_MODIFY      , &
@@ -24,12 +21,19 @@ module mod_set
         KEY_OPT_COEF_SUM_ERROR_EXCESS
   use def_type
   implicit none
-  character(CLEN_PROC), parameter :: MODNAM = 'mod_set'
   private
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
   public :: read_settings
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_set'
+
+  character(CLEN_VAR), parameter :: BLOCKNAME__INPUT  = 'input'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUTPUT = 'output'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT    = 'options'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -68,11 +72,7 @@ subroutine read_settings(input, output, opt)
 
   type(counter_) :: counter
 
-  character(clen_var) :: block_name
-
-  character(clen_var), parameter :: block_name_input  = 'input'
-  character(clen_var), parameter :: block_name_output = 'output'
-  character(clen_var), parameter :: block_name_opt    = 'options'
+  character(clen_var) :: blockName
 
   call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
@@ -104,32 +104,32 @@ subroutine read_settings(input, output, opt)
   call init_counter()
 
   do
-    call find_block(block_name)
+    call find_block(blockName)
 
-    selectcase( block_name )
+    selectcase( blockName )
     !-----------------------------------------------------------
     ! Case: No more block
     case( '' )
       exit
     !-----------------------------------------------------------
     ! Case: input
-    case( block_name_input )
-      call update_counter(counter%input, block_name)
+    case( BLOCKNAME__INPUT )
+      call update_counter(counter%input, blockName)
       call read_settings_input(input)
     !-----------------------------------------------------------
     ! Case: output
-    case( block_name_output )
-      call update_counter(counter%output, block_name)
+    case( BLOCKNAME__OUTPUT )
+      call update_counter(counter%output, blockName)
       call read_settings_output(output)
     !-----------------------------------------------------------
     ! Case: options
-    case( block_name_opt )
-      call update_counter(counter%opt, block_name)
+    case( BLOCKNAME__OPT )
+      call update_counter(counter%opt, blockName )
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call errend(msg_invalid_value('block_name', block_name)//&
+      call errend(msg_invalid_value('blockName', blockName)//&
                 '\nCheck the names of the blocks.')
     endselect
   enddo
@@ -140,44 +140,9 @@ subroutine read_settings(input, output, opt)
 
   call logext()
   !-------------------------------------------------------------
-  ! Detect conflictions
+  ! Check inputs
   !-------------------------------------------------------------
-  call logent('Detecting conflictions', PRCNAM, MODNAM)
-
-  selectcase( output%rt%main%mesh_coef )
-  case( MESH__SOURCE, &
-        MESH__TARGET )
-    if( output%rt%main%opt_coef%is_sum_modify_enabled )then
-      if( input%nFiles_grid > 0 )then
-        call logwrn(msg_unexpected_condition()//&
-                  '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//'" is active and grid data are input.'//&
-                  '\nInterpolation coefficients are computed using intersection area data '//&
-                    'of the remapping tables and modified so that the summuation of the '//&
-                    'coefficients of each grid (specified by the key "mesh_coef" in the block "'//&
-                    str(BLOCK_NAME_OUTPUT)//'" and is "target" by default) is equal to the '//&
-                    'value specified by the key "'//str(KEY_OPT_COEF_SUM_MODIFY)//'". '//&
-                    'Inputs of grid area data and index data are ignored because they '//&
-                    'are not used with the current settings.')
-      endif
-    else
-      if( input%nFiles_grid == 0 )then
-        call errend(msg_unexpected_condition()//&
-                  '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//&
-                    '" is inactive and grid data are not input.'//&
-                  '\nInterpolation coefficients are computed using intersection area '//&
-                    'data of the remapping tables and grid area data, but now grid area data '//&
-                    'are missing. Specify the files of grid area data and correspondant '//&
-                    'grid index data by the keys "fin_grdara" and "fin_grdidx", respectively, '//&
-                    'in the block "'//str(BLOCK_NAME_INPUT)//'".')
-      endif
-    endif
-  case( MESH__NONE )
-    continue
-  case default
-    call errend(msg_invalid_value('output%rt%main%mesh_coef', output%rt%main%mesh_coef))
-  endselect
-
-  call logext()
+  call check_input(input, output)
   !-------------------------------------------------------------
   ! Set some variables
   !-------------------------------------------------------------
@@ -220,26 +185,26 @@ subroutine init_counter()
   counter%opt = 0
 end subroutine init_counter
 !---------------------------------------------------------------
-subroutine update_counter(n, block_name)
+subroutine update_counter(n, blockName)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'update_counter'
   integer, intent(inout) :: n
-  character(*), intent(in) :: block_name
+  character(*), intent(in) :: blockName
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   n = n + 1
 
-  selectcase( block_name )
-  case( BLOCK_NAME_INPUT , &
-        BLOCK_NAME_OUTPUT, &
-        BLOCK_NAME_OPT    )
+  selectcase( blockName )
+  case( BLOCKNAME__INPUT , &
+        BLOCKNAME__OUTPUT, &
+        BLOCKNAME__OPT    )
     if( n > 2 )then
       call errend(msg_invalid_input(line_number())//&
-                '\nBlock "'//str(block_name)//'" appeared more than once.')
+                '\nBlock "'//str(blockName)//'" appeared more than once.')
     endif
   case default
-    call errend(msg_invalid_value('block_name', block_name))
+    call errend(msg_invalid_value('blockName', blockName))
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
@@ -251,9 +216,9 @@ subroutine check_number_of_blocks()
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  call check_num_of_key(counter%input , BLOCK_NAME_INPUT , 1, 1)
-  call check_num_of_key(counter%output, BLOCK_NAME_OUTPUT, 1, 1)
-  call check_num_of_key(counter%opt   , BLOCK_NAME_OPT   , 0, 1)
+  call check_num_of_key(counter%input , BLOCKNAME__INPUT , 1, 1)
+  call check_num_of_key(counter%output, BLOCKNAME__OUTPUT, 1, 1)
+  call check_num_of_key(counter%opt   , BLOCKNAME__OPT   , 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks
@@ -759,9 +724,8 @@ subroutine read_settings_output(output)
         MESH__NONE )
     continue
   case default
-    call errend(str(msg_invalid_value())//&
-            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef)//&
-            '\nCheck value of "mesh_coef".')
+    call errend(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef)//&
+              '\nCheck the value of "mesh_coef".')
   endselect
 
   selectcase( rtm%mesh_sort )
@@ -787,7 +751,7 @@ contains
 !----------------------------------------------------------------
 subroutine check_keynum_relations()
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'check_keynum_relations'
+  character(CLEN_PROC), parameter :: PRCNAM = '__IP__check_keynum_relations'
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !--------------------------------------------------------------
@@ -919,6 +883,54 @@ end subroutine read_settings_opt
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine check_input(input, output)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input'
+  type(input_) , intent(in) :: input
+  type(output_), intent(in) :: output
+
+  call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( output%rt%main%mesh_coef )
+  case( MESH__SOURCE, &
+        MESH__TARGET )
+    if( output%rt%main%opt_coef%is_sum_modify_enabled )then
+      if( input%nFiles_grid > 0 )then
+        call logwrn(msg_unexpected_condition()//&
+                  '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//'" is active and grid data are input.'//&
+                  '\nInterpolation coefficients are computed using intersection area data '//&
+                    'of the remapping tables and modified so that the summuation of the '//&
+                    'coefficients of each grid (specified by the key "mesh_coef" in the block "'//&
+                    str(BLOCKNAME__OUTPUT)//'" and is "target" by default) is equal to the '//&
+                    'value specified by the key "'//str(KEY_OPT_COEF_SUM_MODIFY)//'". '//&
+                    'Inputs of grid area data and index data are ignored because they '//&
+                    'are not used with the current settings.')
+      endif
+    else
+      if( input%nFiles_grid == 0 )then
+        call errend(msg_unexpected_condition()//&
+                  '\n  "'//str(KEY_OPT_COEF_SUM_MODIFY)//&
+                    '" is inactive and grid data are not input.'//&
+                  '\nInterpolation coefficients are computed using intersection area '//&
+                    'data of the remapping tables and grid area data, but now grid area data '//&
+                    'are missing. Specify the files of grid area data and correspondant '//&
+                    'grid index data by the keys "fin_grdara" and "fin_grdidx", respectively, '//&
+                    'in the block "'//str(BLOCKNAME__INPUT)//'".')
+      endif
+    endif
+  case( MESH__NONE )
+    continue
+  case default
+    call errend(msg_invalid_value('output%rt%main%mesh_coef', output%rt%main%mesh_coef))
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input
 !===============================================================
 !
 !===============================================================

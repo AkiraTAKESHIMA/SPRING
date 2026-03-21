@@ -6,7 +6,9 @@ program main
   use lib_io
   use lib_math
   use def_consts
-  use mod_utils
+  use mod_utils, only: &
+        read_conf_earth, &
+        nextxy
   implicit none
 
   ! high-res flow direction map grid
@@ -108,9 +110,8 @@ program main
   read(11,*) nXX
   read(11,*) nYY
   read(11,*) ! fgcmidx
-  read(11,*) ! earth_shape
-  read(11,*) ! earth_r
-  read(11,*) ! earth_e2
+
+  !call read_conf_earth(earth, 11)
 
   close(11)
   !-------------------------------------------------------------

@@ -215,21 +215,14 @@ def part_gs_miss(gs):
 
 
 def block_options(opt):
+    from conf_opt_earth import opt_earth
+
     s = '\
 \n\
 [options]\n\
   old_files: remove\n'
 
-    if opt['Earth']['shape'] == 'sphere':
-        s += f'\
-  earth_shape: {opt["Earth"]["shape"]}\n\
-  earth_r    : {opt["Earth"]["diameter"]}\n'
-
-    elif opt['Earth']['shape'] == 'ellips':
-        s += f'\
-  earth_shape: {opt["Earth"]["shape"]}\n\
-  earth_r    : {opt["Earth"]["diameter"]}\n\
-  earth_e2   : {opt["Earth"]["square_eccentricity"]}\n'
+    s += opt_earth(opt['Earth'])
 
     s += '\
 [end]\n'

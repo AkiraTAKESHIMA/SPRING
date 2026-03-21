@@ -584,15 +584,15 @@ integer(4) function make_grduwa__latlon(al) result(info)
   !-------------------------------------------------------------
   allocate(grduwa_1rad(al%vi:al%vf))
 
-  selectcase( earth%shp )
-  case( EARTH_SHAPE_SPHERE )
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
     grduwa_1rad(:) = area_sphere_rect(al%lat(al%vi-1_8:al%vf-1_8), al%lat(al%vi:al%vf))
-  case( EARTH_SHAPE_ELLIPS )
+  case( EARTH_SHPTYP__ELLIPS )
     grduwa_1rad(:) = area_ellips_rect(al%lat(al%vi-1_8:al%vf-1_8), al%lat(al%vi:al%vf), &
                                       earth%e2)
   case default
     info = 1
-    call errret(msg_invalid_value('earth%shp', earth%shp))
+    call errret(msg_invalid_value('earth%shptyp', earth%shptyp))
     return
   endselect
   !-------------------------------------------------------------
@@ -1540,17 +1540,17 @@ integer(4) function make_wgtmap__raster(ar) result(info)
     ar%status_wgtmap = GRID_STATUS__PREPARED
 
     allocate(rstuwa_col(ar%vi:ar%vf))
-    selectcase( earth%shp )
-    case( EARTH_SHAPE_SPHERE )
+    selectcase( earth%shptyp )
+    case( EARTH_SHPTYP__SPHERE )
       rstuwa_col(:) = area_sphere_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf)) &
                         * ar%lonwidth(1)
-    case( EARTH_SHAPE_ELLIPS )
+    case( EARTH_SHPTYP__ELLIPS )
       rstuwa_col(:) = area_ellips_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf), &
                                        earth%e2) &
                         * ar%lonwidth(1)
     case default
       info = 1
-      call errret(msg_invalid_value('earth%shp', earth%shp))
+      call errret(msg_invalid_value('earth%shptyp', earth%shptyp))
       return
     endselect
 
@@ -2081,17 +2081,17 @@ integer(4) function make_grduwa__raster(ar) result(info)
   !-------------------------------------------------------------
   allocate(rstuwa_col(ar%vi:ar%vf))
 
-  selectcase( earth%shp )
-  case( EARTH_SHAPE_SPHERE )
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
     rstuwa_col(:) = area_sphere_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf)) &
                       * ar%lonwidth(ar%hi)
-  case( EARTH_SHAPE_ELLIPS )
+  case( EARTH_SHPTYP__ELLIPS )
     rstuwa_col(:) = area_ellips_rect(ar%lat(ar%vi-1_8:ar%vf-1_8), ar%lat(ar%vi:ar%vf), &
                                       earth%e2) &
                       * ar%lonwidth(ar%hi)
   case default
     info = 1
-    call errret(msg_invalid_value('earth%shp', earth%shp))
+    call errret(msg_invalid_value('earth%shptyp', earth%shptyp))
     return
   endselect
   !-----------------------------------------------------------

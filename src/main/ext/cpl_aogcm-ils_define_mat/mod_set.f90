@@ -82,42 +82,25 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM &
-                                            = 'input_rt_ogcm_ocean_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM &
-                                            = 'input_rt_ogcm_land_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM &
-                                            = 'input_rt_rm_river_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM &
-                                            = 'input_rt_rm_noriv_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM &
-                                            = 'input_rt_rm_ocean_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_AGCM &
-                                            = 'input_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_INPUT_RM &
-                                            = 'input_rm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_OPT_RT_COEF &
-                                            = 'output_opt_rt_coef'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM &
-                                            = 'output_rt_lsm_river_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM &
-                                            = 'output_rt_lsm_noriv_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM &
-                                            = 'output_rt_lsm_ocean_to_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER &
-                                            = 'output_rt_agcm_to_lsm_river'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV &
-                                            = 'output_rt_agcm_to_lsm_noriv'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN &
-                                            = 'output_rt_agcm_to_lsm_ocean'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_AGCM &
-                                            = 'output_agcm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OUTPUT_LSM &
-                                            = 'output_lsm'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OPTIONS &
-                                            = 'options'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RT_OOCN2A    = 'input_rt_ogcm_ocean_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RT_OLND2A    = 'input_rt_ogcm_land_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RT_RRIV2A    = 'input_rt_rm_river_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RT_RNRV2A    = 'input_rt_rm_noriv_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RT_ROCN2A    = 'input_rt_rm_ocean_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_AGCM         = 'input_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__IN_RM           = 'input_rm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_OPT_RT_COEF = 'output_opt_rt_coef'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_LRIV2A   = 'output_rt_lsm_river_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_LNRV2A   = 'output_rt_lsm_noriv_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_LOCN2A   = 'output_rt_lsm_ocean_to_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_A2LRIV   = 'output_rt_agcm_to_lsm_river'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_A2LNRV   = 'output_rt_agcm_to_lsm_noriv'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_RT_A2LOCN   = 'output_rt_agcm_to_lsm_ocean'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_AGCM        = 'output_agcm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUT_LSM         = 'output_lsm'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT             = 'options'
 
-  character(CLEN_VAR) :: block_name
+  character(CLEN_VAR) :: blockName
   type(opt_rt_coef_) :: opt_rt_coef
   type(opt_) :: opt
 
@@ -190,90 +173,89 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   call init_counter()
 
   do
-    call find_block(block_name)
+    call find_block(blockName)
 
-    selectcase( block_name )
+    selectcase( blockName )
     !-----------------------------------------------------------
     ! Case: No more block
     case( '' )
       exit
     !-----------------------------------------------------------
     ! Case: input rt
-    case( BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM )
+    case( BLOCKNAME__IN_RT_OOCN2A )
       call update_counter(counter%input_rt_ogcm_ocean_to_agcm)
       call read_settings_input_rt(rt_in%ogcm_ocean_to_agcm)
 
-    case( BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM )
+    case( BLOCKNAME__IN_RT_OLND2A )
       call update_counter(counter%input_rt_ogcm_land_to_agcm)
       call read_settings_input_rt(rt_in%ogcm_land_to_agcm)
 
-    case( BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM )
+    case( BLOCKNAME__IN_RT_RRIV2A )
       call update_counter(counter%input_rt_rm_river_to_agcm)
       call read_settings_input_rt(rt_in%rm_river_to_agcm)
 
-    case( BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM )
+    case( BLOCKNAME__IN_RT_RNRV2A )
       call update_counter(counter%input_rt_rm_noriv_to_agcm)
       call read_settings_input_rt(rt_in%rm_noriv_to_agcm)
 
-    case( BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM )
+    case( BLOCKNAME__IN_RT_ROCN2A )
       call update_counter(counter%input_rt_rm_ocean_to_agcm)
       call read_settings_input_rt(rt_in%rm_ocean_to_agcm)
 
-    case( BLOCK_NAME_INPUT_AGCM )
+    case( BLOCKNAME__IN_AGCM )
       call update_counter(counter%input_agcm)
       call read_settings_input_agcm(agcm)
 
-    case( BLOCK_NAME_INPUT_RM )
+    case( BLOCKNAME__IN_RM )
       call update_counter(counter%input_rm)
       call read_settings_input_rm(rm)
     !-----------------------------------------------------------
     ! Case: opt_rt_coef
-    case( BLOCK_NAME_OUTPUT_OPT_RT_COEF )
+    case( BLOCKNAME__OUT_OPT_RT_COEF )
       call update_counter(counter%output_opt_rt_coef)
       call read_settings_rt_coef_options(opt_rt_coef)
     !-----------------------------------------------------------
     ! Case: output rt
-    case( BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM )
+    case( BLOCKNAME__OUT_RT_LRIV2A )
       call update_counter(counter%output_rt_lsm_river_to_agcm)
       call read_settings_output_rt(rt_out%lsm_river_to_agcm)
 
-    case( BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM )
+    case( BLOCKNAME__OUT_RT_LNRV2A )
       call update_counter(counter%output_rt_lsm_noriv_to_agcm)
       call read_settings_output_rt(rt_out%lsm_noriv_to_agcm)
 
-    case( BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM )
+    case( BLOCKNAME__OUT_RT_LOCN2A )
       call update_counter(counter%output_rt_lsm_ocean_to_agcm)
       call read_settings_output_rt(rt_out%lsm_ocean_to_agcm)
 
-    case( BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER )
+    case( BLOCKNAME__OUT_RT_A2LRIV )
       call update_counter(counter%output_rt_agcm_to_lsm_river)
       call read_settings_output_rt(rt_out%agcm_to_lsm_river)
 
-    case( BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV )
+    case( BLOCKNAME__OUT_RT_A2LNRV )
       call update_counter(counter%output_rt_agcm_to_lsm_noriv)
       call read_settings_output_rt(rt_out%agcm_to_lsm_noriv)
 
-    case( BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN )
+    case( BLOCKNAME__OUT_RT_A2LOCN )
       call update_counter(counter%output_rt_agcm_to_lsm_ocean)
       call read_settings_output_rt(rt_out%agcm_to_lsm_ocean)
 
-    case( BLOCK_NAME_OUTPUT_AGCM )
+    case( BLOCKNAME__OUT_AGCM )
       call update_counter(counter%output_agcm)
       call read_settings_output_agcm(agcm)
 
-    case( BLOCK_NAME_OUTPUT_LSM )
+    case( BLOCKNAME__OUT_LSM )
       call update_counter(counter%output_lsm)
       call read_settings_output_lsm(lsm)
 
-    case( BLOCK_NAME_OPTIONS )
+    case( BLOCKNAME__OPT )
       call update_counter(counter%options)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call errend(str(msg_invalid_value())//&
-              '\n  block_name: '//str(block_name)//&
-              '\nCheck the name of the block.')
+      call errend(msg_invalid_value('blockName', blockName)//&
+                '\nCheck the name of the block.')
     endselect
   enddo
 
@@ -283,7 +265,7 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
 
   call logext()
   !-------------------------------------------------------------
-  ! Detect conflictions
+  ! Check inputs
   !-------------------------------------------------------------
   !-------------------------------------------------------------
   ! Set some variables
@@ -369,9 +351,8 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
 
   call logext()
   !-------------------------------------------------------------
-  ! Print the settings
+  ! Print settings
   !-------------------------------------------------------------
-
   call echo_settings_input_rt(rt_in%ogcm_ocean_to_agcm)
   call echo_settings_input_rt(rt_in%ogcm_land_to_agcm)
   call echo_settings_input_rt(rt_in%rm_river_to_agcm)
@@ -392,8 +373,6 @@ subroutine read_settings(rt_in, rt_out, agcm, rm, lsm)
   call echo_settings_output_lsm(lsm)
 
   call logmsg(str(bar('')))
-
-  call logext()
   !-------------------------------------------------------------
   ! Check paths
   !-------------------------------------------------------------
@@ -437,75 +416,75 @@ subroutine update_counter(n)
 
   call check_num_of_key(&
          counter%input_rt_ogcm_ocean_to_agcm, &
-         BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM, 0, 1)
+         BLOCKNAME__IN_RT_OOCN2A, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_ogcm_land_to_agcm, &
-         BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM, 0, 1)
+         BLOCKNAME__IN_RT_OLND2A, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_river_to_agcm, &
-         BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM, 0, 1)
+         BLOCKNAME__IN_RT_RRIV2A, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_noriv_to_agcm, &
-         BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM, 0, 1)
+         BLOCKNAME__IN_RT_RNRV2A, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_ocean_to_agcm, &
-         BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM, 0, 1)
+         BLOCKNAME__IN_RT_ROCN2A, 0, 1)
 
   call check_num_of_key(&
          counter%input_agcm, &
-         BLOCK_NAME_INPUT_AGCM, 0, 1)
+         BLOCKNAME__IN_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%input_rm, &
-         BLOCK_NAME_INPUT_RM, 0, 1)
+         BLOCKNAME__IN_RM, 0, 1)
 
   call check_num_of_key(&
          counter%output_opt_rt_coef, &
-         BLOCK_NAME_OUTPUT_OPT_RT_COEF, 0, 1)
+         BLOCKNAME__OUT_OPT_RT_COEF, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_river_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM, 0, 1)
+         BLOCKNAME__OUT_RT_LRIV2A, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_noriv_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM, 0, 1)
+         BLOCKNAME__OUT_RT_LNRV2A, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_ocean_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM, 0, 1)
+         BLOCKNAME__OUT_RT_LOCN2A, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_ocean_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM, 0, 1)
+         BLOCKNAME__OUT_RT_LOCN2A, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_river, &
-         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER, 0, 1)
+         BLOCKNAME__OUT_RT_A2LRIV, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_noriv, &
-         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV, 0, 1)
+         BLOCKNAME__OUT_RT_A2LNRV, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_ocean, &
-         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN, 0, 1)
+         BLOCKNAME__OUT_RT_A2LOCN, 0, 1)
 
   call check_num_of_key(&
          counter%output_agcm, &
-         BLOCK_NAME_OUTPUT_AGCM, 0, 1)
+         BLOCKNAME__OUT_AGCM, 0, 1)
 
   call check_num_of_key(&
          counter%output_lsm, &
-         BLOCK_NAME_OUTPUT_LSM, 0, 1)
+         BLOCKNAME__OUT_LSM, 0, 1)
 
   call check_num_of_key(&
          counter%options, &
-         BLOCK_NAME_OPTIONS, 0, 1)
+         BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine update_counter
@@ -518,71 +497,71 @@ subroutine check_number_of_blocks()
   !-------------------------------------------------------------
   call check_num_of_key(&
          counter%input_rt_ogcm_ocean_to_agcm, &
-         BLOCK_NAME_INPUT_RT_OGCM_OCEAN_TO_AGCM, 1, 1)
+         BLOCKNAME__IN_RT_OOCN2A, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_ogcm_land_to_agcm, &
-         BLOCK_NAME_INPUT_RT_OGCM_LAND_TO_AGCM, 0, 1)
+         BLOCKNAME__IN_RT_OLND2A, 0, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_river_to_agcm, &
-         BLOCK_NAME_INPUT_RT_RM_RIVER_TO_AGCM, 1, 1)
+         BLOCKNAME__IN_RT_RRIV2A, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_noriv_to_agcm, &
-         BLOCK_NAME_INPUT_RT_RM_NORIV_TO_AGCM, 1, 1)
+         BLOCKNAME__IN_RT_RNRV2A, 1, 1)
 
   call check_num_of_key(&
          counter%input_rt_rm_ocean_to_agcm, &
-         BLOCK_NAME_INPUT_RT_RM_OCEAN_TO_AGCM, 1, 1)
+         BLOCKNAME__IN_RT_ROCN2A, 1, 1)
 
   call check_num_of_key(&
          counter%input_agcm, &
-         BLOCK_NAME_INPUT_AGCM, 1, 1)
+         BLOCKNAME__IN_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%input_rm, &
-         BLOCK_NAME_INPUT_RM, 1, 1)
+         BLOCKNAME__IN_RM, 1, 1)
 
   call check_num_of_key(&
          counter%output_opt_rt_coef, &
-         BLOCK_NAME_OUTPUT_OPT_RT_COEF, 0, 1)
+         BLOCKNAME__OUT_OPT_RT_COEF, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_river_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_RIVER_TO_AGCM, 1, 1)
+         BLOCKNAME__OUT_RT_LRIV2A, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_noriv_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_NORIV_TO_AGCM, 1, 1)
+         BLOCKNAME__OUT_RT_LNRV2A, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_lsm_ocean_to_agcm, &
-         BLOCK_NAME_OUTPUT_RT_LSM_OCEAN_TO_AGCM, 0, 1)
+         BLOCKNAME__OUT_RT_LOCN2A, 0, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_river, &
-         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_RIVER, 1, 1)
+         BLOCKNAME__OUT_RT_A2LRIV, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_noriv, &
-         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_NORIV, 1, 1)
+         BLOCKNAME__OUT_RT_A2LNRV, 1, 1)
 
   call check_num_of_key(&
          counter%output_rt_agcm_to_lsm_ocean, &
-         BLOCK_NAME_OUTPUT_RT_AGCM_TO_LSM_OCEAN, 0, 1)
+         BLOCKNAME__OUT_RT_A2LOCN, 0, 1)
 
   call check_num_of_key(&
          counter%output_agcm, &
-         BLOCK_NAME_OUTPUT_AGCM, 1, 1)
+         BLOCKNAME__OUT_AGCM, 1, 1)
 
   call check_num_of_key(&
          counter%output_lsm, &
-         BLOCK_NAME_OUTPUT_LSM, 1, 1)
+         BLOCKNAME__OUT_LSM, 1, 1)
 
   call check_num_of_key(&
          counter%options, &
-         BLOCK_NAME_OPTIONS, 0, 1)
+         BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks

@@ -76,12 +76,12 @@ subroutine read_settings(s, t, rt)
   type(opt_) :: opt
   integer :: iGs
 
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_LATLON  = 'mesh_latlon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_RASTER  = 'mesh_raster'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_GS_POLYGON = 'mesh_polygon'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_REMAPPING  = 'remapping'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_OPT        = 'options'
-  character(CLEN_VAR), parameter :: BLOCK_NAME_FIG        = 'figures'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_POLYGON = 'mesh_polygon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__REMAPPING    = 'remapping'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT          = 'options'
+  character(CLEN_VAR), parameter :: BLOCKNAME__FIG          = 'figures'
 
   call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
@@ -134,35 +134,35 @@ subroutine read_settings(s, t, rt)
       exit
     !-----------------------------------------------------------
     ! Case: gs_latlon
-    case( BLOCK_NAME_GS_LATLON )
+    case( BLOCKNAME__MESH_LATLON )
       call update_counter(counter%gs, block_name)
       call select_gs(counter%gs, s, t, a)
       call read_settings_gs_latlon(a)
     !-----------------------------------------------------------
     ! Case: gs_raster
-    case( BLOCK_NAME_GS_RASTER )
+    case( BLOCKNAME__MESH_RASTER )
       call update_counter(counter%gs, block_name)
       call select_gs(counter%gs, s, t, a)
       call read_settings_gs_raster(a)
     !-----------------------------------------------------------
     ! Case: gs_polygon
-    case( BLOCK_NAME_GS_POLYGON )
+    case( BLOCKNAME__MESH_POLYGON )
       call update_counter(counter%gs, block_name)
       call select_gs(counter%gs, s, t, a)
       call read_settings_gs_polygon(a)
     !-----------------------------------------------------------
     ! Case: rt
-    case( BLOCK_NAME_REMAPPING )
+    case( BLOCKNAME__REMAPPING )
       call update_counter(counter%rmp, block_name)
       call read_settings_remapping(rt, s, t)
     !-----------------------------------------------------------
     ! Case: opt
-    case( BLOCK_NAME_OPT )
+    case( BLOCKNAME__OPT )
       call update_counter(counter%opt, block_name)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: fig
-    case( BLOCK_NAME_FIG )
+    case( BLOCKNAME__FIG )
       call update_counter(counter%fig, block_name)
       call skip_unused_block()
     !-----------------------------------------------------------
@@ -288,21 +288,21 @@ subroutine update_counter(n, block_name)
   n = n + 1
 
   selectcase( block_name )
-  case( BLOCK_NAME_GS_LATLON, &
-        BLOCK_NAME_GS_RASTER, &
-        BLOCK_NAME_GS_POLYGON )
+  case( BLOCKNAME__MESH_LATLON, &
+        BLOCKNAME__MESH_RASTER, &
+        BLOCKNAME__MESH_POLYGON )
     if( n > 2 )then
       call errend(msg_invalid_input(line_number())//&
                 '\nBlocks of mesh appeared more than twice:'//&
-                '\n  "'//str(BLOCK_NAME_GS_LATLON)//'"'//&
-                '\n  "'//str(BLOCK_NAME_GS_RASTER)//'"'//&
-                '\n  "'//str(BLOCK_NAME_GS_POLYGON)//'"')
+                '\n  "'//str(BLOCKNAME__MESH_LATLON)//'"'//&
+                '\n  "'//str(BLOCKNAME__MESH_RASTER)//'"'//&
+                '\n  "'//str(BLOCKNAME__MESH_POLYGON)//'"')
     endif
-  case( BLOCK_NAME_REMAPPING )
+  case( BLOCKNAME__REMAPPING )
     call check_num_of_key(n, block_name, 0, 2)
-  case( BLOCK_NAME_OPT )
+  case( BLOCKNAME__OPT )
     call check_num_of_key(n, block_name, 0, 1)
-  case( BLOCK_NAME_FIG )
+  case( BLOCKNAME__FIG )
     call check_num_of_key(n, block_name, 0, 1)
   case default
     call errend(msg_invalid_value('block_name', block_name))
@@ -320,16 +320,16 @@ subroutine check_number_of_blocks()
   if( counter%gs /= 2 )then
     call errend(msg_invalid_input()//&
               '\nThe number of blocks of mesh is invalid:'//&
-              '\n  "'//str(BLOCK_NAME_GS_LATLON)//'"'//&
-              '\n  "'//str(BLOCK_NAME_GS_RASTER)//'"'//&
-              '\n  "'//str(BLOCK_NAME_GS_POLYGON)//'"')
+              '\n  "'//str(BLOCKNAME__MESH_LATLON)//'"'//&
+              '\n  "'//str(BLOCKNAME__MESH_RASTER)//'"'//&
+              '\n  "'//str(BLOCKNAME__MESH_POLYGON)//'"')
   endif
 
-  call check_num_of_key(counter%rmp, BLOCK_NAME_REMAPPING, 1, 1)
+  call check_num_of_key(counter%rmp, BLOCKNAME__REMAPPING, 1, 1)
 
-  call check_num_of_key(counter%opt, BLOCK_NAME_OPT, 0, 1)
+  call check_num_of_key(counter%opt, BLOCKNAME__OPT, 0, 1)
 
-  call check_num_of_key(counter%fig, BLOCK_NAME_FIG, 0, 1)
+  call check_num_of_key(counter%fig, BLOCKNAME__FIG, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks
@@ -1817,9 +1817,12 @@ subroutine read_settings_opt(opt)
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
         KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_GEOSYS        , &
+        KEY_EARTH_RTYP          , &
         KEY_EARTH_R             , &
-        KEY_EARTH_E2
+        KEY_EARTH_FINV          , &
+        KEY_EARTH_F             , &
+        KEY_EARTH_E2            
   use c1_opt_set, only: &
         set_values_opt_earth
   implicit none
@@ -1833,13 +1836,18 @@ subroutine read_settings_opt(opt)
   call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
+
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
   call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
-  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
-  call set_keynum(KEY_EARTH_R    , 0, 1)
-  call set_keynum(KEY_EARTH_E2   , 0, 1)
+
+  call set_keynum(KEY_EARTH_GEOSYS, 0, 1)
+  call set_keynum(KEY_EARTH_RTYP  , 0, 1)
+  call set_keynum(KEY_EARTH_R     , 0, 1)
+  call set_keynum(KEY_EARTH_FINV  , 0, 1)
+  call set_keynum(KEY_EARTH_F     , 0, 1)
+  call set_keynum(KEY_EARTH_E2    , 0, 1)
 
   call logext()
   !-------------------------------------------------------------
@@ -1871,10 +1879,16 @@ subroutine read_settings_opt(opt)
       call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
     ! Earth's shape
-    case( KEY_EARTH_SHAPE )
-      call read_value(opt%earth%shp, is_keyword=.true.)
+    case( KEY_EARTH_GEOSYS )
+      call read_value(opt%earth%geosys, is_keyword=.true.)
+    case( KEY_EARTH_RTYP )
+      call read_value(opt%earth%rtyp, is_keyword=.true.)
     case( KEY_EARTH_R )
       call read_value(opt%earth%r)
+    case( KEY_EARTH_FINV )
+      call read_value(opt%earth%finv)
+    case( KEY_EARTH_F )
+      call read_value(opt%earth%f)
     case( KEY_EARTH_E2 )
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
@@ -1901,7 +1915,9 @@ subroutine read_settings_opt(opt)
   call logent('Setting the related values', PRCNAM, MODNAM)
 
   call traperr( set_values_opt_earth(&
-         opt%earth, keynum(KEY_EARTH_R), keynum(KEY_EARTH_E2)) )
+         opt%earth, &
+         keynum(KEY_EARTH_R), keynum(KEY_EARTH_FINV), &
+         keynum(KEY_EARTH_F), keynum(KEY_EARTH_E2)) )
 
   call logext()
   !-------------------------------------------------------------
@@ -2025,15 +2041,15 @@ subroutine check_input(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( opt_earth%shp == EARTH_SHAPE_ELLIPS )then
+  if( opt_earth%shptyp == EARTH_SHPTYP__ELLIPS )then
     do iMesh = 1, 2
       call select_gs(iMesh, s, t, a)
 
       if( a%typ == MESHTYPE__POLYGON )then
         call errend(msg_unexpected_condition()//&
-                  '\n  opt%earth%shp == '//str(opt_earth%shp)//&
+                  '\n  opt%earth%shptyp == '//str(opt_earth%shptyp)//&
                     ' and '//str(a%id)//'%typ == '//str(a%typ)//&
-                  '\nEarth shape "'//str(opt_earth%shp)//'" is '//&
+                  '\nEarth shape "'//str(opt_earth%shptyp)//'" is '//&
                     'not implemented yet for '//str(a%typ)//' meshes.')
       endif
     enddo

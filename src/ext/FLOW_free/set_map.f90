@@ -4,8 +4,12 @@ program main
   use lib_log
   use lib_io
   use lib_array
+  use c1_type_opt, only: &
+        opt_earth_
   use def_consts
-  use mod_utils
+  use mod_utils, only: &
+        read_conf_earth, &
+        nextxy
   implicit none
 
   ! index TRIP
@@ -48,9 +52,7 @@ program main
   integer(8), allocatable :: basin_order(:)
 
   ! earth's params
-  character(8) :: earth_shape
-  real(8) :: earth_r  ! [m]
-  real(8) :: earth_e2
+  type(opt_earth_) :: earth
 
   ! file
   character(128), parameter :: fparams   = 'params.txt'   !! GCM dimention file
@@ -76,15 +78,13 @@ program main
   !
   !-------------------------------------------------------------
   call logmsg('Reading params '//str(fparams))
-
   open(11, file=fparams, status='old')
 
   read(11,*) nXX
   read(11,*) nYY
   read(11,*) ! fgcmidx
-  read(11,*) earth_shape
-  read(11,*) earth_r
-  read(11,*) earth_e2
+
+  call read_conf_earth(earth, 11)
 
   close(11)
   !-------------------------------------------------------------
@@ -245,7 +245,9 @@ program main
 
   do iYY=1, nYY
     do iXX=1, nXX
-      if( nextX(iXX,iYY)>0 ) then
+      selectcase( nextX(iXX,iYY) )
+      case( 0: )
+      !if( nextX(iXX,iYY)>0 ) then
         jXX=nextX(iXX,iYY)
         jYY=nextY(iXX,iYY)
         lon1=lon(iXX,iYY)
@@ -254,19 +256,24 @@ program main
         lat2=lat(jYY,jYY)
         if( lon1<-90 .and. lon2>270 ) lon2=lon2-360
         if( lon1>270 .and. lon2<-90 ) lon2=lon2+360
-        selectcase( earth_shape )
-        case( earth_shape_sphere )
+        selectcase( earth%shptyp )
+        case( EARTH_SHPTYP__SPHERE )
           nxtdst(iXX,iYY)=rgetlen_sphere(lon1,lat1,lon2,lat2)
-        case( earth_shape_ellips )
+        case( EARTH_SHPTYP__ELLIPS )
           nxtdst(iXX,iYY)=rgetlen_ellips(lon1,lat1,lon2,lat2)
         case default
-          print*, '*** ERROR *** earth_shape: '//trim(earth_shape)
+          call errend(msg_invalid_value('earth%shptyp', earth%shptyp))
         endselect
-      elseif( nextX(iXX,iYY)/=-9999 )then
-        nxtdst(iXX,iYY)=dst_mth*1000.
-      elseif( nextX(iXX,iYY)==-9999 )then
+      case( -9999 )
         nxtdst(iXX,iYY)=-9999
-      endif
+      case default
+        nxtdst(iXX,iYY)=dst_mth*1000.
+      endselect
+      !elseif( nextX(iXX,iYY)/=-9999 )then
+      !  nxtdst(iXX,iYY)=dst_mth*1000.
+      !elseif( nextX(iXX,iYY)==-9999 )then
+      !  nxtdst(iXX,iYY)=-9999
+      !endif
     end do
   end do
 
@@ -574,10 +581,10 @@ real(8) function rgetlen_ellips(rlon1, rlat1, rlon2, rlat2) result(l)
   dcoslat1 = cos(rlat1 * d2r)
   dcoslon1 = cos(rlon1 * d2r)
 
-  dn1 = earth_r/(sqrt(1.d0-earth_e2*dsinlat1*dsinlat1))
+  dn1 = earth%r/(sqrt(1.d0-earth%e2*dsinlat1*dsinlat1))
   dx1 = (dn1+dh1)*dcoslat1*dcoslon1
   dy1 = (dn1+dh1)*dcoslat1*dsinlon1
-  dz1 = (dn1*(1-earth_e2)+dh1)*dsinlat1
+  dz1 = (dn1*(1-earth%e2)+dh1)*dsinlat1
   ! ================================================
   ! (lon2,lat2) --> (x2,y2,z2)
   ! ================================================
@@ -586,16 +593,16 @@ real(8) function rgetlen_ellips(rlon1, rlat1, rlon2, rlat2) result(l)
   dcoslat2 = cos(rlat2 * d2r)
   dcoslon2 = cos(rlon2 * d2r)
 
-  dn2 = earth_r/(sqrt(1.d0-earth_e2*dsinlat2*dsinlat2))
+  dn2 = earth%r/(sqrt(1.d0-earth%e2*dsinlat2*dsinlat2))
   dx2 = (dn2+dh2)*dcoslat2*dcoslon2
   dy2 = (dn2+dh2)*dcoslat2*dsinlon2
-  dz2 = (dn2*(1-earth_e2)+dh2)*dsinlat2      
+  dz2 = (dn2*(1-earth%e2)+dh2)*dsinlat2      
   ! ================================================
   ! Calculate length
   ! ================================================
   dlen = sqrt((dx1-dx2)**2+(dy1-dy2)**2+(dz1-dz2)**2)
-  drad = asin(real(dlen*0.5d0/earth_r))
-  l = real(drad*2*earth_r)
+  drad = asin(real(dlen*0.5d0/earth%r))
+  l = real(drad*2*earth%r)
 end function rgetlen_ellips
 !---------------------------------------------------------------
 real(8) function rgetlen_sphere(rlon1, rlat1, rlon2, rlat2) result(l)

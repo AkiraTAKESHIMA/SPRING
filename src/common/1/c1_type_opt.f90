@@ -23,9 +23,13 @@ module c1_type_opt
   end type
 
   type opt_earth_
-    character(CLEN_VAR) :: shp
-    real(8)             :: r
-    real(8)             :: e2
+    character(CLEN_VAR) :: geosys
+    character(CLEN_VAR) :: shptyp
+    character(CLEN_VAR) :: rtyp
+    real(8) :: r
+    real(8) :: finv
+    real(8) :: f
+    real(8) :: e2
   end type
   !-------------------------------------------------------------
 end module c1_type_opt

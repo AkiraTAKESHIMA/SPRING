@@ -1209,10 +1209,10 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   call logmsg('    (a5) noriv_virt: '//str(agcm%sum_lndara_noriv_virt,wfmt))
 
   v = agcm%sum_lndara_noriv_real + agcm%sum_lndara_noriv_virt
-  call logmsg('    (a4)+(a5)      : '//str(v,wfmt)//&
+  call logmsg('    (a4+a5)        : '//str(v,wfmt)//&
               ' (error: '//str((v-agcm%sum_lndara_noriv)/agcm%sum_lndara_noriv,wfmt)//')')
   v = agcm%sum_lndara_river + agcm%sum_lndara_noriv
-  call logmsg('    (a2)+(a3)      : '//str(v,wfmt)//&
+  call logmsg('    (a2+a3)        : '//str(v,wfmt)//&
               ' (error: '//str((v-agcm%sum_lndara_ogcm)/agcm%sum_lndara_ogcm,wfmt)//')')
 
   call logmsg('RM grid')
@@ -1220,6 +1220,10 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   call logmsg('    (b1) river     : '//str(rm%sum_grdara_river,wfmt))
   call logmsg('    (b2) noriv     : '//str(rm%sum_grdara_noriv,wfmt))
   call logmsg('    (b2) ocean     : '//str(rm%sum_grdara_ocean,wfmt))
+
+  v = rm%sum_grdara_river + rm%sum_grdara_noriv + rm%sum_grdara_ocean
+  call logmsg('    (b1+b2+b3)     : '//str(v,wfmt)//&
+              ' (error: '//str((v-agcm%sum_grdara)/agcm%sum_grdara,wfmt)//')')
 
   call logmsg('LSM grid')
   call logmsg('  Grid area')
@@ -1230,10 +1234,10 @@ subroutine define_mat(rt_in, rt_out, agcm, rm, lsm)
   call logmsg('    (c5) ocean     : '//str(lsm%sum_grdara_ocean,wfmt))
 
   v = lsm%sum_grdara_noriv_real + lsm%sum_grdara_noriv_virt
-  call logmsg('    (c3)+(c4)      : '//str(v,wfmt)//&
+  call logmsg('    (c3+c4)        : '//str(v,wfmt)//&
               ' (error: '//str((v-lsm%sum_grdara_noriv)/lsm%sum_grdara_noriv,wfmt)//')')
   v = lsm%sum_grdara_river + lsm%sum_grdara_noriv + lsm%sum_grdara_ocean
-  call logmsg('    (c1)+(c2)+(c5) : '//str(v,wfmt)//&
+  call logmsg('    (c1+c2+c5)     : '//str(v,wfmt)//&
               ' (error: '//str((v-agcm%sum_grdara)/agcm%sum_grdara,wfmt)//')')
 
   call logext()

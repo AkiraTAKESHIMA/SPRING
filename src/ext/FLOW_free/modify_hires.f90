@@ -3,8 +3,12 @@ program main
   use lib_base
   use lib_log
   use lib_io
+  use c1_type_opt, only: &
+        opt_earth_
   use def_consts
-  use mod_utils
+  use mod_utils, only: &
+        read_conf_earth, &
+        nextxy
   implicit none
 
   integer :: ix, iy, jx, jy, kx, ky

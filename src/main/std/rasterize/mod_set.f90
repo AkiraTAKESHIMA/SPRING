@@ -10,12 +10,15 @@ module mod_set
   use c1_type_gs
   use def_type
   implicit none
-  character(CLEN_PROC), parameter :: MODNAM = 'mod_set'
   private
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
   public :: read_settings
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_set'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -62,14 +65,14 @@ subroutine read_settings(s, t, dout)
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR) :: block_name
+  character(CLEN_VAR) :: blockName
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: block_name_gs_latlon  = 'mesh_latlon'
-  character(CLEN_VAR), parameter :: block_name_gs_raster  = 'mesh_raster'
-  character(CLEN_VAR), parameter :: block_name_gs_polygon = 'mesh_polygon'
-  character(CLEN_VAR), parameter :: block_name_raster     = 'raster'
-  character(CLEN_VAR), parameter :: block_name_output     = 'output'
-  character(CLEN_VAR), parameter :: block_name_opt        = 'options'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_POLYGON = 'mesh_polygon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__RASTER       = 'raster'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUTPUT       = 'output'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT          = 'options'
 
   type(gs_common_), pointer :: sc, tc
   type(opt_) :: opt
@@ -113,47 +116,47 @@ subroutine read_settings(s, t, dout)
   call init_counter()
 
   do
-    call find_block(block_name)
+    call find_block(blockName)
 
-    selectcase( block_name )
+    selectcase( blockName )
     !-----------------------------------------------------------
     ! Case: No more block
     case( '' )
       exit
     !-----------------------------------------------------------
     ! Case: gs_latlon
-    case( BLOCK_NAME_GS_LATLON )
+    case( BLOCKNAME__MESH_LATLON )
       call update_counter(counter%s)
       call read_settings_gs_latlon(s)
     !-----------------------------------------------------------
     ! Case: gs_polygon
-    case( BLOCK_NAME_GS_POLYGON )
+    case( BLOCKNAME__MESH_POLYGON )
       call update_counter(counter%s)
       call read_settings_gs_polygon(s)
     !-----------------------------------------------------------
     ! Case: gs_raster
-    case( BLOCK_NAME_GS_RASTER )
+    case( BLOCKNAME__MESH_RASTER )
       call errend(msg_not_implemented()// &
-                '\nblock_name: '//str(block_name))
+                '\nblockName: '//str(blockName))
     !-----------------------------------------------------------
     ! Case: raster
-    case( BLOCK_NAME_RASTER )
+    case( BLOCKNAME__RASTER )
       call update_counter(counter%t)
       call read_settings_raster(t)
     !-----------------------------------------------------------
     ! Case: output
-    case( BLOCK_NAME_OUTPUT )
+    case( BLOCKNAME__OUTPUT )
       call update_counter(counter%dout)
       call read_settings_output(dout)
     !-----------------------------------------------------------
     ! Case: opt
-    case( BLOCK_NAME_OPT )
+    case( BLOCKNAME__OPT )
       call update_counter(counter%opt)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call errend(msg_invalid_value('block_name', block_name)//&
+      call errend(msg_invalid_value('blockName', blockName)//&
                 '\nCheck the name of block.')
     endselect
   enddo
@@ -164,19 +167,9 @@ subroutine read_settings(s, t, dout)
 
   call logext()
   !-------------------------------------------------------------
-  ! Detect conflictions
+  ! Check inputs
   !-------------------------------------------------------------
-  call logent('Detecting conflictions', PRCNAM, MODNAM)
-
-  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
-    if( s%typ == MESHTYPE__POLYGON )then
-      call errend(msg_unexpected_condition()//&
-                '\nEarth shape "'//str(opt%earth%shp)//&
-                  '" cannot be active for '//str(s%typ)//' meshes.')
-    endif
-  endif
-
-  call logext()
+  call check_input(s, opt%earth)
   !-------------------------------------------------------------
   ! Set some variables
   !-------------------------------------------------------------
@@ -276,16 +269,16 @@ subroutine update_counter(n)
   if( counter%s > 1 )then
     call errend(msg_invalid_input(line_number())//&
               '\nBlocks of rasterized meshes appeared more than once:'//&
-              '\n  "'//str(block_name_gs_latlon)//&
-                '", "'//str(block_name_gs_raster)//&
-                '", "'//str(block_name_gs_polygon)//'"')
+              '\n  "'//str(BLOCKNAME__MESH_LATLON)//&
+                '", "'//str(BLOCKNAME__MESH_RASTER)//&
+                '", "'//str(BLOCKNAME__MESH_POLYGON)//'"')
   endif
 
-  call check_num_of_key(counter%t, block_name_raster, 0, 1)
+  call check_num_of_key(counter%t, BLOCKNAME__RASTER, 0, 1)
 
-  call check_num_of_key(counter%dout, block_name_output, 0, 1)
+  call check_num_of_key(counter%dout, BLOCKNAME__OUTPUT, 0, 1)
 
-  call check_num_of_key(counter%opt, block_name_opt, 0, 1)
+  call check_num_of_key(counter%opt, BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine update_counter
@@ -299,27 +292,27 @@ subroutine check_number_of_blocks()
   if( counter%s /= 1 )then
     call errend(msg_syntax_error()//&
               '\nThe number of blocks of grid system is incorrect:'//&
-              '\n  "'//str(block_name_gs_latlon)//&
-               '", "'//str(block_name_gs_raster)//&
-               '", "'//str(block_name_gs_polygon)//'"')
+              '\n  "'//str(BLOCKNAME__MESH_LATLON)//&
+               '", "'//str(BLOCKNAME__MESH_RASTER)//&
+               '", "'//str(BLOCKNAME__MESH_POLYGON)//'"')
   endif
 
   if( counter%t /= 1 )then
     call errend(msg_syntax_error()//&
               '\nThe number of blocks of raster is incorrect:'//&
-              '\n  "'//str(block_name_raster)//'"')
+              '\n  "'//str(BLOCKNAME__RASTER)//'"')
   endif
 
   if( counter%dout /= 1 )then
     call errend(msg_syntax_error()//&
               '\nThe number of blocks of output is incorrect:'//&
-              '\n  "'//str(block_name_output)//'"')
+              '\n  "'//str(BLOCKNAME__OUTPUT)//'"')
   endif
 
   if( counter%opt > 1 )then
     call errend(msg_syntax_error()//&
               '\nThe number of blocks of options is incorrect:'//&
-              '\n  "'//str(block_name_opt)//'"')
+              '\n  "'//str(BLOCKNAME__OPT)//'"')
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
@@ -1464,9 +1457,12 @@ subroutine read_settings_opt(opt)
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
         KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_GEOSYS        , &
+        KEY_EARTH_RTYP          , &
         KEY_EARTH_R             , &
-        KEY_EARTH_E2
+        KEY_EARTH_FINV          , &
+        KEY_EARTH_F             , &
+        KEY_EARTH_E2            
   use c1_opt_set, only: &
         set_values_opt_earth
   implicit none
@@ -1480,13 +1476,18 @@ subroutine read_settings_opt(opt)
   call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
+
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
   call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
-  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
-  call set_keynum(KEY_EARTH_R    , 0, 1)
-  call set_keynum(KEY_EARTH_E2   , 0, 1)
+
+  call set_keynum(KEY_EARTH_GEOSYS, 0, 1)
+  call set_keynum(KEY_EARTH_RTYP  , 0, 1)
+  call set_keynum(KEY_EARTH_R     , 0, 1)
+  call set_keynum(KEY_EARTH_FINV  , 0, 1)
+  call set_keynum(KEY_EARTH_F     , 0, 1)
+  call set_keynum(KEY_EARTH_E2    , 0, 1)
 
   call logext()
   !-------------------------------------------------------------
@@ -1517,13 +1518,17 @@ subroutine read_settings_opt(opt)
     case( KEY_MEMORY_ULIM )
       call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
-    !
-    case( KEY_EARTH_SHAPE )
-      call read_value(opt%earth%shp, is_keyword=.true.)
-
+    ! Earth's shape
+    case( KEY_EARTH_GEOSYS )
+      call read_value(opt%earth%geosys, is_keyword=.true.)
+    case( KEY_EARTH_RTYP )
+      call read_value(opt%earth%rtyp, is_keyword=.true.)
     case( KEY_EARTH_R )
       call read_value(opt%earth%r)
-
+    case( KEY_EARTH_FINV )
+      call read_value(opt%earth%finv)
+    case( KEY_EARTH_F )
+      call read_value(opt%earth%f)
     case( KEY_EARTH_E2 )
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
@@ -1550,7 +1555,10 @@ subroutine read_settings_opt(opt)
   !-------------------------------------------------------------
   call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call traperr( set_values_opt_earth(opt%earth, keynum('earth_r'), keynum('earth_e2')) )
+  call traperr( set_values_opt_earth(&
+         opt%earth, &
+         keynum(KEY_EARTH_R), keynum(KEY_EARTH_FINV), &
+         keynum(KEY_EARTH_F), keynum(KEY_EARTH_E2)) )
 
   call logext()
   !-------------------------------------------------------------
@@ -1568,6 +1576,32 @@ end subroutine read_settings_opt
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+subroutine check_input(&
+    a, opt_earth)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input'
+  type(gs_), intent(in) :: a
+  type(opt_earth_), intent(in) :: opt_earth
+
+  call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( opt_earth%shptyp == EARTH_SHPTYP__ELLIPS )then
+    if( a%typ == MESHTYPE__POLYGON )then
+      call errend(msg_unexpected_condition()//&
+                '\n  opt%earth%shptyp == '//str(opt_earth%shptyp)//&
+                  ' and '//str(a%id)//'%typ == '//str(a%typ)//&
+                '\nEarth shape "'//str(opt_earth%shptyp)//'" is '//&
+                  'not implemented yet for '//str(a%typ)//' meshes.')
+    endif
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input
 !===============================================================
 !
 !===============================================================

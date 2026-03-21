@@ -4,7 +4,12 @@ program main
   use lib_log
   use lib_io
   use lib_math
+  use c1_type_opt, only: &
+        opt_earth_
   use def_consts
+  use mod_utils, only: &
+        read_conf_earth, &
+        nextxy
   implicit none
 
   integer :: ix, iy
@@ -27,9 +32,7 @@ program main
   real(8)   , allocatable :: pixlon(:), pixlat(:)
   real(8)   , allocatable :: pixare(:)
 
-  character(8) :: earth_shape
-  real(8) :: earth_r  ! [m]
-  real(8) :: earth_e2
+  type(opt_earth_) :: earth
 
   ! input
   character(128), parameter :: fparams = 'params.txt'
@@ -54,9 +57,8 @@ program main
   read(11,*) nXX
   read(11,*) nYY
   read(11,*) fgcmidx
-  read(11,*) earth_shape
-  read(11,*) earth_r
-  read(11,*) earth_e2
+
+  call read_conf_earth(earth, 11)
 
   close(11)
   !-------------------------------------------------------------
@@ -139,16 +141,16 @@ program main
   !-------------------------------------------------------------
   call logent('Calculating pixel area')
 
-  selectcase( earth_shape )
-  case( earth_shape_sphere )
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
     pixare(:) = area_sphere_rect(pixlat(0:ny-1), pixlat(1:ny)) * rad_360deg/nx
-  case( earth_shape_ellips )
-    pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth_e2) * rad_360deg/nx
+  case( EARTH_SHPTYP__ELLIPS )
+    pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth%e2) * rad_360deg/nx
   case default
-    call errend(msg_invalid_value('earth_shape', earth_shape))
+    call errend(msg_invalid_value('earth%shptyp', earth%shptyp))
   endselect
 
-  pixare(:) = pixare(:) * earth_r**2
+  pixare(:) = pixare(:) * earth%r**2
   
   call logmsg('surface area: '//str(sum(pixare)*nx*1d-6)//' km2')
 
