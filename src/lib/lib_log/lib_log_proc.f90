@@ -968,7 +968,7 @@ subroutine logwrn(msg, stp, prc, mod, opt)
     call echo_lines('****** WARING ******', STDOUT, set%indent(depth), .true.)
   endif
   if( echoPrc )then
-    call echo_lines('in '//strprc(prc_, mod_), STDOUT, set%indent(depth), .true.)
+    call echo_lines(strprc(prc_, mod_), STDOUT, set%indent(depth), .true.)
   endif
   if( echoMsg )then
     call echo_lines(trim(msg), STDOUT, set%indent(depth), makeNewLine)
@@ -1590,10 +1590,12 @@ function strprc(prc, mod) result(s)
   implicit none
   character(*), intent(in) :: prc
   character(*), intent(in) :: mod
+
   character(:), allocatable :: s
 
   allocate(character(1) :: s)
-  if( len_trim(mod) == 0 )then
+
+  if( mod == '' )then
     s = trim(prc)
   else
     s = trim(prc)//'__MOD__'//trim(mod)
@@ -1607,18 +1609,44 @@ function strstp(stp, prc, mod) result(s)
   character(*), intent(in) :: stp
   character(*), intent(in) :: prc
   character(*), intent(in) :: mod
+
+  character(len_trim(prc)) :: prc_
+  logical :: is_program
   character(:), allocatable :: s
 
   allocate(character(1) :: s)
+
+  call modify_prc(prc, prc_, is_program)
+
   if( stp == '' )then
-    s = 'in MOD__'//trim(mod)//&
-        '__PROC__'//trim(prc)
+    if( is_program )then
+      s = 'PROGRAM__'//trim(prc_)
+    else
+      s = 'MOD__'//trim(mod)//&
+          '__PROC__'//trim(prc_)
+    endif
   else
-    s = 'in MOD__'//trim(mod)//&
-        '__PROC__'//trim(prc)//&
+    s = 'MOD__'//trim(mod)//&
+        '__PROC__'//trim(prc_)//&
         ' step "'//trim(stp)//'"'
   endif
 end function strstp
+!===============================================================
+!
+!===============================================================
+subroutine modify_prc(prc, prc_, is_program)
+  implicit none
+  character(*), intent(in) :: prc
+  character(*), intent(out) :: prc_
+  logical, intent(out) :: is_program
+
+  is_program = .false.
+  prc_ = trim(prc)
+  if( index(prc, 'program ') == 1 )then
+    is_program = .true.
+    prc_ = trim(prc(len('program ')+1:))
+  endif
+end subroutine modify_prc
 !===============================================================
 !
 !===============================================================
