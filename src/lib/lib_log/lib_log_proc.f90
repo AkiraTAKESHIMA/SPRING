@@ -1497,6 +1497,11 @@ subroutine setlog(opt)
   call fwrd_dict(cmd%msrTime, set%msrTime, &
                  depth, val_msrTime, isRec_msrTime)
   !-------------------------------------------------------------
+  ! Update the indent
+  !-------------------------------------------------------------
+  set%indent(depth) = set%indent(depth) + indentInc
+  set%indentInc(depth) = set%indentInc(depth) + indentInc
+  !-------------------------------------------------------------
 end subroutine setlog
 !===============================================================
 !
