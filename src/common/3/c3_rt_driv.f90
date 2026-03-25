@@ -30,10 +30,10 @@ integer(4) function make_rt(&
         is_report_file_opened, &
         report
   use c1_gs_grid_core, only: &
-        make_idxmap_gs, &
-        make_wgtmap_gs, &
-        make_grdidx_gs, &
-        make_grdara_gs
+        make_idxmap, &
+        make_wgtmap, &
+        make_grdidx, &
+        make_grdara
   use c2_rt_main_finish, only: &
         finish_rt_main
   use c2_rt_vrf_driv, only: &
@@ -68,29 +68,29 @@ integer(4) function make_rt(&
   !-------------------------------------------------------------
   ! Make grid data
   !-------------------------------------------------------------
-  if( make_idxmap_gs(s) /= 0 )then
+  if( make_idxmap(s) /= 0 )then
     info = 1; call errret(); return
   endif
-  if( make_grdidx_gs(s) /= 0 )then
+  if( make_grdidx(s) /= 0 )then
     info = 1; call errret(); return
   endif
-  if( make_grdara_gs(s) /= 0 )then
+  if( make_grdara(s) /= 0 )then
     info = 1; call errret(); return
   endif
-  if( make_wgtmap_gs(s) /= 0 )then
+  if( make_wgtmap(s) /= 0 )then
     info = 1; call errret(); return
   endif
 
-  if( make_idxmap_gs(t) /= 0 )then
+  if( make_idxmap(t) /= 0 )then
     info = 1; call errret(); return
   endif
-  if( make_grdidx_gs(t) /= 0 )then
+  if( make_grdidx(t) /= 0 )then
     info = 1; call errret(); return
   endif
-  if( make_grdara_gs(t) /= 0 )then
+  if( make_grdara(t) /= 0 )then
     info = 1; call errret(); return
   endif
-  if( make_wgtmap_gs(t) /= 0 )then
+  if( make_wgtmap(t) /= 0 )then
     info = 1; call errret(); return
   endif
   !-------------------------------------------------------------

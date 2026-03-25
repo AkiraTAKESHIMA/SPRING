@@ -544,7 +544,7 @@ subroutine read_settings_gs_latlon(a)
   !-------------------------------------------------------------
   call logent('Checking the values', PRCNAM, MODNAM)
 
-  if( keynum('west' ) == 1 )then
+  if( keynum('west') == 1 )then
     call traperr( check_bounds_lon(al%west , al%east ) )
   endif
   if( keynum('south') == 1 )then
@@ -588,34 +588,34 @@ subroutine check_keynum_relations()
   ! Coords.
   !-------------------------------------------------------------
   if( keynum('west') == 0 .and. keynum('east') == 0 )then
-    if( keynum('f_lon_bound') == 0 )then
-      call errend(msg_invalid_input()//&
-                '\nInformation of longitude is missing.'//&
-                  ' Give "west" and "east", or give "f_lon_bound".')
-    endif
+!    if( keynum('f_lon_bound') == 0 )then
+!      call errend(msg_invalid_input()//&
+!                '\nInformation of longitude is missing.'//&
+!                  ' Give "west" and "east", or give "f_lon_bound".')
+!    endif
   elseif( keynum('west') == 1 .and. keynum('east') == 1 )then
-    if( keynum('f_lon_bound') == 1 )then
-      call errend(msg_invalid_input()//&
-                '\nInformation of longitude is duplicated.'//&
-                  ' Give "west" and "east", or give "f_lon_bound".')
-    endif
+!    if( keynum('f_lon_bound') == 1 )then
+!      call errend(msg_invalid_input()//&
+!                '\nInformation of longitude is duplicated.'//&
+!                  ' Give "west" and "east", or give "f_lon_bound".')
+!    endif
   elseif( keynum('west') == 1 .neqv. keynum('east') == 1 )then
     call errend(msg_invalid_input()//&
               '\nIf either "west" or "east" is given, both must be given.')
   endif
 
   if( keynum('south') == 0 .and. keynum('north') == 0 )then
-    if( keynum('f_lon_bound') == 0 )then
-      call errend(msg_invalid_input()//&
-                '\nInformation of longitude is missing.'//&
-                  ' Give "south" and "north", or give "f_lon_bound".')
-    endif
+!    if( keynum('f_lon_bound') == 0 )then
+!      call errend(msg_invalid_input()//&
+!                '\nInformation of longitude is missing.'//&
+!                  ' Give "south" and "north", or give "f_lon_bound".')
+!    endif
   elseif( keynum('south') == 1 .and. keynum('north') == 1 )then
-    if( keynum('f_lon_bound') == 1 )then
-      call errend(msg_invalid_input()//&
-                '\nInformation of longitude is duplicated.'//&
-                  ' Give "south" and "north", or give "f_lon_bound".')
-    endif
+!    if( keynum('f_lon_bound') == 1 )then
+!      call errend(msg_invalid_input()//&
+!                '\nInformation of longitude is duplicated.'//&
+!                  ' Give "south" and "north", or give "f_lon_bound".')
+!    endif
   elseif( keynum('south') == 1 .neqv. keynum('north') == 1 )then
     call errend(msg_invalid_input()//&
               '\nIf either "south" or "north" is given both must be given.')
@@ -735,21 +735,21 @@ subroutine read_settings_gs_raster(a)
 
   call set_keynum('name', 0, 1)
 
-  call set_keynum('nx', 1, 1)
-  call set_keynum('ny', 1, 1)
+  call set_keynum('nx', 0, 1)
+  call set_keynum('ny', 0, 1)
   call set_keynum('xi', 0, 1)
   call set_keynum('xf', 0, 1)
   call set_keynum('yi', 0, 1)
   call set_keynum('yf', 0, 1)
-  call set_keynum('west' , 1, 1)
-  call set_keynum('east' , 1, 1)
-  call set_keynum('south', 1, 1)
-  call set_keynum('north', 1, 1)
+  call set_keynum('west' , 0, 1)
+  call set_keynum('east' , 0, 1)
+  call set_keynum('south', 0, 1)
+  call set_keynum('north', 0, 1)
   call set_keynum('is_south_to_north', 0, 1)
 
   call set_keynum('dir', 0, -1)
 
-  call set_keynum('fin_rstidx', 1, 1)
+  call set_keynum('fin_rstidx', 0, 1)
   call set_keynum('fin_rstara', 0, 1)
   call set_keynum('fin_rstwgt', 0, 1)
   call set_keynum('in_raster_sz', 0, 1)
@@ -1046,7 +1046,7 @@ subroutine read_settings_gs_polygon(a)
 
   call set_keynum('name', 0, 1)
 
-  call set_keynum('np', 1, 1)
+  call set_keynum('np', 0, 1)
   call set_keynum('nij', 1, 1)
 
   call set_keynum('dir', 0, -1)
@@ -1290,8 +1290,8 @@ subroutine check_keynum_relations()
     call errend(msg_invalid_input()//&
               '\n"f_lon_vertex" and "f_x_vertex" must not be given at the same time.')
   elseif( keynum('f_lon_vertex') == 0 .and. keynum('f_x_vertex') == 0 )then
-    call errend(msg_invalid_input()//&
-              '\nEither "f_lon_vertex" or "f_x_vertex" must be given.')
+!    call errend(msg_invalid_input()//&
+!              '\nEither "f_lon_vertex" or "f_x_vertex" must be given.')
   endif
 
   if( keynum('arc_parallel') == 1 .and. keynum('f_arctyp') == 1 )then
@@ -1627,15 +1627,9 @@ subroutine read_settings_remapping(rt, s, t)
 
   call check_values_opt_rt_coef(rtm%opt_coef)
 
-  if( keynum('fout_rt_sidx') == 1 .or. &
-      keynum('fout_rt_tidx') == 1 .or. &
-      keynum('fout_rt_area') == 1 .or. &
-      keynum('fout_rt_coef') == 1 )then
+  if( keynum('fout_rt_sidx') == 1 )then
     rt%status = RT_STATUS__MAKE
-  elseif( keynum('fin_rt_sidx') == 1 .or. &
-          keynum('fin_rt_tidx') == 1 .or. &
-          keynum('fin_rt_area') == 1 .or. &
-          keynum('fin_rt_coef') == 1 )then
+  elseif( keynum('fin_rt_sidx') == 1 )then
     rt%status = RT_STATUS__READ
   else
     rt%status = RT_STATUS__NONE
@@ -1729,6 +1723,40 @@ subroutine check_keynum_relations()
   character(CLEN_PROC), parameter :: PRCNAM = 'check_keynum_relations'
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !--------------------------------------------------------------
+  ! Remapping table
+  !--------------------------------------------------------------
+  if( keynum('fin_rt_sidx') == 1 .and. &
+      keynum('fin_rt_tidx') == 1 .and. &
+      keynum('fin_rt_area') == 1 .and. &
+      keynum('fin_rt_coef') == 1 )then
+    if( keynum('length_rt') == 0 )then
+      call errend(msg_invalid_input()//&
+                '\nPre-existing remapping table was specified '//&
+                  'without specifying its length. '//&
+                  'Specify the length by "length_rt".')
+    endif
+    if( keynum('fout_rt_sidx') == 1 .or. &
+        keynum('fout_rt_tidx') == 1 .or. &
+        keynum('fout_rt_area') == 1 .or. &
+        keynum('fout_rt_coef') == 1 )then
+      call errend(msg_invalid_input()//&
+                '\nOutput remapping table cannot be specified '//&
+                 'when pre-existing remapping table was specified.')
+    endif
+  elseif( keynum('fout_rt_sidx') == 1 .and. &
+          keynum('fout_rt_tidx') == 1 .and. &
+          keynum('fout_rt_area') == 1 .and. &
+          keynum('fout_rt_coef') == 1 )then
+    if( keynum('fin_rt_sidx') == 1 .or. &
+        keynum('fin_rt_tidx') == 1 .or. &
+        keynum('fin_rt_area') == 1 .or. &
+        keynum('fin_rt_coef') == 1 )then
+      call errend(msg_invalid_input()//&
+                '\nPre-existing remapping table cannot be specified '//&
+                 'when output remapping table was specified.')
+    endif
+  endif
   !--------------------------------------------------------------
   ! Remapping data
   !--------------------------------------------------------------
@@ -1972,9 +2000,6 @@ subroutine check_input(&
   type(opt_earth_), intent(in) :: opt_earth
 
   type(gs_), pointer :: a
-  type(gs_latlon_), pointer :: al
-  type(gs_raster_), pointer :: ar
-  type(gs_polygon_), pointer :: ap
   integer :: iMesh
 
   call logbgn(PRCNAM, MODNAM)
@@ -1988,43 +2013,48 @@ subroutine check_input(&
 
       selectcase( a%typ )
       case( MESHTYPE__LATLON )
-        al => a%latlon
-        if( al%nx == 0_8 )then
-          call errend(msg_unexpected_condition()//&
-                    '\n  al%nx == 0'//&
-                    '\n  Mesh name: '//str(al%nam)//&
-                    '\nMesh is not defined.')
-        endif
-
+        call check_input__mesh_latlon__rt_out(a%latlon)
+        
       case( MESHTYPE__RASTER )
-        ar => a%raster
-        if( ar%nx == 0_8 )then
-          call errend(msg_unexpected_condition()//&
-                    '\n  ar%nx == 0'//&
-                    '\n  Mesh name: '//str(ar%nam)//&
-                    '\nMesh is not defined.')
-        endif
+        call check_input__mesh_raster__rt_out(a%raster)
 
       case( MESHTYPE__POLYGON )
-        ap => a%polygon
-        if( ap%nij == 0_8 )then
-          call errend(msg_unexpected_condition()//&
-                    '\n  ap%nij == 0'//&
-                    '\n  Mesh name: '//str(ap%nam)//&
-                    '\nMesh is not defined.')
-        endif
+        call check_input__mesh_polygon__rt_out(a%polygon)
 
       case( MESHTYPE__UNDEF )
         call errend(msg_unexpected_condition()//&
                   '\n  a%typ == MESHTYPE__UNDEF'//&
-                  '\n  Mesh name: '//str(a%nam))
+                  '\n  Mesh: '//str(a%nam))
 
       case default
         call errend(msg_invalid_value('a%typ', a%typ)//&
-                  '\n  Mesh name: '//str(a%nam))
+                  '\n  Mesh: '//str(a%nam))
       endselect
     enddo  ! iMesh/
   case( RT_STATUS__READ )
+    do iMesh = 1, 2
+      call select_gs(iMesh, s, t, a)
+
+      selectcase( a%typ )
+      case( MESHTYPE__LATLON )
+        call check_input__mesh_latlon__rt_in(a%latlon)
+        
+      case( MESHTYPE__RASTER )
+        call check_input__mesh_raster__rt_in(a%raster)
+
+      case( MESHTYPE__POLYGON )
+        call check_input__mesh_polygon__rt_in(a%polygon)
+
+      case( MESHTYPE__UNDEF )
+        call errend(msg_unexpected_condition()//&
+                  '\n  a%typ == MESHTYPE__UNDEF'//&
+                  '\n  Mesh: '//str(a%nam))
+
+      case default
+        call errend(msg_invalid_value('a%typ', a%typ)//&
+                  '\n  Mesh: '//str(a%nam))
+      endselect
+    enddo  ! iMesh/
 
   case( RT_STATUS__NONE )
     call errend(msg_unexpected_condition()//&
@@ -2055,8 +2085,146 @@ subroutine check_input(&
     enddo
   endif
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  nullify(a)
+  !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_input
+!===============================================================
+!
+!===============================================================
+subroutine check_input__mesh_latlon__rt_out(al)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input__mesh_latlon__rt_out'
+  type(gs_latlon_), intent(in) :: al
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( al%nx <= 0_8 )then
+    call errend(msg_invalid_value('al%nx', al%nx)//&
+              '\n  mesh: '//str(al%nam))
+  endif
+  if( al%ny <= 0_8 )then
+    call errend(msg_invalid_value('al%ny', al%ny)//&
+              '\n  mesh: '//str(al%nam))
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input__mesh_latlon__rt_out
+!===============================================================
+!
+!===============================================================
+subroutine check_input__mesh_raster__rt_out(ar)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input__mesh_raster__rt_out'
+  type(gs_raster_), intent(in) :: ar
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( ar%nx <= 0_8 )then
+    call errend(msg_invalid_value('ar%nx', ar%nx)//&
+              '\n  mesh: '//str(ar%nam))
+  endif
+  if( ar%ny <= 0_8 )then
+    call errend(msg_invalid_value('ar%ny', ar%ny)//&
+              '\n  mesh: '//str(ar%nam))
+  endif
+  if( ar%f_raster_in%idx%path == '' )then
+    call errend(msg_invalid_value('ar%f_raster_in%idx%path', ar%f_raster_in%idx%path)//&
+              '\n  mesh: '//str(ar%nam))
+  endif
+  !-------------------------------------------------------------
+   call logret(PRCNAM, MODNAM)
+end subroutine check_input__mesh_raster__rt_out
+!===============================================================
+!
+!===============================================================
+subroutine check_input__mesh_polygon__rt_out(ap)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input__mesh_polygon__rt_out'
+  type(gs_polygon_), intent(in) :: ap
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( ap%nij <= 0_8 )then
+    call errend(msg_invalid_value('ap%nij', ap%nij)//&
+              '\n  mesh: '//str(ap%nam))
+  endif
+  if( ap%np <= 0_8 )then
+    call errend(msg_invalid_value('ap%np', ap%np)//&
+              '\n  mesh: '//str(ap%nam))
+  endif
+  !-------------------------------------------------------------
+   call logret(PRCNAM, MODNAM)
+end subroutine check_input__mesh_polygon__rt_out
+!===============================================================
+!
+!===============================================================
+subroutine check_input__mesh_latlon__rt_in(al)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input__mesh_latlon__rt_in'
+  type(gs_latlon_), intent(in) :: al
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( al%nx <= 0_8 )then
+    call errend(msg_invalid_value('al%nx', al%nx)//&
+              '\n  mesh: '//str(al%nam))
+  endif
+  if( al%ny <= 0_8 )then
+    call errend(msg_invalid_value('al%ny', al%ny)//&
+              '\n  mesh: '//str(al%nam))
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input__mesh_latlon__rt_in
+!===============================================================
+!
+!===============================================================
+subroutine check_input__mesh_raster__rt_in(ar)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input__mesh_raster__rt_in'
+  type(gs_raster_), intent(in) :: ar
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( ar%f_grid_in%sz(1) <= 0_8 )then
+    call errend(msg_invalid_value('ar%f_grid_in%sz(1)', ar%f_grid_in%sz(1))//&
+              '\n  mesh: '//str(ar%nam))
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input__mesh_raster__rt_in
+!===============================================================
+!
+!===============================================================
+subroutine check_input__mesh_polygon__rt_in(ap)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input__mesh_polygon__rt_in'
+  type(gs_polygon_), intent(in) :: ap
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( ap%nij <= 0_8 )then
+    call errend(msg_invalid_value('ap%nij', ap%nij)//&
+              '\n  mesh: '//str(ap%nam))
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input__mesh_polygon__rt_in
 !===============================================================
 !
 !===============================================================

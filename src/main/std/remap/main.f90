@@ -5,8 +5,10 @@ program main
   use c1_const
   use c1_type_opt
   use c1_type_gs
-  use c1_gs_driv, only: &
-        set_gs_all
+  use c1_gs_define, only: &
+        set_gs
+  use c1_gs_grid_core, only: &
+        make_grdidx
   use c2_type_rt
   use c2_rt_main_io, only: &
         read_rt_main
@@ -33,16 +35,22 @@ program main
   !-------------------------------------------------------------
   call read_settings(s, t, rt)
 
-  call traperr( set_gs_all(s) )
-  call traperr( set_gs_all(t) )
-
   selectcase( rt%status )
+
   case( RT_STATUS__MAKE )
+    call traperr( set_gs(s) )
+    call traperr( set_gs(t) )
     call traperr( make_rt(s, t, rt, calc_coef, calc_vrf, output) )
+
   case( RT_STATUS__READ )
+    call traperr( make_grdidx(s) )
+    call traperr( make_grdidx(t) )
     call traperr( read_rt_main(rt%main) )
+
   case( RT_STATUS__NONE )
-    continue
+    call errend(msg_unexpected_condition()//&
+              '\n  rt%status == RT_STATUS__NONE')
+
   case default
     call errend(msg_invalid_value('rt%status', rt%status))
   endselect

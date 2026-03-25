@@ -23,6 +23,7 @@ module c1_gs_define
   ! Interfaces
   !-------------------------------------------------------------
   interface set_gs
+    module procedure set_mesh__any
     module procedure set_gs__latlon
     module procedure set_gs__raster
     module procedure set_gs__polygon
@@ -33,6 +34,45 @@ module c1_gs_define
   character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_define'
   !-------------------------------------------------------------
 contains
+!===============================================================
+!
+!===============================================================
+integer(4) function set_mesh__any(a) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_mesh__any'
+  type(gs_), intent(inout) :: a
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%typ )
+
+  case( MESHTYPE__LATLON )
+    if( set_gs__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__RASTER )
+    if( set_gs__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__POLYGON )
+    if( set_gs__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case default
+    info = 1
+    call errret(msg_invalid_value('a%typ', a%typ)//&
+              '\n  Mesh: '//str(a%nam))
+    return
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function set_mesh__any
 !===============================================================
 !
 !===============================================================

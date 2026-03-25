@@ -45,10 +45,10 @@ integer(4) function set_gs__polygon(ap) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( .not. ap%is_valid )then
-    call logret(PRCNAM, MODNAM)
-    return
-  endif
+!  if( .not. ap%is_valid )then
+!    call logret(PRCNAM, MODNAM)
+!    return
+!  endif
 
   fp => ap%f_polygon_in
   g  => ap%grid

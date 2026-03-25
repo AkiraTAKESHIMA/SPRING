@@ -72,26 +72,26 @@ subroutine remap(s, t, rt)
     !-----------------------------------------------------------
     ! Read the remapping table
     !-----------------------------------------------------------
-!    allocate(rtm%sidx(rtm%nij))
-!    allocate(rtm%tidx(rtm%nij))
-!    allocate(rtm%coef(rtm%nij))
-!
-!    f => rtm%f%sidx
-!    call logmsg('Reading sidx '//str(fileinfo(f)))
-!    call traperr( rbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec) )
-!
-!    f => rtm%f%tidx
-!    call logmsg('Reading tidx '//str(fileinfo(f)))
-!    call traperr( rbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec) )
-!
-!    f => rtm%f%coef
-!    call logmsg('Reading coef '//str(fileinfo(f)))
-!    call traperr( rbin(rtm%coef, f%path, f%dtype, f%endian, f%rec) )
+    allocate(rtm%sidx(rtm%nij))
+    allocate(rtm%tidx(rtm%nij))
+    allocate(rtm%coef(rtm%nij))
+
+    f => rtm%f%sidx
+    call logmsg('Reading sidx '//str(fileinfo(f)))
+    call traperr( rbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec) )
+
+    f => rtm%f%tidx
+    call logmsg('Reading tidx '//str(fileinfo(f)))
+    call traperr( rbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec) )
+
+    f => rtm%f%coef
+    call logmsg('Reading coef '//str(fileinfo(f)))
+    call traperr( rbin(rtm%coef, f%path, f%dtype, f%endian, f%rec) )
     !-----------------------------------------------------------
     ! Set grid indices
     !-----------------------------------------------------------
-!    call set_grdidx(s)
-!    call set_grdidx(t)
+    call set_grdidx(s)
+    call set_grdidx(t)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -112,23 +112,11 @@ subroutine remap(s, t, rt)
       !---------------------------------------------------------
       ! Read input
       !---------------------------------------------------------
-!      call traperr( rbin(&
-!             sval_2d, sf%path, sf%dtype, sf%endian, sf%rec, &
-!             sz=sfg%sz(:2), lb=sfg%lb(:2)) )
+      call traperr( rbin(&
+             sval_2d, sf%path, sf%dtype, sf%endian, sf%rec, &
+             sz=sfg%sz(:2), lb=sfg%lb(:2)) )
 
-      selectcase( sfg%ny )
-      case( 1_8 )
-        call traperr( rbin(&
-               sval, sf%path, sf%dtype, sf%endian, sf%rec, &
-               sz=sfg%sz(1), lb=sfg%lb(1), check_recl=.true.) )
-      case( 2_8: )
-        call traperr( rbin(&
-               sval, sfg%nx, sfg%ny, &
-               sf%path, sf%dtype, sf%endian, sf%rec, &
-               sz=sfg%sz(:2), lb=sfg%lb(:2), check_recl=.true.) )
-      case( :0_8 )
-        call errend(msg_invalid_value('sfg%ny', sfg%ny))
-      endselect
+      sval(:) = reshape(sval_2d, (/sfg%nij/))
       !---------------------------------------------------------
       ! Remap
       !---------------------------------------------------------
@@ -139,14 +127,14 @@ subroutine remap(s, t, rt)
         call search(rtm%sidx(rtij), sg%idx, sg%idxarg, loc)
         if( loc == 0_8 )then
           call errend(msg_unexpected_condition()//&
-                    '\nIndex '//str(rtm%sidx(rtij))//' of the source mesh is invalid.')
+                    '\nIndex '//str(rtm%sidx(rtij))//' of the source mesh was not found.')
         endif
         sij = sg%idxarg(loc)
 
         call search(rtm%tidx(rtij), tg%idx, tg%idxarg, loc)
         if( loc == 0_8 )then
           call errend(msg_unexpected_condition()//&
-                    '\nIndex '//str(rtm%tidx(rtij))//' of the target mesh is invalid.')
+                    '\nIndex '//str(rtm%tidx(rtij))//' of the target mesh was not found.')
         endif
         tij = tg%idxarg(loc)
 

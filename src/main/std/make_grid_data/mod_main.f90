@@ -25,8 +25,14 @@ contains
 !
 !===============================================================
 subroutine make_grid_data(a)
-  use c1_gs_driv, only: &
-        set_gs_all
+  use c1_gs_define, only: &
+        set_gs
+  use c1_gs_grid_core, only: &
+        make_grduwa, &
+        make_grdara, &
+        make_grdwgt, &
+        make_grdxyz, &
+        make_grdlonlat
   use c1_gs_grid_io, only: &
         write_grid_data
   implicit none
@@ -45,13 +51,13 @@ subroutine make_grid_data(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call traperr( set_gs_all(&
-         a, &
-         grduwa=fg_out%save_uwa, &
-         grdara=fg_out%save_ara, &
-         grdwgt=fg_out%save_wgt, &
-         grdxyz=fg_out%save_xyz, &
-         grdlonlat=fg_out%save_lonlat) )
+  call traperr( set_gs(a) )
+
+  if( fg_out%save_uwa ) call traperr( make_grduwa(a) )
+  if( fg_out%save_ara ) call traperr( make_grdara(a) )
+  if( fg_out%save_wgt ) call traperr( make_grdwgt(a) )
+  if( fg_out%save_xyz ) call traperr( make_grdxyz(a) )
+  if( fg_out%save_lonlat ) call traperr( make_grdlonlat(a) )
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

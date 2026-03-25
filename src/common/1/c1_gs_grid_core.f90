@@ -22,55 +22,58 @@ module c1_gs_grid_core
   public :: make_grdwgt
   public :: make_grdxyz
   public :: make_grdlonlat
-
-  public :: make_idxmap_gs
-  public :: make_wgtmap_gs
-  public :: make_grdidx_gs
-  public :: make_grdara_gs
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
   interface make_idxmap
+    module procedure make_idxmap__any
     module procedure make_idxmap__latlon
     module procedure make_idxmap__raster
   end interface
 
   interface make_wgtmap
+    module procedure make_wgtmap__any
     module procedure make_wgtmap__latlon
     module procedure make_wgtmap__raster
   end interface
 
   interface make_grdidx
+    module procedure make_grdidx__any
     module procedure make_grdidx__latlon
     module procedure make_grdidx__raster
     module procedure make_grdidx__polygon
   end interface
 
   interface make_grduwa
+    module procedure make_grduwa__any
     module procedure make_grduwa__latlon
     module procedure make_grduwa__raster
     module procedure make_grduwa__polygon
   end interface
 
   interface make_grdara
+    module procedure make_grdara__any
     module procedure make_grdara__latlon
     module procedure make_grdara__raster
     module procedure make_grdara__polygon
   end interface
 
   interface make_grdwgt
+    module procedure make_grdwgt__any
     module procedure make_grdwgt__latlon
     module procedure make_grdwgt__raster
     module procedure make_grdwgt__polygon
   end interface
 
   interface make_grdxyz
+    module procedure make_grdxyz__any
     module procedure make_grdxyz__latlon
     module procedure make_grdxyz__raster
     module procedure make_grdxyz__polygon
   end interface
 
   interface make_grdlonlat
+    module procedure make_grdlonlat__any
     module procedure make_grdlonlat__latlon
     module procedure make_grdlonlat__raster
     module procedure make_grdlonlat__polygon
@@ -89,9 +92,9 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_idxmap_gs(a) result(info)
+integer(4) function make_idxmap__any(a) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'make_idxmap_gs'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_idxmap__any'
   type(gs_), intent(inout) :: a
 
   info = 0
@@ -100,26 +103,30 @@ integer(4) function make_idxmap_gs(a) result(info)
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
+
   case( MESHTYPE__LATLON )
     if( make_idxmap__latlon(a%latlon) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__RASTER )
     if( make_idxmap__raster(a%raster) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__POLYGON )
     continue
+
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end function make_idxmap_gs
+end function make_idxmap__any
 !===============================================================
 !
 !===============================================================
-integer(4) function make_wgtmap_gs(a) result(info)
+integer(4) function make_wgtmap__any(a) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'make_wgtmap_gs'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_wgtmap__any'
   type(gs_), intent(inout) :: a
 
   info = 0
@@ -128,26 +135,30 @@ integer(4) function make_wgtmap_gs(a) result(info)
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
+
   case( MESHTYPE__LATLON )
     if( make_wgtmap__latlon(a%latlon) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__RASTER )
     if( make_wgtmap__raster(a%raster) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__POLYGON )
     continue
+
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end function make_wgtmap_gs
+end function make_wgtmap__any
 !===============================================================
 !
 !===============================================================
-integer(4) function make_grdidx_gs(a) result(info)
+integer(4) function make_grdidx__any(a) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx_gs'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdidx__any'
   type(gs_), intent(inout) :: a
 
   info = 0
@@ -156,26 +167,32 @@ integer(4) function make_grdidx_gs(a) result(info)
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
+
   case( MESHTYPE__LATLON )
     if( make_grdidx__latlon(a%latlon) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__RASTER )
     if( make_grdidx__raster(a%raster) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__POLYGON )
-    continue
+    if( make_grdidx__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end function make_grdidx_gs
+end function make_grdidx__any
 !===============================================================
 !
 !===============================================================
-integer(4) function make_grdara_gs(a) result(info)
+integer(4) function make_grduwa__any(a) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdara_gs'
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grduwa__any'
   type(gs_), intent(inout) :: a
 
   info = 0
@@ -184,22 +201,162 @@ integer(4) function make_grdara_gs(a) result(info)
   !
   !-------------------------------------------------------------
   selectcase( a%typ )
+
+  case( MESHTYPE__LATLON )
+    if( make_grduwa__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__RASTER )
+    if( make_grduwa__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__POLYGON )
+    if( make_grduwa__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function make_grduwa__any
+!===============================================================
+!
+!===============================================================
+integer(4) function make_grdara__any(a) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdara__any'
+  type(gs_), intent(inout) :: a
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%typ )
+
   case( MESHTYPE__LATLON )
     if( make_grdara__latlon(a%latlon) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__RASTER )
     if( make_grdara__raster(a%raster) /= 0 )then
       info = 1; call errret(); return
     endif
+
   case( MESHTYPE__POLYGON )
     if( make_grdara__polygon(a%polygon) /= 0 )then
       info = 1; call errret(); return
     endif
+
   endselect
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end function make_grdara_gs
+end function make_grdara__any
+!===============================================================
+!
+!===============================================================
+integer(4) function make_grdwgt__any(a) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdwgt__any'
+  type(gs_), intent(inout) :: a
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%typ )
+
+  case( MESHTYPE__LATLON )
+    if( make_grdwgt__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__RASTER )
+    if( make_grdwgt__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__POLYGON )
+    if( make_grdwgt__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function make_grdwgt__any
+!===============================================================
+!
+!===============================================================
+integer(4) function make_grdxyz__any(a) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdxyz__any'
+  type(gs_), intent(inout) :: a
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%typ )
+
+  case( MESHTYPE__LATLON )
+    if( make_grdxyz__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__RASTER )
+    if( make_grdxyz__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__POLYGON )
+    if( make_grdxyz__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function make_grdxyz__any
+!===============================================================
+!
+!===============================================================
+integer(4) function make_grdlonlat__any(a) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grdlonlat__any'
+  type(gs_), intent(inout) :: a
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  selectcase( a%typ )
+
+  case( MESHTYPE__LATLON )
+    if( make_grdlonlat__latlon(a%latlon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__RASTER )
+    if( make_grdlonlat__raster(a%raster) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  case( MESHTYPE__POLYGON )
+    if( make_grdlonlat__polygon(a%polygon) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
+  endselect
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function make_grdlonlat__any
 !===============================================================
 !
 !===============================================================

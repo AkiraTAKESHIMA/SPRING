@@ -137,7 +137,7 @@ integer(4) function set_values_opt_earth(&
   ! Case: Geosys = WGS84
   case( EARTH_GEOSYS__WGS84 )
     if( earth%rtyp == '' )then
-      call logmsg('Default value was set for %rtyp, type of radious.')
+      call logmsg('Default value was set for %rtyp, type of radius.')
       earth%rtyp = EARTH_RTYP__DEFAULT
     endif
 
@@ -178,7 +178,45 @@ integer(4) function set_values_opt_earth(&
   !-------------------------------------------------------------
   ! Case: Geosys = GRS80
   case( EARTH_GEOSYS__GRS80 )
+    if( earth%rtyp == '' )then
+      call logmsg('Default value was set for %rtyp, type of radius.')
+      earth%rtyp = EARTH_RTYP__DEFAULT
+    endif
 
+    selectcase( earth%rtyp )
+
+    case( EARTH_RTYP__ELLIPS )
+      earth%shptyp = EARTH_SHPTYP__ELLIPS
+      earth%r = EARTH_CONST__GRS80_R_SEMIMAJOR
+
+    case( EARTH_RTYP__MEAN )
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+      earth%r = EARTH_CONST__GRS80_R_MEAN
+
+    case( EARTH_RTYP__VOLMETRIC )
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+      earth%r = EARTH_CONST__GRS80_R_VOLMETRIC
+
+    case( EARTH_RTYP__AUTHALIC )
+      earth%shptyp = EARTH_SHPTYP__SPHERE
+      earth%r = EARTH_CONST__GRS80_R_AUTHALIC
+
+    case default
+      info = 1
+      call errret(msg_invalid_value('earth%rtyp', earth%rtyp))
+      return
+    endselect
+
+    selectcase( earth%shptyp )
+    case( EARTH_SHPTYP__SPHERE )
+      earth%finv = 0.d0
+      earth%f    = 0.d0
+      earth%e2   = 0.d0
+    case( EARTH_SHPTYP__ELLIPS )
+      earth%finv = EARTH_CONST__GRS80_FINV
+      earth%f    = EARTH_CONST__GRS80_F
+      earth%e2   = EARTH_CONST__GRS80_E2
+    endselect
   !-------------------------------------------------------------
   ! Case: Geosys = other
   case( EARTH_GEOSYS__OTHER )

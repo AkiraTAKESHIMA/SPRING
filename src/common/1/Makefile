@@ -30,7 +30,6 @@ c1_gs_grid_util.o\
 c1_gs_grid_core.o\
 c1_gs_define_polygon.o\
 c1_gs_define.o\
-c1_gs_driv.o\
 c1_gs_grid_io.o
 
 OBJ_CMN = $(OBJ_F)
