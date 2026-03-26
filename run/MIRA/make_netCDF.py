@@ -4,7 +4,7 @@ import netCDF4
 import numpy as np
 
 
-itermax = 1000
+ITERMAX = 3
 
 TABLE_VAR = dict(
   TPW = 'TotalPrecipWater',
@@ -34,7 +34,7 @@ def get_num_elem(mesh):
 #
 # e.g. srcMesh = MIRAu-CS-4
 def makeNetCDF(srcMesh, tgtMesh, var):
-    dir_field = f'out/remap/{srcMesh}_to_{tgtMesh}/field'
+    dir_field = f'out/remap_iter/{srcMesh}_to_{tgtMesh}/field/{var}'
 
     path_nc = f'{dir_field}/{var}.nc'
     if os.path.isfile(path_nc):
@@ -52,9 +52,9 @@ def makeNetCDF(srcMesh, tgtMesh, var):
 
     src = nc.createVariable(f'{var_nc}_remap_src', np.float64, ('iteration', 'elem_src'))
     tgt = nc.createVariable(f'{var_nc}_remap_tgt', np.float64, ('iteration', 'elem_tgt'))
-    for i in range(1, itermax+1):
-        src[i,:] = np.fromfile(f'{dir_field}/{var}_src_iter{i:04d}.bin')
-        tgt[i,:] = np.fromfile(f'{dir_field}/{var}_tgt_iter{i:04d}.bin')
+    for i in range(1, ITERMAX+1):
+        src[i,:] = np.fromfile(f'{dir_field}/{var}_src_{i:04d}.bin')
+        tgt[i,:] = np.fromfile(f'{dir_field}/{var}_tgt_{i:04d}.bin')
     nc.close()
 
 

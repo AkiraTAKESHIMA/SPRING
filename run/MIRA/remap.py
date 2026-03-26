@@ -162,6 +162,8 @@ def make_remapping_table(
     tgtMeshName, *_ = getMesh(tgtIsUniform, tgtMeshType, tgtResolution)
     sForth = get_sForth(isForth)
 
+    print(f'Making table {srcMeshName} to {tgtMeshName} ({sForth})')
+
     f_conf = f'conf/remapping_table/{srcMeshName}_to_{tgtMeshName}/{sForth}.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
     print(f'  conf: {f_conf}')
@@ -195,6 +197,7 @@ path_report: "{get_rtDir(srcMeshName, tgtMeshName, isForth)}/report.txt"\n\
            capture_output=True,
            #check=True,
          )
+
     f_log = f'{get_rtDir(srcMeshName, tgtMeshName, isForth)}/log'
     f_log_stdout = f_log + '.out'
     f_log_stderr = f_log + '.err'
@@ -218,7 +221,7 @@ def remap_field(
     tgtMeshName, *_ = getMesh(tgtIsUniform, tgtMeshType, tgtResolution)
     sForth = get_sForth(isForth)
 
-    print(f'{srcMeshName} to {tgtMeshName} ({sForth}) iter{i}')
+    print(f'Remapping {srcMeshName} to {tgtMeshName} ({sForth}) iter{i}')
 
     f_conf = f'conf/remap_iter/{srcMeshName}_to_{tgtMeshName}/iter{i:04d}_{sForth}.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
