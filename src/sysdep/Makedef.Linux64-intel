@@ -3,7 +3,7 @@
 #==============================================================
 FC = ifort
 
-FCFLAGS_FAST  = -O2 -g -assume byterecl
+FCFLAGS_FAST  = -O2 -g -assume byterecl -heap-arrays
 FCFLAGS_DEBUG = -O0 -check all -check noarg_temp_created -warn all -CB\
                 -gen_interfaces -traceback -g\
                 -heap-arrays\
