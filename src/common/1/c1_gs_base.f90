@@ -1185,7 +1185,7 @@ integer(4) function set_mesh_common(a) result(info)
   ac => a%cmn
 
   allocate(character(1) :: c)
-  c = ac%id
+  c = a%id
 
   allocate(character(1) :: ac%id)
   ac%id = c//'%cmn'
