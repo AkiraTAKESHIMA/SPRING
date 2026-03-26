@@ -7,29 +7,9 @@ module mod_main
   use lib_math
   use c1_const
   use c1_type_opt
-  use c1_file, only: &
-        report
-  use c2_type_rt
-  use c2_rt_main_util, only: &
-        merge_elems_same_index, &
-        sort_rt
-  use c2_rt_main_coef, only: &
-        calc_rt_coef_sum_modify_enabled    , &
-        calc_rt_coef_sum_modify_not_enabled
-  use c2_rt_stats, only: &
-        get_rt_main_stats     , &
-        report_rt_main_summary
-  use c2_rt_error, only: &
-        raise_error_coef_negative        , &
-        raise_error_coef_small           , &
-        raise_error_coef_above_thresh    , &
-        raise_error_coef_sum_above_thresh, &
-        raise_error_val_sum_non_positive
   use def_type
-  use mod_utils, only: &
-        open_file_grid_im , &
-        close_file_grid_im
   implicit none
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_main'
   private
   !-------------------------------------------------------------
   ! Public procedures
@@ -47,7 +27,23 @@ contains
 !
 !===============================================================
 subroutine merge_rt(input, output, opt)
+  use c1_file, only: &
+        report
+  use c2_type_rt
+  use c2_rt_main_util, only: &
+        merge_elems_same_index, &
+        sort_rt
+  use c2_rt_main_coef, only: &
+        calc_rt_coef_sum_modify_enabled    , &
+        calc_rt_coef_sum_modify_not_enabled
+  use c2_rt_stats, only: &
+        get_rt_main_stats     , &
+        report_rt_main_summary
+  use mod_utils, only: &
+        open_file_grid_im , &
+        close_file_grid_im
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'merge_rt'
   type(input_) , intent(inout)         :: input
   type(output_), intent(inout), target :: output
   type(opt_)   , intent(in)            :: opt
@@ -69,7 +65,7 @@ subroutine merge_rt(input, output, opt)
 
   integer :: un_grid_im
 
-  call echo(code%bgn, 'merge_rt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -81,7 +77,7 @@ subroutine merge_rt(input, output, opt)
   if( opt%sys%memory_ulim == 0.d0 )then
     nmax_ulim = 0_8
   else
-    call eerr(str(msg_not_implemented()))
+    call errend(str(msg_not_implemented()))
   endif
   !-------------------------------------------------------------
   !
@@ -91,11 +87,11 @@ subroutine merge_rt(input, output, opt)
     !-----------------------------------------------------------
     ! Read remapping tables
     !-----------------------------------------------------------
-    call echo(code%ent, 'Reading remapping tables')
+    call logent('Reading remapping tables', PRCNAM, MODNAM)
 
     rtm%nij = sum(input%list_f_rt(:)%nij)
     rtm%ijsize = rtm%nij
-    call edbg('Total length: '//str(rtm%nij))
+    call logmsg('Total length: '//str(rtm%nij))
     allocate(rtm%sidx(rtm%ijsize))
     allocate(rtm%tidx(rtm%ijsize))
     allocate(rtm%area(rtm%ijsize))
@@ -104,71 +100,71 @@ subroutine merge_rt(input, output, opt)
     ije = 0_8
     do iFile_rt = 1, input%nFiles_rt
       f_rt => input%list_f_rt(iFile_rt)
-      call echo(code%ent, 'File '//str(iFile_rt,dgt(input%nFiles_rt))//' / '//&
-                str(input%nFiles_rt))
-      call edbg('Length: '//str(f_rt%nij,dgt(rtm%nij))//&
-                ' ('//str((/ije+1_8,ije+f_rt%nij/),dgt(rtm%nij),' ~ ')//')')
+      call logent('File '//str(iFile_rt, dgt(input%nFiles_rt))//' / '//&
+                  str(input%nFiles_rt))
+      call logmsg('Length: '//str(f_rt%nij,dgt(rtm%nij))//&
+                  ' ('//str((/ije+1_8,ije+f_rt%nij/),dgt(rtm%nij),' ~ ')//')')
 
       f => f_rt%f_sidx
-      call edbg('Read '//str(fileinfo(f)))
-      call rbin(rtm%sidx(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Read '//str(fileinfo(f)))
+      call traperr( rbin(rtm%sidx(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec) )
 
       f => f_rt%f_tidx
-      call edbg('Read '//str(fileinfo(f)))
-      call rbin(rtm%tidx(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Read '//str(fileinfo(f)))
+      call traperr( rbin(rtm%tidx(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec) )
 
       f => f_rt%f_area
-      call edbg('Read '//str(fileinfo(f)))
-      call rbin(rtm%area(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Read '//str(fileinfo(f)))
+      call traperr( rbin(rtm%area(ije+1_8:ije+f_rt%nij), f%path, f%dtype, f%endian, f%rec) )
 
-      call get_rt_main_stats(rtm, ije+1_8, ije+f_rt%nij)
+      call traperr( get_rt_main_stats(rtm, ije+1_8, ije+f_rt%nij) )
 
       call add(ije, f_rt%nij)
 
-      call echo(code%ext)
+      call logext()
     enddo  ! iFile_rt
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     ! Merge the elements that have same pair of indices
     !-----------------------------------------------------------
-    call echo(code%ent, 'Merging the elements that have same pair of indices')
+    call logent('Merging the elements that have same pair of indices', PRCNAM, MODNAM)
 
-    call merge_elems_same_index(&
-           rtm%mesh_sort, rtm%ijsize, rtm%nij, rtm%sidx, rtm%tidx, rtm%area)
+    call traperr( merge_elems_same_index(&
+           rtm%mesh_sort, rtm%ijsize, rtm%nij, rtm%sidx, rtm%tidx, rtm%area) )
     allocate(rtm%coef(rtm%ijsize))
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     ! Calc. coef.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Calculating coef.')
+    call logent('Calculating coef.', PRCNAM, MODNAM)
 
     selectcase( rtm%mesh_coef )
     !-----------------------------------------------------------
-    ! 
+    !
     case( MESH__SOURCE, &
           MESH__TARGET )
       !---------------------------------------------------------
       ! Case: Sum. of coef. is modified
       if( rtm%opt_coef%is_sum_modify_enabled )then
-        call echo(code%ent, 'Case: coef_sum_modify is enabled')
+        call logent('Case: coef_sum_modify is enabled', PRCNAM, MODNAM)
         !-------------------------------------------------------
-        call echo(code%ent, 'Calculating coef.')
-  
-        call calc_rt_coef_sum_modify_enabled(rtm)
-  
-        call echo(code%ext)
+        call logent('Calculating coef.', PRCNAM, MODNAM)
+
+        call traperr( calc_rt_coef_sum_modify_enabled(rtm) )
+
+        call logext()
         !-------------------------------------------------------
-        call echo(code%ext)
+        call logext()
       !---------------------------------------------------------
       ! Case: Sum. of coef. is not modified
       else
-        call echo(code%ent, 'Case: coef_sum_modify is not enabled')
+        call logent('Case: coef_sum_modify is not enabled', PRCNAM, MODNAM)
         !-------------------------------------------------------
         ! Read grid data
         !-------------------------------------------------------
-        call echo(code%ent, 'Reading grid data')
+        call logent('Reading grid data', PRCNAM, MODNAM)
 
         allocate(grdidx(output%f_grid%nmax))
         allocate(grdidxarg(output%f_grid%nmax))
@@ -176,12 +172,12 @@ subroutine merge_rt(input, output, opt)
 
         if( output%f_grid%f_idx%path /= '' )then
           f => output%f_grid%f_idx
-          call edbg('Read '//str(fileinfo(f)))
-          call rbin(grdidx, f%path, f%dtype, f%endian, f%rec)
+          call logmsg('Reading '//str(fileinfo(f)))
+          call traperr( rbin(grdidx, f%path, f%dtype, f%endian, f%rec) )
 
           f => output%f_grid%f_ara
-          call edbg('Read '//str(fileinfo(f)))
-          call rbin(grdara, f%path, f%dtype, f%endian, f%rec)
+          call logmsg('Reading '//str(fileinfo(f)))
+          call traperr( rbin(grdara, f%path, f%dtype, f%endian, f%rec) )
         else
           call open_file_grid_im(output%path_grid_im, action_read, un_grid_im)
 
@@ -198,68 +194,68 @@ subroutine merge_rt(input, output, opt)
 
         call argsort(grdidx, grdidxarg)
 
-        call echo(code%ext)
+        call logext()
         !-------------------------------------------------------
         ! Calc. coef.
         !-------------------------------------------------------
-        call echo(code%ent, 'Calculating coef.')
+        call logent('Calculating coef.', PRCNAM, MODNAM)
 
-        call calc_rt_coef_sum_modify_not_enabled(rtm, grdidx, grdidxarg, grdara)
+        call traperr( calc_rt_coef_sum_modify_not_enabled(&
+               rtm, grdidx, grdidxarg, grdara) )
 
         deallocate(grdidx)
         deallocate(grdidxarg)
         deallocate(grdara)
 
-        call echo(code%ext)
+        call logext()
        !-------------------------------------------------------
-       call echo(code%ext)
+       call logext()
        !-------------------------------------------------------
      endif
     !-----------------------------------------------------------
-    ! 
+    !
     case( MESH__NONE )
       call realloc(rtm%coef, rtm%ijsize, clear=.true.)
       rtm%coef(:) = rtm%area(:)
     !-----------------------------------------------------------
     !
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
+      call errend(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef))
     endselect
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call sort_rt(rtm)
+    call traperr( sort_rt(rtm) )
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call get_rt_main_stats(rtm)
+    call traperr( get_rt_main_stats(rtm) )
 
-    call report_rt_main_summary(rtm, .true., .true.)
+    call traperr( report_rt_main_summary(rtm, .true., .true.) )
     !-----------------------------------------------------------
     ! Output
     !-----------------------------------------------------------
-    call echo(code%ent, 'Outputting')
+    call logent('Outputting', PRCNAM, MODNAM)
 
     f => rtm%f%sidx
-    call edbg('Write '//str(fileinfo(f)))
-    call wbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing '//str(fileinfo(f)))
+    call traperr( wbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec) )
 
     f => rtm%f%tidx
-    call edbg('Write '//str(fileinfo(f)))
-    call wbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing '//str(fileinfo(f)))
+    call traperr( wbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec) )
 
     f => rtm%f%area
-    call edbg('Write '//str(fileinfo(f)))
-    call wbin(rtm%area, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing '//str(fileinfo(f)))
+    call traperr( wbin(rtm%area, f%path, f%dtype, f%endian, f%rec) )
 
     f => rtm%f%coef
-    call edbg('Write '//str(fileinfo(f)))
-    call wbin(rtm%coef, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Writing '//str(fileinfo(f)))
+    call traperr( wbin(rtm%coef, f%path, f%dtype, f%endian, f%rec) )
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     rtm%ijsize = 0_8
     deallocate(rtm%sidx)
@@ -269,10 +265,10 @@ subroutine merge_rt(input, output, opt)
   !-------------------------------------------------------------
   ! Case: Memory is limited
   else
-    call eerr(str(msg_not_implemented()))
+    call errend(msg_not_implemented())
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine merge_rt
 !===============================================================
 !

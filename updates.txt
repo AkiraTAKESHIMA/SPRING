@@ -2,12 +2,73 @@
 - Multiple missing indices
 
 - Shapefile input
-- Shapefile input
 #===============================================================
-# v02.04.08
+# v02.05.01
 #===============================================================
 #---------------------------------------------------------------
-[2026/02/27] Setting files
+[2026/03/21] Improvement
+#---------------------------------------------------------------
+Earth's constants and related procedures including python 
+scripts in `src/run` and configuration files in `run`.
+
+Modified earth's constants and way of setting them.
+#---------------------------------------------------------------
+[2026/03/17] Bug fix
+#---------------------------------------------------------------
+I/O library for handling shapefile
+
+Argument of c_dbfopen was modified from Fortran string to 
+C string.
+#---------------------------------------------------------------
+[2026/03/11] Improvement
+#---------------------------------------------------------------
+src/Mkinclude
+
+DEBUG -> SPRING_DEBUG
+#---------------------------------------------------------------
+[2026/03/11] Improvement
+#---------------------------------------------------------------
+src/lib/lib_io/lib_io_arg_parser.f90
+  and related modules in:
+    src/lib/lib_base/lib_base_char.f90
+    src/lib/lib_util/lib_util_char.f90
+    src/lib/lib_io/lib_io_arg_base.f90
+
+Renewed the module.
+#---------------------------------------------------------------
+[2026/03/11] Improvement
+#---------------------------------------------------------------
+Added `.SUFFIXES` to Makefile files for safety.
+#---------------------------------------------------------------
+[2026/03/03] Modification
+#---------------------------------------------------------------
+set/
+
+Modified paths in the sample setting files.
+#---------------------------------------------------------------
+[2026/03/03] Bug fix
+#---------------------------------------------------------------
+src/main/std/rasterize/mod_rasterize_latlon.f90
+
+Added initialization and finalization of thresholds.
+#---------------------------------------------------------------
+[2026/03/03] Bug fix
+#---------------------------------------------------------------
+src/main/std/rasterize/mod_data.f90
+src/main/std/rasterize/mod_rasterize_latlon.f90
+src/main/std/rasterize/mod_rasterize_raster.f90
+
+Fixed a bug of allocation and deallocation of the pointers.
+#---------------------------------------------------------------
+[2026/03/01] Bug fix
+#---------------------------------------------------------------
+src/main/std/remap
+
+1) Adjusted handling of functions so that errors are correctly 
+trapped.
+2) Fixed a bug of initialization and finalization.
+#---------------------------------------------------------------
+[2026/02/27] Modification
 #---------------------------------------------------------------
 Renamed setting files for remapping of MIRA meshes, 
 `set/remapping/MIRA...` and modified mesh names.

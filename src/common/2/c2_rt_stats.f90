@@ -8,7 +8,7 @@ module c2_rt_stats
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: get_rt_main_stats
   public :: update_rt_vrf_min_max
@@ -25,18 +25,25 @@ module c2_rt_stats
     module procedure update_rt_vrf_min_max__dble
   end interface
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_stats'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine get_rt_main_stats(rtm, ijs, ije, echo_msg)
+integer(4) function get_rt_main_stats(&
+    rtm, ijs, ije, echo_msg) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_rt_main_stats'
   type(rt_main_), intent(inout) :: rtm
   integer(8)    , intent(in)   , optional :: ijs, ije
   logical       , intent(in)   , optional :: echo_msg
 
   integer(8) :: ij
   integer(8) :: ijs_, ije_
+  integer :: stat
 
   logical :: is_ok
   character(clen_line) :: msg
@@ -46,7 +53,8 @@ subroutine get_rt_main_stats(rtm, ijs, ije, echo_msg)
   integer              :: dgt_ij
   logical :: echo_msg_
 
-  call echo(code%bgn, 'get_rt_main_stats', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -63,42 +71,54 @@ subroutine get_rt_main_stats(rtm, ijs, ije, echo_msg)
   is_ok = .true.
   if( size(rtm%sidx) /= rtm%ijsize ) is_ok = .false.
   if( size(rtm%tidx) /= rtm%ijsize ) is_ok = .false.
-  msg = str(msg_unexpected_condition())//&
-      '\n  size of arrays are incorrect.'//&
-      '\n  ijsize: '//str(rtm%ijsize)//&
-      '\n  nij   : '//str(rtm%nij)//&
-      '\n  size(sidx): '//str(size(rtm%sidx))//&
-      '\n  size(tidx): '//str(size(rtm%tidx))
+  if( .not. is_ok )then
+    msg = msg_unexpected_condition()//&
+        '\nsize of arrays are incorrect.'//&
+        '\n  ijsize: '//str(rtm%ijsize)//&
+        '\n  nij   : '//str(rtm%nij)//&
+        '\n  size(sidx): '//str(size(rtm%sidx))//&
+        '\n  size(tidx): '//str(size(rtm%tidx))
+  endif
 
   if( associated(rtm%area) )then
-    msg = str(msg)//'\n  size(area): '//str(size(rtm%area))
     if( size(rtm%area) /= rtm%ijsize ) is_ok = .false.
+    if( .not. is_ok )then
+      msg = str(msg)//'\n  size(area): '//str(size(rtm%area))
+    endif
   endif
 
   if( associated(rtm%coef) )then
-    msg = str(msg)//'\n  size(coef): '//str(size(rtm%coef))
     if( size(rtm%coef) /= rtm%ijsize ) is_ok = .false.
+    if( .not. is_ok )then
+      msg = str(msg)//'\n  size(coef): '//str(size(rtm%coef))
+    endif
   endif
 
   if( .not. is_ok )then
-    call eerr(str(msg))
+    info = 1
+    call errret(msg)
+    return
   endif
   !-------------------------------------------------------------
   ! Check bounds.
   !-------------------------------------------------------------
   if( ijs_ > ije_ )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  ijs > ije'//&
-            '\n  ijs: '//str(ijs_)//&
-            '\n  ije: '//str(ije_))
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nijs > ije'//&
+              '\n  ijs: '//str(ijs_)//&
+              '\n  ije: '//str(ije_))
+    return
   endif
 
   if( ijs_ < 1_8 .or. ije_ > rtm%nij )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  $ijs or $ije is out of range'//&
-            '\n  ijs: '//str(ijs_)//&
-            '\n  ije: '//str(ije_)//&
-            '\n  nij: '//str(rtm%nij))
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\n$ijs or $ije is out of range.'//&
+              '\n  ijs: '//str(ijs_)//&
+              '\n  ije: '//str(ije_)//&
+              '\n  nij: '//str(rtm%nij))
+    return
   endif
   !-------------------------------------------------------------
   ! Judge if sorted
@@ -121,21 +141,30 @@ subroutine get_rt_main_stats(rtm, ijs, ije, echo_msg)
   !-------------------------------------------------------------
   ! Get stats
   !-------------------------------------------------------------
-  call get_stats(rtm%sidx(ijs_:ije_), &
+  if( get_minmax(rtm%sidx(ijs_:ije_), stat, &
                  vmin=rtm%sidx_vmin, vmax=rtm%sidx_vmax, &
-                 imin=rtm%sidx_imin, imax=rtm%sidx_imax)
-  call get_stats(rtm%tidx(ijs_:ije_), &
+                 imin=rtm%sidx_imin, imax=rtm%sidx_imax) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  
+  if( get_minmax(rtm%tidx(ijs_:ije_), stat, &
                  vmin=rtm%tidx_vmin, vmax=rtm%tidx_vmax, &
-                 imin=rtm%tidx_imin, imax=rtm%tidx_imax)
+                 imin=rtm%tidx_imin, imax=rtm%tidx_imax) /= 0 )then
+    info = 1; call errret(); return
+  endif
   if( associated(rtm%area) )then
-    call get_stats(rtm%area(ijs_:ije_), &
+    if( get_minmax(rtm%area(ijs_:ije_), stat, &
                    vmin=rtm%area_vmin, vmax=rtm%area_vmax, &
-                   imin=rtm%area_imin, imax=rtm%area_imax)
+                   imin=rtm%area_imin, imax=rtm%area_imax) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   if( associated(rtm%coef) )then
-    call get_stats(rtm%coef(ijs_:ije_), &
+    if( get_minmax(rtm%coef(ijs_:ije_), stat, &
                    vmin=rtm%coef_vmin, vmax=rtm%coef_vmax, &
-                   imin=rtm%coef_imin, imax=rtm%coef_imax)
+                   imin=rtm%coef_imin, imax=rtm%coef_imax) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   !-------------------------------------------------------------
   ! Set format
@@ -149,29 +178,31 @@ subroutine get_rt_main_stats(rtm, ijs, ije, echo_msg)
   ! Print
   !-------------------------------------------------------------
   if( echo_msg_ )then
-    call edbg('id: '//str(rtm%id))
-    call edbg('  mesh_sort: '//str(rtm%mesh_sort))
-    call edbg('  is_sorted_by_sidx: '//str(rtm%is_sorted_by_sidx))
-    call edbg('  is_sorted_by_tidx: '//str(rtm%is_sorted_by_tidx))
-    call edbg('  ijsize: '//str(rtm%ijsize,dgt_ij))
-    call edbg('  nij   : '//str(rtm%nij,dgt_ij))
-    call edbg('  sidx min: '//str(rtm%sidx_vmin,dgt_idx)//' max: '//str(rtm%sidx_vmax,dgt_idx))
-    call edbg('  tidx min: '//str(rtm%tidx_vmin,dgt_idx)//' max: '//str(rtm%tidx_vmax,dgt_idx))
-    call edbg('  area min: '//str(rtm%area_vmin,wfmt_val)//' max: '//str(rtm%area_vmax,wfmt_val))
+    call logmsg('id: '//str(rtm%id))
+    call logmsg('  mesh_sort: '//str(rtm%mesh_sort))
+    call logmsg('  is_sorted_by_sidx: '//str(rtm%is_sorted_by_sidx))
+    call logmsg('  is_sorted_by_tidx: '//str(rtm%is_sorted_by_tidx))
+    call logmsg('  ijsize: '//str(rtm%ijsize,dgt_ij))
+    call logmsg('  nij   : '//str(rtm%nij,dgt_ij))
+    call logmsg('  sidx min: '//str(rtm%sidx_vmin,dgt_idx)//' max: '//str(rtm%sidx_vmax,dgt_idx))
+    call logmsg('  tidx min: '//str(rtm%tidx_vmin,dgt_idx)//' max: '//str(rtm%tidx_vmax,dgt_idx))
+    call logmsg('  area min: '//str(rtm%area_vmin,wfmt_val)//' max: '//str(rtm%area_vmax,wfmt_val))
     if( associated(rtm%coef) )then
-      call edbg('  coef min: '//str(rtm%coef_vmin,wfmt_val)//' max: '//str(rtm%coef_vmax,wfmt_val))
+      call logmsg('  coef min: '//str(rtm%coef_vmin,wfmt_val)//' max: '//str(rtm%coef_vmax,wfmt_val))
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine get_rt_main_stats
+  call logret(PRCNAM, MODNAM)
+end function get_rt_main_stats
 !===============================================================
 !
 !===============================================================
-subroutine update_rt_vrf_min_max__int8(&
-    idx, val, idx_miss, val_miss, &
-    vmin, vmax, idx_vmin, idx_vmax)
+integer(4) function update_rt_vrf_min_max__int8(&
+    idx, val, idx_miss, val_miss,  &
+    vmin, vmax, idx_vmin, idx_vmax &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_rt_vrf_min_max__int8'
   integer(8), intent(in) :: idx(:)
   integer(8), intent(in) :: val(:)
   integer(8), intent(in) :: idx_miss
@@ -183,15 +214,18 @@ subroutine update_rt_vrf_min_max__int8(&
   integer(8) :: imin_this, imax_this
   integer :: stat
 
-  call echo(code%bgn, 'update_rt_vrf_min_max__int8', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call get_stats(&
-         val, miss=val_miss, mask=idx/=idx_miss, &
+  if( get_minmax(&
+         val, stat, &
+         miss=val_miss, mask=idx/=idx_miss, &
          vmin=vmin_this, vmax=vmax_this, &
-         imin=imin_this, imax=imax_this, &
-         stat=stat)
+         imin=imin_this, imax=imax_this) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( stat == 0 )then
     if( idx_vmin == idx_miss )then
@@ -211,15 +245,17 @@ subroutine update_rt_vrf_min_max__int8(&
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine update_rt_vrf_min_max__int8
+  call logret(PRCNAM, MODNAM)
+end function update_rt_vrf_min_max__int8
 !===============================================================
 !
 !===============================================================
-subroutine update_rt_vrf_min_max__dble(&
-    idx, val, idx_miss, val_miss, &
-    vmin, vmax, idx_vmin, idx_vmax)
+integer(4) function update_rt_vrf_min_max__dble(&
+    idx, val, idx_miss, val_miss,  &
+    vmin, vmax, idx_vmin, idx_vmax &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_rt_vrf_min_max__dble'
   integer(8), intent(in) :: idx(:)
   real(8)   , intent(in) :: val(:)
   integer(8), intent(in) :: idx_miss
@@ -231,15 +267,18 @@ subroutine update_rt_vrf_min_max__dble(&
   integer(8) :: imin_this, imax_this
   integer :: stat
 
-  call echo(code%bgn, 'update_rt_vrf_min_max__dble', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call get_stats(&
-         val, miss=val_miss, mask=idx/=idx_miss, &
-         vmin=vmin_this, vmax=vmax_this, &
-         imin=imin_this, imax=imax_this, &
-         stat=stat)
+  if( get_minmax(&
+        val, miss=val_miss, mask=idx/=idx_miss, &
+        vmin=vmin_this, vmax=vmax_this, &
+        imin=imin_this, imax=imax_this, &
+        stat=stat) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( stat == 0 )then
     if( idx_vmin == idx_miss )then
@@ -259,8 +298,8 @@ subroutine update_rt_vrf_min_max__dble(&
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine update_rt_vrf_min_max__dble
+  call logret(PRCNAM, MODNAM)
+end function update_rt_vrf_min_max__dble
 !===============================================================
 !
 !===============================================================
@@ -272,12 +311,13 @@ end subroutine update_rt_vrf_min_max__dble
 !===============================================================
 !
 !===============================================================
-subroutine report_rt_main_summary(&
+integer(4) function report_rt_main_summary(&
     rtm, &
-    print_summary, write_summary)
+    print_summary, write_summary) result(info)
   use c1_file, only: &
         report
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'report_rt_main_summary'
   type(rt_main_), intent(in), target :: rtm
   logical       , intent(in), optional :: print_summary
   logical       , intent(in), optional :: write_summary
@@ -292,7 +332,8 @@ subroutine report_rt_main_summary(&
   integer(8) :: imin, imax
   character(8) :: wfmt
 
-  call echo(code%bgn, 'report_rt_main_summary', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -314,12 +355,14 @@ subroutine report_rt_main_summary(&
     if( associated(rtm%coef) ) is_ok = .false.
 
     if( .not. is_ok )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  Remapping table is empty but arrays are associated'//&
-              '\n  associated(sidx): '//str(associated(rtm%sidx))//&
-              '\n  associated(tidx): '//str(associated(rtm%tidx))//&
-              '\n  associated(area): '//str(associated(rtm%area))//&
-              '\n  associated(coef): '//str(associated(rtm%coef)))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nRemapping table is empty but arrays are associated'//&
+                '\n  associated(sidx): '//str(associated(rtm%sidx))//&
+                '\n  associated(tidx): '//str(associated(rtm%tidx))//&
+                '\n  associated(area): '//str(associated(rtm%area))//&
+                '\n  associated(coef): '//str(associated(rtm%coef)))
+      return
     endif
   else
     if( size(rtm%sidx) /= rtm%ijsize ) is_ok = .false.
@@ -328,14 +371,16 @@ subroutine report_rt_main_summary(&
     if( size(rtm%coef) /= rtm%ijsize ) is_ok = .false.
 
     if( .not. is_ok )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  size of arrays are incorrect.'//&
-              '\n  ijsize: '//str(rtm%ijsize)//&
-              '\n  nij   : '//str(rtm%nij)//&
-              '\n  size(sidx): '//str(size(rtm%sidx))//&
-              '\n  size(tidx): '//str(size(rtm%tidx))//&
-              '\n  size(area): '//str(size(rtm%area))//&
-              '\n  size(coef): '//str(size(rtm%coef)))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nSize of arrays are incorrect.'//&
+                '\n  ijsize: '//str(rtm%ijsize)//&
+                '\n  nij   : '//str(rtm%nij)//&
+                '\n  size(sidx): '//str(size(rtm%sidx))//&
+                '\n  size(tidx): '//str(size(rtm%tidx))//&
+                '\n  size(area): '//str(size(rtm%area))//&
+                '\n  size(coef): '//str(size(rtm%coef)))
+      return
     endif
   endif
   !-------------------------------------------------------------
@@ -358,13 +403,16 @@ subroutine report_rt_main_summary(&
       endif
     enddo
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_sort: '//str(rtm%mesh_sort))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_sort', rtm%mesh_sort))
+    return
   endselect
 
   if( .not. is_ok )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\nArray is not sorted. mesh_sort: '//str(rtm%mesh_sort))
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nArray is not sorted. mesh_sort: '//str(rtm%mesh_sort))
+    return
   endif
   !-------------------------------------------------------------
   ! Set format
@@ -381,42 +429,42 @@ subroutine report_rt_main_summary(&
   if( write_summary_ ) call report('------ Remapping Table ------')
 
   msg = 'id: '//str(rtm%id)
-  if( print_summary_ ) call edbg(str(msg))
+  if( print_summary_ ) call logmsg(str(msg))
   if( write_summary_ ) call report(str(msg))
 
-  call echo(code%set, '+x2')
+  call setlog('+x2')
 
   if( print_summary_ )then
-    call edbg('mesh_coef: '//str(rtm%mesh_coef))
-    call edbg('mesh_sort: '//str(rtm%mesh_sort))
+    call logmsg('mesh_coef: '//str(rtm%mesh_coef))
+    call logmsg('mesh_sort: '//str(rtm%mesh_sort))
 
-    call edbg('coef_sum_modify     : '//str(str_rt_opt_coef(&
-              rtm%opt_coef%is_sum_modify_enabled, rtm%opt_coef%sum_modify)))
-    call edbg('coef_sum_modify_ulim: '//str(str_rt_opt_coef(&
-              rtm%opt_coef%is_sum_modify_ulim_enabled, rtm%opt_coef%sum_modify_ulim)))
-    call edbg('zero_positive       : '//str(str_rt_opt_coef(&
-              rtm%opt_coef%is_zero_positive_enabled, rtm%opt_coef%zero_positive)))
-    call edbg('zero_negative       : '//str(str_rt_opt_coef(&
-              rtm%opt_coef%is_zero_negative_enabled, rtm%opt_coef%zero_negative)))
-    call edbg('error_excess        : '//str(str_rt_opt_coef(&
-              rtm%opt_coef%is_error_excess_enabled, rtm%opt_coef%error_excess)))
-    call edbg('sum_error_excess    : '//str(str_rt_opt_coef(&
-              rtm%opt_coef%is_sum_error_excess_enabled, rtm%opt_coef%sum_error_excess)))
+    call logmsg('coef_sum_modify     : '//str(str_rt_opt_coef(&
+                rtm%opt_coef%is_sum_modify_enabled, rtm%opt_coef%sum_modify)))
+    call logmsg('coef_sum_modify_ulim: '//str(str_rt_opt_coef(&
+                rtm%opt_coef%is_sum_modify_ulim_enabled, rtm%opt_coef%sum_modify_ulim)))
+    call logmsg('zero_positive       : '//str(str_rt_opt_coef(&
+                rtm%opt_coef%is_zero_positive_enabled, rtm%opt_coef%zero_positive)))
+    call logmsg('zero_negative       : '//str(str_rt_opt_coef(&
+                rtm%opt_coef%is_zero_negative_enabled, rtm%opt_coef%zero_negative)))
+    call logmsg('error_excess        : '//str(str_rt_opt_coef(&
+                rtm%opt_coef%is_error_excess_enabled, rtm%opt_coef%error_excess)))
+    call logmsg('sum_error_excess    : '//str(str_rt_opt_coef(&
+                rtm%opt_coef%is_sum_error_excess_enabled, rtm%opt_coef%sum_error_excess)))
   endif
 
   msg = 'length: '//str(rtm%nij)
-  if( print_summary_ ) call edbg(str(msg))
+  if( print_summary_ ) call logmsg(str(msg))
   if( write_summary_ ) call report(str(msg))
 
   if( rtm%nij > 0_8 )then
     msg = 'sidx min: '//str(rtm%sidx_vmin,dgt_idx)//' @ ij '//str(rtm%sidx_imin,dgt_ij)//&
         '\n     max: '//str(rtm%sidx_vmax,dgt_idx)//' @ ij '//str(rtm%sidx_imax,dgt_ij)
-    if( print_summary_ ) call edbg(str(msg))
+    if( print_summary_ ) call logmsg(str(msg))
     if( write_summary_ ) call report(str(msg))
 
     msg = 'tidx min: '//str(rtm%tidx_vmin,dgt_idx)//' @ ij '//str(rtm%tidx_imin,dgt_ij)//&
         '\n     max: '//str(rtm%tidx_vmax,dgt_idx)//' @ ij '//str(rtm%tidx_imax,dgt_ij)
-    if( print_summary_ ) call edbg(str(msg))
+    if( print_summary_ ) call logmsg(str(msg))
     if( write_summary_ ) call report(str(msg))
 
     imin = rtm%area_imin
@@ -425,7 +473,7 @@ subroutine report_rt_main_summary(&
           ' (sidx '//str(rtm%sidx(imin),dgt_idx)//' tidx '//str(rtm%tidx(imin),dgt_idx)//')'//&
         '\n     max: '//str(rtm%area_vmax,wfmt)//' @ ij '//str(imax,dgt_ij)//&
           ' (sidx '//str(rtm%sidx(imax),dgt_idx)//' tidx '//str(rtm%tidx(imax),dgt_idx)//')'
-    if( print_summary_ ) call edbg(str(msg))
+    if( print_summary_ ) call logmsg(str(msg))
     if( write_summary_ ) call report(str(msg))
 
     imin = rtm%coef_imin
@@ -434,22 +482,25 @@ subroutine report_rt_main_summary(&
           ' (sidx '//str(rtm%sidx(imin),dgt_idx)//' tidx '//str(rtm%tidx(imin),dgt_idx)//')'//&
         '\n     max: '//str(rtm%coef_vmax,wfmt)//' @ ij '//str(imax,dgt_ij)//&
           ' (sidx '//str(rtm%sidx(imax),dgt_idx)//' tidx '//str(rtm%tidx(imax),dgt_idx)//')'
-    if( print_summary_ ) call edbg(str(msg))
+    if( print_summary_ ) call logmsg(str(msg))
     if( write_summary_ ) call report(str(msg))
   endif
 
-  call echo(code%set, '-x2')
+  call setlog('-x2')
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine report_rt_main_summary
+  call logret(PRCNAM, MODNAM)
+end function report_rt_main_summary
 !===============================================================
 !
 !===============================================================
-subroutine report_rt_vrf_summary(&
-    output_grdara_true, output_grdara_rt, output_rerr_grdara, output_grdnum, &
+integer(4) function report_rt_vrf_summary(&
+    output_grdara_true, output_grdara_rt, &
+    output_rerr_grdara, output_grdnum   , &
     idx_miss, &
-    rtv)
+    rtv       &
+) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'report_rt_vrf_summary'
   logical      , intent(in) :: output_grdara_true, &
                                output_grdara_rt  , &
                                output_rerr_grdara, &
@@ -462,7 +513,8 @@ subroutine report_rt_vrf_summary(&
   character(clen_wfmt), parameter :: wfmt_dble = 'es22.15'
   integer             , parameter :: dgt_int   = 22
 
-  call echo(code%bgn, 'report_rt_vrf_summary', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -490,62 +542,62 @@ subroutine report_rt_vrf_summary(&
   !-------------------------------------------------------------
   if( output_grdara_true )then
     if( rtv%idx_grdara_true_min == idx_miss )then
-      call edbg(str(VARNAME_GRDARA_TRUE,cl_varname)//&
-                ' (no valid value)')
+      call logmsg(str(VARNAME_GRDARA_TRUE,cl_varname)//&
+                  ' (no valid value)')
     else
-      call edbg(str(VARNAME_GRDARA_TRUE,cl_varname)//&
-                ' min: '//str(rtv%grdara_true_min,wfmt_dble)//&
-                ' (idx: '//str(rtv%idx_grdara_true_min,dgt_idx)//')'//&
-              '\n'//str('',cl_varname)//&
-                ' max: '//str(rtv%grdara_true_max,wfmt_dble)//&
-                ' (idx: '//str(rtv%idx_grdara_true_max,dgt_idx)//')')
+      call logmsg(str(VARNAME_GRDARA_TRUE,cl_varname)//&
+                  ' min: '//str(rtv%grdara_true_min,wfmt_dble)//&
+                  ' (idx: '//str(rtv%idx_grdara_true_min,dgt_idx)//')'//&
+                '\n'//str('',cl_varname)//&
+                  ' max: '//str(rtv%grdara_true_max,wfmt_dble)//&
+                  ' (idx: '//str(rtv%idx_grdara_true_max,dgt_idx)//')')
     endif
   endif
 
   if( output_grdara_rt )then
     if( rtv%idx_grdara_rt_min == idx_miss )then
-      call edbg(str(VARNAME_GRDARA_RT,cl_varname)//&
-                ' (no valid value)')
+      call logmsg(str(VARNAME_GRDARA_RT,cl_varname)//&
+                  ' (no valid value)')
     else
-      call edbg(str(VARNAME_GRDARA_RT,cl_varname)//&
-                ' min: '//str(rtv%grdara_rt_min,wfmt_dble)//&
-                ' (idx: '//str(rtv%idx_grdara_rt_min,dgt_idx)//')'//&
-              '\n'//str('',cl_varname)//&
-                ' max: '//str(rtv%grdara_rt_max,wfmt_dble)//&
-                ' (idx: '//str(rtv%idx_grdara_rt_max,dgt_idx)//')')
+      call logmsg(str(VARNAME_GRDARA_RT,cl_varname)//&
+                  ' min: '//str(rtv%grdara_rt_min,wfmt_dble)//&
+                  ' (idx: '//str(rtv%idx_grdara_rt_min,dgt_idx)//')'//&
+                '\n'//str('',cl_varname)//&
+                  ' max: '//str(rtv%grdara_rt_max,wfmt_dble)//&
+                  ' (idx: '//str(rtv%idx_grdara_rt_max,dgt_idx)//')')
     endif
   endif
 
   if( output_rerr_grdara )then
     if( rtv%idx_rerr_grdara_min == idx_miss )then
-      call edbg(str(VARNAME_RERR_GRDARA,cl_varname)//&
-                ' (no valid value)')
+      call logmsg(str(VARNAME_RERR_GRDARA,cl_varname)//&
+                  ' (no valid value)')
     else
-      call edbg(str(VARNAME_RERR_GRDARA,cl_varname)//&
-                ' min: '//str(rtv%rerr_grdara_min,wfmt_dble)//&
-                ' (idx: '//str(rtv%idx_rerr_grdara_min,dgt_idx)//')'//&
-              '\n'//str('',cl_varname)//&
-                ' max: '//str(rtv%rerr_grdara_max,wfmt_dble)//&
-                ' (idx: '//str(rtv%idx_rerr_grdara_max,dgt_idx)//')')
+      call logmsg(str(VARNAME_RERR_GRDARA,cl_varname)//&
+                  ' min: '//str(rtv%rerr_grdara_min,wfmt_dble)//&
+                  ' (idx: '//str(rtv%idx_rerr_grdara_min,dgt_idx)//')'//&
+                '\n'//str('',cl_varname)//&
+                  ' max: '//str(rtv%rerr_grdara_max,wfmt_dble)//&
+                  ' (idx: '//str(rtv%idx_rerr_grdara_max,dgt_idx)//')')
     endif
   endif
 
   if( output_grdnum )then
     if( rtv%idx_grdnum_min == idx_miss )then
-      call edbg(str(VARNAME_GRDNUM,cl_varname)//&
-                ' (no valid value)')
+      call logmsg(str(VARNAME_GRDNUM,cl_varname)//&
+                  ' (no valid value)')
     else
-      call edbg(str(VARNAME_GRDNUM,cl_varname)//&
-                ' min: '//str(rtv%grdnum_min,dgt_int)//&
-                ' (idx: '//str(rtv%idx_grdnum_min,dgt_idx)//')'//&
-              '\n'//str('',cl_varname)//&
-                ' max: '//str(rtv%grdnum_max,dgt_int)//&
-                ' (idx: '//str(rtv%idx_grdnum_max,dgt_idx)//')')
+      call logmsg(str(VARNAME_GRDNUM,cl_varname)//&
+                  ' min: '//str(rtv%grdnum_min,dgt_int)//&
+                  ' (idx: '//str(rtv%idx_grdnum_min,dgt_idx)//')'//&
+                '\n'//str('',cl_varname)//&
+                  ' max: '//str(rtv%grdnum_max,dgt_int)//&
+                  ' (idx: '//str(rtv%idx_grdnum_max,dgt_idx)//')')
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine report_rt_vrf_summary
+  call logret(PRCNAM, MODNAM)
+end function report_rt_vrf_summary
 !===============================================================
 !
 !===============================================================
@@ -559,6 +611,7 @@ end subroutine report_rt_vrf_summary
 !===============================================================
 character(16) function str_rt_opt_coef(is_enabled, val) result(res)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'str_rt_opt_coef'
   logical, intent(in) :: is_enabled
   real(8), intent(in) :: val
   !-------------------------------------------------------------

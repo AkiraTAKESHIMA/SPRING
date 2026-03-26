@@ -8,8 +8,8 @@
       "dir": "dat/mesh/CaMa-Flood/cmf_v407/glb_06min/1min/CMF",
       "nx_raster" : 21600, 
       "ny_raster" : 10800,
-      "nx_grid":   720, 
-      "ny_grid":   360,
+      "nx_grid": 3600, 
+      "ny_grid": 1800,
       "west": -180, 
       "east":  180, 
       "south": -90, 
@@ -26,7 +26,7 @@
         "ocean"       : -9999
       },
       "fin_catmxy": {
-        "path"  : "1min.catmxy.bin", 
+        "path"  : "raster/1min.catmxy.bin", 
         "dtype" : "int2", 
         "endian": "little"
       },
@@ -36,7 +36,7 @@
         "ocean"        : -9999
       },
       "idx_miss": -9999,
-      "idx_condition": "match"
+      "idx_condition": "raster_in_grid"
     }
   },
   "inputData": {
@@ -124,8 +124,9 @@
   },
   "options": {
     "Earth": {
-      "shape": "sphere",
-      "diameter": 6371e+3
+      "geosys": "other",
+      "r": 6371e3,
+      "f": 0.0
     }
   }
 }

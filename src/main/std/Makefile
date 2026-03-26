@@ -1,3 +1,5 @@
+.SUFFIXES:
+
 DIR_MAKE_GRID_DATA         = make_grid_data
 DIR_REMAP                  = remap
 DIR_MERGE_REMAPPING_TABLES = merge_remapping_tables

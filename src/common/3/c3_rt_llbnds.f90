@@ -8,7 +8,7 @@ module c3_rt_llbnds
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: calc_relations_llbnds
   !-------------------------------------------------------------
@@ -21,75 +21,100 @@ module c3_rt_llbnds
     module procedure calc_relations_llbnds__raster_raster
   end interface
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_llbnds'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__latlon_latlon(sl, tl)
+integer(4) function calc_relations_llbnds__latlon_latlon(&
+    sl, tl) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_relations_llbnds__latlon_latlon'
   type(gs_latlon_), intent(inout) :: sl
   type(gs_latlon_), intent(inout) :: tl
 
-  call echo(code%bgn, 'calc_realtions_llbnds__latlon_latlon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call calc_relations_llbnds_core(&
-         sl%hrel, sl%vrel, sl%nam, tl%nam, &
-         sl%lon, sl%lat, sl%lonwidth, &
-         tl%lon, tl%lat, tl%lonwidth, tl%is_cyclic, tl%lon0)
+  if( calc_relations_llbnds_core(&
+        sl%hrel, sl%vrel, sl%nam     , tl%nam      ,         &
+        sl%lon , sl%lat , sl%lonwidth,                       &
+        tl%lon , tl%lat , tl%lonwidth, tl%is_cyclic, tl%lon0 &
+      ) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_relations_llbnds__latlon_latlon
+  call logret(PRCNAM, MODNAM)
+end function calc_relations_llbnds__latlon_latlon
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__latlon_raster(sl, tr)
+integer(4) function calc_relations_llbnds__latlon_raster(sl, tr) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_relations_llbnds__latlon_raster'
   type(gs_latlon_), intent(inout) :: sl
   type(gs_raster_), intent(inout) :: tr
 
-  call echo(code%bgn, 'calc_relations_llbnds__latlon_raster')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call calc_relations_llbnds_core(&
-         sl%hrel, sl%vrel, sl%nam, tr%nam, &
-         sl%lon, sl%lat, sl%lonwidth, &
-         tr%lon, tr%lat, tr%lonwidth, tr%is_cyclic, tr%lon0)
+  if( calc_relations_llbnds_core(&
+        sl%hrel, sl%vrel, sl%nam     , tr%nam      ,         &
+        sl%lon , sl%lat , sl%lonwidth,                       &
+        tr%lon , tr%lat , tr%lonwidth, tr%is_cyclic, tr%lon0 &
+      ) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_relations_llbnds__latlon_raster
+  call logret(PRCNAM, MODNAM)
+end function calc_relations_llbnds__latlon_raster
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__raster_latlon(sr, tl)
+integer(4) function calc_relations_llbnds__raster_latlon(sr, tl) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_relations_llbnds__raster_latlon'
   type(gs_raster_), intent(inout) :: sr
   type(gs_latlon_), intent(inout) :: tl
 
-  call echo(code%bgn, 'calc_relations_llbnds__raster_latlon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call calc_relations_llbnds_core(&
-         sr%hrel, sr%vrel, sr%nam, tl%nam, &
-         sr%lon, sr%lat, sr%lonwidth, &
-         tl%lon, tl%lat, tl%lonwidth, tl%is_cyclic, tl%lon0)
+  if( calc_relations_llbnds_core(&
+        sr%hrel, sr%vrel, sr%nam     , tl%nam      ,         &
+        sr%lon , sr%lat , sr%lonwidth,                       &
+        tl%lon , tl%lat , tl%lonwidth, tl%is_cyclic, tl%lon0 &
+      ) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_relations_llbnds__raster_latlon
+  call logret(PRCNAM, MODNAM)
+end function calc_relations_llbnds__raster_latlon
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds__raster_raster(sr, tr)
+integer(4) function calc_relations_llbnds__raster_raster(sr, tr) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_relations_llbnds__raster_raster'
   type(gs_raster_), intent(inout) :: sr
   type(gs_raster_), intent(inout) :: tr
 
-  call echo(code%bgn, 'calc_relations_llbnds__raster_raster')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call calc_relations_llbnds_core(&
-         sr%hrel, sr%vrel, sr%nam, tr%nam, &
-         sr%lon, sr%lat, sr%lonwidth, &
-         tr%lon, tr%lat, tr%lonwidth, tr%is_cyclic, tr%lon0)
+  if( calc_relations_llbnds_core(&
+        sr%hrel, sr%vrel, sr%nam     , tr%nam      ,         &
+        sr%lon , sr%lat , sr%lonwidth,                       &
+        tr%lon , tr%lat , tr%lonwidth, tr%is_cyclic, tr%lon0 &
+      ) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_relations_llbnds__raster_raster
+  call logret(PRCNAM, MODNAM)
+end function calc_relations_llbnds__raster_raster
 !===============================================================
 !
 !===============================================================
@@ -101,13 +126,15 @@ end subroutine calc_relations_llbnds__raster_raster
 !===============================================================
 !
 !===============================================================
-subroutine calc_relations_llbnds_core(&
-    shrel, svrel, snam, tnam, &
-    slon, slat, slonwidth, &
-    tlon, tlat, tlonwidth, tcyclic, tlon0)
+integer(4) function calc_relations_llbnds_core(&
+    shrel, svrel, snam     , tnam   ,       &
+    slon , slat , slonwidth,                &
+    tlon , tlat , tlonwidth, tcyclic, tlon0 &
+) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_relations_llbnds_core'
   type(hrel_)     , pointer    :: shrel(:) ! out
   type(vrel_)     , pointer    :: svrel(:) ! out
   character(*)    , intent(in) :: snam, tnam
@@ -141,12 +168,13 @@ subroutine calc_relations_llbnds_core(&
   logical, parameter :: print_check_info = .false.
   logical, parameter :: print_print_info = .false.
 
-  call echo(code%bgn, 'calc_relations_llbnds_core', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('s: '//str(snam))
-  call edbg('t: '//str(tnam))
+  call logmsg('s: '//str(snam))
+  call logmsg('t: '//str(tnam))
 
   shi = lbound(slon,1) + 1_8
   shf = ubound(slon,1)
@@ -170,11 +198,11 @@ subroutine calc_relations_llbnds_core(&
   dgt_th = dgt(thf)
   dgt_tv = dgt(tvf)
 
-  earth = get_opt_earth()
+  call get_opt_earth(earth)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating relations of meridians')
+  call logent('Calculating relations of meridians', PRCNAM, MODNAM)
 
   do ish = shi, shf
     shrel(ish)%hi(:) = 0
@@ -189,15 +217,15 @@ subroutine calc_relations_llbnds_core(&
     t_intersects_lon0 = any(tlon0(:))
   endif
 
-  call edbg('s: '//str(slon(shi-1:shi)*r2d,'f12.7',', ')//&
+  call logmsg('s: '//str(slon(shi-1:shi)*r2d,'f12.7',', ')//&
         ', ..., '//str(slon(shf-1:shf)*r2d,'f12.7',', '))
-  call edbg('t: '//str(tlon(thi-1:thi)*r2d,'f12.7',', ')//&
+  call logmsg('t: '//str(tlon(thi-1:thi)*r2d,'f12.7',', ')//&
         ', ..., '//str(tlon(thf-1:thf)*r2d,'f12.7',', '))
-  call edbg('t_intersects_lon0: '//str(t_intersects_lon0))
+  call logmsg('t_intersects_lon0: '//str(t_intersects_lon0))
 
   ! West
   !-------------------------------------------------------------
-  call echo(code%ent, 'west', '-p -x2')
+  call logent('west', PRCNAM, MODNAM, '-p -x2')
 
   ish = shi
   ith = thi
@@ -223,7 +251,7 @@ subroutine calc_relations_llbnds_core(&
       shrel(ish)%hi(1) = ith
       ish = ish + 1
     else
-      !call edbg('slon(ish-1) < tlon(ith-1) or tlon(ith) < slon(ish-1)'//&
+      !call logmsg('slon(ish-1) < tlon(ith-1) or tlon(ith) < slon(ish-1)'//&
       !        '\n  ish: '//str(ish)//', ith: '//str(ith)//&
       !        '\n  slon(ish-1): '//str(slon(ish-1)*r2d,'f8.3')//&
       !        '\n  tlon(ith-1): '//str(tlon(ith-1)*r2d,'f8.3')//&
@@ -233,19 +261,21 @@ subroutine calc_relations_llbnds_core(&
         ith = thi
         counter = counter + 1
         if( counter > 1 )then
-          call eerr(str(msg_internal_error())//&
-                  '\nRelations of the grid lines were not calculated correctly.'//&
-                  '\n  ish: '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,'f12.7',' ~ ')//')')
+          info = 1
+          call errret(msg_internal_error()//&
+                    '\nRelations of the grid lines were not calculated correctly.'//&
+                    '\n  ish: '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,'f12.7',' ~ ')//')')
+          return
         endif
       endif
     endif
   enddo  ! ish/
 
-  call echo(code%ext)
+  call logext('west', PRCNAM, MODNAM)
 
   ! East
   !-------------------------------------------------------------
-  call echo(code%ent, 'east', '-p -x2')
+  call logent('east', PRCNAM, MODNAM, '-p -x2')
 
   ish = shi
   ith = thi
@@ -276,30 +306,34 @@ subroutine calc_relations_llbnds_core(&
         ith = thi
         counter = counter + 1
         if( counter > 1 )then
-          call eerr(str(msg_internal_error())//&
-                  '\nRelations of the grid lines were not calculated correctly.')
+          info = 1
+          call errret(msg_internal_error()//&
+                    '\nRelations of the grid lines were not calculated correctly.')
+          return
         endif
       endif
     endif
   enddo  ! ish/
 
-  call echo(code%ext)
+  call logext('east', PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  call check_info('lon', print_check_info)
+  if( check_info('lon', print_check_info) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call echo(code%ext)
+  call logext('Calculating relations of meridians', PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Calc. relations of parallels
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating relations of parallels')
+  call logent('Calculating relations of parallels', PRCNAM, MODNAM)
 
   svrel(:)%vi = 0
   svrel(:)%vf = 0
   svrel(:)%mv = 0
 
-  call edbg('s: '//str(slat(svi-1:svi)*r2d,'f12.7',', ')//&
+  call logmsg('s: '//str(slat(svi-1:svi)*r2d,'f12.7',', ')//&
         ', ..., '//str(slat(svf-1:svf)*r2d,'f12.7',', '))
-  call edbg('t: '//str(tlat(tvi-1:tvi)*r2d,'f12.7',', ')//&
+  call logmsg('t: '//str(tlat(tvi-1:tvi)*r2d,'f12.7',', ')//&
         ', ..., '//str(tlat(tvf-1:tvf)*r2d,'f12.7',', '))
 
   ! South
@@ -338,13 +372,15 @@ subroutine calc_relations_llbnds_core(&
     endif
   enddo
 
-  call check_info('lat', print_check_info)
+  if( check_info('lat', print_check_info) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call echo(code%ext)
+  call logext('Calculating relations of parallels', PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Adjust indices of the sides out of range
   !-------------------------------------------------------------
-  call echo(code%ent, 'Adjusting indices of the sides out of range')
+  call logent('Adjusting indices of the sides out of range', PRCNAM, MODNAM)
 
   do ish = shi, shf
     shr => shrel(ish)
@@ -356,11 +392,11 @@ subroutine calc_relations_llbnds_core(&
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. longitudes of boundaries of intersection
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating longitudes of boundaries of intersection')
+  call logent('Calculating longitudes of boundaries of intersection', PRCNAM, MODNAM)
 
   lonwidth_sum = 0.d0
 
@@ -391,12 +427,12 @@ subroutine calc_relations_llbnds_core(&
       shr%hi(2) = 1_8
       shr%hf(2) = theast
 
-      call edbg('nr = 2 @ h = '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,wfmt,' ~ ')//')')
-      call edbg('  hi(1): '//str(thwest,dgt_th)//&
+      call logmsg('nr = 2 @ h = '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,wfmt,' ~ ')//')')
+      call logmsg('  hi(1): '//str(thwest,dgt_th)//&
                 ' ('//str(tlon(thwest-1:thwest)*r2d,wfmt,' ~ ')//&
                 ') hf(1): '//str(thf,dgt_th)//&
                 ' ('//str(tlon(thf-1:thf)*r2d,wfmt,' ~ ')//')')
-      call edbg('  hi(2): '//str(thi,dgt_th)//&
+      call logmsg('  hi(2): '//str(thi,dgt_th)//&
                 ' ('//str(tlon(thi-1:thi)*r2d,wfmt,' ~ ')//&
                 ') hf(2): '//str(theast,dgt_th)//&
                 ' ('//str(tlon(theast-1:theast)*r2d,wfmt,' ~ ')//')')
@@ -449,13 +485,13 @@ subroutine calc_relations_llbnds_core(&
     lonwidth_sum = lonwidth_sum + sum(shr%lonwidth(:))
   enddo  ! ish/
 
-  call edbg('Sum: '//str(lonwidth_sum,wfmt)//' (rad) = '//&
+  call logmsg('Sum: '//str(lonwidth_sum,wfmt)//' (rad) = '//&
             str(lonwidth_sum*r2d,wfmt)//' (deg)')
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. latitudes of boundaries of intersection
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating latitudes of boundaries of intersection')
+  call logent('Calculating latitudes of boundaries of intersection', PRCNAM, MODNAM)
 
   latwidth_sum = 0.d0
 
@@ -490,25 +526,27 @@ subroutine calc_relations_llbnds_core(&
     latwidth_sum = latwidth_sum + sum(svr%north(:) - svr%south(:))
   enddo
 
-  call edbg('Sum: '//str(latwidth_sum,wfmt)//' (rad) = '//&
+  call logmsg('Sum: '//str(latwidth_sum,wfmt)//' (rad) = '//&
             str(latwidth_sum*r2d,wfmt)//' (deg)')
 
   call print_info(print_print_info)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call check_consistency()
+  if( check_consistency() /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Calc. intersection area per 1 radian
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating intersection area per 1 radian')
+  call logent('Calculating intersection area per 1 radian', PRCNAM, MODNAM)
 
   lapara_1rad_sum = 0.d0
 
-  selectcase( earth%shp )
-  case( earth_shape_sphere )
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
     do isv = svi, svf
       svr => svrel(isv)
       if( svr%mv > 0_8 )then
@@ -517,7 +555,7 @@ subroutine calc_relations_llbnds_core(&
         lapara_1rad_sum = lapara_1rad_sum + sum(svr%lapara_1rad)
       endif
     enddo
-  case( earth_shape_ellips )
+  case( EARTH_SHPTYP__ELLIPS )
     do isv = svi, svf
       svr => svrel(isv)
       if( svr%mv > 0_8 )then
@@ -527,24 +565,27 @@ subroutine calc_relations_llbnds_core(&
       endif
     enddo
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth%shp: '//str(earth%shp))
+    info = 1
+    call errret(msg_invalid_value('earth%shptyp', earth%shptyp))
+    return
   endselect
 
-  call edbg('Total: '//str(lapara_1rad_sum)//' (m2)')
-  call echo(code%ext)
+  call logmsg('Total: '//str(lapara_1rad_sum)//' (m2)')
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine check_consistency()
+integer(4) function check_consistency() result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_consistency'
   integer(8) :: ish
   type(hrel_), pointer :: shr, shr_prev
   real(8), parameter :: thresh_lonwidth_rerr = 1d-5
 
-  call echo(code%bgn, '__IP__check_consistency', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -557,10 +598,12 @@ subroutine check_consistency()
     !---------------------------------------------------------
     if( shr%west(1) /= shr_prev%east(shr_prev%mh) .and. &
         abs(shr%west(1) - shr_prev%east(shr_prev%mh)) /= rad_360deg )then
-      call eerr('Incontinuity of longitudes. \n'//&
-                'shrel('//str(ish-1)//')%east('//str(shr_prev%mh)//'): '//&
-                str(shr_prev%east(shr_prev%nr),'f7.3')//', \n'//&
-                'shrel('//str(ish)//')%west(1): '//str(shr%west(1),'f7.3'))
+      info = 1
+      call errret('Incontinuity of longitudes. \n'//&
+                  'shrel('//str(ish-1)//')%east('//str(shr_prev%mh)//'): '//&
+                  str(shr_prev%east(shr_prev%nr),'f7.3')//', \n'//&
+                  'shrel('//str(ish)//')%west(1): '//str(shr%west(1),'f7.3'))
+      return
     endif
     !---------------------------------------------------------
     ! Following condition must be fullfilled.
@@ -569,26 +612,30 @@ subroutine check_consistency()
     if( shr%west(1) == slon(ish-1) .and. shr%east(shr%mh) == slon(ish) )then
       if( abs(sum(shr%lonwidth(:))-londiff_rad(slon(ish),slon(ish-1))) &
              > londiff_rad(slon(ish),slon(ish-1)) * thresh_lonwidth_rerr )then
-        call eerr('Relative error of sum(shrel('//str(ish)//')%lonwidth(:)) '//&
-                  'to the actual width of the cell exceeded the threshhold. \n'//&
-                  'sum(%lonwidth(:)): '//str(sum(shr%lonwidth(:)),'f12.8')//&
-                  ', cell width: '//str(londiff_rad(slon(ish),slon(ish-1)),'f12.8'))
+        info = 1
+        call errret('Relative error of sum(shrel('//str(ish)//')%lonwidth(:)) '//&
+                    'to the actual width of the cell exceeded the threshhold. \n'//&
+                    'sum(%lonwidth(:)): '//str(sum(shr%lonwidth(:)),'f12.8')//&
+                    ', cell width: '//str(londiff_rad(slon(ish),slon(ish-1)),'f12.8'))
+        return
       endif
     endif
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_consistency
+  call logret(PRCNAM, MODNAM)
+end function check_consistency
 !---------------------------------------------------------------
-subroutine check_info(nam, print_this)
+integer(4) function check_info(nam, print_this) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_info'
   character(*), intent(in) :: nam
   logical     , intent(in) :: print_this
   integer(8) :: ish, isv
   integer(8) :: tvsouth, tvnorth
   character(128) :: c_west, c_east, c_south, c_north
 
-  call echo(code%bgn, '__IP__checkInfo', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-----------------------------------------------------------
   selectcase( nam )
   !-----------------------------------------------------------
@@ -617,27 +664,31 @@ subroutine check_info(nam, print_this)
                     ' ('//str(tlat(tvnorth-1:tvnorth)*r2d,wfmt,' ~ ')//')'
         endif
 
-        call edbg(str(isv,dgt_sv)//&
+        call logmsg(str(isv,dgt_sv)//&
                  ' S ('//str(slat(isv-1)*r2d,wfmt)//') '//str(c_south)//&
                  ' N ('//str(slat(isv  )*r2d,wfmt)//') '//str(c_north))
       endif
       !-------------------------------------------------------
       if( tvsouth /= 0 )then
         if( slat(isv-1) < tlat(tvsouth-1) .or. slat(isv-1) > tlat(tvsouth) )then
-          call eerr('slat('//str(isv-1)//'): '//str(slat(isv-1)*r2d)//&
-                    ', tv: '//str(tvsouth)//&
-                    ' ('//str(tlat(tvsouth-1:tvsouth)*r2d,'',' ~ ')//')\n'//&
-                    't_south - s: '//str((tlat(tvsouth-1)-slat(isv-1))*r2d)//'\n'//&
-                    's - t_north: '//str((slat(isv-1)-tlat(tvsouth))*r2d))
+          info = 1
+          call errret('slat('//str(isv-1)//'): '//str(slat(isv-1)*r2d)//&
+                      ', tv: '//str(tvsouth)//&
+                      ' ('//str(tlat(tvsouth-1:tvsouth)*r2d,'',' ~ ')//')\n'//&
+                      't_south - s: '//str((tlat(tvsouth-1)-slat(isv-1))*r2d)//'\n'//&
+                      's - t_north: '//str((slat(isv-1)-tlat(tvsouth))*r2d))
+          return
         endif
       endif
       if( tvnorth /= 0 )then
         if( slat(isv) < tlat(tvnorth-1) .or. slat(isv) > tlat(tvnorth) )then
-          call eerr('slat('//str(isv)//'): '//str(slat(isv)*r2d)//&
-                    ', tv: '//str(tvnorth)//&
-                    ' ('//str(tlat(tvnorth-1:tvnorth),'',' ~ ')//')\n'//&
-                    't_south - s: '//str((tlat(tvnorth-1)-slat(isv))*r2d)//'\n'//&
-                    's - t_north: '//str((slat(isv)-tlat(tvnorth))*r2d))
+          info = 1
+          call errret('slat('//str(isv)//'): '//str(slat(isv)*r2d)//&
+                      ', tv: '//str(tvnorth)//&
+                      ' ('//str(tlat(tvnorth-1:tvnorth),'',' ~ ')//')\n'//&
+                      't_south - s: '//str((tlat(tvnorth-1)-slat(isv))*r2d)//'\n'//&
+                      's - t_north: '//str((slat(isv)-tlat(tvnorth))*r2d))
+          return
         endif
       endif
       !-------------------------------------------------------
@@ -664,9 +715,9 @@ subroutine check_info(nam, print_this)
           c_east = 'in '//str(theast,dgt_th)//' ('//str(tlon(theast-1:theast)*r2d,wfmt,' ~ ')//')'
         endif
 
-        call edbg(str(ish,dgt_sh)//&
-                 ' W ('//str(slon(ish-1)*r2d,wfmt)//') '//str(c_west)//&
-                 ' E ('//str(slon(ish  )*r2d,wfmt)//') '//str(c_east))
+        call logmsg(str(ish,dgt_sh)//&
+                   ' W ('//str(slon(ish-1)*r2d,wfmt)//') '//str(c_west)//&
+                   ' E ('//str(slon(ish  )*r2d,wfmt)//') '//str(c_east))
       endif
       !-------------------------------------------------------
       if( thwest /= 0 )then
@@ -678,11 +729,13 @@ subroutine check_info(nam, print_this)
         !    (slon(ish-1) < tlon(thwest-1) .or. slon(ish-1) > tlon(thwest)) .and. &
         !    abs(slon(ish-1)-tlon(thwest-1)) /= rad_360deg .and. &
         !    abs(slon(ish-1)-tlon(thwest)) /= rad_360deg  )then
-          call eerr('Contradiction in shrel(:)%xi.\n'//&
-                    'Western grid line is out of the other cell.\n'//&
-                    'slon('//str(ish-1)//'): '//str(slon(ish-1)*r2d)//&
-                    ', tlon('//str(thwest-1)//'): '//str(tlon(thwest-1)*r2d)//&
-                    ', tlon('//str(thwest)//'): '//str(tlon(thwest)*r2d))
+          info = 1
+          call errret('Contradiction in shrel(:)%xi.\n'//&
+                      'Western grid line is out of the other cell.\n'//&
+                      'slon('//str(ish-1)//'): '//str(slon(ish-1)*r2d)//&
+                      ', tlon('//str(thwest-1)//'): '//str(tlon(thwest-1)*r2d)//&
+                      ', tlon('//str(thwest)//'): '//str(tlon(thwest)*r2d))
+          return
         endif
       endif
       if( theast /= 0 )then
@@ -694,11 +747,13 @@ subroutine check_info(nam, print_this)
         !    (slon(ish) < tlon(theast-1) .and. slon(ish) > tlon(theast)) .and. &
         !    abs(slon(ish)-tlon(theast-1)) /= rad_360deg .and. &
         !    abs(slon(ish)-tlon(theast)) /= rad_360deg )then
-          call eerr('Contradiction in shrel(:)%xf.\n'//&
-                    'Eastern grid line is out of the other cell.\n'//&
-                    'slon('//str(ish)//'): '//str(slon(ish)*r2d)//&
-                    ', tlon('//str(theast-1)//'): '//str(tlon(theast-1)*r2d)//&
-                    ', tlon('//str(theast)//'): '//str(tlon(theast)*r2d))
+          info = 1
+          call errret('Contradiction in shrel(:)%xf.\n'//&
+                      'Eastern grid line is out of the other cell.\n'//&
+                      'slon('//str(ish)//'): '//str(slon(ish)*r2d)//&
+                      ', tlon('//str(theast-1)//'): '//str(tlon(theast-1)*r2d)//&
+                      ', tlon('//str(theast)//'): '//str(tlon(theast)*r2d))
+          return
         endif
       endif
       !-------------------------------------------------------
@@ -706,11 +761,12 @@ subroutine check_info(nam, print_this)
   !-----------------------------------------------------------
   endselect
   !-----------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_info
+  call logret(PRCNAM, MODNAM)
+end function check_info
 !---------------------------------------------------------------
 subroutine print_info(print_this)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_info'
   logical, intent(in) :: print_this
   integer(8) :: tvsouth, tvnorth
   integer(8) :: thwest, theast
@@ -722,16 +778,16 @@ subroutine print_info(print_this)
   character(256) :: wfmt
   character(256) :: msg
 
-  call echo(code%bgn, '__IP__print_info', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( .not. print_this )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  call edbg(trim(snam))
+  call logmsg(trim(snam))
 
   wfmt = "(i"//str(dgt_sv)//",1x,"//&
          " 2(a,f9.5,a,i"//str(dgt_tv)//",2(a,f9.5),a),"//&
@@ -763,7 +819,7 @@ subroutine print_info(print_this)
          ' (',tlat(tvnorth-1)*r2d,' ~ ',tlat(tvnorth)*r2d,') ', &
          'lap south ',svr%south(1  )*r2d,' ~ ',svr%north(1  )*r2d, &
             ' north ',svr%south(mtv)*r2d,' ~ ',svr%north(mtv)*r2d
-    call edbg(trim(msg))
+    call logmsg(trim(msg))
   enddo
 
   wfmt = "(i"//str(dgt_sh)//",1x,"//&
@@ -799,13 +855,13 @@ subroutine print_info(print_this)
           ' (',tlon(theast-1)*r2d,' ~ ',tlon(theast)*r2d,') ', &
           'lap west ',shr%west(1  )*r2d,' ~ ',shr%east(1  )*r2d,' (',shr%lonwidth(1)  *r2d,') ', &
              ' east ',shr%west(mth)*r2d,' ~ ',shr%east(mth)*r2d,' (',shr%lonwidth(mth)*r2d,')'
-    call edbg(trim(msg))
+    call logmsg(trim(msg))
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_info
 !---------------------------------------------------------------
-end subroutine calc_relations_llbnds_core
+end function calc_relations_llbnds_core
 !===============================================================
 !
 !===============================================================

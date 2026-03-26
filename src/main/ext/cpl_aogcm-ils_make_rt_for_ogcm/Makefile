@@ -1,43 +1,46 @@
 TOPSRCDIR = ../../..
 include $(TOPSRCDIR)/Mkinclude
 
+.SUFFIXES:
 .SUFFIXES: .f90 .F90 .c
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $<\
- -I$(CMNDIR3) -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
+	$(FC) $(FCFLAGS) -c $< -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 %.o: %.F90
-	$(FC) $(FCFLAGS) $(FOPT_USE_C) $(FOPT_TERMINAL_WIDTH) -c $<\
- -I$(CMNDIR3) -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
+	$(FC) $(FCFLAGS) $(FOPT_USE_C) $(FOPT_TERMINAL_WIDTH) -c $< -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 %.o: %.c
-	$(CC) $(CCFLAGS) -c $<\
- -I$(CMNDIR3) -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
+	$(CC) $(CCFLAGS) -c $< -I$(CMNDIR2) -I$(CMNDIR1) -I$(MODDIR)
 %.mod: %.f90 %.o
 	@:
-
-OBJS = \
-	def_const.o\
-	def_type.o\
-	mod_const_util.o\
-	mod_set.o\
-	mod_main.o\
-	mod_finalize.o\
-	main.o
 
 TARGET = main
 BINDIR = $(TOPSRCDIR)/../bin/ext
 BIN = $(BINDIR)/cpl_aogcm-ils_make_rt_for_ogcm.exe
 
+OBJ_F = \
+def_const.o\
+def_type.o\
+mod_const_util.o\
+mod_set.o\
+mod_main.o\
+mod_finalize.o\
+main.o
+
+OBJ_ALL = $(OBJ_F)
+
+.PHONY: all
 all:
-	$(MAKE) $(OBJS)
+	$(MAKE) $(OBJ_ALL)
 	$(MAKE) $(TARGET)
 
+$(TARGET): $(OBJ_ALL) $(CMNDIR2)/*.o $(CMNDIR1)/*.o $(LIB)
+	$(FC) $(FCFLAGS) -o $@ $^
+
+.PHONY: install
 install:
 	$(MKDIR) $(MKDIRFLAGS) $(BINDIR)
 	$(INSTALL) $(TARGET) $(BIN)
 
-$(TARGET): $(OBJS) $(CMNDIR2)/*.a $(CMNDIR1)/*.a $(LIB)
-	$(FC) $(FCFLAGS) -o $@ $^
-
+.PHONY: clean
 clean:
 	$(RM) $(RMFLAGS) *.o *.mod *.a core *~ *trace temp* $(TARGET)
 

@@ -1,6 +1,7 @@
 module c1_type_gs
   use lib_const
   use lib_io
+  use c1_const
   implicit none
   private
   !-------------------------------------------------------------
@@ -15,10 +16,6 @@ module c1_type_gs
   public :: file_polygon_in_
 
   public :: raster_zone_
-
-  public :: list_iRegion_
-  public :: region_
-  public :: regions_
 
   public :: polygon_
 
@@ -163,24 +160,6 @@ module c1_type_gs
     logical(1), pointer :: mskmap(:,:)
     real(8)   , pointer :: wgtmap(:,:)
     integer(8) :: idxmin, idxmax
-  end type
-
-  ! Region of polygons
-  !-------------------------------------------------------------
-  type list_iRegion_
-    integer :: nRegions
-    integer, pointer :: list_iRegion(:)
-  end type
-
-  type region_
-    integer(8) :: maij, mbij
-    integer(8), pointer :: list_aij(:), list_bij(:)
-  end type
-
-  type regions_
-    integer :: nRegions
-    type(region_), pointer :: region(:)
-    type(list_iRegion_), pointer :: a(:), b(:)
   end type
 
   ! Polygon
@@ -388,11 +367,12 @@ module c1_type_gs
   end type
 
   type gs_
+    integer :: status = MESH_STATUS__UNDEFINED
     character(:), allocatable :: id
     character(:), allocatable :: nam
-    logical(4)          :: is_valid
-    character(CLEN_KEY) :: typ
-    logical(4)          :: is_source
+    logical(4)          :: is_valid  = .false.
+    character(CLEN_KEY) :: typ       = MESHTYPE__UNDEF
+    logical(4)          :: is_source = .true.
     type(gs_latlon_) , pointer :: latlon
     type(gs_raster_) , pointer :: raster
     type(gs_polygon_), pointer :: polygon

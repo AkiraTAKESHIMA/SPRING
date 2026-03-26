@@ -1,5 +1,3 @@
-TOPSRCDIR = .
-include Mkinclude
 
 all:\
   make_lib\
@@ -7,7 +5,8 @@ all:\
   make_main\
   make_libspring\
   make_sample_libspring\
-  make_ext
+  make_ext\
+  make_test
 
 make_lib:
 	$(MAKE) -C lib
@@ -27,6 +26,9 @@ make_sample_libspring:
 make_ext:
 	$(MAKE) -C ext
 
+make_test:
+	$(MAKE) -C test
+
 
 install:\
   install_main
@@ -41,7 +43,8 @@ clean:\
   clean_main\
   clean_libspring\
   clean_sample_libspring\
-  clean_ext
+  clean_ext\
+  clean_test
 
 
 clean_lib:
@@ -61,3 +64,6 @@ clean_sample_libspring:
 
 clean_ext:
 	$(MAKE) -C ext clean
+
+clean_test:
+	$(MAKE) -C test clean

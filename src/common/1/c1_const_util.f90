@@ -1,5 +1,6 @@
 module c1_const_util
   use lib_const
+  use lib_base
   use lib_log
   use c1_const
   implicit none
@@ -10,18 +11,24 @@ module c1_const_util
   public :: checkval_idx_condition
   public :: checkval_opt_old_files
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_const_util'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine checkval_idx_condition(s, id)
+integer(4) function checkval_idx_condition(s, id) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'checkval_idx_condition'
   character(*), intent(in) :: s
   character(*), intent(in), optional :: id
 
   character(:), allocatable :: id_
 
-  call echo(code%bgn, 'checkval_idx_condition', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -37,22 +44,26 @@ subroutine checkval_idx_condition(s, id)
         IDX_CONDITION__NONE )
     continue
   case default
-    call eerr('Invalid value for '//id_//': '//str(s))
+    info = 1
+    call errret(msg_invalid_value(id_, s))
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine checkval_idx_condition
+  call logret(PRCNAM, MODNAM)
+end function checkval_idx_condition
 !===============================================================
 !
 !===============================================================
-subroutine checkval_opt_old_files(s, id)
+integer(4) function checkval_opt_old_files(s, id) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'checkval_opt_old_files'
   character(*), intent(in) :: s
   character(*), intent(in), optional :: id
 
   character(:), allocatable :: id_
 
-  call echo(code%bgn, 'checkval_opt_old_files', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -66,11 +77,13 @@ subroutine checkval_opt_old_files(s, id)
         OPT_OLD_FILES_OVERWRITE )
     continue
   case default
-    call eerr('Invalid value in '//id_//': '//str(s))
+    info = 1
+    call errret(msg_invalid_value(id_, s))
+    return
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine checkval_opt_old_files
+  call logret(PRCNAM, MODNAM)
+end function checkval_opt_old_files
 !===============================================================
 !
 !===============================================================

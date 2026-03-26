@@ -19,25 +19,28 @@ module c3_rt_raster_polygon
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: MODNAME = 'c3_rt_raster_polygon'
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_raster_polygon'
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_raster_polygon(s, t, rt)
-  use c2_area_raster, only: &
-        update_iarea_sum, &
-        fill_miss_vrf   , &
-        calc_iratio_sum
+integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
   use c2_area_raster_polygon, only: &
-        initialize     , &
-        finalize       , &
-        initialize_zone, &
-        finalize_zone  , &
-        calc_iarea     , &
-        get_dhv_polygon, &
+        c2arp_initialize      => initialize     , &
+        c2arp_finalize        => finalize       , &
+        c2arp_initialize_zone => initialize_zone, &
+        c2arp_finalize_zone   => finalize_zone  , &
+        calc_iarea                              , &
+        get_dhv_polygon                         , &
         update_rt1d
+  use c2_area_raster, only: &
+        c2ar_initialize        => initialize       , &
+        c2ar_finalize          => finalize         , &
+        c2ar_initialize_zone   => initialize_zone  , &
+        c2ar_finalize_zone     => finalize_zone    , &
+        update_iarea_sum                           , &
+        calc_iratio_sum
   use c2_rt1d, only: &
         alloc_rt1d  , &
         clear_rt1d  , &
@@ -45,6 +48,7 @@ subroutine make_rt_raster_polygon(s, t, rt)
   use c2_rt_main_util, only: &
         trap_rt_empty
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_raster_polygon'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
 
@@ -67,9 +71,9 @@ subroutine make_rt_raster_polygon(s, t, rt)
   integer(8) :: bhi, bhf, bvi, bvf
   logical    :: fill_vrf
   integer(8), parameter :: IJSIZE_INIT = 4
-  integer :: info
 
-  call echo(code%bgn, 'make_rt_raster_polygon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the pointers
   !-------------------------------------------------------------
@@ -82,9 +86,11 @@ subroutine make_rt_raster_polygon(s, t, rt)
     a => t
     b => s
   else
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(str(msg_invalid_value())//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endif
 
   ar => a%raster
@@ -94,7 +100,12 @@ subroutine make_rt_raster_polygon(s, t, rt)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
-  call alloc_rt1d(rt1d, bp%nij, IJSIZE_INIT)
+
+  !
+  !-------------------------------------------------------------
+  if( alloc_rt1d(rt1d, bp%nij, IJSIZE_INIT) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   if( ar%is_source )then
     rtv => rt%vrf_src
@@ -107,27 +118,47 @@ subroutine make_rt_raster_polygon(s, t, rt)
   if( rtv%f%out_iarea_sum%path  /= '' ) do_calc_iarea_sum  = .true.
   if( rtv%f%out_iratio_sum%path /= '' ) do_calc_iratio_sum = .true.
   if( do_calc_iratio_sum ) do_calc_iarea_sum = .true.
-  fill_vrf = .true.
 
-  info = initialize(ar, bp, make_rt=.true.)
+  ! Initialize modules
+  !-------------------------------------------------------------
+  if( c2arp_initialize(ar, bp, make_rt=.true.) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  if( do_calc_iarea_sum )then
+    if( c2ar_initialize(ar) /= 0 )then
+      info = 1; call errret(); return
+    endif
+  endif
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making a remapping table')
+  call logent('Making a remapping table', PRCNAM, MODNAM)
+
+  ! Raise flag
+  fill_vrf = .true.
 
   rtm%nij = 0_8
 
   do iaz = 1, ar%nZone
     arz => ar%zone(iaz)
     if( .not. arz%is_valid ) cycle
+
+    if( ar%nZone > 1 ) call logent('Zone '//str(iaz)//' / '//str(ar%nZone))
     !-------------------------------------------------------------
-    !
+    ! Initialize module for zone
     !-------------------------------------------------------------
     allocate(iarea(arz%hi-1:arz%hf+1,arz%vi-1:arz%vf+1))
+    if( c2arp_initialize_zone(arz) /= 0 )then
+      info = 1; call errret(); return
+    endif
+
     if( do_calc_iarea_sum )then
+      if( c2ar_initialize_zone(arz) /= 0 )then
+        info = 1; call errret(); return
+      endif
       allocate(iarea_sum(arz%hi:arz%hf,arz%vi:arz%vf))
     endif
-    info = initialize_zone(arz)
     !-------------------------------------------------------------
     ! Make a remapping table
     !-------------------------------------------------------------
@@ -140,24 +171,32 @@ subroutine make_rt_raster_polygon(s, t, rt)
 
       rt1%idx_self = bp0%idx
 
-      call calc_iarea(iarea, bp0, iarea_is_updated, arz%mskmap)
+      if( calc_iarea(iarea, bp0, iarea_is_updated, arz%mskmap) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
       if( .not. iarea_is_updated ) cycle
 
-      call update_rt1d(rt1, bij, iarea, arz%mskmap, arz%idxmap)
+      if( update_rt1d(rt1, bij, iarea, arz%mskmap, arz%idxmap) /= 0 )then
+        info = 1; call errret(); return
+      endif
 
       call add(rtm%nij, rt1%mij)
 
       if( do_calc_iarea_sum )then
         call get_dhv_polygon(bhi, bhf, bvi, bvf)
-        info = update_iarea_sum(iarea_sum, iarea, bhi, bhf, bvi, bvf)
+        if( update_iarea_sum(iarea_sum, iarea, bhi, bhf, bvi, bvf) /= 0 )then
+          info = 1; call errret(); return
+        endif
       endif
     enddo  ! bij/
     !-------------------------------------------------------------
-    !
+    ! Finalize module for zone
     !-------------------------------------------------------------
     deallocate(iarea)
-    info = finalize_zone()
+    if( c2arp_finalize_zone() /= 0 )then
+      info = 1; call errret(); return
+    endif
     !-------------------------------------------------------------
     ! Make raster verification data
     !-------------------------------------------------------------
@@ -167,32 +206,50 @@ subroutine make_rt_raster_polygon(s, t, rt)
       if( do_calc_iarea_sum )then
         f => rtv%f%out_iarea_sum
         if( f%path /= '' )then
-          call edbg('Writing iarea_sum  '//str(fileinfo(f))//&
+          call logmsg('Writing iarea_sum  '//str(fileinfo(f))//&
                   '\n  ['//str((/arz%xi,arz%xf/),dgt(ar%nx),':')//&
                      ', '//str((/arz%yi,arz%yf/),dgt(ar%ny),':')//']')
           if( fill_vrf )then
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss)
+            if( wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                     sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss) /= 0 )then
+              info = 1
+              call errret('Case fill_vrf')
+              return
+            endif
           else
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/))
+            if( wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                     sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/)) /= 0 )then
+              info = 1
+              call errret('Case not fill_vrf')
+              return
+            endif
           endif
         endif
       endif
 
       if( do_calc_iratio_sum )then
-        info = calc_iratio_sum(iarea_sum, arz%mskmap)
+        if( calc_iratio_sum(iarea_sum, arz%mskmap) /= 0 )then
+          info = 1; call errret(); return
+        endif
         f => rtv%f%out_iratio_sum
         if( f%path /= '' )then
-          call edbg('Writing iratio_sum '//str(fileinfo(f))//&
+          call logmsg('Writing iratio_sum '//str(fileinfo(f))//&
                   '\n  ['//str((/arz%xi,arz%xf/),dgt(ar%nx),':')//&
                      ', '//str((/arz%yi,arz%yf/),dgt(ar%ny),':')//']')
           if( fill_vrf )then
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss)
+            if( wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                     sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/), fill=rtv%dval_miss) /= 0 )then
+              info = 1
+              call errret('Case fill_vrf')
+              return
+            endif
           else
-            call wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
-                      sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/))
+            if( wbin(iarea_sum, f%path, f%dtype, f%endian, f%rec, &
+                     sz=(/ar%nx,ar%ny/), lb=(/arz%xi,arz%yi/)) /= 0 )then
+              info = 1
+              call errret('Case not fill_vrf')
+              return
+            endif
           endif
         endif
       endif
@@ -200,24 +257,54 @@ subroutine make_rt_raster_polygon(s, t, rt)
       if( .not. ar%is_south_to_north ) call reverse(arz%mskmap,2)
     endif
 
-    if( do_calc_iarea_sum ) deallocate(iarea_sum)
+    ! Kill flag
     if( fill_vrf ) fill_vrf = .false.
+    !-----------------------------------------------------------
+    ! Finalize module for zone
+    !-----------------------------------------------------------
+    if( do_calc_iarea_sum )then
+      deallocate(iarea_sum)
+      if( c2ar_finalize_zone() /= 0 )then
+        info = 1; call errret(); return
+      endif
+    endif
+    !-----------------------------------------------------------
+    if( ar%nZone > 1 ) call logext()
   enddo  ! iaz/
 
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, b%is_source, rtm)
+  if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call trap_rt_empty(rtm)
+  if( trap_rt_empty(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  info = finalize()
-
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
+  ! Finalize
+  !-------------------------------------------------------------
+
+  ! Finalize modules
+  !-------------------------------------------------------------
+  if( c2arp_finalize() /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  if( do_calc_iarea_sum )then
+    if( c2ar_finalize() /= 0 )then
+      info = 1; call errret(); return
+    endif
+  endif
+
   !
   !-------------------------------------------------------------
   nullify(rt1)
-  call clear_rt1d(rt1d)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   nullify(rtm)
 
@@ -226,8 +313,8 @@ subroutine make_rt_raster_polygon(s, t, rt)
   nullify(ar, bp)
   nullify(a, b)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt_raster_polygon
+  call logret(PRCNAM, MODNAM)
+end function make_rt_raster_polygon
 !===============================================================
 !
 !===============================================================

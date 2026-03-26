@@ -17,25 +17,33 @@ module c2_rt_main_io
 
   public :: copy_tmp_data
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_main_io'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine read_rt_main(rtm)
+integer(4) function read_rt_main(rtm) result(info)
   use c2_rt_stats, only: &
         get_rt_main_stats
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_rt_main'
   type(rt_main_), intent(inout), target :: rtm
 
   type(file_), pointer :: f
 
-  call echo(code%bgn, 'read_rt_main')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( rtm%nij <= 0_8 )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  rtm%nij <= 0')
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nrtm%nij <= 0')
+    return
   endif
 
   rtm%ijsize = rtm%nij
@@ -43,7 +51,9 @@ subroutine read_rt_main(rtm)
   f => rtm%f%sidx
   if( f%path /= '' )then
     call realloc(rtm%sidx, rtm%ijsize, clear=.true.)
-    call rbin(rtm%sidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+    if( rbin(rtm%sidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
     call realloc(rtm%sidx, 0)
   endif
@@ -51,7 +61,9 @@ subroutine read_rt_main(rtm)
   f => rtm%f%tidx
   if( f%path /= '' )then
     call realloc(rtm%tidx, rtm%ijsize, clear=.true.)
-    call rbin(rtm%tidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+    if( rbin(rtm%tidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
     call realloc(rtm%tidx, 0)
   endif
@@ -59,7 +71,9 @@ subroutine read_rt_main(rtm)
   f => rtm%f%area
   if( f%path /= '' )then
     call realloc(rtm%area, rtm%ijsize, clear=.true.)
-    call rbin(rtm%area(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+    if( rbin(rtm%area(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
     call realloc(rtm%area, 0)
   endif
@@ -67,78 +81,100 @@ subroutine read_rt_main(rtm)
   f => rtm%f%coef
   if( f%path /= '' )then
     call realloc(rtm%coef, rtm%ijsize, clear=.true.)
-    call rbin(rtm%coef(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+    if( rbin(rtm%coef(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
     call realloc(rtm%coef, 0)
   endif
   !-------------------------------------------------------------
-  call get_rt_main_stats(rtm)
+  if( get_rt_main_stats(rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine read_rt_main
+  call logret(PRCNAM, MODNAM)
+end function read_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine write_rt_main(rtm)
+integer(4) function write_rt_main(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'write_rt_main'
   type(rt_main_), intent(in), target :: rtm
 
   type(file_), pointer :: f
 
-  call echo(code%bgn, 'write_rt_main')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   if( rtm%nij > 0_8 )then
     f => rtm%f%sidx
     if( f%path /= '' )then
-      call edbg('Writing sidx '//str(fileinfo(f)))
-      call wbin(rtm%sidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Writing sidx '//str(fileinfo(f)))
+      if( wbin(rtm%sidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     f => rtm%f%tidx
     if( f%path /= '' )then
-      call edbg('Writing tidx '//str(fileinfo(f)))
-      call wbin(rtm%tidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Writing tidx '//str(fileinfo(f)))
+      if( wbin(rtm%tidx(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     f => rtm%f%area
     if( f%path /= '' )then
-      call edbg('Writing area '//str(fileinfo(f)))
-      call wbin(rtm%area(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Writing area '//str(fileinfo(f)))
+      if( wbin(rtm%area(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     f => rtm%f%coef
     if( f%path /= '' )then
-      call edbg('Writing coef '//str(fileinfo(f)))
-      call wbin(rtm%coef(:rtm%nij), f%path, f%dtype, f%endian, f%rec)
+      call logmsg('Writing coef '//str(fileinfo(f)))
+      if( wbin(rtm%coef(:rtm%nij), f%path, f%dtype, f%endian, f%rec) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
   else
     f => rtm%f%sidx
     if( f%path /= '' )then
-      call edbg('Writing sidx '//str(fileinfo(f))//' (empty)')
-      call make_empty_file(f%path)
+      call logmsg('Writing sidx '//str(fileinfo(f))//' (empty)')
+      if( make_empty_file(f%path) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     f => rtm%f%tidx
     if( f%path /= '' )then
-      call edbg('Writing tidx '//str(fileinfo(f))//' (empty)')
-      call make_empty_file(f%path)
+      call logmsg('Writing tidx '//str(fileinfo(f))//' (empty)')
+      if( make_empty_file(f%path) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     f => rtm%f%area
     if( f%path /= '' )then
-      call edbg('Writing area '//str(fileinfo(f))//' (empty)')
-      call make_empty_file(f%path)
+      call logmsg('Writing area '//str(fileinfo(f))//' (empty)')
+      if( make_empty_file(f%path) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
 
     f => rtm%f%coef
     if( f%path /= '' )then
-      call edbg('Writing coef '//str(fileinfo(f))//' (empty)')
-      call make_empty_file(f%path)
+      call logmsg('Writing coef '//str(fileinfo(f))//' (empty)')
+      if( make_empty_file(f%path) /= 0 )then
+        info = 1; call errret(); return
+      endif
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine write_rt_main
+  call logret(PRCNAM, MODNAM)
+end function write_rt_main
 !===============================================================
 !
 !===============================================================
@@ -150,8 +186,9 @@ end subroutine write_rt_main
 !===============================================================
 !
 !===============================================================
-subroutine copy_tmp_data(f, f_tmp, nij, memory_ulim)
+integer(4) function copy_tmp_data(f, f_tmp, nij, memory_ulim) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'copy_tmp_data'
   type(file_), intent(in) :: f
   type(file_), intent(in) :: f_tmp
   integer(8) , intent(in) :: nij
@@ -166,16 +203,17 @@ subroutine copy_tmp_data(f, f_tmp, nij, memory_ulim)
   real(4)   , allocatable :: dat_real(:)
   real(8)   , allocatable :: dat_dble(:)
 
-  call echo(code%bgn, 'copy_tmp_data', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( f%rec == 1 )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  call edbg('Copy from: '//str(fileinfo(f_tmp))//&
+  call logmsg('Copy from: '//str(fileinfo(f_tmp))//&
           '\n     to  : '//str(fileinfo(f)))
 
   if( memory_ulim == 0.d0 )then
@@ -185,21 +223,22 @@ subroutine copy_tmp_data(f, f_tmp, nij, memory_ulim)
   endif
 
   selectcase( f_tmp%dtype )
-  case( dtype_int1 )
+  case( DTYPE_INT1 )
     allocate(dat_int1(mij))
-  case( dtype_int2 )
+  case( DTYPE_INT2 )
     allocate(dat_int2(mij))
-  case( dtype_int4 )
+  case( DTYPE_INT4 )
     allocate(dat_int4(mij))
-  case( dtype_int8 )
+  case( DTYPE_INT8 )
     allocate(dat_int8(mij))
-  case( dtype_real )
+  case( DTYPE_REAL )
     allocate(dat_real(mij))
-  case( dtype_dble )
+  case( DTYPE_DBLE )
     allocate(dat_dble(mij))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  f_tmp%dtype: '//str(f_tmp%dtype))
+    info = 1
+    call errret(msg_invalid_value('f_tmp%dtype', f_tmp%dtype))
+    return
   endselect
 
   nDivs = int((nij-1_8) / mij + 1_8, 4)
@@ -210,42 +249,67 @@ subroutine copy_tmp_data(f, f_tmp, nij, memory_ulim)
   do iDiv = 1, nDivs
     ijs = ije + 1_8
     ije = min(ijs + mij - 1_8, nij)
-    call edbg('div '//str(iDiv)//' ij: '//str((/ijs,ije/),dgt(nij),' ~ '))
+    call logmsg('div '//str(iDiv)//' ij: '//str((/ijs,ije/),dgt(nij),' ~ '))
 
     selectcase( f_tmp%dtype )
     case( dtype_int1 )
-      call rbin(dat_int1(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
-                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
-      call wbin(dat_int1(:ije-ijs+1_8), f%path, f%dtype, &
-                f%endian, f%rec, sz=nij, lb=ijs)
+      if( rbin(dat_int1(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+               f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( wbin(dat_int1(:ije-ijs+1_8), f%path, f%dtype, &
+               f%endian, f%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
     case( dtype_int2 )
-      call rbin(dat_int2(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
-                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
-      call wbin(dat_int2(:ije-ijs+1_8), f%path, f%dtype, &
-                f%endian, f%rec, sz=nij, lb=ijs)
+      if( rbin(dat_int2(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+               f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( wbin(dat_int2(:ije-ijs+1_8), f%path, f%dtype, &
+               f%endian, f%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
     case( dtype_int4 )
-      call rbin(dat_int4(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
-                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
-      call wbin(dat_int4(:ije-ijs+1_8), f%path, f%dtype, &
-                f%endian, f%rec, sz=nij, lb=ijs)
+      if( rbin(dat_int4(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+               f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( wbin(dat_int4(:ije-ijs+1_8), f%path, f%dtype, &
+               f%endian, f%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
     case( dtype_int8 )
-      call rbin(dat_int8(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
-                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
-      call wbin(dat_int8(:ije-ijs+1_8), f%path, f%dtype, &
-                f%endian, f%rec, sz=nij, lb=ijs)
+      if( rbin(dat_int8(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+               f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( wbin(dat_int8(:ije-ijs+1_8), f%path, f%dtype, &
+               f%endian, f%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
     case( dtype_real )
-      call rbin(dat_real(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
-                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
-      call wbin(dat_real(:ije-ijs+1_8), f%path, f%dtype, &
-                f%endian, f%rec, sz=nij, lb=ijs)
+      if( rbin(dat_real(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+               f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( wbin(dat_real(:ije-ijs+1_8), f%path, f%dtype, &
+               f%endian, f%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
     case( dtype_dble )
-      call rbin(dat_dble(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
-                f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs)
-      call wbin(dat_dble(:ije-ijs+1_8), f%path, f%dtype, &
-                f%endian, f%rec, sz=nij, lb=ijs)
+      if( rbin(dat_dble(:ije-ijs+1_8), f_tmp%path, f_tmp%dtype, &
+               f_tmp%endian, f_tmp%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      if( wbin(dat_dble(:ije-ijs+1_8), f%path, f%dtype, &
+               f%endian, f%rec, sz=nij, lb=ijs) /= 0 )then
+        info = 1; call errret(); return
+      endif
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  f_tmp%dtype: '//str(f_tmp%dtype))
+      info = 1
+      call errret(msg_invalid_value('f_tmp%dtype', f_tmp%dtype))
+      return
     endselect
   enddo  ! iDiv/
   !-------------------------------------------------------------
@@ -258,8 +322,8 @@ subroutine copy_tmp_data(f, f_tmp, nij, memory_ulim)
   if( allocated(dat_real) ) deallocate(dat_real)
   if( allocated(dat_dble) ) deallocate(dat_dble)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine copy_tmp_data
+  call logret(PRCNAM, MODNAM)
+end function copy_tmp_data
 !===============================================================
 !
 !===============================================================

@@ -1,4 +1,6 @@
 
+.SUFFIXES:
+
 all:\
   make_1\
   make_2\

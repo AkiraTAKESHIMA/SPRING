@@ -16,8 +16,10 @@ module c1_opt_ctrl
   public :: set_opt_earth
   public :: get_opt_earth
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_opt_ctrl'
+
   type(opt_sys_)   :: sys
   type(opt_log_)   :: log
   type(opt_earth_) :: earth
@@ -35,11 +37,12 @@ end subroutine set_opt_sys
 !===============================================================
 !
 !===============================================================
-type(opt_sys_) function get_opt_sys() result(res)
+subroutine get_opt_sys(opt_sys)
   implicit none
+  type(opt_sys_), intent(out) :: opt_sys
 
-  res = sys
-end function get_opt_sys
+  opt_sys = sys
+end subroutine get_opt_sys
 !===============================================================
 !
 !===============================================================
@@ -52,11 +55,12 @@ end subroutine set_opt_log
 !===============================================================
 !
 !===============================================================
-type(opt_log_) function get_opt_log() result(res)
+subroutine get_opt_log(opt_log)
   implicit none
+  type(opt_log_), intent(out) :: opt_log
 
-  res = log
-end function get_opt_log
+  opt_log = log
+end subroutine get_opt_log
 !===============================================================
 !
 !===============================================================
@@ -69,11 +73,16 @@ end subroutine set_opt_earth
 !===============================================================
 !
 !===============================================================
-type(opt_earth_) function get_opt_earth() result(res)
+subroutine get_opt_earth(opt_earth)
   implicit none
+  type(opt_earth_), intent(out) :: opt_earth
 
-  res = earth
-end function get_opt_earth
+  opt_earth = earth
+end subroutine get_opt_earth
+!===============================================================
+!
+!===============================================================
+
 !===============================================================
 !
 !===============================================================

@@ -17,8 +17,10 @@ module mod_check_input
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(clen_key), parameter :: mode_rerr_tiny     = 'tiny'
-  character(clen_key), parameter :: mode_rerr_negative = 'negative'
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_check_input'
+
+  character(CLEN_KEY), parameter :: MODE_RERR_TINY     = 'tiny'
+  character(CLEN_KEY), parameter :: MODE_RERR_NEGATIVE = 'negative'
   !-------------------------------------------------------------
 contains
 !===============================================================
@@ -26,45 +28,46 @@ contains
 !===============================================================
 subroutine check_relations_input(rt_in, rm)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_relations_input'
   type(rt_in_), intent(in) :: rt_in
   type(rm_)   , intent(in) :: rm
 
-  call echo(code%bgn, 'check_relations_input')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! rt_in%rm_river_to_agcm and rm%grdara_river
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking relations of rt_rm_river_to_agcm and grid_rm_river')
+  call logent('Checking relations of rt_rm_river_to_agcm and grid_rm_river', PRCNAM, MODNAM)
 
   call check_relations_rt_grid(&
          rt_in%rm_river_to_agcm%main, MESH__SOURCE, &
          rm%fin_grdidx_river, rm%fin_grdara_river, rm%nij, rm%idx_miss, &
-         mode_rerr_tiny)
+         MODE_RERR_TINY)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! rt_in%rm_noriv_to_agcm and rm%grdara_noriv
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking relations of rt_rm_noriv_to_agcm and grid_rm_noriv')
+  call logent('Checking relations of rt_rm_noriv_to_agcm and grid_rm_noriv', PRCNAM, MODNAM)
 
   call check_relations_rt_grid(&
          rt_in%rm_noriv_to_agcm%main, MESH__SOURCE, &
          rm%fin_grdidx_noriv, rm%fin_grdara_noriv, rm%nij, rm%idx_miss, &
-         mode_rerr_tiny)
+         MODE_RERR_TINY)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! rt_in%rm_ocean_to_agcm and rm%grdara_ocean
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking relations of rt_rm_ocean_to_agcm and grid_rm_ocean')
+  call logent('Checking relations of rt_rm_ocean_to_agcm and grid_rm_ocean', PRCNAM, MODNAM)
 
   call check_relations_rt_grid(&
          rt_in%rm_ocean_to_agcm%main, MESH__SOURCE, &
          rm%fin_grdidx_ocean, rm%fin_grdara_ocean, rm%nij, rm%idx_miss, &
-         mode_rerr_tiny)
+         MODE_RERR_TINY)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_relations_input
 !===============================================================
 !
@@ -74,6 +77,7 @@ subroutine check_relations_rt_grid(&
     f_grdidx, f_grdara, ngij, idx_miss, &
     mode_rerr_grdara)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_relations_rt_grid'
   type(rt_main_), intent(in), target :: rtm
   character(*)  , intent(in)         :: mesh_which
   type(file_)   , intent(in), target :: f_grdidx, f_grdara
@@ -95,15 +99,15 @@ subroutine check_relations_rt_grid(&
   real(8), parameter :: val_miss = -1d20
   real(8), parameter :: rerr_grdara_llim = 1d-5
 
-  call echo(code%bgn, 'check_relations_rt_grid')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Length of rt: '//str(rtm%nij))
+  call logmsg('Length of rt: '//str(rtm%nij))
   allocate(rt_grid(rtm%nij))
   allocate(rt_area(rtm%nij))
 
-  call edbg('Length of grid data: '//str(ngij))
+  call logmsg('Length of grid data: '//str(ngij))
   allocate(grdidx(ngij))
   allocate(grdidxarg(ngij))
   allocate(grdara(ngij))
@@ -112,79 +116,78 @@ subroutine check_relations_rt_grid(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking grdidx and grdara')
+  call logent('Checking grdidx and grdara', PRCNAM, MODNAM)
 
   f => f_grdidx
   if( f%path /= '' )then
-    call edbg('Reading grdidx')
-    call rbin(grdidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading grdidx')
+    call traperr( rbin(grdidx, f%path, f%dtype, f%endian, f%rec) )
   else
     do gij = 1_8, ngij
       grdidx(gij) = gij
     enddo
   endif
 
-  call edbg('  min: '//str(minval(grdidx,mask=grdidx/=idx_miss))//&
-             ' max: '//str(maxval(grdidx,mask=grdidx/=idx_miss)))
+  call logmsg('  min: '//str(minval(grdidx,mask=grdidx/=idx_miss))//&
+               ' max: '//str(maxval(grdidx,mask=grdidx/=idx_miss)))
 
   call argsort(grdidx, grdidxarg)
 
   f => f_grdara
-  call edbg('Reading grdara')
-  call rbin(grdara, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading grdara')
+  call traperr( rbin(grdara, f%path, f%dtype, f%endian, f%rec) )
 
-  call edbg('  min: '//str(minval(grdara,mask=grdidx/=idx_miss))//&
-             ' max: '//str(maxval(grdara,mask=grdidx/=idx_miss)))
+  call logmsg('  min: '//str(minval(grdara,mask=grdidx/=idx_miss))//&
+               ' max: '//str(maxval(grdara,mask=grdidx/=idx_miss)))
 
   do gij = 1_8, ngij
     if( (grdidx(gij) == idx_miss .and. grdara(gij) > 0.d0) .or. &
         (grdidx(gij) /= idx_miss .and. grdara(gij) <= 0.d0) )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  gij: '//str(gij)//&
-              '\n  grdidx: '//str(grdidx(gij))//&
-              '\n  grdara: '//str(grdara(gij)))
+      call errend(msg_unexpected_condition()//&
+                '\n  gij: '//str(gij)//&
+                '\n  grdidx: '//str(grdidx(gij))//&
+                '\n  grdara: '//str(grdara(gij)))
     endif
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating grdara from rt')
+  call logent('Calculating grdara from rt', PRCNAM, MODNAM)
 
   selectcase( mesh_which )
   case( MESH__SOURCE )
     f => rtm%f%sidx
-    call edbg('Reading rt_sidx')
-    call rbin(rt_grid, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading rt_sidx')
+    call traperr( rbin(rt_grid, f%path, f%dtype, f%endian, f%rec) )
   case( MESH__TARGET )
     f => rtm%f%tidx
-    call edbg('Reading rt_tidx')
-    call rbin(rt_grid, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading rt_tidx')
+    call traperr( rbin(rt_grid, f%path, f%dtype, f%endian, f%rec) )
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  mesh_which: '//str(mesh_which))
+    call errend(msg_invalid_value('mesh_which', mesh_which))
   endselect
 
   f => rtm%f%area
-  call edbg('Reading rt_area')
-  call rbin(rt_area, f%path, f%dtype, f%endian, f%rec)
+  call logmsg('Reading rt_area')
+  call traperr( rbin(rt_area, f%path, f%dtype, f%endian, f%rec) )
 
   grdara_rt(:) = 0.d0
   do rtij = 1_8, rtm%nij
     call search(rt_grid(rtij), grdidx, grdidxarg, loc)
     if( loc == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  Index '//str(rt_grid(rtij))//' in rt was not found in grdidx.')
+      call errend(msg_unexpected_condition()//&
+                '\n  Index '//str(rt_grid(rtij))//' in rt was not found in grdidx.')
     endif
     call add(grdara_rt(grdidxarg(loc)), rt_area(rtij))
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking rerr of grdara')
+  call logent('Checking rerr of grdara', PRCNAM, MODNAM)
 
   rerr_grdara(:) = val_miss
   do gij = 1_8, ngij
@@ -193,36 +196,35 @@ subroutine check_relations_rt_grid(&
     rerr_grdara(gij) = (grdara_rt(gij) - grdara(gij)) / grdara(gij)
 
     selectcase( mode_rerr_grdara )
-    case( mode_rerr_tiny )
+    case( MODE_RERR_TINY )
       if( abs(rerr_grdara(gij)) > rerr_grdara_llim )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  abs(rerr_grdara) > rerr_grdara_llim'//&
-                '\n  gij: '//str(gij)//&
-                '\n  idx: '//str(grdidx(gij))//&
-                '\n  grdara     : '//str(grdara(gij))//&
-                '\n  grdara_rt  : '//str(grdara_rt(gij))//&
-                '\n  rerr_grdara: '//str(rerr_grdara(gij)))
+        call errend(msg_unexpected_condition()//&
+                  '\n  abs(rerr_grdara) > rerr_grdara_llim'//&
+                  '\n  gij: '//str(gij)//&
+                  '\n  idx: '//str(grdidx(gij))//&
+                  '\n  grdara     : '//str(grdara(gij))//&
+                  '\n  grdara_rt  : '//str(grdara_rt(gij))//&
+                  '\n  rerr_grdara: '//str(rerr_grdara(gij)))
       endif
-    case( mode_rerr_negative )
+    case( MODE_RERR_NEGATIVE )
       if( rerr_grdara(gij) > rerr_grdara_llim )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  rerr_grdara > 0.0'//&
-                '\n  gij: '//str(gij)//&
-                '\n  idx: '//str(grdidx(gij))//&
-                '\n  grdara     : '//str(grdara(gij))//&
-                '\n  grdara_rt  : '//str(grdara_rt(gij))//&
-                '\n  rerr_grdara: '//str(rerr_grdara(gij)))
+        call errend(msg_unexpected_condition()//&
+                  '\n  rerr_grdara > 0.0'//&
+                  '\n  gij: '//str(gij)//&
+                  '\n  idx: '//str(grdidx(gij))//&
+                  '\n  grdara     : '//str(grdara(gij))//&
+                  '\n  grdara_rt  : '//str(grdara_rt(gij))//&
+                  '\n  rerr_grdara: '//str(rerr_grdara(gij)))
       endif
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  mode_rerr_grdara: '//str(mode_rerr_grdara))
+      call errend(msg_invalid_value('mode_rerr_grdara', mode_rerr_grdara))
     endselect
   enddo  ! gij/
 
-  call edbg('min: '//str(minval(rerr_grdara,mask=grdidx/=idx_miss))//&
-           ' max: '//str(maxval(rerr_grdara,mask=grdidx/=idx_miss)))
+  call logmsg('min: '//str(minval(rerr_grdara,mask=grdidx/=idx_miss))//&
+             ' max: '//str(maxval(rerr_grdara,mask=grdidx/=idx_miss)))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -235,7 +237,7 @@ subroutine check_relations_rt_grid(&
   deallocate(grdara_rt)
   deallocate(rerr_grdara)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_relations_rt_grid
 !===============================================================
 !

@@ -5,8 +5,10 @@ program main
   use c1_const
   use c1_type_opt
   use c1_type_gs
-  use c1_gs_driv, only: &
-        set_gs_all
+  use c1_gs_define, only: &
+        set_gs
+  use c1_gs_grid_core, only: &
+        make_grdidx
   use c2_type_rt
   use c2_rt_main_io, only: &
         read_rt_main
@@ -27,30 +29,35 @@ program main
   logical :: calc_vrf  = .true.
   logical :: output    = .true.
 
-  call echo(code%bgn, 'program main', '+tr')
+  call logbgn('program remap', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call read_settings(s, t, rt)
 
-  call set_gs_all(s)
-  call set_gs_all(t)
-
   selectcase( rt%status )
+
   case( RT_STATUS__MAKE )
-    call make_rt(s, t, rt, calc_coef, calc_vrf, output)
+    call traperr( set_gs(s) )
+    call traperr( set_gs(t) )
+    call traperr( make_rt(s, t, rt, calc_coef, calc_vrf, output) )
+
   case( RT_STATUS__READ )
-    call read_rt_main(rt%main)
+    call traperr( make_grdidx(s) )
+    call traperr( make_grdidx(t) )
+    call traperr( read_rt_main(rt%main) )
+
   case( RT_STATUS__NONE )
-    continue
+    call errend(msg_unexpected_condition()//&
+              '\n  rt%status == RT_STATUS__NONE')
+
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  Invalid value in $rt%status: '//str(rt%status))
+    call errend(msg_invalid_value('rt%status', rt%status))
   endselect
 
   call remap(s, t, rt)
 
   call finalize(s, t, rt)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

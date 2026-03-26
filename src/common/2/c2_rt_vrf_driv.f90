@@ -17,29 +17,37 @@ module c2_rt_vrf_driv
   !-------------------------------------------------------------
   public :: make_rt_vrf
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_vrf_driv'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_vrf(rt, a)
+integer(4) function make_rt_vrf(rt, a) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_vrf'
   type(rt_)       , intent(inout), target :: rt
   type(gs_)       , intent(inout)         :: a
 
-  call echo(code%bgn, 'make_rt_vrf')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('mesh: '//str(a%nam))
+  call logmsg('mesh: '//str(a%nam))
 
-  call make_rt_vrf_grid(rt, a)
+  if( make_rt_vrf_grid(rt, a) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt_vrf
+  call logret(PRCNAM, MODNAM)
+end function make_rt_vrf
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_vrf_grid(rt, a)
+integer(4) function make_rt_vrf_grid(rt, a) result(info)
   ! common1
   use c1_opt_ctrl, only: &
         get_opt_log
@@ -55,6 +63,7 @@ subroutine make_rt_vrf_grid(rt, a)
         calc_grdara_rt  , &
         calc_rerr_grdara
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_vrf_grid'
   type(rt_), intent(inout), target :: rt
   type(gs_), intent(in)   , target :: a
 
@@ -71,13 +80,14 @@ subroutine make_rt_vrf_grid(rt, a)
 
   type(opt_log_) :: opt_log
 
-  call echo(code%bgn, 'make_rt_vrf_grid', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   ac => a%cmn
   if( .not. ac%is_valid )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
@@ -90,7 +100,9 @@ subroutine make_rt_vrf_grid(rt, a)
   fg_out => ac%f_grid_out
   g => ac%grid
 
-  call free_rt_vrf_grid(rtv)
+  if( free_rt_vrf_grid(rtv) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   make_vrf_grdidx      = rtv%f%out_grdidx%path      /= ''
   make_vrf_grdara_true = rtv%f%out_grdara_true%path /= ''
@@ -106,11 +118,11 @@ subroutine make_rt_vrf_grid(rt, a)
              make_vrf_grdara_rt   .or. &
              make_vrf_rerr_grdara .or. &
              make_vrf_grdnum) )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
 
-  opt_log = get_opt_log()
+  call get_opt_log(opt_log)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -139,104 +151,126 @@ subroutine make_rt_vrf_grid(rt, a)
   ! Calc. true value of grid area
   !-------------------------------------------------------------
   if( make_vrf_grdara_true )then
-    call echo(code%ent, 'Calculating true value of grid area')
+    call logent('Calculating true value of grid area', PRCNAM, MODNAM)
 
     call cpval(g%ara, rtv%grdara_true)
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Calc. grid area from remapping table
   !-------------------------------------------------------------
   if( make_vrf_grdara_rt )then
-    call echo(code%ent, 'Calculating grid area from remapping table')
+    call logent('Calculating grid area from remapping table', PRCNAM, MODNAM)
 
-    call calc_grdara_rt(&
-           rt%main,                     & ! inout
-           ac%is_source, rtv%dval_miss, & ! in
-           g%msk, g%idx, g%idxarg,      & ! in
-           rtv%grdara_rt)                 ! out
-
-    call echo(code%ext)
+    if( calc_grdara_rt(&
+          rt%main,                     & ! inout
+          ac%is_source, rtv%dval_miss, & ! in
+          g%msk, g%idx, g%idxarg,      & ! in
+          rtv%grdara_rt                & ! out
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Calc. relative error of grid area
   !-------------------------------------------------------------
   if( make_vrf_rerr_grdara )then
-    call echo(code%ent, 'Calculating relative error of grid area')
+    call logent('Calculating relative error of grid area', PRCNAM, MODNAM)
 
-    call calc_rerr_grdara(&
-           rtv%grdara_true, rtv%grdara_rt, rtv%dval_miss, & ! in
-           g%msk,                                         & ! in
-           rtv%rerr_grdara,                               & ! out
-           a)                                               ! in
+    if( calc_rerr_grdara(&
+          rtv%grdara_true, rtv%grdara_rt, rtv%dval_miss, & ! in
+          g%msk,                                         & ! in
+          rtv%rerr_grdara,                               & ! out
+          a                                              & ! in
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Calc. grdnum
   !-------------------------------------------------------------
   if( make_vrf_grdnum )then
-    call echo(code%ent, 'Counting the number of times that each grid appears in the table')
+    call logent('Counting the number of times that each grid appears in the table', PRCNAM, MODNAM)
 
-    call calc_grdnum(&
+    if( calc_grdnum(&
            rt%main,                     & ! inout
            ac%is_source, rtv%ival_miss, & ! in
            g%msk, g%idx, g%idxarg,      & ! in
-           rtv%grdnum)                    ! out
+           rtv%grdnum                   & ! out
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   ! Get stats.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Getting min. and max.')
+  call logent('Getting min. and max.', PRCNAM, MODNAM)
 
   if( make_vrf_grdara_true )then
-    call update_rt_vrf_min_max(&
-           g%idx                  , rtv%grdara_true        , &
-           ac%idx_miss            , rtv%dval_miss          , &
-           rtv%grdara_true_min    , rtv%grdara_true_max    , &
-           rtv%idx_grdara_true_min, rtv%idx_grdara_true_max)
+    if( update_rt_vrf_min_max(&
+          g%idx                  , rtv%grdara_true        , &
+          ac%idx_miss            , rtv%dval_miss          , &
+          rtv%grdara_true_min    , rtv%grdara_true_max    , &
+          rtv%idx_grdara_true_min, rtv%idx_grdara_true_max  &
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
   if( make_vrf_grdara_rt )then
-    call update_rt_vrf_min_max(&
-           g%idx                , rtv%grdara_rt        , &
-           ac%idx_miss          , rtv%dval_miss        , &
-           rtv%grdara_rt_min    , rtv%grdara_rt_max    , &
-           rtv%idx_grdara_rt_min, rtv%idx_grdara_rt_max)
+    if( update_rt_vrf_min_max(&
+          g%idx                , rtv%grdara_rt        , &
+          ac%idx_miss          , rtv%dval_miss        , &
+          rtv%grdara_rt_min    , rtv%grdara_rt_max    , &
+          rtv%idx_grdara_rt_min, rtv%idx_grdara_rt_max  &
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
   if( make_vrf_rerr_grdara )then
-    call update_rt_vrf_min_max(&
-           g%idx                  , rtv%rerr_grdara        , &
-           ac%idx_miss            , rtv%dval_miss          , &
-           rtv%rerr_grdara_min    , rtv%rerr_grdara_max    , &
-           rtv%idx_rerr_grdara_min, rtv%idx_rerr_grdara_max)
+    if( update_rt_vrf_min_max(&
+          g%idx                  , rtv%rerr_grdara        , &
+          ac%idx_miss            , rtv%dval_miss          , &
+          rtv%rerr_grdara_min    , rtv%rerr_grdara_max    , &
+          rtv%idx_rerr_grdara_min, rtv%idx_rerr_grdara_max  &
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
   if( make_vrf_grdnum )then
-    call update_rt_vrf_min_max(&
-           g%idx             , rtv%grdnum        , &
-           ac%idx_miss       , rtv%ival_miss     , &
-           rtv%grdnum_min    , rtv%grdnum_max    , &
-           rtv%idx_grdnum_min, rtv%idx_grdnum_max)
+    if( update_rt_vrf_min_max(&
+          g%idx             , rtv%grdnum        , &
+          ac%idx_miss       , rtv%ival_miss     , &
+          rtv%grdnum_min    , rtv%grdnum_max    , &
+          rtv%idx_grdnum_min, rtv%idx_grdnum_max  &
+        ) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Summary
   !-------------------------------------------------------------
   if( opt_log%print_summary )then
-    call echo(code%ent, 'Summary')
+    call logent('Summary', PRCNAM, MODNAM)
 
-    call report_rt_vrf_summary(&
-           make_vrf_grdara_true, make_vrf_grdara_rt, &
-           make_vrf_rerr_grdara, make_vrf_grdnum   , &
-           ac%idx_miss, rtv)
+    if( report_rt_vrf_summary(&
+          make_vrf_grdara_true, make_vrf_grdara_rt, &
+          make_vrf_rerr_grdara, make_vrf_grdnum   , &
+          ac%idx_miss, rtv) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
@@ -244,8 +278,8 @@ subroutine make_rt_vrf_grid(rt, a)
   nullify(rtv)
   nullify(fg_out)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt_vrf_grid
+  call logret(PRCNAM, MODNAM)
+end function make_rt_vrf_grid
 !===============================================================
 !
 !===============================================================

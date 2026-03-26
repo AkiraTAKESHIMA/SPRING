@@ -7,9 +7,6 @@ module mod_grid
   use lib_math
   use c1_const
   use c1_type_opt
-  use mod_utils, only: &
-        open_file_grid_im, &
-        close_file_grid_im
   use def_type
   implicit none
   private
@@ -20,16 +17,22 @@ module mod_grid
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  integer, parameter :: stat_target_all  = 0
-  integer, parameter :: stat_target_part = 1
-  integer, parameter :: stat_target_none = -1
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_grid'
+
+  integer, parameter :: STAT_TARGET_ALL  = 0
+  integer, parameter :: STAT_TARGET_PART = 1
+  integer, parameter :: STAT_TARGET_NONE = -1
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine merge_grid_data(input, output, opt)
+  use mod_utils, only: &
+        open_file_grid_im, &
+        close_file_grid_im
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'merge_grid_data'
   type(input_) , intent(inout)         :: input
   type(output_), intent(inout), target :: output
   type(opt_)   , intent(in)            :: opt
@@ -47,24 +50,24 @@ subroutine merge_grid_data(input, output, opt)
 
   integer :: un_grid_im
 
-  call echo(code%bgn, 'merge_grid_data')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Calc. nmax_ulim.
   !-------------------------------------------------------------
   if( opt%sys%memory_ulim == 0.d0  )then
     nmax_ulim = 0_8
   else
-    call echo(code%ent, 'Calc. ulim. of length of arrays')
+    call logent('Calculatin ulim. of length of arrays', PRCNAM, MODNAM)
 
-    call eerr('Not implemented yet.')
+    call errend(msg_not_implemented())
 
-    call echo(code%ext)
+    call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( input%nFiles_grid == 0 )then
-    call echo(code%ret)
+    call logret(PRCNAM, MODNAM)
     return
   endif
   !-------------------------------------------------------------
@@ -73,25 +76,25 @@ subroutine merge_grid_data(input, output, opt)
   selectcase( input%opt_idx_dup )
   !-------------------------------------------------------------
   ! Case: Calc. sum
-  case( input_opt_idx_dup_sum )
+  case( INPUT_OPT_IDX_DUP_SUM )
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call echo(code%ent, 'Counting the number of valid grids and get the range of indices')
+    call logent('Counting the number of valid grids and get the range of indices', PRCNAM, MODNAM)
 
     call count_valid_grids(input, nmax, idxmin, idxmax)
 
-    call edbg('Number of valid grids: '//str(nmax))
-    call edbg('Grid index min: '//str(idxmin)//' max: '//str(idxmax))
+    call logmsg('Number of valid grids: '//str(nmax))
+    call logmsg('Grid index min: '//str(idxmin)//' max: '//str(idxmax))
 
     output%f_grid%idxmin = idxmin
     output%f_grid%idxmax = idxmax
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     ! Merge grid data.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Merging grid data')
+    call logent('Merging grid data', PRCNAM, MODNAM)
     !-----------------------------------------------------------
     ! Case: Memory is not limited
     if( nmax_ulim == 0_8 )then
@@ -100,15 +103,15 @@ subroutine merge_grid_data(input, output, opt)
       !---------------------------------------------------------
       ! Read all data.
       !---------------------------------------------------------
-      call echo(code%ent, 'Reading all data')
+      call logent('Reading all data', PRCNAM, MODNAM)
 
       call read_all_data(input, grdidx, grdara)
 
-      call echo(code%ext)
+      call logext()
       !---------------------------------------------------------
       ! Calc. grid area.
       !---------------------------------------------------------
-      call echo(code%ent, 'Calculating grid area')
+      call logent('Calculating grid area', PRCNAM, MODNAM)
 
       allocate(grdidx_merged(nmax))
       allocate(grdara_merged(nmax))
@@ -122,20 +125,20 @@ subroutine merge_grid_data(input, output, opt)
 
       output%f_grid%nmax = nmax_merged
 
-      call echo(code%ext)
+      call logext()
       !---------------------------------------------------------
       ! Output.
       !---------------------------------------------------------
-      call echo(code%ent, 'Outputting')
+      call logent('Outputting', PRCNAM, MODNAM)
 
       if( output%f_grid%f_idx%path /= '' )then
         f => output%f_grid%f_idx
-        call edbg('Write '//str(fileinfo(f)))
-        call wbin(grdidx_merged(:nmax_merged), f%path, f%dtype, f%endian, f%rec)
+        call logmsg('Write '//str(fileinfo(f)))
+        call traperr( wbin(grdidx_merged(:nmax_merged), f%path, f%dtype, f%endian, f%rec) )
 
         f => output%f_grid%f_ara
-        call edbg('Write '//str(fileinfo(f)))
-        call wbin(grdara_merged(:nmax_merged), f%path, f%dtype, f%endian, f%rec)
+        call logmsg('Write '//str(fileinfo(f)))
+        call traperr( wbin(grdara_merged(:nmax_merged), f%path, f%dtype, f%endian, f%rec) )
       else
         call open_file_grid_im(output%path_grid_im, action_write, un_grid_im)
         write(un_grid_im) nmax_merged, grdidx_merged(1), grdidx_merged(nmax_merged)
@@ -144,7 +147,7 @@ subroutine merge_grid_data(input, output, opt)
         call close_file_grid_im()
       endif
 
-      call echo(code%ext)
+      call logext()
       !---------------------------------------------------------
       deallocate(grdidx_merged)
       deallocate(grdara_merged)
@@ -165,29 +168,29 @@ subroutine merge_grid_data(input, output, opt)
     !-----------------------------------------------------------
     endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Stop if index was duplicated
-  case( input_opt_idx_dup_stop )
+  case( INPUT_OPT_IDX_DUP_STOP )
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call echo(code%ent, 'Counting the number of valid grids and get the range of indices')
+    call logent('Counting the number of valid grids and get the range of indices', PRCNAM, MODNAM)
 
     call count_valid_grids(input, nmax, idxmin, idxmax)
 
-    call edbg('Number of valid grids: '//str(nmax))
-    call edbg('Grid index min: '//str(idxmin)//' max: '//str(idxmax))
+    call logmsg('Number of valid grids: '//str(nmax))
+    call logmsg('Grid index min: '//str(idxmin)//' max: '//str(idxmax))
 
     output%f_grid%nmax   = nmax
     output%f_grid%idxmin = idxmin
     output%f_grid%idxmax = idxmax
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     ! Merge grid data.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Merging grid data')
+    call logent('Merging grid data', PRCNAM, MODNAM)
     !-----------------------------------------------------------
     ! Case: Memory is not limited
     if( nmax_ulim == 0_8 )then
@@ -196,32 +199,32 @@ subroutine merge_grid_data(input, output, opt)
       !---------------------------------------------------------
       ! Read all data.
       !---------------------------------------------------------
-      call echo(code%ent, 'Reading all data')
+      call logent('Reading all data', PRCNAM, MODNAM)
 
       call read_all_data(input, grdidx, grdara)
 
-      call echo(code%ext)
+      call logext()
       !---------------------------------------------------------
       ! Check duplication of indices.
       !---------------------------------------------------------
-      call echo(code%ent, 'Checking duplication of indices')
+      call logent('Checking duplication of indices', PRCNAM, MODNAM)
 
       call check_index_duplication(nmax, grdidx, grdara)
 
-      call echo(code%ext)
+      call logext()
       !---------------------------------------------------------
       ! Output.
       !---------------------------------------------------------
-      call echo(code%ent, 'Outputting')
+      call logent('Outputting', PRCNAM, MODNAM)
 
       if( output%f_grid%f_idx%path /= '' )then
         f => output%f_grid%f_idx
-        call edbg('Write '//str(fileinfo(f)))
-        call wbin(grdidx, f%path, f%dtype, f%endian, f%rec)
+        call logmsg('Write '//str(fileinfo(f)))
+        call traperr( wbin(grdidx, f%path, f%dtype, f%endian, f%rec) )
 
         f => output%f_grid%f_ara
-        call edbg('Write '//str(fileinfo(f)))
-        call wbin(grdara, f%path, f%dtype, f%endian, f%rec)
+        call logmsg('Write '//str(fileinfo(f)))
+        call traperr( wbin(grdara, f%path, f%dtype, f%endian, f%rec) )
       else
         call open_file_grid_im(output%path_grid_im, action_write, un_grid_im)
         write(un_grid_im) nmax, grdidx(1), grdidx(nmax)
@@ -230,7 +233,7 @@ subroutine merge_grid_data(input, output, opt)
         call close_file_grid_im()
       endif
 
-      call echo(code%ext)
+      call logext()
       !---------------------------------------------------------
       deallocate(grdidx)
       deallocate(grdara)
@@ -251,15 +254,14 @@ subroutine merge_grid_data(input, output, opt)
     !-----------------------------------------------------------
     endif
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  input%opt_idx_dup: '//str(input%opt_idx_dup))
+    call errend(msg_invalid_value('input%opt_idx_dup', input%opt_idx_dup))
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine merge_grid_data
 !===============================================================
 !
@@ -274,6 +276,7 @@ end subroutine merge_grid_data
 !===============================================================
 recursive subroutine calc_grid_area(input, output, nmax_ulim, idxmin, idxmax, un)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_grid_area'
   type(input_) , intent(in)    :: input
   type(output_), intent(inout) :: output
   integer(8)   , intent(in)    :: nmax_ulim
@@ -287,43 +290,47 @@ recursive subroutine calc_grid_area(input, output, nmax_ulim, idxmin, idxmax, un
   integer   , allocatable :: stat_target(:)
   integer(8) :: nmax, nmax_merged
 
-  call echo(code%bgn, 'calc_grid_area (index '//str((/idxmin,idxmax/),' ~ ')//')')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  ! Count the number of target elements.
+  !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Count the number of target elements')
+  call logmsg('index '//str((/idxmin,idxmax/),' - '))
+  !-------------------------------------------------------------
+  ! Count the number of target elements
+  !-------------------------------------------------------------
+  call logent('Counting the number of target elements', PRCNAM, MODNAM)
 
   allocate(stat_target(input%nFiles_grid))
 
   call count_target_elements(input, idxmin, idxmax, nmax, stat_target)
 
-  call edbg('Num. of elements: '//str(nmax))
+  call logmsg('Num. of elements: '//str(nmax))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  ! Merge the grid data.
+  ! Merge grid data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Merge the grid data')
+  call logent('Merging grid data', PRCNAM, MODNAM)
 
   if( nmax > nmax_ulim )then
     call calc_grid_area(input, output, nmax_ulim, idxmin, idxmin+(idxmax-idxmin)/2_8, un)
     call calc_grid_area(input, output, nmax_ulim, idxmin+(idxmax-idxmin)/2_8+1_8, idxmax, un)
   else
     !-----------------------------------------------------------
-    ! Extract the target elements.
+    ! Extract target elements
     !-----------------------------------------------------------
-    call echo(code%ent, 'Extract the target elements')
+    call logent('Extracting target elements', PRCNAM, MODNAM)
 
     allocate(grdidx(nmax))
     allocate(grdara(nmax))
 
     call extract_target_elements(input, idxmin, idxmax, stat_target, grdidx, grdara)
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
-    ! Merge the extracted elements.
+    ! Merge extracted elements
     !-----------------------------------------------------------
-    call echo(code%ent, 'Merge the extracted elements')
+    call logent('Merging extracted elements', PRCNAM, MODNAM)
 
     allocate(grdidx_merged(nmax))
     allocate(grdara_merged(nmax))
@@ -332,17 +339,17 @@ recursive subroutine calc_grid_area(input, output, nmax_ulim, idxmin, idxmax, un
            nmax, grdidx, grdara, &
            nmax_merged, grdidx_merged, grdara_merged)
 
-    call edbg('Num. of elements: '//str(nmax_merged)//&
-              ' ('//str((/output%f_grid%nmax+1_8,output%f_grid%nmax+nmax_merged/),' ~ ')//')')
+    call logmsg('Num. of elements: '//str(nmax_merged)//&
+                ' ('//str((/output%f_grid%nmax+1_8,output%f_grid%nmax+nmax_merged/),' ~ ')//')')
 
     deallocate(grdidx)
     deallocate(grdara)
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
-    ! Output.
+    ! Output
     !-----------------------------------------------------------
-    call echo(code%ent, 'Output')
+    call logent('Outputting', PRCNAM, MODNAM)
 
     write(un) nmax_merged, idxmin, idxmax
     write(un) grdidx_merged(:nmax_merged)
@@ -350,7 +357,7 @@ recursive subroutine calc_grid_area(input, output, nmax_ulim, idxmin, idxmax, un
 
     call add(output%f_grid%nmax, nmax_merged)
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     deallocate(grdidx_merged)
     deallocate(grdara_merged)
@@ -358,15 +365,17 @@ recursive subroutine calc_grid_area(input, output, nmax_ulim, idxmin, idxmax, un
 
   deallocate(stat_target)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine calc_grid_area
 !===============================================================
 !
 !===============================================================
-subroutine calc_sum_grid_area(nmax, grdidx, grdara, nmax_merged, grdidx_merged, grdara_merged)
+subroutine calc_sum_grid_area(&
+    nmax, grdidx, grdara, nmax_merged, grdidx_merged, grdara_merged)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_sum_grid_area'
   integer(8), intent(in)    :: nmax
   integer(8), intent(inout) :: grdidx(:)
   real(8)   , intent(inout) :: grdara(:)
@@ -377,7 +386,7 @@ subroutine calc_sum_grid_area(nmax, grdidx, grdara, nmax_merged, grdidx_merged, 
   integer(8), allocatable :: arg(:)
   integer(8) :: ns, ne
 
-  call echo(code%bgn, 'calc_sum_grid_area', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -402,7 +411,7 @@ subroutine calc_sum_grid_area(nmax, grdidx, grdara, nmax_merged, grdidx_merged, 
     grdara_merged(nmax_merged) = sum(grdara(ns:ne))
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine calc_sum_grid_area
 !===============================================================
 !
@@ -415,37 +424,43 @@ end subroutine calc_sum_grid_area
 !===============================================================
 !
 !===============================================================
-recursive subroutine merge_grid_data_no_duplication(input, output, nmax_ulim, idxmin, idxmax, un)
+recursive subroutine merge_grid_data_no_duplication(&
+    input, output, nmax_ulim, idxmin, idxmax, un)
   implicit none
-  type(input_) , intent(in)            :: input
+  character(CLEN_PROC), parameter :: PRCNAM = 'merge_grid_data_no_duplication'
+  type(input_) , intent(in)    :: input
   type(output_), intent(inout) :: output
-  integer(8)   , intent(in)            :: nmax_ulim
-  integer(8)   , intent(in)            :: idxmin, idxmax
-  integer      , intent(in)            :: un
+  integer(8)   , intent(in)    :: nmax_ulim
+  integer(8)   , intent(in)    :: idxmin, idxmax
+  integer      , intent(in)    :: un
 
   integer(8), allocatable :: grdidx(:)
   real(8)   , allocatable :: grdara(:)
   integer   , allocatable :: stat_target(:)
   integer(8) :: nmax
 
-  call echo(code%bgn, 'merge_grid_data_no_duplication (index '//str((/idxmin,idxmax/),' ~ ')//')')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
-  ! Count the number of target elements.
+  !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Count the number of target elements')
+  call logmsg('index '//str((/idxmin,idxmax/),' - '))
+  !-------------------------------------------------------------
+  ! Counting the number of target elements
+  !-------------------------------------------------------------
+  call logent('Counting the number of target elements', PRCNAM, MODNAM)
 
   allocate(stat_target(input%nFiles_grid))
 
   call count_target_elements(input, idxmin, idxmax, nmax, stat_target)
 
-  call edbg('Num. of elements: '//str(nmax)//&
+  call logmsg('Num. of elements: '//str(nmax)//&
             ' ('//str((/output%f_grid%nmax+1_8,output%f_grid%nmax+nmax/),' ~ ')//')')
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  ! Merge the grid data.
+  ! Merging grid data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Merge the grid data')
+  call logent('Merging grid data', PRCNAM, MODNAM)
 
   if( nmax > nmax_ulim )then
     call merge_grid_data_no_duplication(&
@@ -454,28 +469,28 @@ recursive subroutine merge_grid_data_no_duplication(input, output, nmax_ulim, id
            input, output, nmax_ulim, idxmin+(idxmax-idxmin)/2_8+1_8, idxmax, un)
   else
     !-----------------------------------------------------------
-    ! Extract the target elements.
+    ! Extract target elements
     !-----------------------------------------------------------
-    call echo(code%ent, 'Extract the target elements')
+    call logent('Extracting target elements', PRCNAM, MODNAM)
 
     allocate(grdidx(nmax))
     allocate(grdara(nmax))
 
     call extract_target_elements(input, idxmin, idxmax, stat_target, grdidx, grdara)
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
-    ! Check duplication of indices.
+    ! Check duplication of indices
     !-----------------------------------------------------------
-    call echo(code%ent, 'Check duplication of indices')
+    call logent('Checking duplication of indices', PRCNAM, MODNAM)
 
     call check_index_duplication(nmax, grdidx, grdara)
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
-    ! Output.
+    ! Output
     !-----------------------------------------------------------
-    call echo(code%ent, 'Output')
+    call logent('Outputting', PRCNAM, MODNAM)
 
     write(un) nmax, idxmin, idxmax
     write(un) grdidx
@@ -483,19 +498,20 @@ recursive subroutine merge_grid_data_no_duplication(input, output, nmax_ulim, id
 
     call add(output%f_grid%nmax, nmax)
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
   endif
 
   deallocate(stat_target)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine merge_grid_data_no_duplication
 !===============================================================
 !
 !===============================================================
 subroutine check_index_duplication(nmax, grdidx, grdara)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_index_duplication'
   integer(8), intent(in) :: nmax
   integer(8), intent(inout) :: grdidx(:)
   real(8)   , intent(inout) :: grdara(:)
@@ -503,7 +519,7 @@ subroutine check_index_duplication(nmax, grdidx, grdara)
   integer(8), allocatable :: arg(:)
   integer(8) :: ns, ne
 
-  call echo(code%bgn, 'check_index_duplication', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -523,12 +539,12 @@ subroutine check_index_duplication(nmax, grdidx, grdara)
     enddo
 
     if( ne /= ns )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  Grid index duplicated.')
+      call errend(msg_unexpected_condition()//&
+                '\n  Grid index duplicated.')
     endif
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_index_duplication
 !===============================================================
 !
@@ -543,6 +559,7 @@ end subroutine check_index_duplication
 !===============================================================
 subroutine count_valid_grids(input, nmax_valid, idxmin, idxmax)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'count_valid_grids'
   type(input_), intent(inout) :: input
   integer(8)  , intent(out)   :: nmax_valid
   integer(8)  , intent(out)   :: idxmin, idxmax
@@ -559,7 +576,7 @@ subroutine count_valid_grids(input, nmax_valid, idxmin, idxmax)
 
   integer    :: dgt_n
 
-  call echo(code%bgn, 'count_valid_grids', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -576,23 +593,24 @@ subroutine count_valid_grids(input, nmax_valid, idxmin, idxmax)
   do iFile_grid = 1, input%nFiles_grid
     f_grid => input%list_f_grid(iFile_grid)
 
-    call echo(code%ent, 'File '//str(iFile_grid,dgt(input%nFiles_grid))//&
-              ' / '//str(input%nFiles_grid))
-    call edbg('Length: '//str(f_grid%nmax,dgt_n))
+    call logent('File '//str(iFile_grid, dgt(input%nFiles_grid))//&
+                ' / '//str(input%nFiles_grid))
+    call logmsg('Length: '//str(f_grid%nmax,dgt_n))
 
     call realloc(grdidx, f_grid%nmax)
     call realloc(grdara, f_grid%nmax)
 
     f => f_grid%f_idx
-    call edbg('Read '//str(fileinfo(f)))
-    call rbin(grdidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Read '//str(fileinfo(f)))
+    call traperr( rbin(grdidx, f%path, f%dtype, f%endian, f%rec) )
 
     f => f_grid%f_ara
-    call edbg('Read '//str(fileinfo(f)))
-    call rbin(grdara, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Read '//str(fileinfo(f)))
+    call traperr( rbin(grdara, f%path, f%dtype, f%endian, f%rec) )
 
-    call get_stats(grdidx, vmin=f_grid%idxmin, vmax=f_grid%idxmax, &
-                   miss=input%idx_miss, stat=stat)
+    call traperr( get_minmax(&
+            grdidx, stat, f_grid%idxmin, f_grid%idxmax, &
+            miss=input%idx_miss) )
     if( stat /= 0 )then
       f_grid%nmax_valid = 0_8
       cycle
@@ -605,31 +623,32 @@ subroutine count_valid_grids(input, nmax_valid, idxmin, idxmax)
       endif
     enddo  ! n/
 
-    call edbg('Num. of valid elements: '//str(f_grid%nmax_valid))
+    call logmsg('Num. of valid elements: '//str(f_grid%nmax_valid))
 
     idxmin = min(idxmin, f_grid%idxmin)
     idxmax = max(idxmax, f_grid%idxmax)
 
-    call echo(code%ext)
+    call logext()
   enddo  ! iFile_grid/
 
   nmax_valid = sum(input%list_f_grid(:)%nmax_valid)
 
   if( nmax_valid == 0_8 )then
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  Valid index was not found.')
+    call errend(msg_unexpected_condition()//&
+              '\n  Valid index was not found.')
   endif
 
   deallocate(grdidx)
   deallocate(grdara)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine count_valid_grids
 !===============================================================
 !
 !===============================================================
 subroutine read_all_data(input, grdidx_all, grdara_all)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_all_data'
   type(input_), intent(in)  :: input
   integer(8)  , intent(out) :: grdidx_all(:)
   real(8)     , intent(out) :: grdara_all(:)
@@ -644,7 +663,7 @@ subroutine read_all_data(input, grdidx_all, grdara_all)
   integer(8) :: nmax, n
   integer    :: iFile_grid
 
-  call echo(code%bgn, 'read_all_data', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -660,12 +679,12 @@ subroutine read_all_data(input, grdidx_all, grdara_all)
     call realloc(mask  , f_grid%nmax)
 
     f => f_grid%f_idx
-    call edbg('Read '//str(fileinfo(f)))
-    call rbin(grdidx, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading '//str(fileinfo(f)))
+    call traperr( rbin(grdidx, f%path, f%dtype, f%endian, f%rec) )
 
     f => f_grid%f_ara
-    call edbg('Read '//str(fileinfo(f)))
-    call rbin(grdara, f%path, f%dtype, f%endian, f%rec)
+    call logmsg('Reading '//str(fileinfo(f)))
+    call traperr( rbin(grdara, f%path, f%dtype, f%endian, f%rec) )
 
     if( f_grid%nmax_valid == f_grid%nmax )then
       grdidx_all(nmax+1_8:nmax+f_grid%nmax) = grdidx(:)
@@ -684,18 +703,18 @@ subroutine read_all_data(input, grdidx_all, grdara_all)
     endif
 
     if( .not. any(mask) )then
-      call edbg('No valid grid exists.')
+      call logmsg('No valid grid exists.')
     else
-      call edbg('idx min: '//str(minval(grdidx,mask=mask))//&
-                  ', max: '//str(maxval(grdidx,mask=mask))//&
-              '\nara min: '//str(minval(grdara,mask=mask))//&
-                  ', max: '//str(maxval(grdara,mask=mask)))
+      call logmsg('idx min: '//str(minval(grdidx,mask=mask))//&
+                    ', max: '//str(maxval(grdidx,mask=mask))//&
+                '\nara min: '//str(minval(grdara,mask=mask))//&
+                    ', max: '//str(maxval(grdara,mask=mask)))
     endif
   enddo  ! iFile_grid/
 
   deallocate(grdidx, grdara, mask)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_all_data
 !===============================================================
 !
@@ -703,6 +722,7 @@ end subroutine read_all_data
 subroutine count_target_elements(&
     input, idxmin, idxmax, nmax, stat_target)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'count_target_elements'
   type(input_), intent(in)  :: input
   integer(8)  , intent(in)  :: idxmin, idxmax
   integer(8)  , intent(out) :: nmax
@@ -716,7 +736,7 @@ subroutine count_target_elements(&
   integer    :: iFile_grid
   integer(8) :: n
 
-  call echo(code%bgn, 'count_target_elements', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -734,16 +754,16 @@ subroutine count_target_elements(&
     ! Case: All grids are targets.
     elseif( f_grid%idxmin >= idxmin .and. f_grid%idxmax <= idxmax )then
       call add(nmax, f_grid%nmax)
-      stat_target(iFile_grid) = stat_target_all
+      stat_target(iFile_grid) = STAT_TARGET_ALL
     !-----------------------------------------------------------
     ! Case: Part of grids can be targets.
     else
       f => f_grid%f_idx
-      call rbin(grdidx_this(:f_grid%nmax), f%path, f%dtype, f%endian, f%rec)
+      call traperr( rbin(grdidx_this(:f_grid%nmax), f%path, f%dtype, f%endian, f%rec) )
 
       do n = 1_8, f_grid%nmax
         if( grdidx_this(n) >= idxmin .and. grdidx_this(n) <= idxmax )then
-          stat_target(iFile_grid) = stat_target_part
+          stat_target(iFile_grid) = STAT_TARGET_PART
           call add(nmax)
         endif
       enddo  ! n/
@@ -753,13 +773,15 @@ subroutine count_target_elements(&
 
   deallocate(grdidx_this)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine count_target_elements
 !===============================================================
 !
 !===============================================================
-subroutine extract_target_elements(input, idxmin, idxmax, stat_target, grdidx, grdara)
+subroutine extract_target_elements(&
+    input, idxmin, idxmax, stat_target, grdidx, grdara)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'extract_target_elements'
   type(input_), intent(in)  :: input
   integer(8)  , intent(in)  :: idxmin, idxmax
   integer     , intent(in)  :: stat_target(:)
@@ -775,7 +797,7 @@ subroutine extract_target_elements(input, idxmin, idxmax, stat_target, grdidx, g
   integer    :: iFile_grid
   integer(8) :: nmax, n
 
-  call echo(code%bgn, 'extract_target_elements', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -790,28 +812,28 @@ subroutine extract_target_elements(input, idxmin, idxmax, stat_target, grdidx, g
     selectcase( stat_target(iFile_grid) )
     !---------------------------------------------------------
     ! Case: No grid is target.
-    case( stat_target_none )
+    case( STAT_TARGET_NONE )
       cycle
     !---------------------------------------------------------
     ! Case: All grids are targets.
-    case( stat_target_all )
+    case( STAT_TARGET_ALL )
       f => f_grid%f_idx
-      call rbin(grdidx_this, f%path, f%dtype, f%endian, f%rec)
+      call traperr( rbin(grdidx_this, f%path, f%dtype, f%endian, f%rec) )
 
       f => f_grid%f_ara
-      call rbin(grdara_this, f%path, f%dtype, f%endian, f%rec)
+      call traperr( rbin(grdara_this, f%path, f%dtype, f%endian, f%rec) )
 
       grdidx(nmax+1_8:nmax+f_grid%nmax) = grdidx_this(:)
       grdara(nmax+1_8:nmax+f_grid%nmax) = grdara_this(:)
       call add(nmax, f_grid%nmax)
     !---------------------------------------------------------
     ! Case: Part of grids can be targets.
-    case( stat_target_part )
+    case( STAT_TARGET_PART )
       f => f_grid%f_idx
-      call rbin(grdidx_this, f%path, f%dtype, f%endian, f%rec)
+      call traperr( rbin(grdidx_this, f%path, f%dtype, f%endian, f%rec) )
 
       f => f_grid%f_ara
-      call rbin(grdara_this, f%path, f%dtype, f%endian, f%rec)
+      call traperr( rbin(grdara_this, f%path, f%dtype, f%endian, f%rec) )
 
       do n = 1_8, f_grid%nmax
         if( grdidx_this(n) >= idxmin .and. grdidx_this(n) <= idxmax )then
@@ -827,7 +849,7 @@ subroutine extract_target_elements(input, idxmin, idxmax, stat_target, grdidx, g
   deallocate(grdidx_this)
   deallocate(grdara_this)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine extract_target_elements
 !===============================================================
 !
@@ -841,7 +863,11 @@ end subroutine extract_target_elements
 !
 !===============================================================
 subroutine make_final_product_from_im(output)
+  use mod_utils, only: &
+        open_file_grid_im, &
+        close_file_grid_im
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_final_product_from_im'
   type(output_), intent(in), target :: output
 
   type(file_), pointer :: f
@@ -853,7 +879,7 @@ subroutine make_final_product_from_im(output)
 
   integer :: un
 
-  call echo(code%bgn, 'make_final_product_from_im', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -882,12 +908,12 @@ subroutine make_final_product_from_im(output)
     read(un) grdara(:nmax)
 
     f => output%f_grid%f_idx
-    call wbin(grdidx(:nmax), f%path, f%dtype, f%endian, f%rec, &
-              lb=nmax_all+1_8, sz=output%f_grid%nmax)
+    call traperr( wbin(grdidx(:nmax), f%path, f%dtype, f%endian, f%rec, &
+                       lb=nmax_all+1_8, sz=output%f_grid%nmax) )
 
     f => output%f_grid%f_ara
-    call wbin(grdara(:nmax), f%path, f%dtype, f%endian, f%rec, &
-              lb=nmax_all+1_8, sz=output%f_grid%nmax)
+    call traperr( wbin(grdara(:nmax), f%path, f%dtype, f%endian, f%rec, &
+                       lb=nmax_all+1_8, sz=output%f_grid%nmax) )
 
     call add(nmax_all, nmax)
   enddo  ! iGroup/
@@ -897,7 +923,7 @@ subroutine make_final_product_from_im(output)
 
   call close_file_grid_im()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_final_product_from_im
 !===============================================================
 !

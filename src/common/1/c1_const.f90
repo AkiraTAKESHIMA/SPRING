@@ -3,11 +3,17 @@ module c1_const
   implicit none
   public
   !-------------------------------------------------------------
-  ! Grid system
+  ! Mesh
   !-------------------------------------------------------------
+  integer, parameter :: MESH_STATUS__UNDEFINED   = 0
+  integer, parameter :: MESH_STATUS__INITIALIZED = 1
+  integer, parameter :: MESH_STATUS__MODIFIED    = 2
+
   character(CLEN_KEY), parameter :: MESHTYPE__LATLON  = 'latlon'
   character(CLEN_KEY), parameter :: MESHTYPE__RASTER  = 'raster'
   character(CLEN_KEY), parameter :: MESHTYPE__POLYGON = 'polygon'
+  character(CLEN_KEY), parameter :: MESHTYPE__UNSPEC  = 'unspecified'
+  character(CLEN_KEY), parameter :: MESHTYPE__UNDEF   = 'undefined'
 
   character(CLEN_KEY), parameter :: MESH__NONE   = 'none'
   character(CLEN_KEY), parameter :: MESH__SOURCE = 'source'
@@ -135,7 +141,7 @@ module c1_const
   character(CLEN_KEY), parameter :: INPUT_OPT_IDX_DUP_SUM  = 'sum'
   character(CLEN_KEY), parameter :: INPUT_OPT_IDX_DUP_STOP = 'stop'
   !-----------------------------------------------------------
-  ! For formatting
+  ! Formatting
   !-----------------------------------------------------------
   character(CLEN_WFMT), parameter :: WFMT_MEM = 'es10.3'
 

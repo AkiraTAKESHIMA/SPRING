@@ -19,12 +19,18 @@ module c2_rt_main_coef
   public :: calc_rt_coef_sum_modify_enabled
   public :: calc_rt_coef_sum_modify_not_enabled
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_main_coef'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine calc_rt_coef(rtm, grdidx, grdidxarg, grdara)
+integer(4) function calc_rt_coef(&
+    rtm, grdidx, grdidxarg, grdara) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_rt_coef'
   type(rt_main_), intent(inout), target :: rtm
   integer(8), intent(in) :: grdidx(:)
   integer(8), intent(in) :: grdidxarg(:)
@@ -33,7 +39,8 @@ subroutine calc_rt_coef(rtm, grdidx, grdidxarg, grdara)
   type(gs_common_), pointer :: uc
   integer(8), pointer :: coefidx(:)
 
-  call echo(code%bgn, 'calc_rt_coef')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Sort by mesh_coef
   !-------------------------------------------------------------
@@ -43,30 +50,37 @@ subroutine calc_rt_coef(rtm, grdidx, grdidxarg, grdara)
   case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef))
+    return
   endselect
   !-----------------------------------------------------------
   ! Calc. coef.
   !-----------------------------------------------------------
   if( rtm%opt_coef%is_sum_modify_enabled )then
-    call calc_rt_coef_sum_modify_enabled(rtm)
+    if( calc_rt_coef_sum_modify_enabled(rtm) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
-    call calc_rt_coef_sum_modify_not_enabled(rtm, grdidx, grdidxarg, grdara)
+    if( calc_rt_coef_sum_modify_not_enabled(&
+          rtm, grdidx, grdidxarg, grdara) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   !-------------------------------------------------------------
   nullify(uc)
   nullify(coefidx)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_rt_coef
+  call logret(PRCNAM, MODNAM)
+end function calc_rt_coef
 !===============================================================
 !
 !===============================================================
-subroutine calc_rt_coef_sum_modify_enabled(rtm)
+integer(4) function calc_rt_coef_sum_modify_enabled(rtm) result(info)
   use c2_rt_error, only: &
-    raise_error_coef_above_thresh
+        raise_error_coef_above_thresh
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_rt_coef_sum_modify_enabled'
   type(rt_main_), intent(inout), target :: rtm
 
   integer(8), pointer :: coefidx(:)
@@ -75,11 +89,12 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
   logical    :: updated
   real(8)    :: vmin, vmax, vmax_negative, vmin_positive
 
-  call echo(code%bgn, 'calc_rt_coef_sum_modify_enabled', '-p -x2')
-  !------------------------------------------------------------- 
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
   !
-  !------------------------------------------------------------- 
-  call echo(code%ent, 'Preparing', '-p -x2')
+  !-------------------------------------------------------------
+  call logent('Preparing', PRCNAM, MODNAM, '-p -x2')
 
   selectcase( rtm%mesh_coef )
   case( MESH__SOURCE )
@@ -87,17 +102,20 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
   case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef))
+    return
   endselect
 
-  call sort_rt(rtm, rtm%mesh_coef)
+  if( sort_rt(rtm, rtm%mesh_coef) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call echo(code%ext)
-  !------------------------------------------------------------- 
+  call logext()
+  !-------------------------------------------------------------
   ! Calc. coef.
-  !------------------------------------------------------------- 
-  call echo(code%ent, 'Calculating coef.', '-p -x2')
+  !-------------------------------------------------------------
+  call logent('Calculating coef.', PRCNAM, MODNAM, '-p -x2')
 
   ije = 0_8
   do while( ije < rtm%nij )
@@ -114,21 +132,23 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
       rtm%coef(ijs:ije) = 0.d0
       cycle
     elseif( area_sum < 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  sum(rtm%area(ijs:ije)) < 0'//&
-              '\n  ijs: '//str(ijs)//&
-              '\n  ije: '//str(ije)//&
-              '\n  sum(rtm%area(ijs:ije)): '//str(area_sum))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nsum(rtm%area(ijs:ije)) < 0'//&
+                '\n  ijs: '//str(ijs)//&
+                '\n  ije: '//str(ije)//&
+                '\n  sum(rtm%area(ijs:ije)): '//str(area_sum))
+      return
     endif
 
     rtm%coef(ijs:ije) = rtm%area(ijs:ije) / area_sum * rtm%opt_coef%sum_modify
   enddo  ! ije/
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the range of coef.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the range', '-p -x2')
+  call logent('Checking the range', PRCNAM, MODNAM, '-p -x2')
 
   call get_ranges_coef(&
          rtm%coef(:rtm%nij), &
@@ -137,11 +157,11 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
   call echo_ranges_coef(&
          vmin, vmax, vmax_negative, vmin_positive)
 
-  call echo(code%ext)
-  !------------------------------------------------------------- 
+  call logext()
+  !-------------------------------------------------------------
   ! Modify values
-  !------------------------------------------------------------- 
-  call echo(code%ent, 'Modifying values', '-p -x2')
+  !-------------------------------------------------------------
+  call logent('Modifying values', PRCNAM, MODNAM, '-p -x2')
 
   ije = 0_8
   do while( ije < rtm%nij )
@@ -161,11 +181,13 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
         rtm%coef(ijs:ije) = 0.d0
         exit
       elseif( area_sum < 0.d0 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  sum(rtm%area(ijs:ije)) < 0'//&
-                '\n  ijs: '//str(ijs)//&
-                '\n  ije: '//str(ije)//&
-                '\n  sum(rtm%area(ijs:ije)): '//str(area_sum))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\nsum(rtm%area(ijs:ije)) < 0'//&
+                  '\n  ijs: '//str(ijs)//&
+                  '\n  ije: '//str(ije)//&
+                  '\n  sum(rtm%area(ijs:ije)): '//str(area_sum))
+        return
       endif
 
       rtm%coef(ijs:ije) = rtm%area(ijs:ije) / area_sum * rtm%opt_coef%sum_modify
@@ -178,6 +200,7 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
             call raise_error_coef_above_thresh(&
                    ij, rtm%sidx(ij), rtm%tidx(ij), &
                    rtm%coef(ij), rtm%opt_coef%error_excess)
+            info = 1; call errret(); return
           endif
         enddo
       endif
@@ -201,18 +224,19 @@ subroutine calc_rt_coef_sum_modify_enabled(rtm)
     !-----------------------------------------------------------
   enddo  ! ije/
 
-  call echo(code%ext)
-  !------------------------------------------------------------- 
-  call echo(code%ret)
-end subroutine calc_rt_coef_sum_modify_enabled
+  call logext()
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function calc_rt_coef_sum_modify_enabled
 !===============================================================
 !
 !===============================================================
-subroutine calc_rt_coef_sum_modify_not_enabled(&
-    rtm, grdidx, grdidxarg, grdara)
+integer(4) function calc_rt_coef_sum_modify_not_enabled(&
+    rtm, grdidx, grdidxarg, grdara) result(info)
   use c2_rt_error, only: &
         raise_error_coef_above_thresh
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_rt_coef_sum_modify_not_enabled'
   type(rt_main_), intent(inout) :: rtm
   integer(8)    , intent(in)    :: grdidx(:)
   integer(8)    , intent(in)    :: grdidxarg(:)
@@ -225,11 +249,12 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
   logical    :: updated
   real(8)    :: vmin, vmax, vmax_negative, vmin_positive
 
-  call echo(code%bgn, 'calc_rt_coef_sum_modify_not_enabled', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing', '-p -x2')
+  call logent('Preparing', PRCNAM, MODNAM, '-p -x2')
 
   selectcase( rtm%mesh_coef )
   case( MESH__SOURCE )
@@ -237,17 +262,20 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
   case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef))
+    return
   endselect
 
-  call sort_rt(rtm, rtm%mesh_coef)
+  if( sort_rt(rtm, rtm%mesh_coef) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Calc. coef.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating coef.', '-p -x2')
+  call logent('Calculating coef.', PRCNAM, MODNAM, '-p -x2')
 
   !-------------------------------------------------------------
   ! Case: $grdidx is sorted
@@ -263,13 +291,17 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
 
       call search(coefidx(ijs), grdidx, gij)
       if( gij == 0_8 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  coefidx(ijs) was not found in grdidx.'//&
-                '\n  ijs: '//str(ijs)//&
-                '\n  coefidx: '//str(coefidx(ijs)))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\ncoefidx(ijs) was not found in grdidx.'//&
+                  '\n  ijs: '//str(ijs)//&
+                  '\n  coefidx: '//str(coefidx(ijs)))
+        return
       endif
 
-      call calc_coef()
+      if( calc_coef() /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo  ! ije/
   !-------------------------------------------------------------
   ! Case: $grdidx is not sorted
@@ -285,23 +317,27 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
 
       call search(coefidx(ijs), grdidx, grdidxarg, loc)
       if( loc == 0_8 )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  coefidx(ijs) was not found in grdidx.'//&
-                '\n  ijs: '//str(ijs)//&
-                '\n  coefidx: '//str(coefidx(ijs)))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\ncoefidx(ijs) was not found in grdidx.'//&
+                  '\n  ijs: '//str(ijs)//&
+                  '\n  coefidx: '//str(coefidx(ijs)))
+        return
       endif
 
       gij = grdidxarg(loc)
 
-      call calc_coef()
+      if( calc_coef() /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo  ! ije/
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the range of coef.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the range', '-p -x2')
+  call logent('Checking the range', PRCNAM, MODNAM, '-p -x2')
 
   call get_ranges_coef(&
          rtm%coef(:rtm%nij), &
@@ -310,11 +346,11 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
   call echo_ranges_coef(&
          vmin, vmax, vmax_negative, vmin_positive)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Modify values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying values', '-p -x2')
+  call logent('Modifying values', PRCNAM, MODNAM, '-p -x2')
 
   ije = 0_8
   do while( ije < rtm%nij )
@@ -333,6 +369,7 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
           call raise_error_coef_above_thresh(&
                  ij, rtm%sidx(ij), rtm%tidx(ij), &
                  rtm%coef(ij), rtm%opt_coef%error_excess)
+          info = 1; call errret(); return
         endif
       enddo
     endif
@@ -379,52 +416,56 @@ subroutine calc_rt_coef_sum_modify_not_enabled(&
     !-----------------------------------------------------------
   enddo  ! ije/
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
-subroutine calc_coef()
+integer(4) function calc_coef() result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_coef'
+
+  info = 0
 
   if( grdara(gij) > 0.d0 )then
     rtm%coef(ijs:ije) = rtm%area(ijs:ije) / grdara(gij)
   else
     if( all(rtm%area(ijs:ije) == 0.d0) )then
       ! TODO: option for allowing zero area grid
-      call ewrn(str(msg_unexpected_condition())//&
-              '\n  grdara('//str(gij)//') <= 0.0'//&
-              '\n  grdidx: '//str(grdidx(gij))//&
-              '\n  grdara: '//str(grdara(gij))//&
-              '\n  rtm%area min: '//str(minval(rtm%area(ijs:ije)),'es10.3')//&
-                         ', max: '//str(maxval(rtm%area(ijs:ije)),'es10.3'))
+      call logwrn(msg_unexpected_condition()//&
+                '\ngrdara('//str(gij)//') <= 0.0'//&
+                '\n  grdidx: '//str(grdidx(gij))//&
+                '\n  grdara: '//str(grdara(gij))//&
+                '\n  rtm%area min: '//str(minval(rtm%area(ijs:ije)),'es10.3')//&
+                           ', max: '//str(maxval(rtm%area(ijs:ije)),'es10.3'))
       rtm%coef(ijs:ije) = 0.d0
     else
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  grdara('//str(gij)//') <= 0.0'//&
-              '\n  grdidx: '//str(grdidx(gij))//&
-              '\n  grdara: '//str(grdara(gij))//&
-              '\n  rtm%area min: '//str(minval(rtm%area(ijs:ije)),'es10.3')//&
-                         ', max: '//str(maxval(rtm%area(ijs:ije)),'es10.3'))
+      call logwrn(msg_unexpected_condition()//&
+                '\ngrdara('//str(gij)//') <= 0.0'//&
+                '\n  grdidx: '//str(grdidx(gij))//&
+                '\n  grdara: '//str(grdara(gij))//&
+                '\n  rtm%area min: '//str(minval(rtm%area(ijs:ije)),'es10.3')//&
+                           ', max: '//str(maxval(rtm%area(ijs:ije)),'es10.3'))
     endif
   endif
-end subroutine calc_coef
+end function calc_coef
 !---------------------------------------------------------------
-end subroutine calc_rt_coef_sum_modify_not_enabled
+end function calc_rt_coef_sum_modify_not_enabled
 !===============================================================
 !
 !===============================================================
 subroutine get_ranges_coef(&
     coef, vmin, vmax, vmax_negative, vmin_positive)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_ranges_coef'
   real(8), intent(in)  :: coef(:)
   real(8), intent(out) :: vmin, vmax
   real(8), intent(out) :: vmax_negative, vmin_positive
 
   integer(8) :: ij
 
-  call echo(code%bgn, 'get_ranges_coef', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -442,7 +483,7 @@ subroutine get_ranges_coef(&
     endif
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine get_ranges_coef
 !===============================================================
 !
@@ -450,25 +491,26 @@ end subroutine get_ranges_coef
 subroutine echo_ranges_coef(&
     vmin, vmax, vmax_negative, vmin_positive)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_ranges_coef'
   real(8), intent(in) :: vmin, vmax
   real(8), intent(in) :: vmax_negative, vmin_positive
 
-  call echo(code%bgn, 'echo_ranges_coef', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('min: '//str(vmin))
-  call edbg('max: '//str(vmax))
+  call logmsg('min: '//str(vmin))
+  call logmsg('max: '//str(vmax))
 
   if( vmin < 0.d0 )then
-    call edbg('max negative: '//str(vmax_negative))
+    call logmsg('max negative: '//str(vmax_negative))
   endif
 
   if( vmax > 0.d0 )then
-    call edbg('min positive: '//str(vmin_positive))
+    call logmsg('min positive: '//str(vmin_positive))
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_ranges_coef
 !===============================================================
 !
@@ -476,6 +518,7 @@ end subroutine echo_ranges_coef
 subroutine round_down_coef_lt_zero_positive(&
     area, coef, ijs, ije, zero_positive, updated)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'round_down_coef_lt_zero_positive'
   real(8)   , intent(inout) :: area(:), coef(:)
   integer(8), intent(in)    :: ijs, ije
   real(8)   , intent(in)    :: zero_positive
@@ -484,7 +527,7 @@ subroutine round_down_coef_lt_zero_positive(&
   integer(8) :: ij
   logical    :: updated_this
 
-  !call echo(code%bgn, 'round_down_coef_lt_zero_positive')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   updated_this = .true.
   do while( updated_this )
@@ -499,7 +542,7 @@ subroutine round_down_coef_lt_zero_positive(&
     enddo  ! ij/
   enddo  ! updated/
   !-------------------------------------------------------------
-  !call echo(code%ret)
+   call logret(PRCNAM, MODNAM)
 end subroutine round_down_coef_lt_zero_positive
 !===============================================================
 !
@@ -507,6 +550,7 @@ end subroutine round_down_coef_lt_zero_positive
 subroutine round_down_coef_gt_zero_negative(&
     area, coef, ijs, ije, zero_negative, updated)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'round_down_coef_gt_zero_negative'
   real(8)   , intent(inout) :: area(:), coef(:)
   integer(8), intent(in)    :: ijs, ije
   real(8)   , intent(in)    :: zero_negative
@@ -515,7 +559,7 @@ subroutine round_down_coef_gt_zero_negative(&
   integer(8) :: ij
   logical    :: updated_this
 
-  !call echo(code%bgn, 'round_down_coef_gt_zero_negative')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   updated_this = .true.
   do while( updated_this )
@@ -530,7 +574,7 @@ subroutine round_down_coef_gt_zero_negative(&
     enddo  ! ij/
   enddo  ! updated/
   !-------------------------------------------------------------
-  !call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine round_down_coef_gt_zero_negative
 !===============================================================
 !

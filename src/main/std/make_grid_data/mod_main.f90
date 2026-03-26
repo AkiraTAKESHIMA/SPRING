@@ -12,28 +12,37 @@ module mod_main
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: make_grid_data
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_main'
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine make_grid_data(a)
-  use c1_gs_base, only: &
-        clear_gs
-  use c1_gs_driv, only: &
-        set_gs_all
+  use c1_gs_define, only: &
+        set_gs
+  use c1_gs_grid_core, only: &
+        make_grduwa, &
+        make_grdara, &
+        make_grdwgt, &
+        make_grdxyz, &
+        make_grdlonlat
   use c1_gs_grid_io, only: &
         write_grid_data
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_grid_data'
   type(gs_), intent(inout) :: a
 
   type(gs_common_)    , pointer :: ac
   type(file_grid_out_), pointer :: fg_out
 
-  call echo(code%bgn, 'make_grid_data')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -42,19 +51,19 @@ subroutine make_grid_data(a)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call set_gs_all(&
-         a, &
-         grduwa=fg_out%save_uwa, &
-         grdara=fg_out%save_ara, &
-         grdwgt=fg_out%save_wgt, &
-         grdxyz=fg_out%save_xyz, &
-         grdlonlat=fg_out%save_lonlat)
+  call traperr( set_gs(a) )
+
+  if( fg_out%save_uwa ) call traperr( make_grduwa(a) )
+  if( fg_out%save_ara ) call traperr( make_grdara(a) )
+  if( fg_out%save_wgt ) call traperr( make_grdwgt(a) )
+  if( fg_out%save_xyz ) call traperr( make_grdxyz(a) )
+  if( fg_out%save_lonlat ) call traperr( make_grdlonlat(a) )
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call write_grid_data(ac)
+  call traperr( write_grid_data(ac) )
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine make_grid_data
 !===============================================================
 !

@@ -10,18 +10,23 @@ module mod_const_util
   !-------------------------------------------------------------
   public :: checkval_method_rivwat
   !-------------------------------------------------------------
+  ! Pivate module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_const_util'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
 subroutine checkval_method_rivwat(s, id)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'checkval_method_rivwat'
   character(*), intent(in) :: s
   character(*), intent(in), optional :: id
 
   character(:), allocatable :: id_
 
-  call echo(code%bgn, 'checkval_method_rivwat', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -34,11 +39,10 @@ subroutine checkval_method_rivwat(s, id)
         METHOD_RIVWAT__WEIGHTED_DIST )
     continue
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  '//id_//str(s))
+    call errend(msg_invalid_value(id_, s))
   endselect
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine checkval_method_rivwat
 !===============================================================
 !

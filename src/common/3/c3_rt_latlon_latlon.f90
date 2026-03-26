@@ -14,18 +14,23 @@ module c3_rt_latlon_latlon
   !-------------------------------------------------------------
   public :: make_rt_latlon_latlon
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_latlon_latlon'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_latlon_latlon(s, t, rt)
+integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   use c2_rt1d, only: &
-        init_rt1d, &
-        clear_rt1d, &
+        init_rt1d   , &
+        clear_rt1d  , &
         reshape_rt1d
   use c3_rt_llbnds, only: &
         calc_relations_llbnds
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_latlon_latlon'
   type(gs_), intent(in)   , target :: s, t
   type(rt_), intent(inout), target :: rt
 
@@ -43,15 +48,18 @@ subroutine make_rt_latlon_latlon(s, t, rt)
   integer(8), allocatable :: iibh(:)
   integer(8) :: aij
 
-  call echo(code%bgn, 'make_rt_latlon_latlon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
   if( s%typ /= MESHTYPE__LATLON .or. &
       t%typ /= MESHTYPE__LATLON )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endif
 
   a => s
@@ -64,8 +72,12 @@ subroutine make_rt_latlon_latlon(s, t, rt)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
-  call calc_relations_llbnds(al, bl)
-  call calc_relations_llbnds(bl, al)
+  if( calc_relations_llbnds(al, bl) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( calc_relations_llbnds(bl, al) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
@@ -73,7 +85,9 @@ subroutine make_rt_latlon_latlon(s, t, rt)
   iibh(:) = 0_8
 
   allocate(rt1d(al%nij))
-  call init_rt1d(rt1d)
+  if( init_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
@@ -150,12 +164,16 @@ subroutine make_rt_latlon_latlon(s, t, rt)
 
   ! Respahe rt and output intermediates
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, a%is_source, rtm)
+  if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
   nullify(rt1)
-  call clear_rt1d(rt1d)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   nullify(rtm)
 
@@ -167,8 +185,8 @@ subroutine make_rt_latlon_latlon(s, t, rt)
   nullify(al, bl)
   nullify(a, b)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt_latlon_latlon
+  call logret(PRCNAM, MODNAM)
+end function make_rt_latlon_latlon
 !===============================================================
 !
 !===============================================================

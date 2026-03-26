@@ -5,7 +5,12 @@ program main
   use lib_io
   use lib_array
   use lib_math
+  use c1_type_opt, only: &
+        opt_earth_
   use def_consts
+  use mod_utils, only: &
+        read_conf_earth, &
+        nextxy
   implicit none
 
   integer, parameter :: nCX = 360
@@ -34,9 +39,7 @@ program main
   logical :: found
 
   ! earth's params
-  character(8) :: earth_shape
-  real(8) :: earth_r  ! [m]
-  real(8) :: earth_e2
+  type(opt_earth_) :: earth
 
   ! file
   character(128), parameter :: fparams  = 'params.txt'
@@ -44,8 +47,7 @@ program main
   character(128), parameter :: finpmat  = 'map/inpmat.bin'
   character(128), parameter :: fdiminfo = 'map/diminfo.txt'
 
-
-  call echo(code%bgn, 'program calc_inpmat')
+  call logbgn('program calc_inpmat', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -53,16 +55,16 @@ program main
   read(11,*) nXX
   read(11,*) nYY
   read(11,*) ! fgcmidx
-  read(11,*) earth_shape
-  read(11,*) earth_r
-  read(11,*) earth_e2
+
+  call read_conf_earth(earth, 11)
+
   close(11)
 
   allocate(catmXX(nx,ny))
   allocate(catmYY(nx,ny))
 
-  call rbin(catmXX, rfile1, rec=1)
-  call rbin(catmYY, rfile1, rec=2)
+  call traperr( rbin(catmXX, rfile1, rec=1) )
+  call traperr( rbin(catmYY, rfile1, rec=2) )
 
   mx = nx / nCX
   my = ny / nCY
@@ -71,7 +73,7 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Calculating pixel area')
+  call logent('Calculating pixel area')
 
   allocate(pixlat(0:ny))
 
@@ -80,25 +82,24 @@ program main
   enddo
   pixlat(ny) = -rad_90deg
 
-  selectcase( earth_shape )
-  case( earth_shape_sphere )
+  selectcase( earth%shptyp )
+  case( EARTH_SHPTYP__SPHERE )
     pixare(:) = area_sphere_rect(pixlat(0:ny-1), pixlat(1:ny)) * rad_360deg/nx
-  case( earth_shape_ellips )
-    pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth_e2) * rad_360deg/nx
+  case( EARTH_SHPTYP__ELLIPS )
+    pixare(:) = area_ellips_rect(pixlat(0:ny-1), pixlat(1:ny), earth%e2) * rad_360deg/nx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  earth_shape: '//str(earth_shape))
+    call errend(msg_invalid_value('earth%shptyp', earth%shptyp))
   endselect
 
-  pixare(:) = pixare(:) * earth_r**2
+  pixare(:) = pixare(:) * earth%r**2
 
   deallocate(pixlat)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Count num. of layers
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting num. of layers')
+  call logent('Counting num. of layers')
 
   allocate(map_iCXY(nXX,nYY))
   map_iCXY(:,:)%n = 0
@@ -155,13 +156,13 @@ program main
 
   ninp = maxval(map_iCXY(:,:)%n)
 
-  call edbg('ninp: '//str(ninp))
+  call logmsg('ninp: '//str(ninp))
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Make inpmat
   !-------------------------------------------------------------
-  call echo(code%ent, 'Making inpmat')
+  call logent('Making inpmat')
 
   allocate(inpx(nXX,nYY,ninp))
   allocate(inpy(nXX,nYY,ninp))
@@ -199,8 +200,8 @@ program main
           enddo
 
           if( .not. found )then
-            call eerr(str(msg_unexpected_condition())//&
-                    '\n  iCXY '//str(iCXY)//' was not found in the list')
+            call errend(msg_unexpected_condition()//&
+                      '\n  iCXY '//str(iCXY)//' was not found in the list.')
           endif
 
           inpx(XX,YY,i) = iCX
@@ -215,24 +216,24 @@ program main
   nullify(miCXY)
   deallocate(map_iCXY)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Output
   !-------------------------------------------------------------
-  call echo(code%ent, 'Outputting')
+  call logent('Outputting')
 
   ! inpmat
   !-------------------------------------------------------------
   do i = 1, ninp
-    call wbin(inpx(:,:,i), finpmat, dtype=dtype_int4, rec=ninp*0+i)
+    call traperr( wbin(inpx(:,:,i), finpmat, dtype=dtype_int4, rec=ninp*0+i) )
   enddo
 
   do i = 1, ninp
-    call wbin(inpy(:,:,i), finpmat, dtype=dtype_int4, rec=ninp*1+i)
+    call traperr( wbin(inpy(:,:,i), finpmat, dtype=dtype_int4, rec=ninp*1+i) )
   enddo
 
   do i = 1, ninp
-    call wbin(inpa(:,:,i), finpmat, dtype=dtype_real, rec=ninp*2+i)
+    call traperr( wbin(inpa(:,:,i), finpmat, dtype=dtype_real, rec=ninp*2+i) )
   enddo
 
   ! diminfo
@@ -252,7 +253,7 @@ program main
   write(11,'(f12.3,5x,a)') -90.,        '!! south edge'
   close(11)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -260,5 +261,5 @@ program main
   deallocate(inpy)
   deallocate(inpa)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret()
 end program main

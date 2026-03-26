@@ -16,6 +16,10 @@ module mod_set
   !-------------------------------------------------------------
   public :: read_settings
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'mod_set'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
@@ -43,11 +47,12 @@ subroutine read_settings(s, t, dout)
         set_default_values_opt_log, &
         set_default_values_opt_earth
   use c1_gs_base, only: &
-        init_gs               , &
+        init_mesh             , &
         set_miss_file_grid_in , &
         set_miss_file_grid_out, &
         set_save_file_grid_out
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings'
   type(gs_)    , intent(out), target :: s
   type(gs_)    , intent(out), target :: t
   type(output_), intent(out), target :: dout
@@ -60,26 +65,26 @@ subroutine read_settings(s, t, dout)
   end type
   type(counter_) :: counter
 
-  character(CLEN_VAR) :: block_name
+  character(CLEN_VAR) :: blockName
   !-------------------------------------------------------------
-  character(CLEN_VAR), parameter :: block_name_gs_latlon  = 'mesh_latlon'
-  character(CLEN_VAR), parameter :: block_name_gs_raster  = 'mesh_raster'
-  character(CLEN_VAR), parameter :: block_name_gs_polygon = 'mesh_polygon'
-  character(CLEN_VAR), parameter :: block_name_raster     = 'raster'
-  character(CLEN_VAR), parameter :: block_name_output     = 'output'
-  character(CLEN_VAR), parameter :: block_name_opt        = 'options'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_LATLON  = 'mesh_latlon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_RASTER  = 'mesh_raster'
+  character(CLEN_VAR), parameter :: BLOCKNAME__MESH_POLYGON = 'mesh_polygon'
+  character(CLEN_VAR), parameter :: BLOCKNAME__RASTER       = 'raster'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OUTPUT       = 'output'
+  character(CLEN_VAR), parameter :: BLOCKNAME__OPT          = 'options'
 
   type(gs_common_), pointer :: sc, tc
   type(opt_) :: opt
 
-  call echo(code%bgn, 'read_settings')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Init.
   !-------------------------------------------------------------
-  call echo(code%ent, 'Initilizing')
+  call logent('Initilizing', PRCNAM, MODNAM)
 
-  call init_gs(s)
-  call init_gs(t)
+  call traperr( init_mesh(s) )
+  call traperr( init_mesh(t) )
 
   s%id = 's'
   s%nam = MESH__SOURCE
@@ -93,68 +98,66 @@ subroutine read_settings(s, t, dout)
   call set_default_values_opt_log(opt%log)
   call set_default_values_opt_earth(opt%earth)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   call open_setting_file()
 
   ! Open report file
   !-------------------------------------------------------------
   call read_path_report()
-  call open_report_file(get_path_report())
+  call traperr( open_report_file(get_path_report()) )
 
   ! Read settings
   !-------------------------------------------------------------
   call init_counter()
 
   do
-    call find_block(block_name)
+    call find_block(blockName)
 
-    selectcase( block_name )
+    selectcase( blockName )
     !-----------------------------------------------------------
     ! Case: No more block
     case( '' )
       exit
     !-----------------------------------------------------------
     ! Case: gs_latlon
-    case( BLOCK_NAME_GS_LATLON )
+    case( BLOCKNAME__MESH_LATLON )
       call update_counter(counter%s)
       call read_settings_gs_latlon(s)
     !-----------------------------------------------------------
     ! Case: gs_polygon
-    case( BLOCK_NAME_GS_POLYGON )
+    case( BLOCKNAME__MESH_POLYGON )
       call update_counter(counter%s)
       call read_settings_gs_polygon(s)
     !-----------------------------------------------------------
     ! Case: gs_raster
-    case( BLOCK_NAME_GS_RASTER )
-      call eerr(str(msg_invalid_value())//&
-              '\n  block_name: '//str(block_name)//&
-              '\nNot implemented yet.')
+    case( BLOCKNAME__MESH_RASTER )
+      call errend(msg_not_implemented()// &
+                '\nblockName: '//str(blockName))
     !-----------------------------------------------------------
     ! Case: raster
-    case( BLOCK_NAME_RASTER )
+    case( BLOCKNAME__RASTER )
       call update_counter(counter%t)
       call read_settings_raster(t)
     !-----------------------------------------------------------
     ! Case: output
-    case( BLOCK_NAME_OUTPUT )
+    case( BLOCKNAME__OUTPUT )
       call update_counter(counter%dout)
       call read_settings_output(dout)
     !-----------------------------------------------------------
     ! Case: opt
-    case( BLOCK_NAME_OPT )
+    case( BLOCKNAME__OPT )
       call update_counter(counter%opt)
       call read_settings_opt(opt)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  block_name: '//str(block_name)//&
-              '\nCheck the name of the block.')
+      call errend(msg_invalid_value('blockName', blockName)//&
+                '\nCheck the name of block.')
     endselect
   enddo
 
@@ -162,30 +165,20 @@ subroutine read_settings(s, t, dout)
 
   call check_number_of_blocks()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  ! Detect conflictions
+  ! Check inputs
   !-------------------------------------------------------------
-  call echo(code%ent, 'Detecting conflictions')
-
-  if( opt%earth%shp == EARTH_SHAPE_ELLIPS )then
-    if( s%typ == MESHTYPE__POLYGON )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\nEarth shape "'//str(opt%earth%shp)//'" is inactive'//&
-                ' for '//str(s%typ)//' meshes.')
-    endif
-  endif
-
-  call echo(code%ext)
+  call check_input(s, opt%earth)
   !-------------------------------------------------------------
   ! Set some variables
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting some variables')
+  call logent('Setting some variables', PRCNAM, MODNAM)
 
   if( opt%sys%dir_im == '' )then
     opt%sys%dir_im = dirname(get_path_report())
-    call edbg('Directory of intermediates was not given.'//&
-            '\nAutomatically set to "'//str(opt%sys%dir_im)//'".')
+    call logmsg('Directory of intermediates was not given.'//&
+              '\nAutomatically set to "'//str(opt%sys%dir_im)//'".')
   endif
 
   sc => s%cmn
@@ -193,29 +186,29 @@ subroutine read_settings(s, t, dout)
 
   ! Missing values of grid data
   !-------------------------------------------------------------
-  call set_miss_file_grid_in(&
+  call traperr( set_miss_file_grid_in(&
          sc%f_grid_in, &
          sc%idx_miss, sc%ara_miss, sc%wgt_miss, &
-         sc%xyz_miss, sc%lonlat_miss, sc%val_miss)
+         sc%xyz_miss, sc%lonlat_miss, sc%val_miss) )
 
-  call set_miss_file_grid_out(&
+  call traperr( set_miss_file_grid_out(&
          sc%f_grid_out, &
          sc%idx_miss, sc%ara_miss, sc%wgt_miss, &
-         sc%xyz_miss, sc%lonlat_miss, sc%val_miss)
+         sc%xyz_miss, sc%lonlat_miss, sc%val_miss) )
 
-  call set_save_file_grid_out(sc%f_grid_out)
+  call traperr( set_save_file_grid_out(sc%f_grid_out) )
 
-  call set_miss_file_grid_in(&
+  call traperr( set_miss_file_grid_in(&
          tc%f_grid_in, &
          tc%idx_miss, tc%ara_miss, tc%wgt_miss, &
-         tc%xyz_miss, tc%lonlat_miss, tc%val_miss)
+         tc%xyz_miss, tc%lonlat_miss, tc%val_miss) )
 
-  call set_miss_file_grid_out(&
+  call traperr( set_miss_file_grid_out(&
          tc%f_grid_out, &
          tc%idx_miss, tc%ara_miss, tc%wgt_miss, &
-         tc%xyz_miss, tc%lonlat_miss, tc%val_miss)
+         tc%xyz_miss, tc%lonlat_miss, tc%val_miss) )
 
-  call set_save_file_grid_out(tc%f_grid_out)
+  call traperr( set_save_file_grid_out(tc%f_grid_out) )
 
   ! Options
   !-------------------------------------------------------------
@@ -223,7 +216,7 @@ subroutine read_settings(s, t, dout)
   call set_opt_log(opt%log)
   call set_opt_earth(opt%earth)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Print settings
   !-------------------------------------------------------------
@@ -235,8 +228,7 @@ subroutine read_settings(s, t, dout)
   case( MESHTYPE__POLYGON )
     call echo_settings_gs_polygon(s%polygon)
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ))
+    call errend(msg_invalid_value('s%typ', s%typ))
   endselect
 
   call echo_settings_raster(t%raster)
@@ -245,18 +237,19 @@ subroutine read_settings(s, t, dout)
 
   call echo_settings_opt(opt)
 
-  call edbg(bar(''))
+  call logmsg(bar(''))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call check_paths(s, t, dout, opt%sys)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
 subroutine init_counter()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_counter'
 
   counter%s  = 0
   counter%t  = 0
@@ -266,62 +259,63 @@ end subroutine init_counter
 !---------------------------------------------------------------
 subroutine update_counter(n)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_counter'
   integer, intent(inout) :: n
 
-  call echo(code%bgn, '__IP__update_counter', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   n = n + 1
 
   if( counter%s > 1 )then
-    call eerr(str(msg_invalid_input())//&
-            '\n@ line '//str(line_number())//&
-            '\nBlocks of grid system (gs) appeared more than once:'//&
-            '\n  "'//str(block_name_gs_latlon)//&
-              '", "'//str(block_name_gs_raster)//&
-              '", "'//str(block_name_gs_polygon)//'"')
+    call errend(msg_invalid_input(line_number())//&
+              '\nBlocks of rasterized meshes appeared more than once:'//&
+              '\n  "'//str(BLOCKNAME__MESH_LATLON)//&
+                '", "'//str(BLOCKNAME__MESH_RASTER)//&
+                '", "'//str(BLOCKNAME__MESH_POLYGON)//'"')
   endif
 
-  call check_num_of_key(counter%t, block_name_raster, 0, 1)
+  call check_num_of_key(counter%t, BLOCKNAME__RASTER, 0, 1)
 
-  call check_num_of_key(counter%dout, block_name_output, 0, 1)
+  call check_num_of_key(counter%dout, BLOCKNAME__OUTPUT, 0, 1)
 
-  call check_num_of_key(counter%opt, block_name_opt, 0, 1)
+  call check_num_of_key(counter%opt, BLOCKNAME__OPT, 0, 1)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine update_counter
 !---------------------------------------------------------------
 subroutine check_number_of_blocks()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_number_of_blocks'
 
-  call echo(code%bgn, '__IP__check_number_of_blocks', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( counter%s /= 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\nThe number of blocks of grid system is incorrect:'//&
-            '\n  "'//str(block_name_gs_latlon)//&
-             '", "'//str(block_name_gs_raster)//&
-             '", "'//str(block_name_gs_polygon)//'"')
+    call errend(msg_syntax_error()//&
+              '\nThe number of blocks of grid system is incorrect:'//&
+              '\n  "'//str(BLOCKNAME__MESH_LATLON)//&
+               '", "'//str(BLOCKNAME__MESH_RASTER)//&
+               '", "'//str(BLOCKNAME__MESH_POLYGON)//'"')
   endif
 
   if( counter%t /= 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\nThe number of blocks of raster is incorrect:'//&
-            '\n  "'//str(block_name_raster)//'"')
+    call errend(msg_syntax_error()//&
+              '\nThe number of blocks of raster is incorrect:'//&
+              '\n  "'//str(BLOCKNAME__RASTER)//'"')
   endif
 
   if( counter%dout /= 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\nThe number of blocks of output is incorrect:'//&
-            '\n  "'//str(block_name_output)//'"')
+    call errend(msg_syntax_error()//&
+              '\nThe number of blocks of output is incorrect:'//&
+              '\n  "'//str(BLOCKNAME__OUTPUT)//'"')
   endif
 
   if( counter%opt > 1 )then
-    call eerr(str(msg_syntax_error())//&
-            '\nThe number of blocks of options is incorrect:'//&
-            '\n  "'//str(block_name_opt)//'"')
+    call errend(msg_syntax_error()//&
+              '\nThe number of blocks of options is incorrect:'//&
+              '\n  "'//str(BLOCKNAME__OPT)//'"')
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_number_of_blocks
 !---------------------------------------------------------------
 end subroutine read_settings
@@ -354,12 +348,11 @@ subroutine read_settings_gs_latlon(u)
         msg_invalid_input      , &
         msg_undesirable_input
   use c1_gs_base, only: &
-        alloc_gs_components         , &
-        set_gs_common               , &
-        set_default_values_gs_latlon, &
-        alloc_file_grid_in_val      , &
-        set_bounds_file_latlon_in   , &
-        set_bounds_file_grid_in     , &
+        init_mesh_latlon         , &
+        set_mesh_common          , &
+        alloc_file_grid_in_val   , &
+        set_bounds_file_latlon_in, &
+        set_bounds_file_grid_in  , &
         set_bounds_file_grid_out
   use c1_gs_define, only: &
         check_bounds_lon, &
@@ -367,6 +360,7 @@ subroutine read_settings_gs_latlon(u)
   use c1_gs_util, only: &
         set_gs_debug
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_gs_latlon'
   type(gs_), intent(inout), target :: u
 
   type(gs_latlon_)     , pointer :: ul
@@ -376,11 +370,11 @@ subroutine read_settings_gs_latlon(u)
 
   character(clen_path) :: dir
 
-  call echo(code%bgn, 'read_settings_gs_latlon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the limits. of the number of each keyword
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the limits. of the number of each keyword')
+  call logent('Setting the limits. of the number of each keyword', PRCNAM, MODNAM)
 
   call alloc_keynum()
 
@@ -417,26 +411,25 @@ subroutine read_settings_gs_latlon(u)
 
   call set_keynum('idx_debug', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
-  call alloc_gs_components(u, MESHTYPE__LATLON)
-  call set_default_values_gs_latlon(u%latlon)
-  call set_gs_common(u)
+  call traperr( init_mesh_latlon(u) )
+  call traperr( set_mesh_common(u) )
 
   ul => u%latlon
   fl     => ul%f_latlon_in
   fg_in  => ul%f_grid_in
   fg_out => ul%f_grid_out
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Count the number of each key
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of each keyword')
+  call logent('Counting the number of each keyword', PRCNAM, MODNAM)
 
   fg_in%nFiles_val = 0
 
@@ -460,15 +453,15 @@ subroutine read_settings_gs_latlon(u)
     endselect
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call alloc_file_grid_in_val(fg_in)
+  call traperr( alloc_file_grid_in_val(fg_in) )
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   call back_to_block_head()
   call reset_keynum()
@@ -489,7 +482,7 @@ subroutine read_settings_gs_latlon(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
-      call remove_quotes(u%nam, QUOTE_BOTH)
+      call traperr( remove_quotes(u%nam, QUOTE_BOTH) )
     !-----------------------------------------------------------
     ! Resolution
     case( 'nx' )
@@ -574,100 +567,103 @@ subroutine read_settings_gs_latlon(u)
   call check_keynum()
   call check_keynum_relations()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the values')
+  call logent('Checking the values', PRCNAM, MODNAM)
 
-  if( keynum('west' ) == 1 ) call check_bounds_lon(ul%west , ul%east )
-  if( keynum('south') == 1 ) call check_bounds_lat(ul%south, ul%north)
+  if( keynum('west' ) == 1 ) call traperr( check_bounds_lon(ul%west , ul%east ) )
+  if( keynum('south') == 1 ) call traperr( check_bounds_lat(ul%south, ul%north) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call set_bounds_file_latlon_in(&
-         fl, ul%nx, ul%ny,                       & ! in
-         ul%nh, ul%hi, ul%hf, ul%nv, ul%vi, ul%vf) ! out
-  call set_bounds_file_grid_in(fg_in, ul%nx, ul%ny)
-  call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
+  call traperr( set_bounds_file_latlon_in(&
+         fl, ul%nx, ul%ny,                       &  ! in
+         ul%nh, ul%hi, ul%hf, ul%nv, ul%vi, ul%vf) )! out
+  call traperr( set_bounds_file_grid_in(fg_in, ul%nx, ul%ny) )
+  call traperr( set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2)) )
 
   ! For debugging
   !-------------------------------------------------------------
-  call set_gs_debug(ul%debug, ul%idx_debug, ul%idx_miss, keynum('idx_debug')==1)
+  call traperr( set_gs_debug(&
+         ul%debug, ul%idx_debug, ul%idx_miss, keynum('idx_debug')==1) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free the external module variables
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
 subroutine check_keynum_relations()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_keynum_relations'
 
-  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   ! Coords.
   !-------------------------------------------------------------
   if( keynum('west') == 0 .and. keynum('east') == 0 )then
     if( keynum('f_lon_bound') == 0 )then
-      call eerr(str(msg_invalid_input())//&
-              '\nInformation of longitude is missing.'//&
-                ' Give "west" and "east", or give "f_lon_bound".')
+      call errend(msg_invalid_input()//&
+                '\nInformation of longitude is missing.'//&
+                  ' Give "west" and "east", or give "f_lon_bound".')
     endif
   elseif( keynum('west') == 1 .and. keynum('east') == 1 )then
     if( keynum('f_lon_bound') == 1 )then
-      call eerr(str(msg_invalid_input())//&
-              '\nInformation of longitude is duplicated.'//&
-                ' Give "west" and "east", or give "f_lon_bound".')
+      call errend(msg_invalid_input()//&
+                '\nInformation of longitude is duplicated.'//&
+                  ' Give "west" and "east", or give "f_lon_bound".')
     endif
   elseif( keynum('west') == 1 .neqv. keynum('east') == 1 )then
-    call eerr(str(msg_invalid_input())//&
-            '\nIf either "west" or "east" is given, both must be given.')
+    call errend(msg_invalid_input()//&
+              '\nIf either "west" or "east" is given, both must be given.')
   endif
 
   if( keynum('south') == 0 .and. keynum('north') == 0 )then
     if( keynum('f_lon_bound') == 0 )then
-      call eerr(str(msg_invalid_input())//&
-              '\nInformation of longitude is missing.'//&
-                ' Give "south" and "north", or give "f_lon_bound".')
+      call errend(msg_invalid_input()//&
+                '\nInformation of longitude is missing.'//&
+                  ' Give "south" and "north", or give "f_lon_bound".')
     endif
   elseif( keynum('south') == 1 .and. keynum('north') == 1 )then
     if( keynum('f_lon_bound') == 1 )then
-      call eerr(str(msg_invalid_input())//&
-              '\nInformation of longitude is duplicated.'//&
-                ' Give "south" and "north", or give "f_lon_bound".')
+      call errend(msg_invalid_input()//&
+                '\nInformation of longitude is duplicated.'//&
+                  ' Give "south" and "north", or give "f_lon_bound".')
     endif
   elseif( keynum('south') == 1 .neqv. keynum('north') == 1 )then
-    call eerr(str(msg_invalid_input())//&
-            '\nIf either "south" or "north" is given both must be given.')
+    call errend(msg_invalid_input()//&
+              '\nIf either "south" or "north" is given both must be given.')
   endif
 
   if( keynum('f_lon_bound') == 0 .and. keynum('f_lat_bound') == 0 .and. &
       keynum('coord_unit') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"coord_unit" is given but '//&
-              'neither "f_lon_bound" or "f_lat_bound" is given.'//&
-              ' The input given by "coord_unit" is ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\n"coord_unit" is given but '//&
+                'neither "f_lon_bound" or "f_lat_bound" is given.'//&
+                ' The input given by "coord_unit" is ignored.')
   endif
   !-------------------------------------------------------------
   ! Grid data
   !-------------------------------------------------------------
   if( keynum('idx_bgn') == 1 .and. keynum('fin_grdidx') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"idx_bgn" is given although "fin_grdidx" is given.'//&
-              ' The input for "idx_bgn" is ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\n"idx_bgn" is given although "fin_grdidx" is given.'//&
+                ' The input for "idx_bgn" is ignored.')
   endif
 
   if( keynum('fin_grdara') == 1 .and. keynum('fin_grdwgt') == 1 )then
-    call eerr('"fin_grdara" and "fin_grdwgt" must not be given at the same time.')
+    call errend(msg_unexpected_condition()//&
+              '\n"fin_grdara" and "fin_grdwgt" must not be given at the same time.')
   endif
 
   if( keynum('fin_grdidx') == 0 .and. &
@@ -677,20 +673,20 @@ subroutine check_keynum_relations()
       (keynum('in_grid_sz') == 1 .or. &
        keynum('in_grid_lb') == 1 .or. &
        keynum('in_grid_ub') == 1) )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\nAny value is given by the following keywords:'//&
-            '\n  "'//str('in_grid_sz')//'"'//&
-            '\n  "'//str('in_grid_lb')//'"'//&
-            '\n  "'//str('in_grid_ub')//'"'//&
-            '\nbut any value is not given by the following keywords:'//&
-            '\n  "'//str('fin_grdidx')//'"'//&
-            '\n  "'//str('fin_grdara')//'"'//&
-            '\n  "'//str('fin_grdwgt')//'"'//&
-            '\n  "'//str('fin_grdval')//'"'//&
-            '\nThe inputs given by the former keywords are ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\nAny value is given by the following keywords:'//&
+              '\n  "'//str('in_grid_sz')//'"'//&
+              '\n  "'//str('in_grid_lb')//'"'//&
+              '\n  "'//str('in_grid_ub')//'"'//&
+              '\nbut any value is not given by the following keywords:'//&
+              '\n  "'//str('fin_grdidx')//'"'//&
+              '\n  "'//str('fin_grdara')//'"'//&
+              '\n  "'//str('fin_grdwgt')//'"'//&
+              '\n  "'//str('fin_grdval')//'"'//&
+              '\nThe inputs given by the former keywords are ignored.')
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_keynum_relations
 !---------------------------------------------------------------
 end subroutine read_settings_gs_latlon
@@ -715,16 +711,16 @@ subroutine read_settings_gs_polygon(u)
         msg_invalid_input      , &
         msg_undesirable_input
   use c1_gs_base, only: &
-        alloc_gs_components          , &
-        set_gs_common                , &
-        set_default_values_gs_polygon, &
-        alloc_file_grid_in_val       , &
-        set_bounds_file_polygon_in   , &
-        set_bounds_file_grid_in      , &
+        init_mesh_polygon         , &
+        set_mesh_common           , &
+        alloc_file_grid_in_val    , &
+        set_bounds_file_polygon_in, &
+        set_bounds_file_grid_in   , &
         set_bounds_file_grid_out
   use c1_gs_util, only: &
         set_gs_debug
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_gs_polygon'
   type(gs_), intent(inout), target :: u
 
   type(gs_polygon_)     , pointer :: up
@@ -735,11 +731,11 @@ subroutine read_settings_gs_polygon(u)
   character(CLEN_PATH) :: dir
   real(8) :: coord_miss
 
-  call echo(code%bgn, 'read_settings_gs_polygon')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the limits. of the number of each keyword
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the limits. of the number of each keyword')
+  call logent('Setting the limits. of the number of each keyword', PRCNAM, MODNAM)
 
   call alloc_keynum()
 
@@ -778,26 +774,25 @@ subroutine read_settings_gs_polygon(u)
 
   call set_keynum('idx_debug', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
-  call alloc_gs_components(u, MESHTYPE__POLYGON)
-  call set_default_values_gs_polygon(u%polygon)
-  call set_gs_common(u)
+  call traperr( init_mesh_polygon(u) )
+  call traperr( set_mesh_common(u) )
 
   up => u%polygon
   fp     => up%f_polygon_in
   fg_in  => up%f_grid_in
   fg_out => up%f_grid_out
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Count the number of times each keyword was used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Counting the number of times each keyword was used')
+  call logent('Counting the number of times each keyword was used', PRCNAM, MODNAM)
 
   fg_in%nFiles_val = 0
 
@@ -821,15 +816,15 @@ subroutine read_settings_gs_polygon(u)
     endselect
   enddo
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call alloc_file_grid_in_val(fg_in)
+  call traperr( alloc_file_grid_in_val(fg_in) )
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   call back_to_block_head()
   call reset_keynum()
@@ -850,7 +845,7 @@ subroutine read_settings_gs_polygon(u)
     ! Name
     case( 'name' )
       call read_value(u%nam)
-      call remove_quotes(u%nam, QUOTE_BOTH)
+      call traperr( remove_quotes(u%nam, QUOTE_BOTH) )
     !-----------------------------------------------------------
     ! Shape
     case( 'np' )
@@ -937,15 +932,15 @@ subroutine read_settings_gs_polygon(u)
   call check_keynum()
   call check_keynum_relations()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij)
-  call set_bounds_file_grid_in(fg_in, up%nij, 1_8)
-  call set_bounds_file_grid_out(fg_out, up%nij, 1_8)
+  call traperr( set_bounds_file_polygon_in(fp, up%ijs, up%ije, up%np, up%nij) )
+  call traperr( set_bounds_file_grid_in(fg_in, up%nij, 1_8) )
+  call traperr( set_bounds_file_grid_out(fg_out, up%nij, 1_8) )
 
   ! Coordinate system
   !-------------------------------------------------------------
@@ -957,8 +952,8 @@ subroutine read_settings_gs_polygon(u)
     else
       if( up%coord_unit /= UNIT_DEGREE .and. &
           up%coord_unit /= UNIT_RADIAN )then
-        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
-                '\nThis is invalid when "f_lon_vertex" is given.')
+        call errend(msg_invalid_value('up%coord_unit', up%coord_unit)//&
+                  '\nThis is invalid when "f_lon_vertex" is given.')
       endif
     endif
 
@@ -971,8 +966,8 @@ subroutine read_settings_gs_polygon(u)
     else
       if( up%coord_unit /= UNIT_METER .and. &
           up%coord_unit /= UNIT_KILOMETER )then
-        call eerr('Invalid value in $up%coord_unit: '//str(up%coord_unit)//&
-                '\nThis is invalid when "f_x_vertex" is given.')
+        call errend(msg_invalid_value('up%coord_unit', up%coord_unit)//&
+                  '\nThis is invalid when "f_x_vertex" is given.')
       endif
     endif
 
@@ -981,22 +976,23 @@ subroutine read_settings_gs_polygon(u)
 
   ! For debugging
   !-------------------------------------------------------------
-  call set_gs_debug(up%debug, up%idx_debug, up%idx_miss, keynum('idx_debug')==1)
+  call traperr( set_gs_debug(up%debug, up%idx_debug, up%idx_miss, keynum('idx_debug')==1) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free the external module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !----------------------------------------------------------------
 contains
 !----------------------------------------------------------------
 subroutine check_keynum_relations()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_keynum_relations'
 
-  call echo(code%bgn, '__IP__check_keynum_relations', '-p')
+  call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   ! Coords.
   !-------------------------------------------------------------
@@ -1005,9 +1001,9 @@ subroutine check_keynum_relations()
       .and. &
       .not. (keynum('f_lon_vertex') == 0 .and. &
              keynum('f_lat_vertex') == 0) )then
-    call eerr(str(msg_invalid_input())//&
-            '\nIf either "f_lon_vertex" or "f_lat_vertex" is given'//&
-              ' both must be given.')
+    call errend(msg_invalid_input()//&
+              '\nIf either "f_lon_vertex" or "f_lat_vertex" is given'//&
+                ' both must be given.')
   endif
 
   if( .not. (keynum('f_x_vertex') == 1 .and. &
@@ -1017,30 +1013,30 @@ subroutine check_keynum_relations()
       .not. (keynum('f_x_vertex') == 0 .and. &
              keynum('f_y_vertex') == 0 .and. &
              keynum('f_z_vertex') == 0) )then
-    call eerr(str(msg_invalid_input())//&
-            '\nIf any of "f_x_vertex", "f_y_vertex" or "f_z_vertex" is given'//&
-              ' all of them must be given.')
+    call errend(msg_invalid_input()//&
+              '\nIf any of "f_x_vertex", "f_y_vertex" or "f_z_vertex" is given'//&
+                ' all of them must be given.')
   endif
 
   if( keynum('f_lon_vertex') == 1 .and. keynum('f_x_vertex') == 1 )then
-    call eerr(str(msg_invalid_input())//&
-            '\n"f_lon_vertex" and "f_x_vertex" cannot be given at the same time.')
+    call errend(msg_invalid_input()//&
+              '\n"f_lon_vertex" and "f_x_vertex" cannot be given at the same time.')
   elseif( keynum('f_lon_vertex') == 0 .and. keynum('f_x_vertex') == 0 )then
-    call eerr(str(msg_invalid_input())//&
-            '\nEither "f_lon_vertex" or "f_x_vertex" must be given.')
+    call errend(msg_invalid_input()//&
+              '\nEither "f_lon_vertex" or "f_x_vertex" must be given.')
   endif
 
   if( keynum('arc_parallel') == 1 .and. keynum('f_arctyp') == 1 )then
-    call eerr(str(msg_invalid_input())//&
-            '\nBoth "arc_parallel" and "f_arctyp" are given.')
+    call errend(msg_invalid_input()//&
+              '\nBoth "arc_parallel" and "f_arctyp" are given.')
   endif
   !--------------------------------------------------------------
   ! Grid data
   !--------------------------------------------------------------
   if( keynum('idx_bgn') == 1 .and. keynum('fin_grdidx') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"idx_bgn" is given but "fin_grdidx" is also given.'//&
-              ' The input for "idx_bgn" is ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\n"idx_bgn" is given but "fin_grdidx" is also given.'//&
+                ' The input for "idx_bgn" is ignored.')
   endif
 
   if( keynum('fin_grdidx') == 0 .and. &
@@ -1049,33 +1045,33 @@ subroutine check_keynum_relations()
       (keynum('in_grid_sz') == 1 .or. &
        keynum('in_grid_lb') == 1 .or. &
        keynum('in_grid_ub') == 1) )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\nAny value is given by the following keywords:'//&
-            '\n  "'//str('in_grid_sz')//'"'//&
-            '\n  "'//str('in_grid_lb')//'"'//&
-            '\n  "'//str('in_grid_ub')//'"'//&
-            '\nbut any value is not given by the following keywords:'//&
-            '\n  "'//str('fin_grdidx')//'"'//&
-            '\n  "'//str('fin_grdara')//'"'//&
-            '\n  "'//str('fin_grdwgt')//'"'//&
-            '\nThe inputs given by the former keywords are ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\nAny value is given by the following keywords:'//&
+              '\n  "'//str('in_grid_sz')//'"'//&
+              '\n  "'//str('in_grid_lb')//'"'//&
+              '\n  "'//str('in_grid_ub')//'"'//&
+              '\nbut any value is not given by the following keywords:'//&
+              '\n  "'//str('fin_grdidx')//'"'//&
+              '\n  "'//str('fin_grdara')//'"'//&
+              '\n  "'//str('fin_grdwgt')//'"'//&
+              '\nThe inputs given by the former keywords are ignored.')
   endif
   !-------------------------------------------------------------
   ! Missing value
   !-------------------------------------------------------------
   if( keynum('fin_grdara') == 0 .and. keynum('ara_miss') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"ara_miss" is given although "fin_grdara" is not given.'//&
-              ' The input for "ara_miss" is ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\n"ara_miss" is given although "fin_grdara" is not given.'//&
+                ' The input for "ara_miss" is ignored.')
   endif
 
   if( keynum('fin_grdwgt') == 0 .and. keynum('wgt_miss') == 1 )then
-    call ewrn(str(msg_undesirable_input())//&
-            '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
-              ' The input for "wgt_miss" is ignored.')
+    call logwrn(msg_undesirable_input()//&
+              '\n"wgt_miss" is given although "fin_grdwgt" is not given.'//&
+                ' The input for "wgt_miss" is ignored.')
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_keynum_relations
 !----------------------------------------------------------------
 end subroutine read_settings_gs_polygon
@@ -1100,16 +1096,16 @@ subroutine read_settings_raster(u)
         msg_invalid_input      , &
         msg_undesirable_input
   use c1_gs_base, only: &
-        alloc_gs_components         , &
-        set_gs_common               , &
-        set_default_values_gs_raster, &
-        set_bounds_file_raster_in   , &
-        set_bounds_file_grid_in     , &
+        init_mesh_raster         , &
+        set_mesh_common          , &
+        set_bounds_file_raster_in, &
+        set_bounds_file_grid_in  , &
         set_bounds_file_grid_out
   use c1_gs_define, only: &
         check_bounds_lon, &
         check_bounds_lat
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_raster'
   type(gs_), intent(inout), target :: u
 
   type(gs_raster_)     , pointer :: ur
@@ -1119,11 +1115,11 @@ subroutine read_settings_raster(u)
 
   character(clen_path) :: dir
 
-  call echo(code%bgn, 'read_settings_raster')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
   call set_keynum('nx', 1, 1)
@@ -1134,26 +1130,25 @@ subroutine read_settings_raster(u)
   call set_keynum('north', 1, 1)
   call set_keynum('is_south_to_north', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
-  call alloc_gs_components(u, MESHTYPE__RASTER)
-  call set_default_values_gs_raster(u%raster)
-  call set_gs_common(u)
+  call traperr( init_mesh_raster(u) )
+  call traperr( set_mesh_common(u) )
 
   ur => u%raster
   fr     => ur%f_raster_in
   fg_in  => ur%f_grid_in
   fg_out => ur%f_grid_out
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   dir = ''
 
@@ -1195,36 +1190,36 @@ subroutine read_settings_raster(u)
   call check_keynum()
   !call check_keynum_relations()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the values')
+  call logent('Checking the values', PRCNAM, MODNAM)
 
-  call check_bounds_lon(ur%west , ur%east )
-  call check_bounds_lat(ur%south, ur%north)
+  call traperr( check_bounds_lon(ur%west , ur%east ) )
+  call traperr( check_bounds_lat(ur%south, ur%north) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call set_bounds_file_raster_in(&
-         fr,                                     & ! inout
-         ur%nx, ur%ny, ur%is_south_to_north,     & ! in
-         ur%xi, ur%xf, ur%yi, ur%yf,             & ! out
-         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) ! out
-  call set_bounds_file_grid_in(fg_in)
-  call set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2))
+  call traperr( set_bounds_file_raster_in(&
+         fr,                                     &  ! inout
+         ur%nx, ur%ny, ur%is_south_to_north,     &  ! in
+         ur%xi, ur%xf, ur%yi, ur%yf,             &  ! out
+         ur%nh, ur%hi, ur%hf, ur%nv, ur%vi, ur%vf) )! out
+  call traperr( set_bounds_file_grid_in(fg_in) )
+  call traperr( set_bounds_file_grid_out(fg_out, fg_in%sz(1), fg_in%sz(2)) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free the external module variables
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_settings_raster
 !===============================================================
 !
@@ -1247,16 +1242,17 @@ subroutine read_settings_output(dout)
         msg_invalid_input      , &
         msg_undesirable_input
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_output'
   type(output_), intent(out) :: dout
 
   character(clen_path) :: dir
   logical :: include_min, include_max
 
-  call echo(code%bgn, 'read_settings_output')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
   call set_keynum('ratio_min', 0, 1)
@@ -1272,11 +1268,11 @@ subroutine read_settings_output(dout)
   call set_keynum('f_idx'      , 0, 1)
   call set_keynum('val_miss', 0, 1)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the default variables
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the default values')
+  call logent('Setting the default values', PRCNAM, MODNAM)
 
   ! [0.5, 1.0] in default
   dout%thresh%iratio_min = 0.5d0
@@ -1296,11 +1292,11 @@ subroutine read_settings_output(dout)
 
   dout%val_miss = -1d20
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   dir = ''
 
@@ -1360,11 +1356,11 @@ subroutine read_settings_output(dout)
   call check_keynum()
   !call check_keynum_relations()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
   if( keynum('ratio_min') == 0 )then
     dout%thresh%ineq_iratio_min = INEQ_NONE
@@ -1386,50 +1382,51 @@ subroutine read_settings_output(dout)
     endif
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the values')
+  call logent('Checking the values', PRCNAM, MODNAM)
 
   call check_values_iratio_minmax(&
          dout%thresh%ineq_iratio_min, dout%thresh%ineq_iratio_max, &
          dout%thresh%iratio_min     , dout%thresh%iratio_max)
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
 subroutine check_values_iratio_minmax(ineq_min, ineq_max, vmin, vmax)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_values_iratio_minmax'
   character(*), intent(in) :: ineq_min, ineq_max
   real(8)     , intent(in) :: vmin, vmax
 
-  call echo(code%bgn, '__IP__check_values_iratio_minmax', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( ineq_min == INEQ_NONE .or. ineq_max == INEQ_NONE )then
     continue
   elseif( ineq_min == INEQ_GE .and. ineq_max == INEQ_LE )then
     if( vmin > vmax )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\nRange of the ratio is invalid.'//&
-              ' Check the values of "ratio_min", "ratio_max", "include_min" and "include_max".')
+      call errend(msg_unexpected_condition()//&
+                '\nRange of the ratio is invalid.'//&
+                ' Check the values of "ratio_min", "ratio_max", "include_min" and "include_max".')
     endif
   else
     if( vmin >= vmax )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\nRange of the ratio is invalid.'//&
-              ' Check the values of "ratio_min", "ratio_max", "include_min" and "include_max".')
+      call errend(msg_unexpected_condition()//&
+                '\nRange of the ratio is invalid.'//&
+                ' Check the values of "ratio_min", "ratio_max", "include_min" and "include_max".')
     endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_values_iratio_minmax
 !---------------------------------------------------------------
 end subroutine read_settings_output
@@ -1460,34 +1457,43 @@ subroutine read_settings_opt(opt)
         KEY_DIR_INTERMEDIATES   , &
         KEY_REMOVE_INTERMEDIATES, &
         KEY_MEMORY_ULIM         , &
-        KEY_EARTH_SHAPE         , &
+        KEY_EARTH_GEOSYS        , &
+        KEY_EARTH_RTYP          , &
         KEY_EARTH_R             , &
-        KEY_EARTH_E2
+        KEY_EARTH_FINV          , &
+        KEY_EARTH_F             , &
+        KEY_EARTH_E2            
   use c1_opt_set, only: &
         set_values_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_settings_opt'
   type(opt_), intent(inout) :: opt
 
-  call echo(code%bgn, 'read_settings_opt')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set the lim. of the number of times each keyword is used
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the lim. of the number of times each keyword is used')
+  call logent('Setting the lim. of the number of times each keyword is used', PRCNAM, MODNAM)
 
   call alloc_keynum()
+
   call set_keynum(KEY_OLD_FILES           , 0, 1)
   call set_keynum(KEY_DIR_INTERMEDIATES   , 0, 1)
   call set_keynum(KEY_REMOVE_INTERMEDIATES, 0, 1)
   call set_keynum(KEY_MEMORY_ULIM         , 0, 1)
-  call set_keynum(KEY_EARTH_SHAPE, 0, 1)
-  call set_keynum(KEY_EARTH_R    , 0, 1)
-  call set_keynum(KEY_EARTH_E2   , 0, 1)
 
-  call echo(code%ext)
+  call set_keynum(KEY_EARTH_GEOSYS, 0, 1)
+  call set_keynum(KEY_EARTH_RTYP  , 0, 1)
+  call set_keynum(KEY_EARTH_R     , 0, 1)
+  call set_keynum(KEY_EARTH_FINV  , 0, 1)
+  call set_keynum(KEY_EARTH_F     , 0, 1)
+  call set_keynum(KEY_EARTH_E2    , 0, 1)
+
+  call logext()
   !-------------------------------------------------------------
   ! Read the settings
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading the settings')
+  call logent('Reading the settings', PRCNAM, MODNAM)
 
   do
     call read_input()
@@ -1512,13 +1518,17 @@ subroutine read_settings_opt(opt)
     case( KEY_MEMORY_ULIM )
       call read_value(opt%sys%memory_ulim)
     !-----------------------------------------------------------
-    !
-    case( KEY_EARTH_SHAPE )
-      call read_value(opt%earth%shp, is_keyword=.true.)
-
+    ! Earth's shape
+    case( KEY_EARTH_GEOSYS )
+      call read_value(opt%earth%geosys, is_keyword=.true.)
+    case( KEY_EARTH_RTYP )
+      call read_value(opt%earth%rtyp, is_keyword=.true.)
     case( KEY_EARTH_R )
       call read_value(opt%earth%r)
-
+    case( KEY_EARTH_FINV )
+      call read_value(opt%earth%finv)
+    case( KEY_EARTH_F )
+      call read_value(opt%earth%f)
     case( KEY_EARTH_E2 )
       call read_value(opt%earth%e2)
     !-----------------------------------------------------------
@@ -1531,29 +1541,32 @@ subroutine read_settings_opt(opt)
   call check_keynum()
   !call check_keynum_relations()
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Check the values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking the values')
+  call logent('Checking the values', PRCNAM, MODNAM)
 
-  call checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files')
+  call traperr( checkval_opt_old_files(opt%sys%old_files, 'opt%sys%old_files') )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Set the related values
   !-------------------------------------------------------------
-  call echo(code%ent, 'Setting the related values')
+  call logent('Setting the related values', PRCNAM, MODNAM)
 
-  call set_values_opt_earth(opt%earth, keynum('earth_r'), keynum('earth_e2'))
+  call traperr( set_values_opt_earth(&
+         opt%earth, &
+         keynum(KEY_EARTH_R), keynum(KEY_EARTH_FINV), &
+         keynum(KEY_EARTH_F), keynum(KEY_EARTH_E2)) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   ! Free module variable
   !-------------------------------------------------------------
   call free_keynum()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine read_settings_opt
 !===============================================================
 !
@@ -1566,11 +1579,38 @@ end subroutine read_settings_opt
 !===============================================================
 !
 !===============================================================
+subroutine check_input(&
+    a, opt_earth)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_input'
+  type(gs_), intent(in) :: a
+  type(opt_earth_), intent(in) :: opt_earth
+
+  call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( opt_earth%shptyp == EARTH_SHPTYP__ELLIPS )then
+    if( a%typ == MESHTYPE__POLYGON )then
+      call errend(msg_unexpected_condition()//&
+                '\n  opt%earth%shptyp == '//str(opt_earth%shptyp)//&
+                  ' and '//str(a%id)//'%typ == '//str(a%typ)//&
+                '\nEarth shape "'//str(opt_earth%shptyp)//'" is '//&
+                  'not implemented yet for '//str(a%typ)//' meshes.')
+    endif
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_input
+!===============================================================
+!
+!===============================================================
 subroutine check_paths(s, t, dout, opt_sys)
   use c1_file, only: &
         set_opt_old_files, &
         handle_old_file
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_paths'
   type(gs_)     , intent(in), target :: s
   type(gs_)     , intent(in), target :: t
   type(output_) , intent(in), target :: dout
@@ -1583,11 +1623,11 @@ subroutine check_paths(s, t, dout, opt_sys)
 
   integer :: iFile
 
-  call echo(code%bgn, 'check_paths')
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking input files')
+  call logent('Checking input files', PRCNAM, MODNAM)
 
   selectcase( s%typ )
   !-------------------------------------------------------------
@@ -1596,11 +1636,11 @@ subroutine check_paths(s, t, dout, opt_sys)
     sfl => s%latlon%f_latlon_in
     sfg_in => s%latlon%f_grid_in
 
-    call check_permission(sfl%lon, allow_empty=.true.)
-    call check_permission(sfl%lat, allow_empty=.true.)
+    call traperr( check_permission(sfl%lon, allow_empty=.true.) )
+    call traperr( check_permission(sfl%lat, allow_empty=.true.) )
 
     do iFile = 1, sfg_in%nFiles_val
-      call check_permission(sfg_in%val(iFile), allow_empty=.false.)
+      call traperr( check_permission(sfg_in%val(iFile), allow_empty=.false.) )
     enddo
   !-------------------------------------------------------------
   ! Case: Raster
@@ -1608,66 +1648,64 @@ subroutine check_paths(s, t, dout, opt_sys)
     sfr => s%raster%f_raster_in
     sfg_in => s%raster%f_grid_in
 
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\nNot implemented yet.')
+    call errend(msg_not_implemented()//&
+              '\n  s%typ: '//str(s%typ))
   !-------------------------------------------------------------
   ! Case: Polygon
   case( MESHTYPE__POLYGON )
     sfp => s%polygon%f_polygon_in
     sfg_in => s%polygon%f_grid_in
 
-    call check_permission(sfp%lon   , allow_empty=.true.)
-    call check_permission(sfp%lat   , allow_empty=.true.)
-    call check_permission(sfp%x     , allow_empty=.true.)
-    call check_permission(sfp%y     , allow_empty=.true.)
-    call check_permission(sfp%z     , allow_empty=.true.)
-    call check_permission(sfp%arctyp, allow_empty=.true.)
+    call traperr( check_permission(sfp%lon   , allow_empty=.true.) )
+    call traperr( check_permission(sfp%lat   , allow_empty=.true.) )
+    call traperr( check_permission(sfp%x     , allow_empty=.true.) )
+    call traperr( check_permission(sfp%y     , allow_empty=.true.) )
+    call traperr( check_permission(sfp%z     , allow_empty=.true.) )
+    call traperr( check_permission(sfp%arctyp, allow_empty=.true.) )
 
     do iFile = 1, sfg_in%nFiles_val
-      call check_permission(sfg_in%val(iFile), allow_empty=.true.)
+      call traperr( check_permission(sfg_in%val(iFile), allow_empty=.true.) )
     enddo
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ))
+    call errend(msg_invalid_value('s%typ', s%typ))
   endselect
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Checking old output files')
+  call logent('Checking old output files', PRCNAM, MODNAM)
 
-  call set_opt_old_files(opt_sys%old_files)
+  call traperr( set_opt_old_files(opt_sys%old_files) )
 
-  call handle_old_file(dout%f_mask)
-  call handle_old_file(dout%f_iratio_sum)
-  call handle_old_file(dout%f_iarea_sum)
-  call handle_old_file(dout%f_idx)
+  call traperr( handle_old_file(dout%f_mask) )
+  call traperr( handle_old_file(dout%f_iratio_sum) )
+  call traperr( handle_old_file(dout%f_iarea_sum) )
+  call traperr( handle_old_file(dout%f_idx) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Preparing output directories')
+  call logent('Preparing output directories', PRCNAM, MODNAM)
 
-  call set_opt_mkdir(output=.true., hut=hut_command)
+  call traperr( set_opt_mkdir(output=.true., hut=hut_command) )
 
-  call mkdir(dirname(dout%f_mask%path))
-  call mkdir(dirname(dout%f_iratio_sum%path))
-  call mkdir(dirname(dout%f_iarea_sum%path))
-  call mkdir(dirname(dout%f_idx%path))
+  call traperr( mkdir(dirname(dout%f_mask%path)) )
+  call traperr( mkdir(dirname(dout%f_iratio_sum%path)) )
+  call traperr( mkdir(dirname(dout%f_iarea_sum%path)) )
+  call traperr( mkdir(dirname(dout%f_idx%path)) )
 
-  call check_permission(dout%f_mask      , allow_empty=.true.)
-  call check_permission(dout%f_iratio_sum, allow_empty=.true.)
-  call check_permission(dout%f_iarea_sum , allow_empty=.true.)
-  call check_permission(dout%f_idx       , allow_empty=.true.)
+  call traperr( check_permission(dout%f_mask      , allow_empty=.true.) )
+  call traperr( check_permission(dout%f_iratio_sum, allow_empty=.true.) )
+  call traperr( check_permission(dout%f_iarea_sum , allow_empty=.true.) )
+  call traperr( check_permission(dout%f_idx       , allow_empty=.true.) )
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine check_paths
 !===============================================================
 !
@@ -1684,17 +1722,18 @@ subroutine echo_settings_gs_latlon(ul)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_gs_latlon'
   type(gs_latlon_), intent(in), target :: ul
 
   type(file_latlon_in_), pointer :: fl
   type(file_grid_in_), pointer :: fg_in
   integer :: dgt_nxy
 
-  call echo(code%bgn, 'echo_settings_gs_latlon', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(bar('Grid System (LatLon)'))
+  call logmsg(bar('Grid System (LatLon)'))
 
   fl => ul%f_latlon_in
   fg_in => ul%f_grid_in
@@ -1703,53 +1742,53 @@ subroutine echo_settings_gs_latlon(ul)
   !-------------------------------------------------------------
   dgt_nxy = dgt(max(ul%nx, ul%ny, maxval(fg_in%sz(:2))))
 
-  call edbg('Name: '//str(ul%nam))
+  call logmsg('Name: '//str(ul%nam))
 
-  call edbg('Mesh type: '//str(MESHTYPE__LATLON))
+  call logmsg('Mesh type: '//str(MESHTYPE__LATLON))
 
-  call edbg('nx: '//str(ul%nx))
-  call edbg('ny: '//str(ul%ny))
+  call logmsg('nx: '//str(ul%nx))
+  call logmsg('ny: '//str(ul%ny))
 
   if( fl%lon%path == '' )then
-    call edbg('West : '//str(ul%west,'f12.5'))
-    call edbg('East : '//str(ul%east,'f12.5'))
+    call logmsg('West : '//str(ul%west,'f12.5'))
+    call logmsg('East : '//str(ul%east,'f12.5'))
   else
-    call edbg('Bounds of longit.: '//str(fl%lon%path))
+    call logmsg('Bounds of longit.: '//str(fl%lon%path))
   endif
 
   if( fl%lat%path == '' )then
-    call edbg('South: '//str(ul%south,'f12.5'))
-    call edbg('North: '//str(ul%north,'f12.5'))
+    call logmsg('South: '//str(ul%south,'f12.5'))
+    call logmsg('North: '//str(ul%north,'f12.5'))
   else
-    call edbg('Bounds of latit. : '//str(fl%lat%path))
+    call logmsg('Bounds of latit. : '//str(fl%lat%path))
   endif
 
-  call edbg('Is south to north: '//str(ul%is_south_to_north))
+  call logmsg('Is south to north: '//str(ul%is_south_to_north))
 
-  call edbg('Grid data (in)')
+  call logmsg('Grid data (in)')
   if( fg_in%idx%path /= '' .or. fg_in%ara%path /= '' .or. fg_in%wgt%path /= '' )then
-    call edbg('  Index : '//str(fileinfo(fg_in%idx)))
-    call edbg('  Area  : '//str(fileinfo(fg_in%ara)))
-    call edbg('  Weight: '//str(fileinfo(fg_in%wgt)))
-    call edbg('  Size: ('//str(fg_in%sz(:2),dgt_nxy,', ')//')')
-    call edbg('  Use : ('//str((/fg_in%lb(1),fg_in%ub(1)/),dgt_nxy,':')//&
-                     ', '//str((/fg_in%lb(2),fg_in%ub(2)/),dgt_nxy,':')//')')
+    call logmsg('  Index : '//str(fileinfo(fg_in%idx)))
+    call logmsg('  Area  : '//str(fileinfo(fg_in%ara)))
+    call logmsg('  Weight: '//str(fileinfo(fg_in%wgt)))
+    call logmsg('  Size: ('//str(fg_in%sz(:2),dgt_nxy,', ')//')')
+    call logmsg('  Use : ('//str((/fg_in%lb(1),fg_in%ub(1)/),dgt_nxy,':')//&
+                       ', '//str((/fg_in%lb(2),fg_in%ub(2)/),dgt_nxy,':')//')')
     if( fg_in%ara%path /= '' )then
-      call edbg('  Unit of Area: '//str(fg_in%unit_ara))
+      call logmsg('  Unit of Area: '//str(fg_in%unit_ara))
     endif
   else
-    call edbg('  (No input)')
+    call logmsg('  (No input)')
   endif
 
-  call edbg('Missing values')
-  call edbg('  Index : '//str(ul%idx_miss))
-  call edbg('  Area  : '//str(ul%ara_miss))
-  call edbg('  Weight: '//str(ul%wgt_miss))
-  call edbg('  XYZ   : '//str(ul%xyz_miss))
-  call edbg('  LatLon: '//str(ul%lonlat_miss))
-  call edbg('  Value : '//str(ul%val_miss))
+  call logmsg('Missing values')
+  call logmsg('  Index : '//str(ul%idx_miss))
+  call logmsg('  Area  : '//str(ul%ara_miss))
+  call logmsg('  Weight: '//str(ul%wgt_miss))
+  call logmsg('  XYZ   : '//str(ul%xyz_miss))
+  call logmsg('  LatLon: '//str(ul%lonlat_miss))
+  call logmsg('  Value : '//str(ul%val_miss))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_gs_latlon
 !===============================================================
 !
@@ -1758,26 +1797,27 @@ subroutine echo_settings_gs_raster(ur)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_gs_raster'
   type(gs_raster_), intent(in), target :: ur
 
   integer :: dgt_nxy
 
-  call echo(code%bgn, 'echo_settings_raster', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(bar('Grid system (Raster)'))
+  call logmsg(bar('Grid system (Raster)'))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   dgt_nxy = dgt(max(ur%nx,ur%ny))
 
-  call edbg('Name: '//str(ur%nam))
+  call logmsg('Name: '//str(ur%nam))
 
-  call edbg('nx: '//str(ur%nx,dgt_nxy))
-  call edbg('ny: '//str(ur%ny,dgt_nxy))
+  call logmsg('nx: '//str(ur%nx,dgt_nxy))
+  call logmsg('ny: '//str(ur%ny,dgt_nxy))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_gs_raster
 !===============================================================
 !
@@ -1786,17 +1826,18 @@ subroutine echo_settings_gs_polygon(up)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_gs_polygon'
   type(gs_polygon_), target :: up
 
   type(file_polygon_in_), pointer :: fp
   type(file_grid_in_)   , pointer :: fg_in
   integer :: dgt_ij
 
-  call echo(code%bgn, 'echo_settings_gs_polygon', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(bar('Grid System (Polygon)'))
+  call logmsg(bar('Grid System (Polygon)'))
 
   fp => up%f_polygon_in
   fg_in => up%f_grid_in
@@ -1805,66 +1846,65 @@ subroutine echo_settings_gs_polygon(up)
   !-------------------------------------------------------------
   dgt_ij = dgt(maxval(fp%sz(:2)))
 
-  call edbg('Name: '//str(up%nam))
+  call logmsg('Name: '//str(up%nam))
 
-  call edbg('Mesh type: '//str(MESHTYPE__POLYGON))
+  call logmsg('Mesh type: '//str(MESHTYPE__POLYGON))
 
-  call edbg('Grid data')
-  call edbg('  Size : '//str(fp%sz(2),dgt_ij))
-  call edbg('  Input: ('//str((/fp%lb(2),fp%ub(2)/),dgt_ij,':')//')')
+  call logmsg('Grid data')
+  call logmsg('  Size : '//str(fp%sz(2),dgt_ij))
+  call logmsg('  Input: ('//str((/fp%lb(2),fp%ub(2)/),dgt_ij,':')//')')
 
-  call edbg('Max. num. of vertices of a grid: '//str(up%np))
+  call logmsg('Max. num. of vertices of a grid: '//str(up%np))
 
-  call edbg('Coordinates')
-  call edbg('  Coordinate system: '//str(up%coord_sys))
-  call edbg('  Files of coords. of vertices')
+  call logmsg('Coordinates')
+  call logmsg('  Coordinate system: '//str(up%coord_sys))
+  call logmsg('  Files of coords. of vertices')
   selectcase( up%coord_sys )
   case( coord_sys_spherical )
-    call edbg('    Lon: '//str(fileinfo(fp%lon)))
-    call edbg('    Lat: '//str(fileinfo(fp%lat)))
+    call logmsg('    Lon: '//str(fileinfo(fp%lon)))
+    call logmsg('    Lat: '//str(fileinfo(fp%lat)))
   case( coord_sys_cartesian )
-    call edbg('    X: '//str(fileinfo(fp%x)))
-    call edbg('    Y: '//str(fileinfo(fp%y)))
-    call edbg('    Z: '//str(fileinfo(fp%z)))
+    call logmsg('    X: '//str(fileinfo(fp%x)))
+    call logmsg('    Y: '//str(fileinfo(fp%y)))
+    call logmsg('    Z: '//str(fileinfo(fp%z)))
   case default
-    call eerr(str(msg_invalid_value())//&
-           '\n  up%coord_sys: '//str(up%coord_sys))
+    call errend(msg_invalid_value('up%coord_sys', up%coord_sys))
   endselect
 
-  call edbg('  Unit: '//str(up%coord_unit))
+  call logmsg('  Unit: '//str(up%coord_unit))
 
-  call edbg('  Missing value of coords.')
-  call edbg('    Spherical: '//str(up%coord_miss_s))
-  call edbg('    Cartesian: '//str(up%coord_miss_c))
+  call logmsg('  Missing value of coords.')
+  call logmsg('    Spherical: '//str(up%coord_miss_s))
+  call logmsg('    Cartesian: '//str(up%coord_miss_c))
 
   if( fp%arctyp%path == '' )then
-    call edbg('Treat the arcs whose edges have same lattitude as small arcs: '//&
-              str(up%arc_parallel))
+    call logmsg('Treat the arcs whose edges have same lattitude as small arcs: '//&
+                str(up%arc_parallel))
   else
-    call edbg('Types of the arcs: '//str(fileinfo(fp%arctyp)))
+    call logmsg('Types of the arcs: '//str(fileinfo(fp%arctyp)))
   endif
 
-  call edbg('Grid data (in)')
+  call logmsg('Grid data (in)')
   if( fg_in%idx%path /= '' .or. fg_in%ara%path /= '' .or. fg_in%wgt%path /= '' )then
-    call edbg('  Index : '//str(fileinfo(fg_in%idx)))
-    call edbg('  Area  : '//str(fileinfo(fg_in%ara)))
-    call edbg('  Weight: '//str(fileinfo(fg_in%wgt)))
+    call logmsg('  Index : '//str(fileinfo(fg_in%idx)))
+    call logmsg('  Area  : '//str(fileinfo(fg_in%ara)))
+    call logmsg('  Weight: '//str(fileinfo(fg_in%wgt)))
     if( fg_in%ara%path /= '' )then
-      call edbg('  Unit of Area: '//str(fg_in%unit_ara))
+      call logmsg('  Unit of Area: '//str(fg_in%unit_ara))
     endif
   else
-    call edbg('  (No input)')
+    call logmsg('  (No input)')
   endif
 
-  call edbg('Missing values')
-  call edbg('  Index : '//str(up%idx_miss))
-  call edbg('  Area  : '//str(up%ara_miss))
-  call edbg('  Weight: '//str(up%wgt_miss))
-  call edbg('  XYZ   : '//str(up%xyz_miss))
-  call edbg('  LatLon: '//str(up%lonlat_miss))
-  call edbg('  Value : '//str(up%val_miss))
+  call logmsg('Missing values')
+  call logmsg('  Index : '//str(up%idx_miss))
+  call logmsg('  Area  : '//str(up%ara_miss))
+  call logmsg('  Weight: '//str(up%wgt_miss))
+  call logmsg('  XYZ   : '//str(up%xyz_miss))
+  call logmsg('  LatLon: '//str(up%lonlat_miss))
+  call logmsg('  Value : '//str(up%val_miss))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_gs_polygon
 !===============================================================
 !
@@ -1873,32 +1913,33 @@ subroutine echo_settings_raster(ur)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_raster'
   type(gs_raster_), intent(in), target :: ur
 
   integer :: dgt_nxy
 
-  call echo(code%bgn, 'echo_settings_raster', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(bar('Raster'))
+  call logmsg(bar('Raster'))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   dgt_nxy = dgt(max(ur%nx,ur%ny))
 
-  call edbg('Name: '//str(ur%nam))
+  call logmsg('Name: '//str(ur%nam))
 
-  call edbg('nx: '//str(ur%nx,dgt_nxy))
-  call edbg('ny: '//str(ur%ny,dgt_nxy))
+  call logmsg('nx: '//str(ur%nx,dgt_nxy))
+  call logmsg('ny: '//str(ur%ny,dgt_nxy))
 
-  call edbg('West : '//str(ur%west,'f12.5'))
-  call edbg('East : '//str(ur%east,'f12.5'))
-  call edbg('South: '//str(ur%south,'f12.5'))
-  call edbg('North: '//str(ur%north,'f12.5'))
-  call edbg('Is south to north: '//str(ur%is_south_to_north))
+  call logmsg('West : '//str(ur%west,'f12.5'))
+  call logmsg('East : '//str(ur%east,'f12.5'))
+  call logmsg('South: '//str(ur%south,'f12.5'))
+  call logmsg('North: '//str(ur%north,'f12.5'))
+  call logmsg('Is south to north: '//str(ur%is_south_to_north))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_raster
 !===============================================================
 !
@@ -1907,15 +1948,16 @@ subroutine echo_settings_output(dout)
   use c1_set, only: &
         bar
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_output'
   type(output_), intent(in), target :: dout
 
   character(clen_wfmt*2) :: range_left, range_right
 
-  call echo(code%bgn, 'echo_settings_output', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(bar('Output'))
+  call logmsg(bar('Output'))
   !-------------------------------------------------------------
   ! Make a string of range of the ratio
   !-------------------------------------------------------------
@@ -1928,11 +1970,10 @@ subroutine echo_settings_output(dout)
     range_left = '['//str(dout%thresh%iratio_min)
   case( INEQ_LT, &
         INEQ_LE )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  dout%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
+    call errend(msg_unexpected_condition()//&
+              '\n  dout%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  dout%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
+    call errend(msg_invalid_value('dout%ineq_iratio_min', dout%thresh%ineq_iratio_min))
   endselect
 
   selectcase( dout%thresh%ineq_iratio_max )
@@ -1944,28 +1985,27 @@ subroutine echo_settings_output(dout)
     range_right = str(dout%thresh%iratio_min)//']'
   case( INEQ_GT, &
         INEQ_GE )
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  dout%thresh%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
+    call errend(msg_unexpected_condition()//&
+              '\n  dout%thresh%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  dout%thresh%ineq_iratio_min: '//str(dout%thresh%ineq_iratio_min))
+    call errend(msg_invalid_value('dout%thresh%ineq_iratio_min', dout%thresh%ineq_iratio_min))
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Files')
-  call edbg('  area_sum : '//str(fileinfo(dout%f_iarea_sum)))
-  call edbg('  ratio_sum: '//str(fileinfo(dout%f_iratio_sum)))
-  call edbg('  mask     : '//str(fileinfo(dout%f_mask)))
-  call edbg('  idx      : '//str(fileinfo(dout%f_idx)))
-  call edbg('Missing value: '//str(dout%val_miss))
-  call edbg('Range of intersection ratio: '//str(range_left)//', '//str(range_right))
-  call edbg('Missing index is applied when sum. of ratio <= '//&
-            str(dout%thresh%iratio_min_idx))
-  call edbg('Intersection is ignored when its ratio <= '//&
-            str(dout%thresh%iratio_ignored))
+  call logmsg('Files')
+  call logmsg('  area_sum : '//str(fileinfo(dout%f_iarea_sum)))
+  call logmsg('  ratio_sum: '//str(fileinfo(dout%f_iratio_sum)))
+  call logmsg('  mask     : '//str(fileinfo(dout%f_mask)))
+  call logmsg('  idx      : '//str(fileinfo(dout%f_idx)))
+  call logmsg('Missing value: '//str(dout%val_miss))
+  call logmsg('Range of intersection ratio: '//str(range_left)//', '//str(range_right))
+  call logmsg('Missing index is applied when sum. of ratio <= '//&
+              str(dout%thresh%iratio_min_idx))
+  call logmsg('Intersection is ignored when its ratio <= '//&
+              str(dout%thresh%iratio_ignored))
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_output
 !===============================================================
 !
@@ -1978,13 +2018,14 @@ subroutine echo_settings_opt(opt)
         echo_settings_opt_log, &
         echo_settings_opt_earth
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'echo_settings_opt'
   type(opt_), intent(in) :: opt
 
-  call echo(code%bgn, 'echo_settings_opt', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg(bar('Options'))
+  call logmsg(bar('Options'))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1994,7 +2035,7 @@ subroutine echo_settings_opt(opt)
 
   call echo_settings_opt_earth(opt%earth)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine echo_settings_opt
 !===============================================================
 !

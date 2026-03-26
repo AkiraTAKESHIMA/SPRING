@@ -12,20 +12,36 @@ module c3_rt_driv
   implicit none
   private
   !-------------------------------------------------------------
-  !
+  ! Public procedures
   !-------------------------------------------------------------
   public :: make_rt
+  !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_driv'
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
+integer(4) function make_rt(&
+    s, t, rt, calc_coef, make_vrf, output) result(info)
+  use c1_file, only: &
+        is_report_file_opened, &
+        report
   use c1_gs_grid_core, only: &
-        make_idxmap_gs, &
-        make_wgtmap_gs, &
-        make_grdidx_gs, &
-        make_grdara_gs
+        make_idxmap, &
+        make_wgtmap, &
+        make_grdidx, &
+        make_grdara
+  use c2_rt_main_finish, only: &
+        finish_rt_main
+  use c2_rt_vrf_driv, only: &
+        make_rt_vrf
+  use c2_rt_main_io, only: &
+        write_rt_main
+  use c2_rt_vrf_io, only: &
+        write_rt_vrf
   use c3_rt_latlon_latlon, only: &
         make_rt_latlon_latlon
   use c3_rt_latlon_raster, only: &
@@ -38,17 +54,8 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
         make_rt_raster_polygon
   use c3_rt_polygon_polygon, only: &
         make_rt_polygon_polygon
-  use c2_rt_main_finish, only: &
-        finish_rt_main
-  use c2_rt_vrf_driv, only: &
-        make_rt_vrf
-  use c2_rt_main_io, only: &
-        write_rt_main
-  use c2_rt_vrf_io, only: &
-        write_rt_vrf
-  use c1_file, only: &
-        report
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt'
   type(gs_), intent(inout) :: s
   type(gs_), intent(inout) :: t
   type(rt_), intent(inout) :: rt
@@ -56,19 +63,36 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
   logical  , intent(in)    :: make_vrf
   logical  , intent(in)    :: output
 
-  call echo(code%bgn, 'make_rt')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Make grid data
   !-------------------------------------------------------------
-  call make_idxmap_gs(s)
-  call make_grdidx_gs(s)
-  call make_grdara_gs(s)
-  call make_wgtmap_gs(s)
+  if( make_idxmap(s) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx(s) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdara(s) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_wgtmap(s) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call make_idxmap_gs(t)
-  call make_grdidx_gs(t)
-  call make_grdara_gs(t)
-  call make_wgtmap_gs(t)
+  if( make_idxmap(t) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdidx(t) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_grdara(t) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( make_wgtmap(t) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
@@ -76,59 +100,91 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
   !-------------------------------------------------------------
   ! Case: LatLon and LatLon
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__LATLON) )
-    call make_rt_latlon_latlon(s, t, rt)
+    if( make_rt_latlon_latlon(s, t, rt) /= 0 )then
+      info = 1; call errret(); return
+    endif
   !-------------------------------------------------------------
   ! Case: LatLon and Raster
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__RASTER), &
         trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__LATLON) )
-    call make_rt_latlon_raster(s, t, rt)
+    if( make_rt_latlon_raster(s, t, rt) /= 0 )then
+      info = 1; call errret(); return
+    endif
   !-------------------------------------------------------------
   ! Case: LatLon and Polygon
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__POLYGON), &
         trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__LATLON) )
-    call make_rt_latlon_polygon(s, t, rt)
+    if( make_rt_latlon_polygon(s, t, rt) /= 0 )then
+      info = 1; call errret(); return
+    endif
   !-------------------------------------------------------------
   ! Case: Raster and Raster
   case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__RASTER) )
-    call make_rt_raster_raster(s, t, rt)
+    if( make_rt_raster_raster(s, t, rt) /= 0 )then
+      info = 1; call errret(); return
+    endif
   !-------------------------------------------------------------
   ! Case: Raster and Polygon
   case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__POLYGON), &
         trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__RASTER) )
-    call make_rt_raster_polygon(s, t, rt)
+    if( make_rt_raster_polygon(s, t, rt) /= 0 )then
+      info = 1; call errret(); return
+    endif
   !-------------------------------------------------------------
   ! Case: Polygon and Polygon
   case( trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__POLYGON) )
-    call make_rt_polygon_polygon(s, t, rt)
+    if( make_rt_polygon_polygon(s, t, rt) /= 0 )then
+      info = 1; call errret(); return
+    endif
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endselect
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( calc_coef )then
-    call finish_rt_main(rt, s, t)
+    if( finish_rt_main(rt, s, t) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( make_vrf )then
-    call make_rt_vrf(rt, s)
-    call make_rt_vrf(rt, t)
+    if( make_rt_vrf(rt, s) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( make_rt_vrf(rt, t) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( output )then
-    call write_rt_main(rt%main)
-    call write_rt_vrf(rt, s)
-    call write_rt_vrf(rt, t)
+    if( write_rt_main(rt%main) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( write_rt_vrf(rt, s) /= 0 )then
+      info = 1; call errret(); return
+    endif
+    if( write_rt_vrf(rt, t) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
+  if( .not. is_report_file_opened() )then
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\nReport file is not opened.')
+    return
+  endif
   call report('------ Remapping table ------')
   call report('length: '//str(rt%main%nij))
   if( rt%main%nij > 0_8 )then
@@ -140,8 +196,8 @@ subroutine make_rt(s, t, rt, calc_coef, make_vrf, output)
                 ' max: '//str(rt%main%coef_vmax,'es12.5'))
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine make_rt
+  call logret(PRCNAM, MODNAM)
+end function make_rt
 !===============================================================
 !
 !===============================================================

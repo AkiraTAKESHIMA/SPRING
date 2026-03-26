@@ -11,26 +11,27 @@ module c1_gs_define_polygon
   implicit none
   private
   !-------------------------------------------------------------
-  ! Public Procedures
+  ! Public procedures
   !-------------------------------------------------------------
   public :: set_gs__polygon
 
   public :: free_gs_polygon
   !-------------------------------------------------------------
-  !
+  ! Private module variables
   !-------------------------------------------------------------
-  character(clen_wfmt), parameter :: wfmt_coord = 'es10.3'
-  character(clen_wfmt), parameter :: WFMT_LONLAT = 'f12.7'
-  character(1), parameter :: str_coord_miss = '-'
-  character(3), parameter :: str_3dots = '...'
-  integer, parameter :: mij_print = 10
+  character(CLEN_PROC), parameter :: MODNAM = 'c1_gs_define_polygon'
+
+  character(CLEN_WFMT), parameter :: WFMT_COORD = 'es10.3'
+  character(CLEN_WFMT), parameter :: WFMT_LONLAT = 'f12.7'
+  integer, parameter :: MIJ_PRINT = 10
   !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine set_gs__polygon(ap)
+integer(4) function set_gs__polygon(ap) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'set_gs__polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(file_polygon_in_), pointer :: fp
@@ -39,14 +40,15 @@ subroutine set_gs__polygon(ap)
   integer(8) :: ijs, ije, ij
   logical :: idx_is_ok, msk_is_ok
 
-  call echo(code%bgn, 'set_gs__polygon')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( .not. ap%is_valid )then
-    call echo(code%ret)
-    return
-  endif
+!  if( .not. ap%is_valid )then
+!    call logret(PRCNAM, MODNAM)
+!    return
+!  endif
 
   fp => ap%f_polygon_in
   g  => ap%grid
@@ -63,12 +65,14 @@ subroutine set_gs__polygon(ap)
       ijs = g%ij_debug
       ije = g%ij_debug
     else
-      call ewrn('Grid index data has not been prepared.')
+      call logwrn('Grid index data has not been prepared.')
       if( 1 <= ap%idx_debug .and. ap%idx_debug <= ap%nij )then
         ijs = g%ij_debug
         ije = g%ij_debug
       else
-        call eerr('$ap%idx_debug = '//str(ap%idx_debug)//' is out of range.')
+        info = 1
+        call errret('$ap%idx_debug = '//str(ap%idx_debug)//' is out of range.')
+        return
       endif
     endif
   endif
@@ -101,71 +105,96 @@ subroutine set_gs__polygon(ap)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call edbg('Reading grid system data')
-  call read_data_plainbinary(ap, ijs, ije)
+  call logmsg('Reading grid system data')
+  if( read_data_plainbinary(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Modifying coords.')
-  call modify_coords(ap, ijs, ije)
+  call logmsg('Modifying coords.')
+  if( modify_coords(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Counting the number of vertices')
-  call count_vertices(ap, ijs, ije)
+  call logmsg('Counting the number of vertices')
+  if( count_vertices(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Modifying arc type')
-  call modify_arctyp(ap, ijs, ije)
+  call logmsg('Modifying arc type')
+  if( modify_arctyp(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Finding polar vertices')
-  call find_polar_vertices(ap, ijs, ije)
+  call logmsg('Finding polar vertices')
+  if( find_polar_vertices(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Judging statuses of the arcs')
-  call judge_status_of_arcs(ap, ijs, ije)
+  call logmsg('Judging statuses of the arcs')
+  if( judge_status_of_arcs(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Judging types of the grids')
-  call judge_type_of_grids(ap, ijs, ije)
+  call logmsg('Judging types of the grids')
+  if( judge_type_of_grids(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Calculating coefs. of the arcs')
-  call calc_coefs_of_arcs(ap, ijs, ije)
+  call logmsg('Calculating coefs. of the arcs')
+  if( calc_coefs_of_arcs(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Calculating the range of longit.')
-  call calc_range_of_longit(ap, ijs, ije)
+  call logmsg('Calculating the range of longit.')
+  if( calc_range_of_longit(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Calculating the range of latit.')
-  call calc_range_of_latit(ap, ijs, ije)
+  call logmsg('Calculating the range of latit.')
+  if( calc_range_of_latit(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Modifying loop directions')
-  call modify_loop_directions(ap, ijs, ije)
+  call logmsg('Modifying loop directions')
+  if( modify_loop_directions(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
-  call edbg('Updating grid mask')
-  call update_grdmsk(ap, ijs, ije)
-  
+  call logmsg('Updating grid mask')
+  if( update_grdmsk(ap, ijs, ije) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
   call print_info(ap, ijs, ije)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( ap%debug )then
     p => ap%polygon(ijs)
-    call edbg('polygon '//str(g%ij_debug))
-    call edbg('n: '//str(p%n))
-    call edbg('pos: '//str(str_polygon_pos_long(p%pos)))
-    call edbg('bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,WFMT_LONLAT,','))
-    call edbg('n_west: '//str(p%n_west)//', n_east: '//str(p%n_east)//&
+    call logmsg('polygon '//str(g%ij_debug))
+    call logmsg('n: '//str(p%n))
+    call logmsg('pos: '//str(str_polygon_pos_long(p%pos)))
+    call logmsg('bbox: '//str((/p%west,p%east,p%south,p%north/)*r2d,WFMT_LONLAT,','))
+    call logmsg('n_west: '//str(p%n_west)//', n_east: '//str(p%n_east)//&
               ', n_pole: '//str(p%n_pole))
-    call edbg('lon   : '//str_coords(p%lon, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
-    call edbg('lat   : '//str_coords(p%lat, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
-    call edbg('lontop: '//str_coords(p%lontop, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
-    call edbg('lattop: '//str_coords(p%lattop, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
-    call edbg('convex: '//str(str_convex_long(p%convex),-cl(WFMT_LONLAT),','))
-    call edbg('arctyp: '//str(str_arctyp_long(p%arctyp),-cl(WFMT_LONLAT),','))
-    call edbg('arcpos: '//str(str_arcpos_long(p%arcpos),-cl(WFMT_LONLAT),','))
+    call logmsg('lon   : '//str_coords(p%lon, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call logmsg('lat   : '//str_coords(p%lat, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call logmsg('lontop: '//str_coords(p%lontop, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call logmsg('lattop: '//str_coords(p%lattop, r2d, ap%coord_miss_s, WFMT_LONLAT, ',', p%n))
+    call logmsg('convex: '//str(str_convex_long(p%convex),-cl(WFMT_LONLAT),','))
+    call logmsg('arctyp: '//str(str_arctyp_long(p%arctyp),-cl(WFMT_LONLAT),','))
+    call logmsg('arcpos: '//str(str_arcpos_long(p%arcpos),-cl(WFMT_LONLAT),','))
     nullify(p)
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine set_gs__polygon
+  call logret(PRCNAM, MODNAM)
+end function set_gs__polygon
 !===============================================================
 !
 !===============================================================
-subroutine read_data_plainbinary(ap, ijs, ije)
+integer(4) function read_data_plainbinary(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'read_data_plainbinary'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -177,7 +206,8 @@ subroutine read_data_plainbinary(ap, ijs, ije)
   integer(8) :: fijs
   integer(8) :: ij
 
-  call echo(code%bgn, 'read_data_plainbinary', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -208,150 +238,163 @@ subroutine read_data_plainbinary(ap, ijs, ije)
     !-----------------------------------------------------------
     ! Read coordinate data
     !-----------------------------------------------------------
-    call echo(code%ent, 'Reading coordinate data')
+    call logent('Reading coordinate data', PRCNAM, MODNAM)
 
     f => fp%lon
-    call edbg('Reading lon '//str(fileinfo(f)))
-    call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
+    call logmsg('Reading lon '//str(fileinfo(f)))
+    if( rbin(coord, f%path, f%dtype, f%endian, f%rec, &
+             sz=f%sz(:2), lb=(/f%lb(1),fijs/)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = ijs, ije
       ap%polygon(ij)%lon(:) = coord(:,ij)
     enddo
 
     f => fp%lat
-    call edbg('Reading lat '//str(fileinfo(f)))
-    call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
+    call logmsg('Reading lat '//str(fileinfo(f)))
+    if( rbin(coord, f%path, f%dtype, f%endian, f%rec, &
+             sz=f%sz(:2), lb=(/f%lb(1),fijs/)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = ijs, ije
       ap%polygon(ij)%lat(:) = coord(:,ij)
     enddo
 
-    if( ije-ijs+1_8 > mij_print )then
+    if( ije-ijs+1_8 > MIJ_PRINT )then
       do ij = ijs, ijs+2_8
         p => ap%polygon(ij)
-        call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,wfmt_coord))
+        call logmsg('ij '//str(ij,dgt(ije))//&
+                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
+                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
       enddo
-      call edbg('...')
+      call logmsg('...')
       do ij = ije-2_8, ije
         p => ap%polygon(ij)
-        call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,wfmt_coord))
+        call logmsg('ij '//str(ij,dgt(ije))//&
+                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
+                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
       enddo
     else
       do ij = ijs, ije
         p => ap%polygon(ij)
-        call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,wfmt_coord)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,wfmt_coord))
+        call logmsg('ij '//str(ij,dgt(ije))//&
+                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
+                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
       enddo
     endif
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-!    call echo(code%ent, 'Checking values')
+!    call logent('Checking values', PRCNAM, MODNAM)
 
-!    call echo(code%ext)
+!    call logext(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Case: Cartesian
   case( coord_sys_cartesian )
     !-----------------------------------------------------------
     ! Read coordinate data
     !-----------------------------------------------------------
-    call echo(code%ent, 'Reading coordinate data')
+    call logent('Reading coordinate data', PRCNAM, MODNAM)
 
     f => fp%x
-    call edbg('Reading x '//str(fileinfo(f)))
-    call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
+    call logmsg('Reading x '//str(fileinfo(f)))
+    if( rbin(coord, f%path, f%dtype, f%endian, f%rec, &
+             sz=f%sz(:2), lb=(/f%lb(1),fijs/)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = ijs, ije
       ap%polygon(ij)%x(:) = coord(:,ij)
     enddo
 
     f => fp%y
-    call edbg('Reading y '//str(fileinfo(f)))
-    call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
+    call logmsg('Reading y '//str(fileinfo(f)))
+    if( rbin(coord, f%path, f%dtype, f%endian, f%rec, &
+             sz=f%sz(:2), lb=(/f%lb(1),fijs/)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = ijs, ije
       ap%polygon(ij)%y(:) = coord(:,ij)
     enddo
 
     f => fp%z
-    call edbg('Reading z '//str(fileinfo(f)))
-    call rbin(coord, f%path, f%dtype, f%endian, f%rec, &
-              sz=f%sz(:2), lb=(/f%lb(1),fijs/))
+    call logmsg('Reading z '//str(fileinfo(f)))
+    if( rbin(coord, f%path, f%dtype, f%endian, f%rec, &
+             sz=f%sz(:2), lb=(/f%lb(1),fijs/)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = ijs, ije
       ap%polygon(ij)%z(:) = coord(:,ij)
     enddo
 
-    if( ije-ijs+1_8 > mij_print )then
+    if( ije-ijs+1_8 > MIJ_PRINT )then
       do ij = ijs, ijs+2_8
         p => ap%polygon(ij)
-        call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,wfmt_coord)//&
-                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,wfmt_coord))
+        call logmsg('ij '//str(ij,dgt(ije))//&
+                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,WFMT_COORD)//&
+                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,WFMT_COORD)//&
+                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,WFMT_COORD))
       enddo
-      call edbg('...')
+      call logmsg('...')
       do ij = ije-2_8, ije
         p => ap%polygon(ij)
-        call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,wfmt_coord)//&
-                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,wfmt_coord))
+        call logmsg('ij '//str(ij,dgt(ije))//&
+                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,WFMT_COORD)//&
+                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,WFMT_COORD)//&
+                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,WFMT_COORD))
       enddo
     else
       do ij = ijs, ije
         p => ap%polygon(ij)
-        call edbg('ij '//str(ij,dgt(ije))//&
-                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,wfmt_coord)//&
-                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,wfmt_coord)//&
-                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,wfmt_coord))
+        call logmsg('ij '//str(ij,dgt(ije))//&
+                '\n  x: '//str_coords(p%x,1.d0,ap%coord_miss_c,WFMT_COORD)//&
+                '\n  y: '//str_coords(p%y,1.d0,ap%coord_miss_c,WFMT_COORD)//&
+                '\n  z: '//str_coords(p%z,1.d0,ap%coord_miss_c,WFMT_COORD))
       enddo
     endif
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-!    call echo(code%ent, 'Checking values')
+!    call logent('Checking values', PRCNAM, MODNAM)
 
-!    call echo(code%ext)
+!    call logext()
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  ap%coord_sys: '//str(ap%coord_sys))
+    info = 1
+    call errret(msg_invalid_value('ap%coord_sys', ap%coord_sys))
+    return
   endselect
 
   deallocate(coord)
   !-------------------------------------------------------------
   ! Read arc type data
   !-------------------------------------------------------------
-  call echo(code%ent, 'Reading arc type data')
+  call logent('Reading arc type data', PRCNAM, MODNAM)
 
   f => fp%arctyp
 
   if( f%path == '' )then
-    call edbg('File was not given.')
+    call logmsg('File was not given.')
     do ij = ijs, ije
       ap%polygon(ij)%arctyp(:) = ARC_TYPE_NORMAL
     enddo
   else
     allocate(arctyp(ap%np,ijs:ije))
 
-    call edbg('Reading arctyp '//str(fileinfo(f)))
-    call rbin(arctyp, f%path, f%dtype, f%endian, f%rec, &
-              sz=fp%sz(:2), lb=(/fp%lb(1),fijs/))
+    call logmsg('Reading arctyp '//str(fileinfo(f)))
+    if( rbin(arctyp, f%path, f%dtype, f%endian, f%rec, &
+             sz=fp%sz(:2), lb=(/fp%lb(1),fijs/)) /= 0 )then
+      info = 1; call errret(); return
+    endif
 
     do ij = ijs, ije
       ap%polygon(ij)%arctyp(:) = arctyp(:,ij)
@@ -360,15 +403,16 @@ subroutine read_data_plainbinary(ap, ijs, ije)
     deallocate(arctyp)
   endif
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine read_data_plainbinary
+  call logret(PRCNAM, MODNAM)
+end function read_data_plainbinary
 !===============================================================
 !
 !===============================================================
-subroutine modify_coords(ap, ijs, ije)
+integer(4) function modify_coords(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'modify_coords'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -377,7 +421,8 @@ subroutine modify_coords(ap, ijs, ije)
   integer(4) :: n
   logical :: found_0deg, found_lt180deg
 
-  call echo(code%bgn, 'modify_coords', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -388,7 +433,7 @@ subroutine modify_coords(ap, ijs, ije)
     !-----------------------------------------------------------
     ! Conv. unit
     !-----------------------------------------------------------
-    call echo(code%ent, 'Converting unit')
+    call logent('Converting unit', PRCNAM, MODNAM)
 
     selectcase( ap%coord_unit )
     case( UNIT_DEGREE )
@@ -407,30 +452,34 @@ subroutine modify_coords(ap, ijs, ije)
     case( UNIT_RADIAN )
       continue
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  ap%coord_unit: '//str(ap%coord_unit))
+      info = 1
+      call errret(msg_invalid_value('ap%coord_unit', ap%coord_unit))
+      return
     endselect
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     ! Calc. cartesian coords.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Calculating cartesian coords.')
+    call logent('Calculating cartesian coords.', PRCNAM, MODNAM)
 
     do ij = ijs, ije
       p => ap%polygon(ij)
-      call conv_spherical_to_cartesian_rad(&
-             p%lon, p%lat, p%x, p%y, p%z, ap%coord_miss_s, ap%coord_miss_c)
+      if( spherical_to_cartesian_rad(&
+            p%lon, p%lat, p%x, p%y, p%z, &
+            ap%coord_miss_s, ap%coord_miss_c) /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: Cartesian
   case( COORD_SYS_CARTESIAN )
     !-----------------------------------------------------------
     ! Conv. unit
     !-----------------------------------------------------------
-    call echo(code%ent, 'Converting unit')
+    call logent('Converting unit', PRCNAM, MODNAM)
 
     selectcase( ap%coord_unit )
     case( UNIT_METER )
@@ -447,33 +496,38 @@ subroutine modify_coords(ap, ijs, ije)
         enddo  ! n/
       enddo  ! ij/
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  ap%coord_unit: '//str(ap%coord_unit))
+      info = 1
+      call errret(msg_invalid_value('ap%coord_unit', ap%coord_unit))
+      return
     endselect
 
-    call echo(code%ext)
+    call logext()
     !-----------------------------------------------------------
     ! Calc. spherical coords.
     !-----------------------------------------------------------
-    call echo(code%ent, 'Calculating spherical coords.')
+    call logent('Calculating spherical coords.', PRCNAM, MODNAM)
 
     do ij = ijs, ije
       p => ap%polygon(ij)
-      call conv_cartesian_to_spherical_rad(&
-             p%x, p%y, p%z, p%lon, p%lat, ap%coord_miss_c, ap%coord_miss_s)
+      if( cartesian_to_spherical_rad(&
+            p%x, p%y, p%z, p%lon, p%lat, &
+            ap%coord_miss_c, ap%coord_miss_s) /= 0 )then
+        info = 1; call errret(); return
+      endif
     enddo
 
-    call echo(code%ext)
+    call logext()
   !-------------------------------------------------------------
   ! Case: ERROR
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  ap%coord_sys: '//str(ap%coord_sys))
+    info = 1
+    call errret(msg_invalid_value('ap%coord_sys', ap%coord_sys))
+    return
   endselect
   !-------------------------------------------------------------
   ! Modify spherical coords. of special points
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying spherical coords. of special points')
+  call logent('Modifying spherical coords. of special points', PRCNAM, MODNAM)
 
   do ij = ijs, ije
     p => ap%polygon(ij)
@@ -489,11 +543,11 @@ subroutine modify_coords(ap, ijs, ije)
     enddo  ! n/
   enddo  ! ij/
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call echo(code%ent, 'Modifying longit.')
+  call logent('Modifying longit.', PRCNAM, MODNAM)
 
   do ij = ijs, ije
     p => ap%polygon(ij)
@@ -523,15 +577,16 @@ subroutine modify_coords(ap, ijs, ije)
     endif
   enddo  ! ij/
 
-  call echo(code%ext)
+  call logext()
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine modify_coords
+  call logret(PRCNAM, MODNAM)
+end function modify_coords
 !===============================================================
 !
 !===============================================================
-subroutine count_vertices(ap, ijs, ije)
+integer(4) function count_vertices(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'count_vertices'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -542,7 +597,8 @@ subroutine count_vertices(ap, ijs, ije)
   real(8) :: lon1, lat1, lon2, lat2
   logical :: is_same
 
-  call echo(code%bgn, 'count_vertices', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -570,8 +626,10 @@ subroutine count_vertices(ap, ijs, ije)
       is_same = .false.
       if( lat1 == ap%coord_miss_s )then
         if( lon1 /= ap%coord_miss_s )then
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  lat. is missing value but lon. is not missing value')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nlat. is missing value but lon. is not missing value')
+          return
         endif
         cycle
       elseif( abs(lat1) == rad_90deg )then
@@ -582,16 +640,18 @@ subroutine count_vertices(ap, ijs, ije)
 
       if( is_same )then
         if( ap%allow_duplicated_vertex )then
-          !call edbg('polygon('//str(ij,dgt(ije))//') '//&
+          !call logmsg('polygon('//str(ij,dgt(ije))//') '//&
           !          '('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
           !          '('//str(str_coords_lonlat((/lon1,lat1/),ap%coord_miss_s))//')')
         else
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  Duplicated vertices were found.'//&
-                  '\npolygon('//str(ij,dgt(ije))//') '//&
-                    !'('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
-                    '('//str(n,dgt(ap%np))//') == ('//str(next_cyclic(n,int(ap%np,4)))//') '//&
-                    '('//str(str_coords_lonlat((/lon1,lat1/),ap%coord_miss_s))//')')
+          info = 1
+          call errret(msg_unexpected_condition()//&
+                    '\nDuplicated vertices were found.'//&
+                    '\npolygon('//str(ij,dgt(ije))//') '//&
+                      !'('//str(n,dgt(ap%np))//') == ('//str(ap%n_next(n,ap%np))//') '//&
+                      '('//str(n)//') == ('//str(next_cyclic(n,int(ap%np,4)))//') '//&
+                      '('//str(str_coords_lonlat((/lon1,lat1/),ap%coord_miss_s))//')')
+          return
         endif
         cycle
       endif
@@ -611,9 +671,11 @@ subroutine count_vertices(ap, ijs, ije)
     case( 3: )
       continue
     case default
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  ij: '//str(ij)//&
-              '\n  p%n: '//str(p%n))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n  ij: '//str(ij)//&
+                '\n  p%n: '//str(p%n))
+      return
     endselect
 
     if( p%n == ap%np ) cycle
@@ -668,13 +730,14 @@ subroutine count_vertices(ap, ijs, ije)
   deallocate(p_%lat)
   deallocate(p_%arctyp)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine count_vertices
+  call logret(PRCNAM, MODNAM)
+end function count_vertices
 !===============================================================
 !
 !===============================================================
-subroutine modify_arctyp(ap, ijs, ije)
+integer(4) function modify_arctyp(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'modify_arctyp'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -682,7 +745,8 @@ subroutine modify_arctyp(ap, ijs, ije)
   integer(8) :: ij
   integer(4) :: n, nn
 
-  call echo(code%bgn, 'modify_arctyp', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   do ij = ijs, ije
     p => ap%polygon(ij)
@@ -699,13 +763,14 @@ subroutine modify_arctyp(ap, ijs, ije)
     enddo  ! n/
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine modify_arctyp
+  call logret(PRCNAM, MODNAM)
+end function modify_arctyp
 !===============================================================
 !
 !===============================================================
-subroutine find_polar_vertices(ap, ijs, ije)
+integer(4) function find_polar_vertices(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'find_polar_vertices'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -713,12 +778,11 @@ subroutine find_polar_vertices(ap, ijs, ije)
   integer(8) :: ij
   integer(4) :: n
   logical :: is_ok
-  character(16) :: opt
 
-  call echo(code%bgn, 'find_polar_vertices', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   is_ok = .true.
-  opt = '-q -b'
   do ij = ijs, ije
     p => ap%polygon(ij)
 
@@ -727,13 +791,11 @@ subroutine find_polar_vertices(ap, ijs, ije)
       if( abs(p%lat(n)) == rad_90deg )then
         if( p%n_pole /= 0 )then
           is_ok = .false.
-          call eerr(str(msg_unexpected_condition())//&
-                  '\n  p%n_pole /= 0'//&
-                  '\n  ij: '//str(ij)//&
-                  '\n  lon: '//str_coords(p%lon, r2d, ap%coord_miss_s, wfmt_lonlat, n1max=p%n)//&
-                  '\n  lat: '//str_coords(p%lat, r2d, ap%coord_miss_s, wfmt_lonlat, n1max=p%n), &
-                    opt)
-          opt = '-q -b -p'
+          call erradd(msg_unexpected_condition()//&
+                    '\n  p%n_pole /= 0'//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  lon: '//str_coords(p%lon, r2d, ap%coord_miss_s, WFMT_LONLAT, n1max=p%n)//&
+                    '\n  lat: '//str_coords(p%lat, r2d, ap%coord_miss_s, WFMT_LONLAT, n1max=p%n))
           exit
         endif
         p%n_pole = int(n,4)
@@ -742,16 +804,19 @@ subroutine find_polar_vertices(ap, ijs, ije)
   enddo  ! ij/
 
   if( .not. is_ok )then
-    call eerr('', '-p')
+    info = 1
+    call errret()
+    return
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine find_polar_vertices
+  call logret(PRCNAM, MODNAM)
+end function find_polar_vertices
 !===============================================================
 !
 !===============================================================
-subroutine judge_status_of_arcs(ap, ijs, ije)
+integer(4) function judge_status_of_arcs(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'judge_status_of_arcs'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -759,7 +824,8 @@ subroutine judge_status_of_arcs(ap, ijs, ije)
   integer(8) :: ij
   integer(4) :: n, n_next
 
-  call echo(code%bgn, 'judge_status_of_arcs', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   do ij = ijs, ije
     p => ap%polygon(ij)
@@ -769,7 +835,6 @@ subroutine judge_status_of_arcs(ap, ijs, ije)
     p%arcpos(:) = arc_position_normal
 
     do n = 1, p%n
-      !n_next = ap%n_next(n,p%n)
       n_next = next_cyclic(n,p%n)
 
       if( n == p%n_pole .or. n_next == p%n_pole )then
@@ -789,13 +854,14 @@ subroutine judge_status_of_arcs(ap, ijs, ije)
     enddo  ! n/
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine judge_status_of_arcs
+  call logret(PRCNAM, MODNAM)
+end function judge_status_of_arcs
 !===============================================================
 !
 !===============================================================
-subroutine judge_type_of_grids(ap, ijs, ije)
+integer(4) function judge_type_of_grids(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'judge_type_of_grids'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -804,7 +870,8 @@ subroutine judge_type_of_grids(ap, ijs, ije)
   integer(4) :: n
   integer :: counter_lon0
 
-  call echo(code%bgn, 'judge_type_of_grids', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   do ij = ijs, ije
     p => ap%polygon(ij)
@@ -816,16 +883,17 @@ subroutine judge_type_of_grids(ap, ijs, ije)
 
     do n = 1, p%n
       selectcase( p%arcpos(n) )
-      case( arc_position_normal, &
-            arc_position_polar )
+      case( ARC_POSITION_NORMAL, &
+            ARC_POSITION_POLAR )
         continue
-      case( arc_position_lon0 )
+      case( ARC_POSITION_LON0 )
         call add(counter_lon0)
       case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  p%arcpos(n): '//str(p%arcpos(n))//&
-                '\n  ij: '//str(ij)//&
-                '\n  n : '//str(n))
+        info = 1
+        call errret(msg_invalid_value('p%arcpos(n)', p%arcpos(n))//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  n : '//str(n))
+        return
       endselect
     enddo  ! n/
     !-----------------------------------------------------------
@@ -841,13 +909,14 @@ subroutine judge_type_of_grids(ap, ijs, ije)
     !-----------------------------------------------------------
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine judge_type_of_grids
+  call logret(PRCNAM, MODNAM)
+end function judge_type_of_grids
 !===============================================================
 !
 !===============================================================
-subroutine calc_coefs_of_arcs(ap, ijs, ije)
+integer(4) function calc_coefs_of_arcs(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_coefs_of_arcs'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -855,7 +924,8 @@ subroutine calc_coefs_of_arcs(ap, ijs, ije)
   integer(8) :: ij
   integer(4) :: n, n_next
 
-  call echo(code%bgn, 'calc_coefs_of_arcs', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -868,39 +938,44 @@ subroutine calc_coefs_of_arcs(ap, ijs, ije)
     allocate(p%c(p%n))
 
     do n = 1, p%n
-      !n_next = ap%n_next(n,p%n)
       n_next = next_cyclic(n,p%n)
 
       selectcase( p%arctyp(n) )
       case( ARC_TYPE_MERIDIAN )
-        call calc_coefs_large_arc(&
-               p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
-               p%a(n), p%b(n), p%c(n))
+        if( calc_coefs_large_arc(&
+              p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
+              p%a(n), p%b(n), p%c(n)) /= 0 )then
+          info = 1; call errret(); return
+        endif
         p%c(n) = 0.d0
       case( ARC_TYPE_PARALLEL )
         p%a(n) = 0.d0
         p%b(n) = 0.d0
         p%c(n) = 0.d0
       case( ARC_TYPE_NORMAL )
-        call calc_coefs_large_arc(&
-               p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
-               p%a(n), p%b(n), p%c(n))
+        if( calc_coefs_large_arc(&
+              p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
+              p%a(n), p%b(n), p%c(n)) /= 0 )then
+          info = 1; call errret(); return
+        endif
       case default
-        call eerr(str(msg_invalid_value())//&
-                '\n  p%arctyp(n): '//str(p%arctyp(n))//&
-                '\n  ij: '//str(ij)//&
-                '\n  n: '//str(n))
+        info = 1
+        call errret(msg_invalid_value('p%arctyp(n)', p%arctyp(n))//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  n : '//str(n))
+        return
       endselect
     enddo  ! n/
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_coefs_of_arcs
+  call logret(PRCNAM, MODNAM)
+end function calc_coefs_of_arcs
 !===============================================================
 !
 !===============================================================
-subroutine calc_range_of_longit(ap, ijs, ije)
+integer(4) function calc_range_of_longit(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_range_of_longit'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -908,7 +983,8 @@ subroutine calc_range_of_longit(ap, ijs, ije)
   integer(8) :: ij
   integer(4) :: n
 
-  call echo(code%bgn, 'calc_range_of_longit', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -972,7 +1048,7 @@ subroutine calc_range_of_longit(ap, ijs, ije)
         endif
       enddo
 
-      call edbg('ij '//str(ij)//' intersect with lon0.'//&
+      call logmsg('ij '//str(ij)//' intersect with lon0.'//&
                 ' West: '//str(p%west*r2d,'f12.8')//&
                 ' East: '//str(p%east*r2d,'f12.8'))
     !-----------------------------------------------------------
@@ -983,24 +1059,26 @@ subroutine calc_range_of_longit(ap, ijs, ije)
       p%west = rad_0deg
       p%east = rad_360deg
 
-      call edbg('ij '//str(ij)//' include a pole.'//&
+      call logmsg('ij '//str(ij)//' include a pole.'//&
               '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
               '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s)))
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  p%pos: '//str(p%pos))
+      info = 1
+      call errret(msg_invalid_value('p%pos', p%pos))
+      return
     endselect
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_range_of_longit
+  call logret(PRCNAM, MODNAM)
+end function calc_range_of_longit
 !===============================================================
 !
 !===============================================================
-subroutine calc_range_of_latit(ap, ijs, ije)
+integer(4) function calc_range_of_latit(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'calc_range_of_latit'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -1009,7 +1087,8 @@ subroutine calc_range_of_latit(ap, ijs, ije)
   integer(4) :: n, n_next
   real(8) :: south, north
 
-  call echo(code%bgn, 'calc_range_of_latit', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1027,7 +1106,7 @@ subroutine calc_range_of_latit(ap, ijs, ije)
     selectcase( p%pos )
     !-----------------------------------------------------------
     ! Case: Polar
-    case( polygon_position_polar )
+    case( POLYGON_POSITION_POLAR )
 
       p%south = minval(p%lat)
       p%north = maxval(p%lat)
@@ -1041,13 +1120,14 @@ subroutine calc_range_of_latit(ap, ijs, ije)
       do n = 1, p%n
         selectcase( p%arctyp(n) )
         case( ARC_TYPE_NORMAL )
-          !n_next = ap%n_next(n,p%n)
           n_next = next_cyclic(n,p%n)
 
-          call calc_lat_range_large_arc(&
-                 p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
-                 p%a(n), p%b(n), p%c(n), &
-                 south, north, p%convex(n), p%lontop(n), p%lattop(n))
+          if( calc_lat_range_large_arc(&
+                p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
+                p%a(n), p%b(n), p%c(n), &
+                south, north, p%convex(n), p%lontop(n), p%lattop(n)) /= 0 )then
+            info = 1; call errret(); return
+          endif
 
           if( p%convex(n) == CONVEX_MONOTONE )then
             p%lontop(n) = ap%coord_miss_s
@@ -1058,14 +1138,17 @@ subroutine calc_range_of_latit(ap, ijs, ije)
         case( ARC_TYPE_PARALLEL )
 
         case default
-          call eerr(str(msg_invalid_value())//&
-                  '\n  p%arctyp('//str(n)//'): '//str(p%arctyp(n)))
+          info = 1
+          call errret(msg_invalid_value('p%arctyp(n)', p%arctyp(n))//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  n : '//str(n))
+          return
         endselect
       enddo  ! n/
     !-----------------------------------------------------------
     ! Case: Lon0 or Normal
-    case( polygon_position_lon0, &
-          polygon_position_normal )
+    case( POLYGON_POSITION_LON0, &
+          POLYGON_POSITION_NORMAL )
 
       p%south = minval(p%lat)
       p%north = maxval(p%lat)
@@ -1073,13 +1156,14 @@ subroutine calc_range_of_latit(ap, ijs, ije)
       do n = 1, p%n
         selectcase( p%arctyp(n) )
         case( ARC_TYPE_NORMAL )
-          !n_next = ap%n_next(n,p%n)
           n_next = next_cyclic(n,p%n)
 
-          call calc_lat_range_large_arc(&
-                 p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
-                 p%a(n), p%b(n), p%c(n), &
-                 south, north, p%convex(n), p%lontop(n), p%lattop(n))
+          if( calc_lat_range_large_arc(&
+                p%lon(n), p%lat(n), p%lon(n_next), p%lat(n_next), &
+                p%a(n), p%b(n), p%c(n), &
+                south, north, p%convex(n), p%lontop(n), p%lattop(n)) /= 0 )then
+            info = 1; call errret(); return
+          endif
 
           if( p%convex(n) == CONVEX_MONOTONE )then
             p%lontop(n) = ap%coord_miss_s
@@ -1093,25 +1177,31 @@ subroutine calc_range_of_latit(ap, ijs, ije)
         case( ARC_TYPE_PARALLEL )
 
         case default
-          call eerr(str(msg_invalid_value())//&
-                  '\n  p%arctyp('//str(n)//'): '//str(p%arctyp(n)))
+          info = 1
+          call errret(msg_invalid_value('p%arctyp(n)', p%arctyp(n))//&
+                    '\n  ij: '//str(ij)//&
+                    '\n  n : '//str(n))
+          return
         endselect
       enddo  ! n/
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  p%pos: '//str(p%pos))
+      info = 1
+      call errret(msg_invalid_value('p%pos', p%pos)//&
+                '\n  ij: '//str(ij))
+      return
     endselect
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine calc_range_of_latit
+  call logret(PRCNAM, MODNAM)
+end function calc_range_of_latit
 !===============================================================
 !
 !===============================================================
-subroutine modify_loop_directions(ap, ijs, ije)
+integer(4) function modify_loop_directions(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'modify_loop_directions'
   type(gs_polygon_), intent(inout), target :: ap
   integer(8), intent(in) :: ijs, ije
 
@@ -1121,7 +1211,8 @@ subroutine modify_loop_directions(ap, ijs, ije)
   logical :: is_anticlockwise
   logical :: is_north
 
-  call echo(code%bgn, 'modify_loop_directions', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1134,8 +1225,6 @@ subroutine modify_loop_directions(ap, ijs, ije)
     ! Case: Normal
     case( POLYGON_POSITION_NORMAL )
       n = p%n_west
-      !n_prev = ap%n_prev(n,p%n)
-      !n_next = ap%n_next(n,p%n)
       n_prev = prev_cyclic(n,p%n)
       n_next = next_cyclic(n,p%n)
 
@@ -1148,8 +1237,6 @@ subroutine modify_loop_directions(ap, ijs, ije)
     ! Case: Lon0
     case( POLYGON_POSITION_LON0 )
       n = p%n_west
-      !n_prev = ap%n_prev(n,p%n)
-      !n_next = ap%n_next(n,p%n)
       n_prev = prev_cyclic(n,p%n)
       n_next = next_cyclic(n,p%n)
 
@@ -1169,8 +1256,10 @@ subroutine modify_loop_directions(ap, ijs, ije)
         is_north = .false.
       endif
 
-      call get_n_next_lon_is_unequal(ij, n, p%n, p%n_pole, p%lon, n_next)
-      !n = ap%n_prev(n_next,p%n)
+      if( get_n_next_lon_is_unequal(&
+            ij, n, p%n, p%n_pole, p%lon, n_next) /= 0 )then
+        info = 1; call errret(); return
+      endif
       n = prev_cyclic(n_next,p%n)
 
       if( p%arcpos(n) == ARC_POSITION_LON0 )then
@@ -1181,8 +1270,9 @@ subroutine modify_loop_directions(ap, ijs, ije)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
-      call eerr(str(msg_invalid_value())//&
-              '\n  p%pos: '//str(p%pos))
+      info = 1
+      call errret(msg_invalid_value('p%pos', p%pos))
+      return
     endselect
     !-----------------------------------------------------------
     !
@@ -1219,19 +1309,21 @@ subroutine modify_loop_directions(ap, ijs, ije)
     endif
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine modify_loop_directions
+  call logret(PRCNAM, MODNAM)
+end function modify_loop_directions
 !===============================================================
 !
 !===============================================================
-subroutine update_grdmsk(ap, ijs, ije)
+integer(4) function update_grdmsk(ap, ijs, ije) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_grdmsk'
   type(gs_polygon_), intent(in), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   integer(8) :: ij
 
-  call echo(code%bgn, 'update_grdmsk', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1239,49 +1331,79 @@ subroutine update_grdmsk(ap, ijs, ije)
     if( ap%polygon(ij)%n < 3 ) ap%grid%msk(ij) = .false.
   enddo
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine update_grdmsk
+  call logret(PRCNAM, MODNAM)
+end function update_grdmsk
 !===============================================================
 !
 !===============================================================
-subroutine get_n_next_lon_is_unequal(ij, n, nmax, n_pole, lon, n_next)
+integer(4) function get_n_next_lon_is_unequal(&
+    ij, n, nmax, n_pole, lon, n_next) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'get_n_next_lon_is_unequal'
   integer(8), intent(in) :: ij
   integer(4), intent(in) :: n
   integer(4), intent(in) :: nmax, n_pole
   real(8)   , intent(in) :: lon(:)  !(nmax)
   integer(4), intent(out) :: n_next
 
-  !call echo(code%bgn, 'get_n_next_lon_is_unequal', '-p -x2')
+  logical :: is_found
+  integer :: i
+
+  info = 0
+  !call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  !n_next = ap%n_next(n,nmax)
   n_next = next_cyclic(n,nmax)
   do while( lon(n_next) == lon(n) .or. n_next == n_pole )
-    !n_next = ap%n_next(n_next,nmax)
     n_next = next_cyclic(n_next,nmax)
+!    if( n_next == n )then
+!      call logbgn(PRCNAM, MODNAM, '-p -x2')
+!      info = 1
+!      call errret(msg_unexpected_condition()//&
+!                '\n  n_next == n'//&
+!                '\n  ij: '//str(ij))
+!      return
+!    endif
+    ! TMP
     if( n_next == n )then
-      call echo(code%bgn, 'get_n_next_lon_is_unequal', '-p -x2')
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  n_next == n'//&
-              '\n  ij: '//str(ij))
-      call echo(code%ret)
+      is_found = .false.
+      do i = 1, nmax
+        if( i == n .or. i == n_pole ) cycle
+        if( lon(i) /= lon(n) )then
+          is_found = .true.
+          exit
+        endif
+      enddo
+      if( .not. is_found )then
+        info = 1
+        call logbgn(PRCNAM, MODNAM, '-p')
+        call errret(msg_unexpected_condition()//&
+                  '\nPoints with unequal longitudes were not found. ij: '//str(ij))
+        return
+      else
+        info = 1
+        call logbgn(PRCNAM, MODNAM, '-p')
+        call errret(msg_internal_error()//&
+                  '\nFailed to find points with unequal longitudes.')
+        return
+      endif
     endif
   enddo
   !-------------------------------------------------------------
-  !call echo(code%ret)
-end subroutine get_n_next_lon_is_unequal
+  !call logret(PRCNAM, MODNAM)
+end function get_n_next_lon_is_unequal
 !===============================================================
 !
 !===============================================================
 subroutine print_info(ap, ijs, ije)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'print_info'
   type(gs_polygon_), intent(in), target :: ap
   integer(8), intent(in) :: ijs, ije
 
   type(polygon_), pointer :: p
   integer(8) :: ij, mij_valid
 
-  call echo(code%bgn, 'print_info', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   mij_valid = 0_8
   do ij = ijs, ije
@@ -1292,41 +1414,41 @@ subroutine print_info(ap, ijs, ije)
     case( 3: )
       call add(mij_valid)
     case default
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  p%n /= 0 .and. p%n < 3')
+      call errend(msg_internal_error()//&
+                '\np%n /= 0 .and. p%n < 3 @ ij = '//str(ij))
     endselect
   enddo
 
-  call edbg('Num. of valid grids: '//str(mij_valid)//' / '//str(ije-ijs+1_8))
+  call logmsg('Num. of valid grids: '//str(mij_valid)//' / '//str(ije-ijs+1_8))
 
-  if( mij_valid <= mij_print )then
+  if( mij_valid <= MIJ_PRINT )then
     do ij = ijs, ije
       p => ap%polygon(ij)
       if( p%n == 0 ) cycle
 
-      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
+      call logmsg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
               '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
               '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s))//' (deg)')
     enddo  ! ij/
   else
     mij_valid = 0_8
     ij = ijs - 1_8
-    do while( mij_valid < mij_print/2 )
+    do while( mij_valid < MIJ_PRINT/2 )
       ij = ij + 1_8
       p => ap%polygon(ij)
       if( p%n == 0 ) cycle
       call add(mij_valid)
 
-      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
+      call logmsg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
               '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
               '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s))//' (deg)')
     enddo
 
-    call edbg('...')
+    call logmsg('...')
 
     mij_valid = 0_8
     ij = ije + 1_8
-    do while( mij_valid < mij_print/2 )
+    do while( mij_valid < MIJ_PRINT/2 )
       ij = ij - 1_8
       p => ap%polygon(ij)
       if( p%n == 0 )cycle
@@ -1339,13 +1461,13 @@ subroutine print_info(ap, ijs, ije)
       p => ap%polygon(ij)
       if( p%n == 0 )cycle
 
-      call edbg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
+      call logmsg('ij '//str(ij,dgt(ije))//' n '//str(p%n,dgt(ap%np))//&
               '\n  lon: '//str(str_coords_lonlat(p%lon,ap%coord_miss_s))//&
               '\n  lat: '//str(str_coords_lonlat(p%lat,ap%coord_miss_s))//' (deg)')
     enddo
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end subroutine print_info
 !===============================================================
 !
@@ -1360,15 +1482,16 @@ end subroutine print_info
 !===============================================================
 function str_coords_lonlat(coords, coord_miss) result(res)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'str_coords_lonlat'
   real(8), intent(in) :: coords(:)
   real(8), intent(in) :: coord_miss
-  character(cl(wfmt_lonlat)*size(coords)+2*(size(coords)-1)) :: res
+  character(cl(WFMT_LONLAT)*size(coords)+2*(size(coords)-1)) :: res
 
-  call echo(code%bgn, 'str_coords_lonlat', '-p -x2')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  res = str_coords(coords, r2d, coord_miss, wfmt_lonlat)
+  res = str_coords(coords, r2d, coord_miss, WFMT_LONLAT)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 end function str_coords_lonlat
 !===============================================================
 !
@@ -1381,14 +1504,16 @@ end function str_coords_lonlat
 !===============================================================
 !
 !===============================================================
-subroutine free_gs_polygon(ap)
+integer(4) function free_gs_polygon(ap) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'free_gs_polygon'
   type(gs_polygon_), intent(inout), target :: ap
 
   type(polygon_), pointer :: p
   integer(8) :: ij
 
-  call echo(code%bgn, 'free_gs_polygon', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   do ij = 1_8, ap%nij
     p => ap%polygon(ij)
@@ -1410,8 +1535,8 @@ subroutine free_gs_polygon(ap)
 
   deallocate(ap%polygon)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine free_gs_polygon
+  call logret(PRCNAM, MODNAM)
+end function free_gs_polygon
 !===============================================================
 !
 !===============================================================

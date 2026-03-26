@@ -1,6 +1,7 @@
 TOPSRCDIR = ../..
 include $(TOPSRCDIR)/Mkinclude
 
+.SUFFIXES:
 .SUFFIXES: .f90 .F90 .c
 %.o: %.f90
 	$(FC) $(FCFLAGS) -c $< -I$(MODDIR)
@@ -22,7 +23,6 @@ c1_file.o\
 c1_set.o\
 c1_opt_ctrl.o\
 c1_opt_set.o\
-c1_regions_base.o\
 c1_gs_util.o\
 c1_gs_grid_base.o\
 c1_gs_base.o\
@@ -30,7 +30,6 @@ c1_gs_grid_util.o\
 c1_gs_grid_core.o\
 c1_gs_define_polygon.o\
 c1_gs_define.o\
-c1_gs_driv.o\
 c1_gs_grid_io.o
 
 OBJ_CMN = $(OBJ_F)

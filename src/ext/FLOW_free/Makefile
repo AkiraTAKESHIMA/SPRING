@@ -1,9 +1,10 @@
 TOPSRCDIR = ../..
 include $(TOPSRCDIR)/Mkinclude
 
+.SUFFIXES:
 .SUFFIXES: .f90
 %.o: %.f90
-	$(FC) $(FCFLAGS) -c $< -I$(MODDIR)
+	$(FC) $(FCFLAGS) -c $< -I$(MODDIR) -I$(CMNDIR1)
 
 
 MODS = \
@@ -45,30 +46,30 @@ clean:
 	rm -f *~ $(TARGETS) *.o *.mod
 
 
-$(TARGET1): $(TARGET1).o $(MODS) $(LIB)
+$(TARGET1): $(TARGET1).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET2): $(TARGET2).o $(MODS) $(LIB)
+$(TARGET2): $(TARGET2).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET3): $(TARGET3).o $(MODS) $(LIB)
+$(TARGET3): $(TARGET3).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET4): $(TARGET4).o $(MODS) $(LIB)
+$(TARGET4): $(TARGET4).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET5): $(TARGET5).o $(MODS) $(LIB)
+$(TARGET5): $(TARGET5).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET6): $(TARGET6).o $(MODS) $(LIB)
+$(TARGET6): $(TARGET6).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET7): $(TARGET7).o $(MODS) $(LIB)
+$(TARGET7): $(TARGET7).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET8): $(TARGET8).o $(MODS) $(LIB)
+$(TARGET8): $(TARGET8).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET9): $(TARGET9).o $(MODS) $(LIB)
+$(TARGET9): $(TARGET9).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 

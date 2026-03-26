@@ -25,13 +25,18 @@ module c2_rt_main_util
 
   public :: trap_rt_empty
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c2_rt_main_util'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine merge_elems_same_index(&
-    mesh_sort, ijsize, nij, sidx, tidx, area)
+integer(4) function merge_elems_same_index(&
+    mesh_sort, ijsize, nij, sidx, tidx, area) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'merge_elems_same_index'
   character(*), intent(in)    :: mesh_sort
   integer(8)  , intent(inout) :: ijsize
   integer(8)  , intent(inout) :: nij
@@ -44,7 +49,8 @@ subroutine merge_elems_same_index(&
   integer(8), allocatable :: arg(:)
   integer(8) :: nij_new, ijs, ije, ijs2, ije2
 
-  call echo(code%bgn, 'merge_elems_same_index')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -56,8 +62,9 @@ subroutine merge_elems_same_index(&
     sortidx    => tidx
     notsortidx => sidx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  mesh_sort: '//str(mesh_sort))
+    info = 1
+    call errret(msg_invalid_value('mesh_sort', mesh_sort))
+    return
   endselect
 
   allocate(arg(nij))
@@ -102,7 +109,7 @@ subroutine merge_elems_same_index(&
     enddo  ! ije2/
   enddo  ! ije/
 
-  call edbg('Length: '//str(nij)//' -> '//str(nij_new))
+  call logmsg('Length: '//str(nij)//' -> '//str(nij_new))
   ijsize = nij_new
   nij = ijsize
 
@@ -124,13 +131,15 @@ subroutine merge_elems_same_index(&
   nullify(sortidx)
   nullify(notsortidx)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine merge_elems_same_index
+  call logret(PRCNAM, MODNAM)
+end function merge_elems_same_index
 !===============================================================
 !
 !===============================================================
-subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
+integer(4) function modify_rt_area(&
+    rtm, grdidx, grdidxarg, grdara) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'modify_rt_area'
   type(rt_main_), intent(inout), target :: rtm
   integer(8)    , intent(in) :: grdidx(:)
   integer(8)    , intent(in) :: grdidxarg(:)
@@ -142,7 +151,8 @@ subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
   real(8) :: ratio
   character(1024) :: msg
 
-  call echo(code%bgn, 'modify_rt_area')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -152,8 +162,9 @@ subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
   case( MESH__TARGET )
     coefidx => rtm%tidx
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_coef: '//str(rtm%mesh_coef))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_coef', rtm%mesh_coef))
+    return
   endselect
   !-------------------------------------------------------------
   !
@@ -164,18 +175,22 @@ subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
     call search(coefidx(ij), grdidx, grdidxarg, loc)
 
     if( loc == 0_8 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\nIndex '//str(coefidx(ij))//' was not found '//&
-                'in the set of grid indices.')
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\nIndex '//str(coefidx(ij))//' was not found '//&
+                  'in the set of grid indices.')
+      return
     endif
 
     gij = grdidxarg(loc)
 
     if( grdara(gij) <= 0.d0 )then
-      call eerr(str(msg_unexpected_condition())//&
-              '\n  grdara <= 0.0'//&
-              '\n  Index: '//str(grdidx(gij))//&
-              '\n  Area : '//str(grdara(gij)))
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\ngrdara <= 0.0'//&
+                '\n  Index: '//str(grdidx(gij))//&
+                '\n  Area : '//str(grdara(gij)))
+      return
     endif
 
     ratio = rtm%area(ij) / grdara(gij)
@@ -201,19 +216,22 @@ subroutine modify_rt_area(rtm, grdidx, grdidxarg, grdara)
     endif
   enddo  ! ij/
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine modify_rt_area
+  call logret(PRCNAM, MODNAM)
+end function modify_rt_area
 !===============================================================
 !
 !===============================================================
-subroutine check_coef_after_modification(coef, opt_coef)
+integer(4) function check_coef_after_modification(&
+    coef, opt_coef) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_coef_after_modification'
   real(8), intent(in) :: coef(:)
   type(opt_rt_coef_), intent(in) :: opt_coef
 
   integer(8) :: nij, ij
 
-  call echo(code%bgn, 'check_coef_after_modification')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -224,11 +242,13 @@ subroutine check_coef_after_modification(coef, opt_coef)
   if( opt_coef%is_zero_positive_enabled )then
     do ij = 1_8, nij
       if( coef(ij) > 0.d0 .and. coef(ij) < opt_coef%zero_positive )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  coef(ij) is in (0.0, zero_positive)'//&
-                '\n  ij: '//str(ij)//&
-                '\n  coef(ij): '//str(coef(ij))//&
-                '\n  zero_positive: '//str(opt_coef%zero_positive))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\ncoef(ij) is in (0.0, zero_positive)'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  coef(ij): '//str(coef(ij))//&
+                  '\n  zero_positive: '//str(opt_coef%zero_positive))
+        return
       endif
     enddo  ! ij/
   endif
@@ -236,11 +256,13 @@ subroutine check_coef_after_modification(coef, opt_coef)
   if( opt_coef%is_zero_negative_enabled )then
     do ij = 1_8, nij
       if( coef(ij) < 0.d0 .and. coef(ij) > opt_coef%zero_negative )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  coef(ij) in (zero_negative, 0.0)'//&
-                '\n  ij: '//str(ij)//&
-                '\n  coef(ij): '//str(coef(ij))//&
-                '\n  zero_negative: '//str(opt_coef%zero_negative))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\ncoef(ij) in (zero_negative, 0.0)'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  coef(ij): '//str(coef(ij))//&
+                  '\n  zero_negative: '//str(opt_coef%zero_negative))
+        return
       endif
     enddo  ! ij/
   endif
@@ -248,56 +270,68 @@ subroutine check_coef_after_modification(coef, opt_coef)
   if( opt_coef%is_error_excess_enabled )then
     do ij = 1_8, nij
       if( coef(ij) > 1.d0 + opt_coef%error_excess )then
-        call eerr(str(msg_unexpected_condition())//&
-                '\n  coef(ij) > 1.0 + error_excess'//&
-                '\n  ij: '//str(ij)//&
-                '\n  coef(ij): '//str(coef(ij))//&
-                '\n  error_excess: '//str(opt_coef%error_excess))
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\ncoef(ij) > 1.0 + error_excess'//&
+                  '\n  ij: '//str(ij)//&
+                  '\n  coef(ij): '//str(coef(ij))//&
+                  '\n  error_excess: '//str(opt_coef%error_excess))
+        return
       endif
     enddo  ! ij/
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine check_coef_after_modification
+  call logret(PRCNAM, MODNAM)
+end function check_coef_after_modification
 !===============================================================
 !
 !===============================================================
-subroutine remove_zero(rtm)
+integer(4) function remove_zero(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'remove_zero'
   type(rt_main_), intent(inout) :: rtm
 
-  call echo(code%bgn, 'remove_zero')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( associated(rtm%coef) )then
-    call remove_zero_coef(&
-           rtm%ijsize, rtm%nij, &
-           rtm%sidx, rtm%tidx, rtm%area, rtm%coef)
+    if( remove_zero_coef(&
+          rtm%ijsize, rtm%nij, &
+          rtm%sidx, rtm%tidx, rtm%area, rtm%coef) /= 0 )then
+      info = 1; call errret(); return
+    endif
   else
-    call remove_zero_area(&
-           rtm%ijsize, rtm%nij, &
-           rtm%sidx, rtm%tidx, rtm%area)
+    if( remove_zero_area(&
+          rtm%ijsize, rtm%nij, &
+          rtm%sidx, rtm%tidx, rtm%area) /= 0 )then
+      info = 1; call errret(); return
+    endif
   endif
 
   if( rtm%ijsize == 0_8 )then
     if( rtm%allow_empty )then
-      call ewrn('Remapping table is empty.')
-      call echo(code%ret)
+      call logwrn('Remapping table is empty.')
+      call logret(PRCNAM, MODNAM)
       return
     else
-      call eerr(str(msg_unexpected_condition())//&
-             '\n  rtm%ijsize == 0')
-     endif
+      info = 1
+      call errret(msg_unexpected_condition()//&
+               '\nrtm%ijsize == 0')
+      return
+    endif
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine remove_zero
+  call logret(PRCNAM, MODNAM)
+end function remove_zero
 !===============================================================
 !
 !===============================================================
-subroutine remove_zero_area(ijsize, nij, sidx, tidx, area)
+integer(4) function remove_zero_area(&
+    ijsize, nij, sidx, tidx, area) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'remove_zero_area'
   integer(8)        , intent(inout) :: ijsize
   integer(8)        , intent(inout) :: nij
   integer(8)        , pointer       :: sidx(:), tidx(:)
@@ -307,7 +341,8 @@ subroutine remove_zero_area(ijsize, nij, sidx, tidx, area)
   real(8)   , allocatable :: area_tmp(:)
   integer(8) :: nij_new, ij
 
-  call echo(code%bgn, 'remove_zero_area')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -325,7 +360,7 @@ subroutine remove_zero_area(ijsize, nij, sidx, tidx, area)
     endif
   enddo  !ij/
 
-  call edbg('Length: '//str(nij)//' -> '//str(nij_new))
+  call logmsg('Length: '//str(nij)//' -> '//str(nij_new))
   nij = nij_new
 
   if( size(sidx) /= nij )then
@@ -345,13 +380,15 @@ subroutine remove_zero_area(ijsize, nij, sidx, tidx, area)
   deallocate(tidx_tmp)
   deallocate(area_tmp)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine remove_zero_area
+  call logret(PRCNAM, MODNAM)
+end function remove_zero_area
 !===============================================================
 !
 !===============================================================
-subroutine remove_zero_coef(ijsize, nij, sidx, tidx, area, coef)
+integer(4) function remove_zero_coef(&
+    ijsize, nij, sidx, tidx, area, coef) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'remove_zero_coef'
   integer(8)        , intent(inout) :: ijsize
   integer(8)        , intent(inout) :: nij
   integer(8)        , pointer       :: sidx(:), tidx(:)
@@ -361,7 +398,8 @@ subroutine remove_zero_coef(ijsize, nij, sidx, tidx, area, coef)
   real(8)   , allocatable :: area_tmp(:), coef_tmp(:)
   integer(8) :: nij_new, ij
 
-  call echo(code%bgn, 'remove_zero_coef')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -381,7 +419,7 @@ subroutine remove_zero_coef(ijsize, nij, sidx, tidx, area, coef)
     endif
   enddo  !ij/
 
-  call edbg('Length: '//str(nij)//' -> '//str(nij_new))
+  call logmsg('Length: '//str(nij)//' -> '//str(nij_new))
   nij = nij_new
 
   if( size(sidx) /= nij )then
@@ -404,13 +442,14 @@ subroutine remove_zero_coef(ijsize, nij, sidx, tidx, area, coef)
   deallocate(area_tmp)
   deallocate(coef_tmp)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine remove_zero_coef
+  call logret(PRCNAM, MODNAM)
+end function remove_zero_coef
 !===============================================================
 !
 !===============================================================
-subroutine sort_rt(rtm, mesh_sort)
+integer(4) function sort_rt(rtm, mesh_sort) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'sort_rt'
   type(rt_main_), intent(inout), target :: rtm
   character(*)  , intent(in), optional :: mesh_sort
 
@@ -420,7 +459,8 @@ subroutine sort_rt(rtm, mesh_sort)
   integer(8) :: ijs, ije
   logical :: is_area_valid, is_coef_valid
 
-  call echo(code%bgn, 'sort_rt')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -432,8 +472,8 @@ subroutine sort_rt(rtm, mesh_sort)
     sortidx    => rtm%sidx
     notsortidx => rtm%tidx
     if( rtm%is_sorted_by_sidx )then
-      call edbg('Already sorted.')
-      call echo(code%ret)
+      call logmsg('Already sorted.')
+      call logret(PRCNAM, MODNAM)
       return
     endif
     rtm%is_sorted_by_sidx = .true.
@@ -442,15 +482,16 @@ subroutine sort_rt(rtm, mesh_sort)
     sortidx    => rtm%tidx
     notsortidx => rtm%sidx
     if( rtm%is_sorted_by_tidx )then
-      call edbg('Already sorted.')
-      call echo(code%ret)
+      call logmsg('Already sorted.')
+      call logret(PRCNAM, MODNAM)
       return
     endif
     rtm%is_sorted_by_sidx = .false.
     rtm%is_sorted_by_tidx = .true.
   case default
-    call eerr(str(msg_invalid_value())//&
-            '\n  rtm%mesh_sort: '//str(rtm%mesh_sort))
+    info = 1
+    call errret(msg_invalid_value('rtm%mesh_sort', rtm%mesh_sort))
+    return
   endselect
 
   is_area_valid = associated(rtm%area)
@@ -465,9 +506,9 @@ subroutine sort_rt(rtm, mesh_sort)
   if( is_area_valid ) call sort(rtm%area(:rtm%nij), arg)
   if( is_coef_valid ) call sort(rtm%coef(:rtm%nij), arg)
 
-  !call edbg('nij: '//str(rtm%nij))
-  !call edbg('sortidx    min: '//str(minval(sortidx(:rtm%nij)))//', max: '//str(maxval(sortidx(:rtm%nij))))
-  !call edbg('notsortidx min: '//str(minval(notsortidx(:rtm%nij)))//', max: '//str(maxval(notsortidx(:rtm%nij))))
+  !call logmsg('nij: '//str(rtm%nij))
+  !call logmsg('sortidx    min: '//str(minval(sortidx(:rtm%nij)))//', max: '//str(maxval(sortidx(:rtm%nij))))
+  !call logmsg('notsortidx min: '//str(minval(notsortidx(:rtm%nij)))//', max: '//str(maxval(notsortidx(:rtm%nij))))
   !do ijs = 1_8, rtm%nij-1
   !  if( sortidx(ijs) > sortidx(ijs+1) )then
   !    call eerr('sortidx is not sorted.')
@@ -492,25 +533,29 @@ subroutine sort_rt(rtm, mesh_sort)
 
   deallocate(arg)
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine sort_rt
+  call logret(PRCNAM, MODNAM)
+end function sort_rt
 !===============================================================
 !
 !===============================================================
-subroutine trap_rt_empty(rtm)
+integer(4) function trap_rt_empty(rtm) result(info)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'trap_rt_empty'
   type(rt_main_), intent(in) :: rtm
 
-  call echo(code%bgn, 'trap_rt_empty', '-p -x2')
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   if( rtm%nij == 0_8 .and. .not. rtm%allow_empty )then
-    call eerr('The remapping table is empty.')
+    info = 1
+    call errret('The remapping table is empty.')
+    return
   endif
   !-------------------------------------------------------------
-  call echo(code%ret)
-end subroutine trap_rt_empty
+  call logret(PRCNAM, MODNAM)
+end function trap_rt_empty
 !===============================================================
 !
 !===============================================================

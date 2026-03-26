@@ -13,13 +13,13 @@ program main
   type(gs_)     :: dst
   type(output_) :: output
 
-  call echo(code%bgn, 'program main', '+tr')
+  call logbgn('program main', '', '+tr')
   !-------------------------------------------------------------
   call read_settings(org, dst, output)
 
   call run(org, dst, output)
 
-  call finalize()
+  call finalize(org, dst)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret('program main', '')
 end program main

@@ -310,8 +310,8 @@
   },
   "options": {
     "Earth": {
-      "shape": "sphere",
-      "diameter": 6371e+3
+      "geosys": "WGS84",
+      "rtyp": "volmetric"
     },
     "method_rivwat": "weighted_dist"
   }

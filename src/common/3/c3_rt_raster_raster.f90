@@ -15,11 +15,15 @@ module c3_rt_raster_raster
   !-------------------------------------------------------------
   public :: make_rt_raster_raster
   !-------------------------------------------------------------
+  ! Private module variables
+  !-------------------------------------------------------------
+  character(CLEN_PROC), parameter :: MODNAM = 'c3_rt_raster_raster'
+  !-------------------------------------------------------------
 contains
 !===============================================================
 !
 !===============================================================
-subroutine make_rt_raster_raster(s, t, rt)
+integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   use c2_rt1d, only: &
         init_rt1d   , &
         clear_rt1d  , &
@@ -27,6 +31,7 @@ subroutine make_rt_raster_raster(s, t, rt)
   use c3_rt_llbnds, only: &
         calc_relations_llbnds
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_raster_raster'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
 
@@ -53,15 +58,18 @@ subroutine make_rt_raster_raster(s, t, rt)
   integer :: case_wgtmap, case_wgtmap_a, case_wgtmap_b
   integer(8), parameter :: IJSIZE_INIT = 4_8
 
-  call echo(code%bgn, 'make_rt_raster_raster')
+  info = 0
+  call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
   if( s%typ /= MESHTYPE__RASTER .or. &
       t%typ /= MESHTYPE__RASTER )then
-    call eerr(str(msg_invalid_value())//&
-            '\n  s%typ: '//str(s%typ)//&
-            '\n  t%typ: '//str(t%typ))
+    info = 1
+    call errret(msg_invalid_value()//&
+              '\n  s%typ: '//str(s%typ)//&
+              '\n  t%typ: '//str(t%typ))
+    return
   endif
 
   a => s
@@ -74,15 +82,21 @@ subroutine make_rt_raster_raster(s, t, rt)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
-  call calc_relations_llbnds(ar, br)
-  call calc_relations_llbnds(br, ar)
+  if( calc_relations_llbnds(ar, br) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  if( calc_relations_llbnds(br, ar) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
   allocate(iibh(br%hi-1_8:br%hf+1_8))
 
   allocate(rt1d(ar%nij))
-  call init_rt1d(rt1d)
+  if( init_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
   do aij = 1_8, ar%nij
     rt1 => rt1d(aij)
     rt1%ijsize = IJSIZE_INIT
@@ -113,9 +127,11 @@ subroutine make_rt_raster_raster(s, t, rt)
   case( 11, 12, 21, 22 )
     continue
   case default
-    call eerr(str(msg_unexpected_condition())//&
-            '\n  ar%status_wgtmap: '//str(ar%status_wgtmap)//&
-            '\n  br%status_wgtmap: '//str(br%status_wgtmap))
+    info = 1
+    call errret(msg_unexpected_condition()//&
+              '\n  ar%status_wgtmap: '//str(ar%status_wgtmap)//&
+              '\n  br%status_wgtmap: '//str(br%status_wgtmap))
+    return
   endselect
   !-------------------------------------------------------------
   ! Make a remapping table
@@ -145,8 +161,10 @@ subroutine make_rt_raster_raster(s, t, rt)
 
           call search(aidx, ar%grid%idx, ar%grid%idxarg, loc)
           if( loc == 0_8 )then
-          call eerr(str(msg_unexpected_condition())//&
-                    '\nIndex of $a, '//str(aidx)//', was not found.')
+            info = 1
+            call errret(msg_unexpected_condition()//&
+                      '\nIndex of $a, '//str(aidx)//', was not found.')
+            return
           endif
           aij = ar%grid%idxarg(loc)
           !-------------------------------------------------------
@@ -157,11 +175,14 @@ subroutine make_rt_raster_raster(s, t, rt)
 
           if( rt1%mij > 0_8 )then
             if( rt1%idx(ij_prev(aij)) /= bidx_prev(aij) )then
-              call eerr('rt1%idx(ij_prev(aij)) /= bidx_prev(aij)'//&
-                      '\n  aij: '//str(aij)//&
-                      '\n  ij_prev: '//str(ij_prev(aij))//&
-                      '\n  rt1%idx: '//str(rt1%idx(ij_prev(aij)))//&
-                      '\n  bidx_prev: '//str(bidx_prev(aij)))
+              info = 1
+              call errret(msg_unexpected_condition()//&
+                        '\nrt1%idx(ij_prev(aij)) /= bidx_prev(aij)'//&
+                        '\n  aij: '//str(aij)//&
+                        '\n  ij_prev: '//str(ij_prev(aij))//&
+                        '\n  rt1%idx: '//str(rt1%idx(ij_prev(aij)))//&
+                        '\n  bidx_prev: '//str(bidx_prev(aij)))
+              return
             endif
           endif
           !-------------------------------------------------------
@@ -196,8 +217,9 @@ subroutine make_rt_raster_raster(s, t, rt)
                 case( 22 )
                   lapara = avr%lapara_1rad(iibv) * ahr%lonwidth(iibh(ibh))
                 case default
-                  call eerr(str(msg_invalid_value())//&
-                          '\n  case_wgtmap: '//str(case_wgtmap))
+                  info = 1
+                  call errret(msg_invalid_value('case_wgtmap', case_wgtmap))
+                  return
                 endselect
 
                 call update_rt1d()
@@ -214,12 +236,16 @@ subroutine make_rt_raster_raster(s, t, rt)
 
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
-  call reshape_rt1d(rt1d, a%is_source, rtm)
+  if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
+    info = 1; call errret(); return
+  endif
   !-------------------------------------------------------------
   ! Free pointers and arrays
   !-------------------------------------------------------------
   nullify(rt1)
-  call clear_rt1d(rt1d)
+  if( clear_rt1d(rt1d) /= 0 )then
+    info = 1; call errret(); return
+  endif
 
   nullify(rtm)
 
@@ -233,12 +259,13 @@ subroutine make_rt_raster_raster(s, t, rt)
   nullify(ar, br)
   nullify(a, b)
   !-------------------------------------------------------------
-  call echo(code%ret)
+  call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------
 contains
 !---------------------------------------------------------------
 subroutine update_rt1d()
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'update_rt1d'
 
   bidx = brz%idxmap(ibh,ibv)
 
@@ -287,7 +314,7 @@ subroutine update_rt1d()
   endif
 end subroutine update_rt1d
 !---------------------------------------------------------------
-end subroutine make_rt_raster_raster
+end function make_rt_raster_raster
 !===============================================================
 !
 !===============================================================
