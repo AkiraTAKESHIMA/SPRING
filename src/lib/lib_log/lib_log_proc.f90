@@ -1213,6 +1213,7 @@ subroutine errret(msg, prc, mod)
 
   character(:), allocatable :: msg_
   character(:), allocatable :: errmsg
+  character(:), allocatable :: c
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1223,18 +1224,18 @@ subroutine errret(msg, prc, mod)
   ! Case: `logbgn` was not called in the upper procedure
   ! Thus, need not to call `logret` here.
   if( present(prc) .and. present(mod) )then
-    call erradd(msg, '', prc, mod)
+    call erradd(msg_, '', prc, mod)
   !-------------------------------------------------------------
   ! Case: `logbgn` was called in the upper procedure
   ! Thus, need to call `logret` here.
   elseif( .not. present(prc) .and. .not. present(mod) )then
     do
       if( set%stp(depth) == '' )then
-        call erradd(msg, '', set%prc(depth), set%mod(depth))
+        call erradd(msg_, '', set%prc(depth), set%mod(depth))
         call logret()
         exit
       else
-        call erradd(msg, set%stp(depth), set%prc(depth), set%mod(depth))
+        call erradd(msg_, set%stp(depth), set%prc(depth), set%mod(depth))
         call logret()
       endif
     enddo
@@ -1242,9 +1243,19 @@ subroutine errret(msg, prc, mod)
   ! Case: ERROR
   else
     allocate(character(1) :: errmsg)
+
+    allocate(character(1) :: c)
     errmsg = 'present(prc) .neqv. present(mod)'
-    if( present(prc) ) errmsg = trim(errmsg)//'\nprc: '//trim(prc)
-    if( present(mod) ) errmsg = trim(errmsg)//'\nmod: '//trim(mod)
+    if( present(prc) )then
+      c = errmsg//'\nprc: '//trim(prc)
+      errmsg = c
+    endif
+
+    if( present(mod) )then
+      c = errmsg//'\nmod: '//trim(mod)
+      errmsg = c
+    endif
+
     call errend(errmsg, &
                 '', PRCNAM, MODNAM)
   endif
@@ -1292,14 +1303,21 @@ subroutine errapd(msg, newline)
 
   logical :: newline_
 
+  character(:), allocatable :: c
+
   newline_ = .true.
   if( present(newline) ) newline_ = newline
 
+  allocate(character(1) :: c)
+  c = err(n_err)%msg
+
   if( newline_ )then
-    err(n_err)%msg = trim(err(n_err)%msg)//'\n'//trim(msg)
+    err(n_err)%msg = c//'\n'//trim(msg)
   else
-    err(n_err)%msg = trim(err(n_err)%msg)//trim(msg)
+    err(n_err)%msg = c//trim(msg)
   endif
+
+  deallocate(c)
 end subroutine errapd
 !===============================================================
 !
