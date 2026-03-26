@@ -162,7 +162,7 @@ def make_remapping_table(
     tgtMeshName, *_ = getMesh(tgtIsUniform, tgtMeshType, tgtResolution)
     sForth = get_sForth(isForth)
 
-    f_conf = f'conf/remap/{srcMeshName}_to_{tgtMeshName}/remapping_table_{get_sForth(isForth)}.conf'
+    f_conf = f'conf/remapping_table/{srcMeshName}_to_{tgtMeshName}/{sForth}.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
     print(f'conf: {f_conf}')
     with open(f_conf, 'w') as wf:
@@ -195,9 +195,18 @@ path_report: "{get_rtDir(srcMeshName, tgtMeshName, isForth)}/report.txt"\n\
            capture_output=True,
            check=True,
          )
-    #print(cp.returncode)
-    #print(f'stdout: {cp.stdout.decode()}')
-    #print(f'stderr: {cp.stderr.decode()}')
+    f_log = f'{get_rtDir(srcMeshName, tgtMeshName, isForth)}/log'
+    f_log_stdout = f_log + '.out'
+    f_log_stderr = f_log + '.err'
+    print(f'  stdout: {f_log_stdout}')
+    print(f'  stderr: {f_log_stderr}')
+    os.makedirs(os.path.dirname(f_log), exist_ok=True)
+    with open(f_log_stdout, 'w') as wf:
+        wf.write(cp.stdout.decode())
+    with open(f_log_stderr, 'w') as wf:
+        wf.write(cp.stderr.decode())
+    if cp.returncode != 0:
+        print(f'returncode: {cp.returncode}')
 
 
 def remap_field(
@@ -211,7 +220,7 @@ def remap_field(
 
     print(f'{srcMeshName} to {tgtMeshName} ({sForth}) iter{i}')
 
-    f_conf = f'conf/remap/{srcMeshName}_to_{tgtMeshName}/iter{i:04d}_{sForth}.conf'
+    f_conf = f'conf/remap_iter/{srcMeshName}_to_{tgtMeshName}/iter{i:04d}_{sForth}.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
     print(f'  conf: {f_conf}')
     with open(f_conf, 'w') as wf:
