@@ -164,7 +164,7 @@ def make_remapping_table(
 
     f_conf = f'conf/remapping_table/{srcMeshName}_to_{tgtMeshName}/{sForth}.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
-    print(f'conf: {f_conf}')
+    print(f'  conf: {f_conf}')
     with open(f_conf, 'w') as wf:
         wf.write(f'\
 #\n\
@@ -193,7 +193,7 @@ path_report: "{get_rtDir(srcMeshName, tgtMeshName, isForth)}/report.txt"\n\
     cp = subprocess.run(
            [PROGRAM_REMAP, f_conf], 
            capture_output=True,
-           check=True,
+           #check=True,
          )
     f_log = f'{get_rtDir(srcMeshName, tgtMeshName, isForth)}/log'
     f_log_stdout = f_log + '.out'
