@@ -6,6 +6,12 @@
 # v02.05.01
 #===============================================================
 #---------------------------------------------------------------
+[2026/03/26] Improvement
+#---------------------------------------------------------------
+Modified processes for the case that pre-existing remapping
+table is used. Now detailed imformation of meshes are not 
+necessary in this mode.
+#---------------------------------------------------------------
 [2026/03/21] Improvement
 #---------------------------------------------------------------
 Earth's constants and related procedures including python 
