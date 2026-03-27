@@ -3,19 +3,24 @@
 #==============================================================
 FC = ifort
 
-FCFLAGS_FAST  = -O2 -g -assume byterecl -heap-arrays
-FCFLAGS_DEBUG = -O0 -check all -check noarg_temp_created -warn all -CB\
+FCFLAGS_COMMON = -assume byterecl -heap-arrays
+
+FCFLAGS_FAST  = $(FCFLAGS_COMMON)\
+                -O2
+FCFLAGS_DEBUG = $(FCFLAGS_COMMON)\
+                -O0 -check all -check noarg_temp_created -warn all -CB\
                 -gen_interfaces -traceback -g\
-                -heap-arrays\
-                -assume byterecl\
                 -assume realloc_lhs -fstack-protector\
                 -assume protect_parens\
                 -fpe0 -ftrapuv
 
 CC = icc
 
-CCFLAGS_FAST  = -O2 -std=c99 -no-multibyte-chars
-CCFLAGS_DEBUG = -O0 -g -debug all -std=c99 -no-multibyte-chars
+CCFLAGS_COMMON = -std=c99 -no-multibyte-chars
+CCFLAGS_FAST  = $(CCFLAGS_COMMON)\
+                -O2
+CCFLAGS_DEBUG = $(CCFLAGS_COMMON)\
+                -O0 -g -debug all
 #==============================================================
 #
 #==============================================================

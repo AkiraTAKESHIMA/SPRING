@@ -3,8 +3,14 @@
 #==============================================================
 FC = gfortran
 
-FCFLAGS_FAST  = -O2 -g
-FCFLAGS_DEBUG = -O0 -Wall -g\
+#FCFLAGS_COMMON = -fmax-stack-var-size=100000000000
+FCFLAGS_COMMON = -frecursive
+
+FCFLAGS_FAST  = $(FCFLAGS_COMMON)\
+                -O2
+
+FCFLAGS_DEBUG = $(FCFLAGS_COMMON)\
+                -O0 -Wall -g\
                 -fcheck=bounds,do,mem,pointer,recursion\
                 -frecord-marker=4\
                 -fmax-errors=5\
