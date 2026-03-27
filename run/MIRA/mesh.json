@@ -1,0 +1,52 @@
+{
+  "UniformlyRefined": {
+    "CS": {
+      "name": "CS",
+      "file": {
+        "r16": "sample_NM16_O10_CS-{r}_TPW_CFR_TPO_A1_A2.nc",
+        "r32": null,
+        "r64": null,
+        "r128": null,
+        "r256": null
+      }
+    },
+    "ICOD": {
+      "name": "ICOD",
+      "file": {
+        "r16": "sample_NM16_O10_ICOD-{r}_TPW_CFR_TPO_A1_A2.nc",
+        "r32": null,
+        "r64": null,
+        "r128": null,
+        "r256": null
+      }
+    },
+    "RLL": {
+      "name": "RLL",
+      "file": {
+        "r30-60": "sample_NM16_O10_RLL-{r}_TPW_CFR_TPO_A1_A2.nc",
+        "r90-180": null,
+        "r180-360": null,
+        "r360-720": null,
+        "r720-1440": null
+      }
+    }
+  },
+  "RegionallyRefined": {
+    "CS": {
+      "name": "CS",
+      "file": {
+        "r32": "sample_NM32_O18_{r}_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        "r64": "sample_NM32_O18_{r}_lev2_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        "r128": "sample_NM32_O18_{r}_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc"
+      }
+    },
+    "ICOD": {
+      "name": "MPAS",
+      "file": {
+        "r3": "sample_NM32_O18_mpas_{r}_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        "r4": null,
+        "r5": null
+      }
+    }
+  }
+}
