@@ -93,7 +93,7 @@ def make_remapping_table(
           os.path.isfile(f'{rtDir}/area.bin') and\
           os.path.isfile(f'{rtDir}/coef.bin'):
             if log:
-                print(f'File already exists: {rtDir}/grid.bin')
+                print(f'  File already exists: {rtDir}/grid.bin')
             return
 
     f_conf = f'conf/remapping_table/{srcMeshName}_to_{tgtMeshName}/{sForth}.conf'
@@ -167,17 +167,17 @@ def remap_field(
         fin_grdval, fout_grdval = util.get_fieldBinFile(isForth, var, i)
         if os.path.isfile(f'{fieldDir}/{fout_grdval}'):
             if log:
-                    print(f'File already exists: {fieldDir}/{fout_grdval}')
+                print(f'  File already exists: {fieldDir}/{fout_grdval}')
             return
 
-    f_conf = f'conf/remap_iter/{srcMeshName}_to_{tgtMeshName}/iter{i:04d}_{sForth}.conf'
+    f_conf = f'conf/remap_iter/{srcMeshName}_to_{tgtMeshName}/{var}_{i:04d}_{sForth}.conf'
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
     if log:
         print(f'  conf: {f_conf}')
     with open(f_conf, 'w') as wf:
         wf.write(f'\
 #\n\
-path_report: "{util.get_remapDir(srcMeshName, tgtMeshName)}/report/iter{i:04d}_{sForth}.txt"\n\
+path_report: "{util.get_remapDir(srcMeshName, tgtMeshName)}/report/{var}_{i:04d}_{sForth}.txt"\n\
 \n')
         if isForth:
             wf.write(f'\
@@ -221,7 +221,7 @@ path_report: "{util.get_remapDir(srcMeshName, tgtMeshName)}/report/iter{i:04d}_{
       capture_output=True,
     )
 
-    f_log = f'{util.get_remapDir(srcMeshName, tgtMeshName)}/log/iter{i:04d}_{sForth}'
+    f_log = f'{util.get_remapDir(srcMeshName, tgtMeshName)}/log/{var}_{i:04d}_{sForth}'
     f_log_stdout = f_log + '.out'
     f_log_stderr = f_log + '.err'
     if log:
@@ -335,7 +335,7 @@ def make_netCDF(
             os.remove(f_nc)
         else:
             if log:
-                print(f'File already exists: {f_nc}')
+                print(f'  File already exists: {f_nc}')
             return
     nc = netCDF4.Dataset(f_nc, 'w', format='NETCDF4')
 
@@ -357,7 +357,7 @@ def make_netCDF(
         print(f'*** File not found: {f_tgt}')
         return
 
-    for i in range(1, util.ITERMAX+1):
+    for i in range(util.ITERMAX+1):
         src[i,:] = np.fromfile(f'{fieldDir}/{var}_src_{i:04d}.bin')
         tgt[i,:] = np.fromfile(f'{fieldDir}/{var}_tgt_{i:04d}.bin')
     nc.close()
@@ -381,7 +381,7 @@ def calc_metrics(
     if not overwrite:
         if os.path.isfile(f_metrics):
             if log:
-                print(f'File already exists: {f_metrics}')
+                print(f'  File already exists: {f_metrics}')
             return
 
     os.makedirs(os.path.dirname(fb_metrics), exist_ok=True)
@@ -399,6 +399,29 @@ def calc_metrics(
         print(cp.stderr.decode())
         print(f'*** return code: {cp.returncode}')
 
+
+def plot_metrics(
+  srcRefinement, srcMeshType, srcResolution,
+  tgtRefinement, tgtMeshType, tgtResolution,
+  var,
+  overwrite,
+  log):
+
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
+    tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
+
+    f_metrics, _ = util.get_metricsFile(srcMeshName, tgtMeshName, var)
+    df = pd.read_csv(f_metrics)
+    df = df.drop(df.index[0])
+
+    d = df['GC']
+    dd = np.array([np.log10(abs(v)) if v != 0 else np.nan for v in d])
+    plt.plot(range(len(dd)), dd)
+    plt.show()
 
 
 
@@ -532,6 +555,27 @@ elif job == 'calc_metrics':
     args = parser.parse_args()
 
     calc_metrics(
+      args.srcRefinement, args.srcMeshType, args.srcResolution,
+      args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
+      args.variable, 
+      args.overwrite,
+      args.log)
+
+elif job == 'plot_metrics':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('job')
+    parser.add_argument('srcRefinement', type=str)
+    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('srcResolution', type=int)
+    parser.add_argument('tgtRefinement', type=str)
+    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtResolution', type=int)
+    parser.add_argument('variable', type=str)
+    parser.add_argument('--overwrite', action='store_true')
+    parser.add_argument('--log', action='store_false')
+    args = parser.parse_args()
+
+    plot_metrics(
       args.srcRefinement, args.srcMeshType, args.srcResolution,
       args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
       args.variable, 

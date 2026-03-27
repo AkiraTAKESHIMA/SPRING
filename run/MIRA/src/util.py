@@ -15,8 +15,8 @@ MESHDICT = json.load(open('mesh.json', 'r'))
 
 TBL_VAR = dict(
   TPW = 'TotalPrecipWater',
-  CRF = 'CloudFraction'   ,
-  TOP = 'Topography'      ,
+  CFR = 'CloudFraction'   ,
+  TPO = 'Topography'      ,
   A1  = 'AnalyticalFun1'  ,
   A2  = 'AnalyticalFun2'  ,
 )
@@ -124,8 +124,8 @@ def get_nk(refinement: str, meshType: str, resolution: int):
     elif refinement == 'r':
         if meshType == 'CS':
             nk = 4
-        elif meshType == 'RLL':
-            nk = 4
+        elif meshType == 'ICOD':
+            nk = 7
         else:
             raise Exception(f'Invalid value in meshType: {meshType}')
     else:
@@ -143,7 +143,7 @@ def get_resolution(refinement: str, meshType: str, resolution: int):
 
 
 def get_mesh(refinement: str, meshType: str, resolution: int):
-    meshType_ = meshType
+    meshType_ = get_meshType(refinement, meshType)
 
     refinement_ = get_refinement(refinement)
 

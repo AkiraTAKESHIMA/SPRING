@@ -279,7 +279,7 @@ integer(8) function filesize(path) result(sz)
   integer :: un
   integer :: ios
 
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   un = unit_number()
   open(un, file=path, status='old', action='read', iostat=ios)
@@ -990,7 +990,7 @@ function fileinfo(f) result(res)
   character(clen_key) :: opt
   character(4+dgt(INT4_ULIM)) :: str_rec
 
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( f%path == '' )then
     allocate(character(10) :: res)
@@ -1096,7 +1096,7 @@ integer(4) function set_opt_check_permission(allow_empty) result(info)
   logical, intent(in), optional :: allow_empty
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1115,7 +1115,7 @@ integer(4) function init_opt_check_permission(key) result(info)
   character(*), intent(in) :: key
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1153,7 +1153,7 @@ integer(4) function check_permission__file(&
   integer :: access
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   ! Options
   !-------------------------------------------------------------
@@ -1293,7 +1293,7 @@ integer(4) function check_permission__path(&
   integer :: access
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !------------------------------------------------------------
   !
   !------------------------------------------------------------
@@ -1430,7 +1430,7 @@ integer(4) function check_file_size(&
   integer :: access
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   ! Options
   !-------------------------------------------------------------
@@ -1563,7 +1563,7 @@ integer(4) function try_make_empty_file__file(f) result(info)
   integer :: access
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( f%path == '' )then
     info = 1
@@ -1576,7 +1576,7 @@ integer(4) function try_make_empty_file__file(f) result(info)
   if( access(f%path,' ') == 0 )then
     info = 1
     call errret(msg_unexpected_condition()//&
-              '\nFile already exists: "'//str(f%path)//'".'//&
+              '\nFile already exists: '//str(f%path)//&
               '\n  id: '//str(f%id))
     return
   endif
@@ -1586,7 +1586,7 @@ integer(4) function try_make_empty_file__file(f) result(info)
   if( ios /= 0 )then
     info = 1
     call errret(msg_io_error()//&
-              '\nFailed to make an empty file: "'//str(f%path)//'".'&
+              '\nFailed to make an empty file: '//str(f%path)//&
               '\n  id: '//str(f%id))
     return
   endif
@@ -1603,31 +1603,66 @@ integer(4) function try_make_empty_file__dir(dir) result(info)
   character(CLEN_PROC), parameter :: PRCNAM = 'try_make_empty_file__dir'
   character(*), intent(in) :: dir
 
-  character(len_trim(dir)+32) :: path_file
+  character(len_trim(dir)+32) :: f
+  integer, parameter :: IMAX = 1000000
+  integer, parameter :: NTRY = 5
   integer :: i
-  integer, parameter :: imax = 1000000
+  integer :: iTry
+
+  integer :: un
+  integer :: ios
+  logical :: opened, exist
 
   integer :: access
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  do i = 1, imax
-    path_file = joined(dir,'spring.empty.'//str(i))
-    if( access(path_file,' ') == 0 ) cycle
+  do i = 1, IMAX
+    f = joined(dir,'spring.empty.'//str(i))
+    if( access(f,' ') == 0 ) cycle
 
-    if( make_empty_file(path_file, remove=.true.) /= 0 )then
-      info = 1; call errret(); return
-    endif
+    open(newunit=un, file=f, status='new', iostat=ios)
+    if( ios /= 0 ) cycle
 
-    exit
+    do iTry = 1, NTRY
+      close(un, status='delete', iostat=ios)
+      if( ios == 0 ) exit
+
+      inquire(file=f, opened=opened, exist=exist)
+      if( .not. opened .and. .not. exist )then
+        call logwrn('Deletion of temporal file received iostat of failure '//&
+                    'but the file does not already exist.')
+        ios = 0
+        exit
+      elseif( opened .and. exist )then
+        if( iTry < NTRY )then
+          call logwrn('Failed to remove the empty file. Trying again...')
+        else
+          info = 1
+          call errret(msg_io_error()//&
+                    '\nFailed to remove the temporal file: '//str(f))
+          return
+        endif
+      else
+        info = 1
+        call logerr(msg_io_error()//&
+                  '\nUnknown I/O error.'//&
+                  '\n  file: '//str(f)//&
+                  '\n  opened: '//str(opened)//&
+                  '\n  exist: '//str(exist))
+        return
+      endif
+    enddo
+
+    if( ios == 0 ) exit
 
     if( i == imax )then
       info = 1
       call errret(msg_unexpected_condition()//&
-                '\n$i exceeded the upper limit.')
+                '\nReached the upper limit of $i.')
       return
     endif
   enddo
@@ -1644,7 +1679,7 @@ integer(4) function set_opt_mkdir(output, hut) result(info)
   character(*), intent(in), optional :: hut
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   if( present(output) )then
     opt_mkdir__output = output
@@ -1666,7 +1701,7 @@ integer(4) function init_opt_mkdir(key) result(info)
   character(*), intent(in) :: key
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   selectcase( key )
   case( 'output' )
@@ -1823,7 +1858,7 @@ integer(4) function remove(path, dir, output) result(info)
   logical :: output_
 
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !------------------------------------------------------------
   ! Options
   !------------------------------------------------------------
@@ -1867,8 +1902,12 @@ integer(4) function make_empty_file(path, remove) result(info)
   integer :: un
   integer :: ios
 
+  integer, parameter :: NTRY = 10
+  integer :: iTry
+  logical :: opened, exist
+
   info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1884,19 +1923,45 @@ integer(4) function make_empty_file(path, remove) result(info)
     return
   endif
 
-  un = unit_number()
-  open(un, file=path, status='replace', iostat=ios)
+  open(newunit=un, file=path, status='replace', iostat=ios)
 
   if( ios == 0 )then
     if( remove_ )then
-      close(un, status='delete')
+      do iTry = 1, NTRY
+        close(un, status='delete', iostat=ios)
+        if( ios == 0 ) exit
+
+        inquire(file=path, opened=opened, exist=exist)
+        if( .not. opened .and. .not. exist )then
+          call logwrn('Deletion received iostat of failure but the file has been removed.')
+          ios = 0
+          exit
+        elseif( opened .neqv. exist )then
+          info = 1
+          call logerr(msg_io_error()//&
+                    '\nUnknown I/O error.'//&
+                    '\n  file: '//str(path)//&
+                    '\n  opened: '//str(opened)//&
+                    '\n  exist: '//str(exist))
+          return
+        endif
+
+        call logmsg('Failed to remove the temporal file. Trying again...')
+      enddo
+
+      if( ios /= 0 )then
+        info = 1
+        call errret(msg_io_error()//&
+                  '\nFailed to remove the temporal file: '//str(path))
+        return
+      endif
     else
       close(un)
     endif
   else
     info = 1
     call errret(msg_io_error()//&
-              '\nFailed to make an empty file: "'//str(path)//'".')
+              '\nFailed to make an empty file: '//str(path))
     return
   endif
   !-------------------------------------------------------------
