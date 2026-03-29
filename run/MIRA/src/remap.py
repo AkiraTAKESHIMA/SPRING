@@ -401,9 +401,10 @@ def calc_metrics(
 
 
 def plot_metrics(
-  srcRefinement, srcMeshType, srcResolution,
-  tgtRefinement, tgtMeshType, tgtResolution,
-  var,
+  refinement, 
+  srcMeshType, srcResolution,
+  tgtMeshType, tgtResolution,
+  metric, var,
   overwrite,
   log):
 
@@ -411,16 +412,71 @@ def plot_metrics(
     import numpy as np
     import matplotlib.pyplot as plt
 
-    srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
-    tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
+    srcMeshName, *_ = util.get_mesh(refinement, srcMeshType, srcResolution)
+    tgtMeshName, *_ = util.get_mesh(refinement, tgtMeshType, tgtResolution)
+
+    ds = {}
+    lst_label = []
 
     f_metrics, _ = util.get_metricsFile(srcMeshName, tgtMeshName, var)
+    if log:
+        print(f'Metrics: {f_metrics}')
     df = pd.read_csv(f_metrics)
     df = df.drop(df.index[0])
+    ds["SPRING"] = df
+    lst_label.append('SPRING')
 
-    d = df['GC']
-    dd = np.array([np.log10(abs(v)) if v != 0 else np.nan for v in d])
-    plt.plot(range(len(dd)), dd)
+    for algorithm in util.DICT_METRICSDATA.keys():
+        d = util.DICT_METRICSDATA[algorithm]
+        mode = tuple(d["mode"].keys())[-1]
+        f_metrics = util.get_MIRAMetricsFile(
+          refinement, algorithm,
+          srcMeshType, srcResolution, 
+          tgtMeshType, tgtResolution, 
+          mode, var)
+
+        if log:
+            print(f'Metrics: {f_metrics}')
+        df = pd.read_csv(f_metrics)
+        df = df.drop(df.index[0])
+        ds[algorithm] = df
+        lst_label.append(f'{algorithm} ({d["mode"][mode]["label"]})')
+
+
+    f_fig = util.get_metricsFigFile(
+      refinement, srcMeshType, srcResolution, tgtMeshType, tgtResolution,
+      metric, var)
+    os.makedirs(os.path.dirname(f_fig), exist_ok=True)
+
+    fig = plt.figure(figsize=(10,6))
+    ax = fig.add_subplot(position=(0.1, 0.1, 0.6, 0.8))
+    x = np.arange(0, util.ITERMAX+1, util.ITERINT_PLOT)
+    for algorithm, label in zip(list(ds.keys()), lst_label):
+        y = ds[algorithm][metric].values.astype(np.float64)
+        if algorithm == 'SPRING':
+            # TMP
+            #y = y[x]
+            y = y[x[:-1]]
+            y = np.r_[y, y[-1]]
+            color = 'red'
+            zorder = 1
+        else:
+            color = util.DICT_METRICSDATA[algorithm]["color"]
+            zorder = 0
+
+        if metric in ('GC', 'GL1', 'GL2'):
+            y = np.array([np.log10(abs(v)) if v != 0 else np.nan for v in y])
+        print(f'{algorithm}: {y[-1]}')
+
+        ax.plot(x, y, label=label, color=color, zorder=zorder)
+        ax.scatter(x, y, s=10, marker='o', color=color, zorder=zorder)
+    ax.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left', borderaxespad=0, fontsize=12)
+    ax.set_xlabel('Iteration', fontsize=12)
+    ax.set_ylabel(util.TBL_METRIC[metric], fontsize=12)
+    ax.set_title(f'{srcMeshType}{srcResolution}_{tgtMeshType}{tgtResolution}', fontsize=12)
+    if log:
+        print(f'Fig: {f_fig}')
+    plt.savefig(f_fig, bbox_inches='tight')
     plt.show()
 
 
@@ -564,21 +620,22 @@ elif job == 'calc_metrics':
 elif job == 'plot_metrics':
     parser = argparse.ArgumentParser()
     parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
+    parser.add_argument('refinement', type=str)
     parser.add_argument('srcMeshType', type=str)
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
     parser.add_argument('tgtMeshType', type=str)
     parser.add_argument('tgtResolution', type=int)
+    parser.add_argument('metric', type=str)
     parser.add_argument('variable', type=str)
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
 
     plot_metrics(
-      args.srcRefinement, args.srcMeshType, args.srcResolution,
-      args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
-      args.variable, 
+      args.refinement, 
+      args.srcMeshType, args.srcResolution,
+      args.tgtMeshType, args.tgtResolution,
+      args.metric, args.variable, 
       args.overwrite,
       args.log)
 

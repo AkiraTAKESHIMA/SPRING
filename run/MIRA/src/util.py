@@ -3,15 +3,22 @@ import json
 
 
 ITERMAX = 1000
+ITERINT_PLOT = 10
 
 PROGRAM_REMAP = './bin/std/remap.exe'
 SCRIPT_PLOT_FIELD = 'bin/std/mkfig_remap.py'
 SCRIPT_CANGAMETRICSDRIVER = 'src/MIRA/CANGAMetricsDriver.py'
 
-NCMESHDIR = '../../ext/MIRA-Datasets/Meshes'
+MIRADATASETDIR = '../../ext/MIRA-Datasets'
+MIRAMESHDIR = '{MIRADATASETDIR}/Meshes'
 BINMESHDIR = '../../dat/mesh/MIRA'
+MIRAMETRICSDIR = f'{MIRADATASETDIR}/MetricsData'
+METRICSFIGDIR = 'fig/metrics'
 
-MESHDICT = json.load(open('mesh.json', 'r'))
+TBL_RFN = dict(
+  u = 'UniformlyRefined' ,
+  r = 'RegionallyRefined',
+)
 
 TBL_VAR = dict(
   TPW = 'TotalPrecipWater',
@@ -20,6 +27,349 @@ TBL_VAR = dict(
   A1  = 'AnalyticalFun1'  ,
   A2  = 'AnalyticalFun2'  ,
 )
+
+TBL_METRIC = dict(
+  GC = r'Global Conservation Error ${L_g}$',
+  GL1 = r'Standard Error 1 ${E_{L_1}}$',
+  GL2 = r'Standard Error 2 ${E_{L_2}}$',
+  GLinf = r'Largest Pointwise Error ${E_{L_max}}$',
+  GMaxE = 'Global Overshoot ${|G_{max}|}$',
+  GMinE = 'Global Undershoot ${|G_{min}|}$',
+  LMaxL1 = 'L1 of Local Maxima ${L_{max,1}}$',
+  LMaxL2 = 'L2 of Local Maxima ${L_{max,2}}$',
+  LMaxLm = 'Linf of Local Maxima ${L_{max,inf}}$',
+  LMinL1 = 'L1 of Local Minima ${L_{min,1}}$',
+  LMinL2 = 'L2 of Local Minima ${L_{min,2}}$',
+  LMinLm = 'Linf of Local Minima ${L_{min,inf}}$',
+  H12T = '',
+  H1T = '',
+  H12S = '',
+  H1S = '',
+)
+
+DICT_MESH = {
+  "u": {
+    "CS": {
+      "name": "CS",
+      "file": {
+        "r16": "sample_NM16_O10_CS-{r}_TPW_CFR_TPO_A1_A2.nc",
+        "r32": None,
+        "r64": None,
+        "r128": None,
+        "r256": None
+      }
+    },
+    "ICOD": {
+      "name": "ICOD",
+      "file": {
+        "r16": "sample_NM16_O10_ICOD-{r}_TPW_CFR_TPO_A1_A2.nc",
+        "r32": None,
+        "r64": None,
+        "r128": None,
+        "r256": None
+      }
+    },
+    "RLL": {
+      "name": "RLL",
+      "file": {
+        "r30-60": "sample_NM16_O10_RLL-{r}_TPW_CFR_TPO_A1_A2.nc",
+        "r90-180": None,
+        "r180-360": None,
+        "r360-720": None,
+        "r720-1440": None
+      }
+    }
+  },
+  "r": {
+    "CS": {
+      "name": "CS",
+      "file": {
+        "r32": "sample_NM32_O18_{r}_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        "r64": "sample_NM32_O18_{r}_lev2_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        "r128": "sample_NM32_O18_{r}_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc"
+      }
+    },
+    "ICOD": {
+      "name": "MPAS",
+      "file": {
+        "r3": "sample_NM32_O18_mpas_{r}_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        "r4": None,
+        "r5": None
+      }
+    }
+  }
+}
+
+DICT_METRICSDATA = {
+  "ESMF": {
+    "mesh": {
+      "u": {
+        "CS": {
+          "dir": "CS",
+          "file": "CS",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "ICOD": {
+          "dir": "MPAS",
+          "file": "ICOD",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "RLL": {
+          "dir": "RLL",
+          "file": "RLL",
+          "resolution": ["16", "32", "64", "128", "256"]
+        }
+      },
+      "r": {
+        "CS": {
+          "file": "cs",
+          "resolution": ["32", "64", "128"]
+        },
+        "ICOD": {
+          "file": "icodr",
+          "resolution": ["3", "4", "5"]
+        },
+      }
+    },
+    "mode": {
+      1: {
+        "dir": "conserve",
+        "file": "conserve",
+        "label": "conserve"
+      },
+      2: {
+        "dir": "conserve2nd",
+        "file": "conserve2nd",
+        "label": "conserve2nd"
+      },
+    },
+    "color": "mediumorchid",
+  },
+  "GMLS": {
+    "mesh": {
+      "u": {
+        "CS": {
+          "dir": "CS",
+          "file": "CS",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "ICOD": {
+          "dir": "MPAS",
+          "file": "ICOD",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "RLL": {
+          "dir": "RLL",
+          "file": "RLL",
+          "resolution": ["16", "32", "64", "128", "256"]
+        }
+      },
+      "r": {
+        "CS": {
+          "file": "CS",
+          "resolution": ["32", "64", "128"],
+        },
+        "ICOD": {
+          "file": "ICOD",
+          "resolution": ["32", "64", "128"],
+        },
+      }
+    },
+    "mode": {
+      1: {
+        "dir": "degree-1",
+        "file": "O2",
+        "label": "p=1"
+      },
+      2: {
+        "dir": "degree-2",
+        "file": "O3",
+        "label": "p=2"
+      },
+      3: {
+        "dir": "degree-3",
+        "file": "O4",
+        "label": "p=3"
+      },
+      4: {
+        "dir": "degree-4",
+        "file": "O5",
+        "label": "p=4"
+      }
+    },
+    "color": "burlywood",
+  },
+  "GMLS-CAAS": {
+    "mesh": {
+      "u": {
+        "CS": {
+          "dir": "CS",
+          "file": "CS",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "ICOD": {
+          "dir": "MPAS",
+          "file": "ICOD",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "RLL": {
+          "dir": "RLL",
+          "file": "RLL",
+          "resolution": ["16", "32", "64", "128", "256"]
+        }
+      },
+      "r": {
+        "CS": {
+          "file": "CS",
+          "resolution": ["32", "64", "128"],
+        },
+        "ICOD": {
+          "file": "ICOD",
+          "resolution": ["32", "64", "128"],
+        },
+      },
+    },
+    "mode": {
+      1: {
+        "dir": "degree-1",
+        "file": "O2",
+        "label": "p=1"
+      },
+      2: {
+        "dir": "degree-2",
+        "file": "O3",
+        "label": "p=2"
+      },
+      3: {
+        "dir": "degree-3",
+        "file": "O4",
+        "label": "p=3"
+      },
+      4: {
+        "dir": "degree-4",
+        "file": "O5",
+        "label": "p=4"
+      }
+    },
+    "color": "orange",
+  },
+  "TempestRemap": {
+    "mesh": {
+      "u": {
+        "CS": {
+          "dir": "CS",
+          "file": "CS",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "ICOD": {
+          "dir": "MPAS",
+          "file": "ICOD",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "RLL": {
+          "dir": "RLL",
+          "file": "RLL",
+          "resolution": ["30-60", "90-180", "180-360", "360-720", "720-1440"]
+        }
+      },
+      "r": {
+        "CS": {
+          "file": "cs",
+          "resolution": ["32", "64", "128"]
+        },
+        "ICOD": {
+          "file": "icodr",
+          "resolution": ["3", "4", "5"]
+        },
+      }
+    },
+    "mode": {
+      0: {
+        "dir": "degree-0",
+        "file": "O1",
+        "label": "p=0"
+      },
+      1: {
+        "dir": "degree-1",
+        "file": "O2",
+        "label": "p=1"
+      },
+      2: {
+        "dir": "degree-2",
+        "file": "O3",
+        "label": "p=2"
+      },
+      3: {
+        "dir": "degree-3",
+        "file": "O4",
+        "label": "p=3"
+      }
+    },
+    "color": "dodgerblue",
+  },
+  "WLS-ENOR": {
+    "mesh": {
+      "u": {
+        "CS": {
+          "dir": "CS",
+          "file": "CS",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "ICOD": {
+          "dir": "MPAS",
+          "file": "ICOD",
+          "resolution": ["16", "32", "64", "128", "256"]
+        },
+        "RLL": {
+          "dir": "RLL",
+          "file": "RLL",
+          "resolution": ["16", "32", "64", "128", "256"]
+        }
+      },
+      "r": {
+        "CS": {
+          "file": "RRMr",
+          "resolution": ["16", "32", "64"]
+        },
+        "ICOD": {
+          "file": "MPAS",
+          "resolution": ["16", "32", "64"]
+        }
+      },
+    },
+    "mode": {
+      2: {
+        "dir": "degree-2",
+        "file": "p=2",
+        "label": "p=2"
+      },
+      3: {
+        "dir": "degree-3",
+        "file": "p=3",
+        "label": "p=3"
+      },
+      4: {
+        "dir": "degree-4",
+        "file": "p=4",
+        "label": "p=4"
+      }
+    },
+    "color": "mediumseagreen",
+  }
+}
+"""
+for alrogithm in DICT_METRICSDATA["r"].keys():
+    d = DICT_METRICSDATA["r"][algorithm]
+    for refinement in d["mesh"].keys():
+        for srcMeshType, tgtMeshType in zip(
+        ("CS", "ICOD"), ("ICOD", "RLL"), ("RLL", "CS")):
+            for mode in  d["mode"].keys():
+                mode_dir = d["mode"][mode]["dir"]
+                mode_file = d["mode"][mode]["file"]
+                for srcResolution in d["mesh"][meshType]["resolution"]:
+                    for tgtResolution in d["mesh"][meshType]["resolution"]:
+"""
+            
 
 LST_RANGE = dict(
   TPW = (0., 70.),
@@ -135,17 +485,17 @@ def get_nk(refinement: str, meshType: str, resolution: int):
 
 
 def get_meshType(refinement: str, meshType: str):
-    return MESHDICT[get_refinement(refinement)][meshType]['name']
+    return DICT_MESH[refinement][meshType]['name']
 
 
 def get_resolution(refinement: str, meshType: str, resolution: int):
-    return tuple(MESHDICT[get_refinement(refinement)][meshType]['file'].keys())[resolution]
+    return tuple(DICT_MESH[refinement][meshType]['file'].keys())[resolution]
 
 
 def get_mesh(refinement: str, meshType: str, resolution: int):
     meshType_ = get_meshType(refinement, meshType)
 
-    refinement_ = get_refinement(refinement)
+    refinement_ = TBL_RFN[refinement]
 
     resolution_ = get_resolution(refinement, meshType, resolution)
 
@@ -159,15 +509,6 @@ def get_mesh(refinement: str, meshType: str, resolution: int):
     return meshName, meshDir, nk, nij
 
 
-def get_refinement(refinement: str):
-    if refinement == 'u':
-        return 'UniformlyRefined'
-    elif refinement == 'r':
-        return 'RegionallyRefined'
-    else:
-        raise Exception(f'Invalid value in refinement: {refinement}')
-
-
 def get_sForth(isForth: bool):
     if isForth:
         return 'forth'
@@ -176,15 +517,14 @@ def get_sForth(isForth: bool):
 
 
 def get_meshNCFile(refinement: str, meshType: str, resolution: int):
-    refinement_ = get_refinement(refinement)
+    refinement_ = TBL_RFN[refinement]
     resolution_ = get_resolution(refinement, meshType, resolution)
 
-    u = MESHDICT[refinement_]
-    m = u[meshType]
+    m = DICT_MESH[refinement][meshType]
     f = m["file"][resolution_]
     if f is None:
         f = m["file"][tuple(m["file"].keys())[0]]
-    return f'{NCMESHDIR}/{refinement_}/{m["name"]}/{f.format(r=resolution_)}'
+    return f'{MIRAMESHDIR}/{refinement_}/{m["name"]}/{f.format(r=resolution_)}'
 
 
 def get_remapDir(srcMeshName: str, tgtMeshName: str):
@@ -219,4 +559,40 @@ def get_metricsFile(srcMeshName: str, tgtMeshName: str, var: str):
            f'out/metrics/{srcMeshName}_to_{tgtMeshName}.csv'
 
 
+def get_MIRAMetricsFile(
+  refinement: str, algorithm: str, 
+  srcMeshType: str, srcResolution: int, 
+  tgtMeshType: str, tgtResolution: int,
+  mode: int, var: str):
+
+    d = DICT_METRICSDATA[algorithm]
+    srcMesh = d["mesh"][refinement][srcMeshType]
+    tgtMesh = d["mesh"][refinement][tgtMeshType]
+    mode_dir = d["mode"][mode]["dir"]
+    mode_file = d["mode"][mode]["file"]
+
+    s = f'{srcMesh["file"]}{srcMesh["resolution"][srcResolution]}'
+    t = f'{tgtMesh["file"]}{tgtMesh["resolution"][tgtResolution]}'
+    f = f'metrics_{s}_{t}_{mode_file}_{TBL_VAR[var]}.csv'
+    if refinement == 'u':
+        return f'{MIRAMETRICSDIR}/{TBL_RFN[refinement]}/{algorithm}/'\
+               f'{srcMesh["dir"]}-{tgtMesh["dir"]}/{mode_dir}/{f}'
+    elif refinement == 'r':
+        return f'{MIRAMETRICSDIR}/{TBL_RFN[refinement]}/{algorithm}/{mode_dir}/{f}'
+
+
+def get_metricsFigFile(
+  refinement: str, 
+  srcMeshType: str, srcResolution: int, 
+  tgtMeshType: str, tgtResolution: int,
+  metric: str, var: str, add: str=''):
+
+    if add == '':
+        add_ = 'default'
+    else:
+        add_ = add
+
+    return f'{METRICSFIGDIR}/{TBL_RFN[refinement]}/'\
+           f'{srcMeshType}{srcResolution}-{tgtMeshType}{tgtResolution}/'\
+           f'{metric}_{var}_{add_}.png'
 
