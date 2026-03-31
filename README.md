@@ -1,10 +1,7 @@
 # SPRING version 2.5.1
 
-See for details: 
-http://hydro.iis.u-tokyo.ac.jp/~akira/page/Products/contents/SPRING/latest/
-
 User's Guide:
-https://drive.google.com/file/d/1AtcsjSA78dje38Mbl1Ce8hFzYXuQuxj0/view?usp=sharing
+https://drive.google.com/file/d/17KhNHE7XJ060nWIQQG6LIi9mAGLqN4F9/view?usp=sharing
 
 Sample Data:
-https://drive.google.com/file/d/1lo4fbXQhk4PBnSV9OgDQZnLoHArLIRw6/view?usp=drive_link
+https://drive.google.com/file/d/14bYGj-3GdmVnwSVRwh36ZSnKH93E0Ocx/view?usp=sharing
