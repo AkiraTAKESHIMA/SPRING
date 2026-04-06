@@ -513,7 +513,7 @@ subroutine parsearg(istart, iend)
   narg = argnum()
 
   istart_ = 1
-  iend_ = narg
+  iend_ = ad%n_positional
   if( present(istart) ) istart_ = istart
   if( present(iend) ) iend_ = iend
   !-------------------------------------------------------------
