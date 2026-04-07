@@ -492,20 +492,41 @@ subroutine check_format_key_optional(key_short, key_long)
     call errend('Key is empty.')
   endif
 
-  if( key_short /= '' )then
-    if( index(key_short, '-') == 0 .or. index(key_short, '--') /= 0 )then
-      call errend('Put "-" on the head of short key.')
-    endif
-  endif
-
-  if( key_long /= '' )then
-    if( index(key_long, '--') == 0 )then
-      call errend('Put "--" on the head of long key.')
-    endif
+  if( .not. is_key_optional(key_short) .and. &
+      .not. is_key_optional(key_long) )then
+    call errend('Invalid format of key for optional arguments.'//&
+                ' Put "-" on the head of short key, and'//&
+                ' Put "--" on the head of long key.')
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine check_format_key_optional
+!===============================================================
+!
+!===============================================================
+logical function is_key_optional(s) result(res)
+  implicit none
+  character(*), intent(in) :: s
+
+  res = .false.
+
+  if( len_trim(s) == 2 )then
+    ! Short key, e.g., -f
+    if( s(1:1) == '-' .and. s(2:2) /= '-' )then
+      res = .true.
+    endif
+
+  elseif( len_trim(s) >= 3 )then
+    ! Short key, e.g., -f
+    if( s(1:1) == '-' .and. s(2:2) /= '-' )then
+      res = .true.
+
+    ! Long key, e.g., --recursive
+    elseif( s(1:2) == '--' .and. s(3:3) /= '-' )then
+      res = .true.
+    endif
+  endif
+end function is_key_optional
 !===============================================================
 !
 !===============================================================
@@ -537,7 +558,7 @@ subroutine parsearg(istart, iend)
   narg = argnum()
 
   istart_ = 1
-  iend_ = ad%n_positional
+  iend_ = max(ad%n_positional, narg)
   if( present(istart) ) istart_ = istart
   if( present(iend) ) iend_ = iend
   !-------------------------------------------------------------
@@ -577,7 +598,7 @@ subroutine parsearg(istart, iend)
   ! -- Return of TRUE by `update_arg_opt_*` means the value was 
   !    updated.
   i = ad%n_positional
-  do while( i < min(narg, iend_) )
+  do while( i < iend_ )
     i = i + 1
     key = argument(i)
 
@@ -872,7 +893,7 @@ logical(4) function arg_flag(s) result(v)
   !-------------------------------------------------------------
   ! Case: Optional
   ! -- $s is key.
-  elseif( s(1:1) == '-' )then
+  elseif( is_key_optional(s) )then
     is_ok = .false.
     do i = 1, ad%n_optional
       selectcase( ad%typ_optional(i) )
@@ -949,7 +970,7 @@ character(CLEN_PATH) function arg_char(s) result(v)
   !-------------------------------------------------------------
   ! Case: Optional
   ! -- $s is key.
-  elseif( s(1:1) == '-' )then
+  elseif( is_key_optional(s) )then
     is_ok = .false.
     do i = 1, ad%n_optional
       selectcase( ad%typ_optional(i) )
@@ -1026,7 +1047,7 @@ integer(4) function arg_int4(s) result(v)
   !-------------------------------------------------------------
   ! Case: Optional
   ! -- $s is key.
-  elseif( s(1:1) == '-' )then
+  elseif( is_key_optional(s) )then
     is_ok = .false.
     do i = 1, ad%n_optional
       selectcase( ad%typ_optional(i) )
