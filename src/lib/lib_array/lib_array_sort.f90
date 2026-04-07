@@ -21,12 +21,14 @@ module lib_array_sort
     module procedure sort__int8
     module procedure sort__real
     module procedure sort__dble
+    module procedure sort_arg__log4_arg8
     module procedure sort_arg__int1_arg8
     module procedure sort_arg__int2_arg8
     module procedure sort_arg__int4_arg8
     module procedure sort_arg__int8_arg8
     module procedure sort_arg__real_arg8
     module procedure sort_arg__dble_arg8
+    module procedure sort_arg__log4_arg4
     module procedure sort_arg__int1_arg4
     module procedure sort_arg__int2_arg4
     module procedure sort_arg__int4_arg4
@@ -113,6 +115,27 @@ module lib_array_sort
   end interface
   !-------------------------------------------------------------
 contains
+!==============================================================
+!
+!==============================================================
+subroutine sort_arg__log4_arg8(array, arg)
+  implicit none
+  logical(4), intent(inout) :: array(:)
+  integer(8), intent(in)    :: arg(:)
+
+  logical(4), allocatable :: arr(:)
+  integer(8) :: n, i
+
+  n = size(arg,kind=8)
+  allocate(arr(n))
+  do i = 1_8, n
+    arr(i) = array(arg(i))
+  enddo
+  do i = 1_8, n
+    array(i) = arr(i)
+  enddo
+  deallocate(arr)
+end subroutine sort_arg__log4_arg8
 !==============================================================
 !
 !==============================================================
@@ -239,6 +262,27 @@ subroutine sort_arg__dble_arg8(array, arg)
   enddo
   deallocate(arr)
 end subroutine sort_arg__dble_arg8
+!==============================================================
+!
+!==============================================================
+subroutine sort_arg__log4_arg4(array, arg)
+  implicit none
+  logical(4), intent(inout) :: array(:)
+  integer(4), intent(in)    :: arg(:)
+
+  logical(4), allocatable :: arr(:)
+  integer(4) :: n, i
+
+  n = size(arg)
+  allocate(arr(n))
+  do i = 1, n
+    arr(i) = array(arg(i))
+  enddo
+  do i = 1, n
+    array(i) = arr(i)
+  enddo
+  deallocate(arr)
+end subroutine sort_arg__log4_arg4
 !==============================================================
 !
 !==============================================================
