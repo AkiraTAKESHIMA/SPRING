@@ -490,10 +490,18 @@ subroutine check_format_key_optional(key_short, key_long)
   !-------------------------------------------------------------
   if( key_short == '' .and. key_long == '' )then
     call errend('Key is empty.')
-  elseif( index(key_short, '-') == 0 )then
-    call errend('Put "-" on the head of short key.')
-  elseif( index(key_long, '--') == 0 )then
-    call errend('Put "--" on the head of long key.')
+  endif
+
+  if( key_short /= '' )then
+    if( index(key_short, '-') == 0 .or. index(key_short, '--') /= 0 )then
+      call errend('Put "-" on the head of short key.')
+    endif
+  endif
+
+  if( key_long /= '' )then
+    if( index(key_long, '--') == 0 )then
+      call errend('Put "--" on the head of long key.')
+    endif
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
