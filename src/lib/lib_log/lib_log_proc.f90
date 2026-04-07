@@ -425,6 +425,21 @@ subroutine logret(prc, mod)
   !-------------------------------------------------------------
   ! Update the indent
   !-------------------------------------------------------------
+
+  ! Skip the steps
+  do while( set%stp(depth) /= '' )
+    depth = depth - 1
+
+    call back_dict(cmd%echoPrc, set%echoPrc, depth)
+    call back_dict(cmd%echoPcc, set%echoPcc, depth)
+    call back_dict(cmd%echoMsg, set%echoMsg, depth)
+    call back_dict(cmd%echoWrn, set%echoWrn, depth)
+    call back_dict(cmd%echoErr, set%echoErr, depth)
+    call back_dict(cmd%echoBar, set%echoBar, depth)
+    call back_dict(cmd%stopErr, set%stopErr, depth)
+    call back_dict(cmd%msrTime, set%msrTime, depth)
+  enddo
+
   set%indent(depth) = set%indent(depth) - set%indentInc(depth) - INDENTINC_PRC
   !-------------------------------------------------------------
   ! Print the message
