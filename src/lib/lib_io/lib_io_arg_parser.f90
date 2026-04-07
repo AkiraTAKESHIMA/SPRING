@@ -212,9 +212,7 @@ subroutine addarg__optional__flag(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( key_short == '' .and. key_long == '' )then
-    call errend('Key is empty.')
-  endif
+  call check_format_key_optional(key_short, key_long)
 
   call inc_n_arg(.false., ITYPE_FLAG)
 
@@ -260,9 +258,7 @@ subroutine addarg__optional__char(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( key_short == '' .and. key_long == '' )then
-    call errend('Key is empty.')
-  endif
+  call check_format_key_optional(key_short, key_long)
 
   call inc_n_arg(.false., ITYPE_CHAR)
 
@@ -309,9 +305,7 @@ subroutine addarg__optional__int4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  if( key_short == '' .and. key_long == '' )then
-    call errend('Key is empty.')
-  endif
+  call check_format_key_optional(key_short, key_long)
 
   call inc_n_arg(.false., ITYPE_INT4)
 
@@ -485,6 +479,28 @@ end subroutine init_arg_int4
 !===============================================================
 !
 !===============================================================
+subroutine check_format_key_optional(key_short, key_long)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'check_format_key_optional'
+  character(*), intent(in) :: key_short, key_long
+
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( key_short == '' .and. key_long == '' )then
+    call errend('Key is empty.')
+  elseif( index(key_short, '-') == 0 )then
+    call errend('Put "-" on the head of short key.')
+  elseif( index(key_long, '--') == 0 )then
+    call errend('Put "--" on the head of long key.')
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end subroutine check_format_key_optional
+!===============================================================
+!
+!===============================================================
 !
 !
 !
@@ -535,11 +551,11 @@ subroutine parsearg(istart, iend)
     !-----------------------------------------------------------
     ! Case: Char
     case( ITYPE_CHAR )
-      call update_arg_pos_char(ad%lst_char(ii), ii)
+      call update_arg_pos_char(ad%lst_char(ii), i)
     !-----------------------------------------------------------
     ! Case: Int4
     case( ITYPE_INT4 )
-      call update_arg_pos_int4(ad%lst_int4(ii), ii)
+      call update_arg_pos_int4(ad%lst_int4(ii), i)
     !-----------------------------------------------------------
     ! Case: ERROR
     case default
@@ -1037,6 +1053,9 @@ integer(4) function arg_int4(s) result(v)
       case( ITYPE_INT4 )
         a => ad%lst_int4(ad%idx_positional(i))
         if( a%name == s )then
+          if( .not. a%used )then
+            call errend('The '//ordinal(i)//' positional argument is missing.')
+          endif
           v = a%val
           is_ok = .true.
           exit
