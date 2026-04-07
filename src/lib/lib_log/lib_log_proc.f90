@@ -968,7 +968,7 @@ subroutine logwrn(msg, stp, prc, mod, opt)
     call echo_lines('****** WARING ******', STDOUT, set%indent(depth), .true.)
   endif
   if( echoPrc )then
-    call echo_lines(strprc(prc_, mod_), STDOUT, set%indent(depth), .true.)
+    call echo_lines(strstp(stp_, prc_, mod_), STDOUT, set%indent(depth), .true.)
   endif
   if( echoMsg )then
     call echo_lines(trim(msg), STDOUT, set%indent(depth), makeNewLine)
@@ -1092,7 +1092,7 @@ subroutine logerr(msg, stp, prc, mod, opt)
     call echo_lines('****** ERROR ******', STDOUT, set%indent(depth), .true.)
   endif
   if( echoPrc )then
-    call echo_lines('in '//strstp(stp_, prc_, mod_), STDOUT, set%indent(depth), .true.)
+    call echo_lines(strstp(stp_, prc_, mod_), STDOUT, set%indent(depth), .true.)
   endif
   if( echoMsg )then
     call echo_lines(trim(msg), STDOUT, set%indent(depth), makeNewLine)
@@ -1213,7 +1213,6 @@ subroutine errret(msg, prc, mod)
 
   character(:), allocatable :: msg_
   character(:), allocatable :: errmsg
-  character(:), allocatable :: c
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -1224,18 +1223,18 @@ subroutine errret(msg, prc, mod)
   ! Case: `logbgn` was not called in the upper procedure
   ! Thus, need not to call `logret` here.
   if( present(prc) .and. present(mod) )then
-    call erradd(msg_, '', prc, mod)
+    call erradd(msg, '', prc, mod)
   !-------------------------------------------------------------
   ! Case: `logbgn` was called in the upper procedure
   ! Thus, need to call `logret` here.
   elseif( .not. present(prc) .and. .not. present(mod) )then
     do
       if( set%stp(depth) == '' )then
-        call erradd(msg_, '', set%prc(depth), set%mod(depth))
+        call erradd(msg, '', set%prc(depth), set%mod(depth))
         call logret()
         exit
       else
-        call erradd(msg_, set%stp(depth), set%prc(depth), set%mod(depth))
+        call erradd(msg, set%stp(depth), set%prc(depth), set%mod(depth))
         call logret()
       endif
     enddo
@@ -1243,19 +1242,9 @@ subroutine errret(msg, prc, mod)
   ! Case: ERROR
   else
     allocate(character(1) :: errmsg)
-
-    allocate(character(1) :: c)
     errmsg = 'present(prc) .neqv. present(mod)'
-    if( present(prc) )then
-      c = errmsg//'\nprc: '//trim(prc)
-      errmsg = c
-    endif
-
-    if( present(mod) )then
-      c = errmsg//'\nmod: '//trim(mod)
-      errmsg = c
-    endif
-
+    if( present(prc) ) errmsg = trim(errmsg)//'\nprc: '//trim(prc)
+    if( present(mod) ) errmsg = trim(errmsg)//'\nmod: '//trim(mod)
     call errend(errmsg, &
                 '', PRCNAM, MODNAM)
   endif
@@ -1303,21 +1292,14 @@ subroutine errapd(msg, newline)
 
   logical :: newline_
 
-  character(:), allocatable :: c
-
   newline_ = .true.
   if( present(newline) ) newline_ = newline
 
-  allocate(character(1) :: c)
-  c = err(n_err)%msg
-
   if( newline_ )then
-    err(n_err)%msg = c//'\n'//trim(msg)
+    err(n_err)%msg = trim(err(n_err)%msg)//'\n'//trim(msg)
   else
-    err(n_err)%msg = c//trim(msg)
+    err(n_err)%msg = trim(err(n_err)%msg)//trim(msg)
   endif
-
-  deallocate(c)
 end subroutine errapd
 !===============================================================
 !
@@ -1515,11 +1497,6 @@ subroutine setlog(opt)
   call fwrd_dict(cmd%msrTime, set%msrTime, &
                  depth, val_msrTime, isRec_msrTime)
   !-------------------------------------------------------------
-  ! Update the indent
-  !-------------------------------------------------------------
-  set%indent(depth) = set%indent(depth) + indentInc
-  set%indentInc(depth) = set%indentInc(depth) + indentInc
-  !-------------------------------------------------------------
 end subroutine setlog
 !===============================================================
 !
@@ -1613,12 +1590,10 @@ function strprc(prc, mod) result(s)
   implicit none
   character(*), intent(in) :: prc
   character(*), intent(in) :: mod
-
   character(:), allocatable :: s
 
   allocate(character(1) :: s)
-
-  if( mod == '' )then
+  if( len_trim(mod) == 0 )then
     s = trim(prc)
   else
     s = trim(prc)//'__MOD__'//trim(mod)
@@ -1632,44 +1607,18 @@ function strstp(stp, prc, mod) result(s)
   character(*), intent(in) :: stp
   character(*), intent(in) :: prc
   character(*), intent(in) :: mod
-
-  character(len_trim(prc)) :: prc_
-  logical :: is_program
   character(:), allocatable :: s
 
   allocate(character(1) :: s)
-
-  call modify_prc(prc, prc_, is_program)
-
   if( stp == '' )then
-    if( is_program )then
-      s = 'PROGRAM__'//trim(prc_)
-    else
-      s = 'MOD__'//trim(mod)//&
-          '__PROC__'//trim(prc_)
-    endif
+    s = 'MOD__'//trim(mod)//&
+        '__PROC__'//trim(prc)
   else
     s = 'MOD__'//trim(mod)//&
-        '__PROC__'//trim(prc_)//&
+        '__PROC__'//trim(prc)//&
         ' step "'//trim(stp)//'"'
   endif
 end function strstp
-!===============================================================
-!
-!===============================================================
-subroutine modify_prc(prc, prc_, is_program)
-  implicit none
-  character(*), intent(in) :: prc
-  character(*), intent(out) :: prc_
-  logical, intent(out) :: is_program
-
-  is_program = .false.
-  prc_ = trim(prc)
-  if( index(prc, 'program ') == 1 )then
-    is_program = .true.
-    prc_ = trim(prc(len('program ')+1:))
-  endif
-end subroutine modify_prc
 !===============================================================
 !
 !===============================================================
