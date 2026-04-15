@@ -240,17 +240,22 @@ path_report: "{util.get_remapDir(srcMeshName, tgtMeshName)}/report/{var}_{i:04d}
 
 
 def plot_field(
-  srcRefinement, srcMeshType, srcResolution,
-  tgtRefinement, tgtMeshType, tgtResolution, 
-  mesh, var, i,
-  overwrite,
-  log):
+  srcRefinement: str, srcMeshType: str, srcResolution: int,
+  tgtRefinement: str, tgtMeshType: str, tgtResolution: int, 
+  mesh: str, var: str, i: int,
+  plot_val: bool, vmin: float, vmax: float, 
+  plot_diff: bool, dmax: float,
+  overwrite: bool,
+  log: bool):
 
     import numpy as np
 
     """
     mesh = {src, tgt}
     """
+
+    if i == 0:
+        plot_diff = False
 
     srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
     tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
@@ -262,21 +267,35 @@ def plot_field(
     elif mesh == 'tgt':
         mesh_long = 'target'
 
-    vmin, vmax = util.LST_RANGE[var]
-
     remapDir = util.get_remapDir(srcMeshName, tgtMeshName)
     f_ini = f'{remapDir}/field/{var}/{var}_{mesh}_{0:04d}.bin'
     f_val = f'{remapDir}/field/{var}/{var}_{mesh}_{i:04d}.bin'
     f_dif = f'{remapDir}/field/{var}_diff/{var}_{mesh}_{i:04d}.bin'
-    if i != 0:
+    if plot_diff:
         if log:
             print(f'  diff: {f_dif}')
         os.makedirs(os.path.dirname(f_dif), exist_ok=True)
         (np.fromfile(f_val) - np.fromfile(f_ini)).tofile(f_dif)
 
+    if vmin is None:
+        vmin = util.DICT_VAR[var]["vmin"]
+    if vmax is None:
+        vmax = util.DICT_VAR[var]["vmax"]
+    if plot_diff and dmax is None:
+        dmax = util.DICT_VAR[var]["dmax"]
+
     f_conf = f'conf/plot_field/{srcMeshName}_to_{tgtMeshName}/{var}_{mesh}_{i:04d}.conf'
+    fig_val = f'fig/field/{srcMeshName}_to_{tgtMeshName}/{var}/{var}_{mesh}_{i:04d}.png'
+    fig_dif = f'fig/field/{srcMeshName}_to_{tgtMeshName}/{var}_diff/{var}_{mesh}_{i:04d}.png'
     if log:
         print(f'  conf: {f_conf}')
+        if plot_val and plot_diff:
+            print(f'  fig_val : {fig_val}')
+            print(f'  fig_diff: {fig_dif}')
+        elif plot_val:
+            print(f'  fig_val: {fig_val}')
+        elif plot_diff:
+            print(f'  fig_diff: {fig_dif}')
     os.makedirs(os.path.dirname(f_conf), exist_ok=True)
     with open(f_conf, 'w') as wf:
         wf.write(f'\
@@ -288,18 +307,28 @@ def plot_field(
         wf.write(f'\
 [figures]\n\
   cmap: jet\n\
-  vmin: {vmin}\n\
-  vmax: {vmax}\n\
 \n\
   dir: ""\n\
+')
+        if plot_val:
+            wf.write(f'\
 \n\
   mesh: {mesh_long}\n\
-  path_fig: "fig/field/{srcMeshName}_to_{tgtMeshName}/{var}/{var}_{mesh}_{i:04d}.png"\n\
+  path_fig: "{fig_val}"\n\
   f_grdval: "{f_val}"\n\
+  vmin: {vmin}\n\
+  vmax: {vmax}\n\
+')
+        if plot_diff:
+            wf.write(f'\
 \n\
   mesh: {mesh_long}\n\
-  path_fig: "fig/field/{srcMeshName}_to_{tgtMeshName}/{var}_diff/{var}_{mesh}_{i:04d}.png"\n\
+  path_fig: "{fig_dif}"\n\
   f_grdval: "{f_dif}"\n\
+  vmin: {-dmax}\n\
+  vmax: {dmax}\n\
+')
+        wf.write('\
 [end]\n\
 ')
 
@@ -339,7 +368,7 @@ def make_netCDF(
             return
     nc = netCDF4.Dataset(f_nc, 'w', format='NETCDF4')
 
-    var_nc = util.TBL_VAR[var]
+    var_nc = util.DICT_VAR[var]["name"]
 
     dim_iter = nc.createDimension('iteration', None)
     dim_elem_tgt = nc.createDimension('elem_tgt', ntij)
@@ -391,7 +420,7 @@ def calc_metrics(
     cp = subprocess.run(['python3', util.SCRIPT_CANGAMETRICSDRIVER,
       '--ss', f_src, '--smc', '1',
       '--st', f_tgt, '--tmc', '1',
-      '--data', f_data, '--field', util.TBL_VAR[var],
+      '--data', f_data, '--field', util.DICT_VAR[var]["name"],
       '--output', fb_metrics],
       capture_output=True)
     if cp.returncode != 0:
@@ -405,6 +434,8 @@ def plot_metrics(
   srcMeshType, srcResolution,
   tgtMeshType, tgtResolution,
   metric, var,
+  ymin, ymax,
+  plot_GMLS, figname_add,
   overwrite,
   log):
 
@@ -415,18 +446,28 @@ def plot_metrics(
     srcMeshName, *_ = util.get_mesh(refinement, srcMeshType, srcResolution)
     tgtMeshName, *_ = util.get_mesh(refinement, tgtMeshType, tgtResolution)
 
+    x = np.arange(0, util.ITERMAX+1, util.ITERINT_PLOT)
+
     ds = {}
     lst_label = []
 
     f_metrics, _ = util.get_metricsFile(srcMeshName, tgtMeshName, var)
     if log:
         print(f'Metrics: {f_metrics}')
-    df = pd.read_csv(f_metrics)
+    df = pd.read_csv(f_metrics)[metric]
     df = df.drop(df.index[0])
-    ds["SPRING"] = df
+    y = df.values.astype(np.float64)
+    # TMP
+    #y = y[x]
+    y = y[x[:-1]]
+    y = np.r_[y, y[-1]]
+    ds["SPRING"] = y
     lst_label.append('SPRING')
 
     for algorithm in util.DICT_METRICSDATA.keys():
+        if not plot_GMLS and algorithm == 'GMLS':
+            continue
+
         d = util.DICT_METRICSDATA[algorithm]
         mode = tuple(d["mode"].keys())[-1]
         f_metrics = util.get_MIRAMetricsFile(
@@ -437,48 +478,67 @@ def plot_metrics(
 
         if log:
             print(f'Metrics: {f_metrics}')
-        df = pd.read_csv(f_metrics)
-        df = df.drop(df.index[0])
-        ds[algorithm] = df
+        df = pd.read_csv(f_metrics)[metric]
+        y = df.drop(df.index[0]).values
+        ds[algorithm] = y
         lst_label.append(f'{algorithm} ({d["mode"][mode]["label"]})')
+
+
+    if "function" in util.DICT_METRIC[metric].keys():
+        for algorithm in ds.keys():
+          ds[algorithm] = util.DICT_METRIC[metric]["function"](ds[algorithm])
+    if log:
+        for algorithm in ds.keys():
+            y = ds[algorithm]
+            print(f'{algorithm} iter={util.ITERMAX}: {y[-1]}, '\
+                  f'nan_exist: {np.isnan(y).any()}, '\
+                  f'nanmin: {y.min()}, nanmax: {y.max()}, nanmean: {np.nanmean(y)}')
 
 
     f_fig = util.get_metricsFigFile(
       refinement, srcMeshType, srcResolution, tgtMeshType, tgtResolution,
-      metric, var)
+      metric, var, figname_add)
     os.makedirs(os.path.dirname(f_fig), exist_ok=True)
 
     fig = plt.figure(figsize=(10,6))
     ax = fig.add_subplot(position=(0.1, 0.1, 0.6, 0.8))
-    x = np.arange(0, util.ITERMAX+1, util.ITERINT_PLOT)
     for algorithm, label in zip(list(ds.keys()), lst_label):
-        y = ds[algorithm][metric].values.astype(np.float64)
+        if not plot_GMLS and algorithm == 'GMLS':
+            continue
+
+        #y = ds[algorithm][metric].values.astype(np.float64)
+        y = ds[algorithm]
         if algorithm == 'SPRING':
-            # TMP
-            #y = y[x]
-            y = y[x[:-1]]
-            y = np.r_[y, y[-1]]
             color = 'red'
-            zorder = 1
+            zorder = 2
         else:
             color = util.DICT_METRICSDATA[algorithm]["color"]
-            zorder = 0
-
-        if metric in ('GC', 'GL1', 'GL2'):
-            y = np.array([np.log10(abs(v)) if v != 0 else np.nan for v in y])
-        print(f'{algorithm}: {y[-1]}')
+            zorder = 1
 
         ax.plot(x, y, label=label, color=color, zorder=zorder)
         ax.scatter(x, y, s=10, marker='o', color=color, zorder=zorder)
+
+    _, _, ymin_, ymax_ = ax.axis()
+    if ymin is None:
+        ymin = ymin_
+    if ymax is None:
+        ymax = ymax_
+    xticks = np.arange(0, util.ITERMAX+1, util.ITERINT_TICK)
+    yticks = ax.get_yticks()
+    kw = dict(linewidth=0.5, color='silver', zorder=0)
+    ax.hlines(yticks, x.min(), x.max(), **kw)
+    ax.vlines(xticks, ymin, ymax, **kw)
+    ax.set_xlim(x.min(), x.max())
+    ax.set_ylim(ymin, ymax)
+
     ax.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left', borderaxespad=0, fontsize=12)
-    ax.set_xlabel('Iteration', fontsize=12)
-    ax.set_ylabel(util.TBL_METRIC[metric], fontsize=12)
-    ax.set_title(f'{srcMeshType}{srcResolution}_{tgtMeshType}{tgtResolution}', fontsize=12)
+    ax.set_xlabel('Remap iteration', fontsize=12)
+    ax.set_ylabel(util.DICT_METRIC[metric]["label"], fontsize=12)
+    ax.set_title(f'{srcMeshType}{srcResolution}_{tgtMeshType}{tgtResolution} {var}', fontsize=12)
     if log:
         print(f'Fig: {f_fig}')
     plt.savefig(f_fig, bbox_inches='tight')
     plt.show()
-
 
 
 job = sys.argv[1]
@@ -564,6 +624,11 @@ elif job == 'plot_field':
     parser.add_argument('mesh', choices=['src', 'tgt'], type=str)
     parser.add_argument('variable', type=str)
     parser.add_argument('iteration', type=int)
+    parser.add_argument('--val', action='store_false')
+    parser.add_argument('--vmin', type=float)
+    parser.add_argument('--vmax', type=float)
+    parser.add_argument('--diff', action='store_false')
+    parser.add_argument('--dmax', type=float)
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -571,7 +636,9 @@ elif job == 'plot_field':
     plot_field(
       args.srcRefinement, args.srcMeshType, args.srcResolution, 
       args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
-      args.mesh, args.varriable, args.iteration,
+      args.mesh, args.variable, args.iteration,
+      args.val, args.vmin, args.vmax, 
+      args.diff, args.dmax,
       args.overwrite, 
       args.log)
 
@@ -627,6 +694,10 @@ elif job == 'plot_metrics':
     parser.add_argument('tgtResolution', type=int)
     parser.add_argument('metric', type=str)
     parser.add_argument('variable', type=str)
+    parser.add_argument('--min', type=float)
+    parser.add_argument('--max', type=float)
+    parser.add_argument('--GMLS', action='store_false')
+    parser.add_argument('--figadd', type=str)
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -636,7 +707,9 @@ elif job == 'plot_metrics':
       args.srcMeshType, args.srcResolution,
       args.tgtMeshType, args.tgtResolution,
       args.metric, args.variable, 
-      args.overwrite,
+      args.min, args.max,
+      args.GMLS,
+      args.figadd, args.overwrite,
       args.log)
 
 elif job == 'all':

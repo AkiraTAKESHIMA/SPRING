@@ -1,16 +1,18 @@
 import os
 import json
+import numpy as np
 
 
 ITERMAX = 1000
 ITERINT_PLOT = 10
+ITERINT_TICK = 200
 
 PROGRAM_REMAP = './bin/std/remap.exe'
 SCRIPT_PLOT_FIELD = 'bin/std/mkfig_remap.py'
 SCRIPT_CANGAMETRICSDRIVER = 'src/MIRA/CANGAMetricsDriver.py'
 
 MIRADATASETDIR = '../../ext/MIRA-Datasets'
-MIRAMESHDIR = '{MIRADATASETDIR}/Meshes'
+MIRAMESHDIR = f'{MIRADATASETDIR}/Meshes'
 BINMESHDIR = '../../dat/mesh/MIRA'
 MIRAMETRICSDIR = f'{MIRADATASETDIR}/MetricsData'
 METRICSFIGDIR = 'fig/metrics'
@@ -20,32 +22,93 @@ TBL_RFN = dict(
   r = 'RegionallyRefined',
 )
 
-TBL_VAR = dict(
-  TPW = 'TotalPrecipWater',
-  CFR = 'CloudFraction'   ,
-  TPO = 'Topography'      ,
-  A1  = 'AnalyticalFun1'  ,
-  A2  = 'AnalyticalFun2'  ,
+DICT_VAR = dict(
+  TPW = dict(
+    name = 'TotalPrecipWater',
+    cmap = "plasma",
+    vmin = 0,
+    vmax = 70,
+    dmax = 10,
+  ),
+  CFR = dict(
+    name = 'CloudFraction'   ,
+    cmap = "plasma",
+    vmin = 0,
+    vmax = 1,
+    dmax = 0.2,
+  ),
+  TPO = dict(
+    name = 'Topography',
+    cmap = "plasma",
+    vmin = -12000,
+    vmax = 10000,
+    dmax = 1000,
+  ),
+  A1 = dict(
+    name = 'AnalyticalFun1',
+  ),
+  A2 = dict(
+    name = 'AnalyticalFun2',
+  ),
 )
 
-TBL_METRIC = dict(
-  GC = r'Global Conservation Error ${L_g}$',
-  GL1 = r'Standard Error 1 ${E_{L_1}}$',
-  GL2 = r'Standard Error 2 ${E_{L_2}}$',
-  GLinf = r'Largest Pointwise Error ${E_{L_max}}$',
-  GMaxE = 'Global Overshoot ${|G_{max}|}$',
-  GMinE = 'Global Undershoot ${|G_{min}|}$',
-  LMaxL1 = 'L1 of Local Maxima ${L_{max,1}}$',
-  LMaxL2 = 'L2 of Local Maxima ${L_{max,2}}$',
-  LMaxLm = 'Linf of Local Maxima ${L_{max,inf}}$',
-  LMinL1 = 'L1 of Local Minima ${L_{min,1}}$',
-  LMinL2 = 'L2 of Local Minima ${L_{min,2}}$',
-  LMinLm = 'Linf of Local Minima ${L_{min,inf}}$',
-  H12T = '',
-  H1T = '',
-  H12S = '',
-  H1S = '',
-)
+def metrics_log10(x):
+    return np.array([np.log10(abs(v)) if v != 0 else np.nan for v in x])
+
+
+DICT_METRIC = {
+  "GC": {
+    "function": metrics_log10,
+    "label": r'Global Conservation Error, $\mathrm{log}_{10}L_g$',
+  },
+  "GL1": {
+    "function": metrics_log10,
+    "label": r'L1 of Standard Error, $\mathrm{log}_{10}E_{L_1}$',
+  },
+  "GL2": {
+    "function": metrics_log10,
+    "label": r'L2 of Standard Error, $\mathrm{log}_{10}E_{L_2}$',
+  },
+  "GLinf": {
+    "label": r'Largest Pointwise Error, $E_{L_max}$',
+  },
+  "GMaxE": {
+    "label": 'Global Overshoot, ${|G_{max}|}$',
+  },
+  "GMinE": {
+    "label": 'Global Undershoot, ${|G_{min}|}$',
+  },
+  "LMaxL1": {
+    "label": 'L1 of Local Maxima Error, $L_{max,1}$',
+  },
+  "LMaxL2": {
+    "label": 'L2 of Local Maxima Error, $L_{max,2}$',
+  },
+  "LMaxLm": {
+    "label": 'Largest Error in Local Maxima, $L_{max,inf}$',
+  },
+  "LMinL1": {
+    "label": 'L1 of Local Minima Error, $L_{min,1}$',
+  },
+  "LMinL2": {
+    "label": 'L2 of Local Minima Error, $L_{min,2}$',
+  },
+  "LMinLm": {
+    "label": 'Largest Error in Local Minima, $L_{min,inf}$',
+  },
+  "H12T": {
+    "label": '',
+  },
+  "H1T": {
+    "label": '',
+  },
+  "H12S": {
+    "label": '',
+  },
+  "H1S": {
+    "label": '',
+  },
+}
 
 DICT_MESH = {
   "u": {
@@ -371,8 +434,10 @@ for alrogithm in DICT_METRICSDATA["r"].keys():
 """
             
 
-LST_RANGE = dict(
+TBL_RANGE = dict(
   TPW = (0., 70.),
+  CFR = (0, 1.0),
+  TPO = (-12000, 8000)
 )
 
 COLOR_TPW = (
@@ -555,7 +620,7 @@ def get_fieldNCFile(srcMeshName: str, tgtMeshName: str, var: str):
 
 
 def get_metricsFile(srcMeshName: str, tgtMeshName: str, var: str):
-    return f'out/metrics/{srcMeshName}_to_{tgtMeshName}_{TBL_VAR[var]}.csv',\
+    return f'out/metrics/{srcMeshName}_to_{tgtMeshName}_{DICT_VAR[var]["name"]}.csv',\
            f'out/metrics/{srcMeshName}_to_{tgtMeshName}.csv'
 
 
@@ -573,7 +638,7 @@ def get_MIRAMetricsFile(
 
     s = f'{srcMesh["file"]}{srcMesh["resolution"][srcResolution]}'
     t = f'{tgtMesh["file"]}{tgtMesh["resolution"][tgtResolution]}'
-    f = f'metrics_{s}_{t}_{mode_file}_{TBL_VAR[var]}.csv'
+    f = f'metrics_{s}_{t}_{mode_file}_{DICT_VAR[var]["name"]}.csv'
     if refinement == 'u':
         return f'{MIRAMETRICSDIR}/{TBL_RFN[refinement]}/{algorithm}/'\
                f'{srcMesh["dir"]}-{tgtMesh["dir"]}/{mode_dir}/{f}'
@@ -587,7 +652,7 @@ def get_metricsFigFile(
   tgtMeshType: str, tgtResolution: int,
   metric: str, var: str, add: str=''):
 
-    if add == '':
+    if add is None or add == '':
         add_ = 'default'
     else:
         add_ = add

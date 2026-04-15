@@ -723,7 +723,7 @@ subroutine logent(stp, prc, mod, opt)
   set%indent(depth) = set%indent(depth-1) + indentInc
   set%indentInc(depth) = indentInc
 
-  set%echoPrc(depth) = get_tf(val_echoPrc, set%echoPrc(depth-1))
+  set%echoPrc(depth) = get_tf(val_echoPrc, set%echoPcc(depth-1))
   !-------------------------------------------------------------
   ! Print the message
   !-------------------------------------------------------------
