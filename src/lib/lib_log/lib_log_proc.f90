@@ -1512,6 +1512,14 @@ subroutine setlog(opt)
   call fwrd_dict(cmd%msrTime, set%msrTime, &
                  depth, val_msrTime, isRec_msrTime)
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( indent == INDENT_MISS )then
+    set%indent(depth) = set%indent(depth) + indentInc
+  else
+    set%indent(depth) = indent
+  endif
+  !-------------------------------------------------------------
 end subroutine setlog
 !===============================================================
 !

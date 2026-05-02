@@ -7,17 +7,19 @@ module lib_math_interp
   !-------------------------------------------------------------
   ! Public procedures
   !-------------------------------------------------------------
-  public :: interpolate
+  public :: interp_fv2fv_conserve1st
+
+  public :: interp_bilinear
   !-------------------------------------------------------------
   ! Interfaces
   !-------------------------------------------------------------
-  interface interpolate
-    module procedure interpolate__real_2d
-  end interface interpolate
+  interface interp_fv2fv_conserve1st
+    module procedure interp_fv2fv_conserve1st__real_2d
+  end interface
 
-  interface interpolate_linear
-    module procedure interpolate_linear__real_2d
-  end interface interpolate_linear
+  interface interp_bilinear
+    module procedure interp_bilinear__dble
+  end interface
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
@@ -25,43 +27,12 @@ module lib_math_interp
   !-------------------------------------------------------------
 contains
 !===============================================================
-!
+! Conservative remapping from finit volume (FV) to FV
 !===============================================================
-integer(4) function interpolate__real_2d(&
-    s, t, method) result(info)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'interpolate__real_2d'
-  real(4)     , intent(in)  :: s(:,:)
-  real(4)     , intent(out) :: t(:,:)
-  character(*), intent(in)  :: method
-
-  info = 0
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  if( all(shape(s) == shape(t)) )then
-    t(:,:) = s(:,:)
-  else
-    selectcase( method )
-    case(  INTERP_METHOD_LINEAR )
-      if( interpolate_linear(s, t) /= 0 )then
-        info = 1; call errret(); return
-      endif
-    case default
-      info = 1
-      call errret(msg_invalid_value('method', method))
-      return
-    endselect
-  endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end function interpolate__real_2d
-!===============================================================
-!
-!===============================================================
-integer(4) function interpolate_linear__real_2d(&
+integer(4) function interp_fv2fv_conserve1st__real_2d(&
     s, t) result(info)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'interpolate_linear__real_2d'
+  character(CLEN_PROC), parameter :: PRCNAM = 'interp_fv2fv_conserve1st__real_2d'
   integer, parameter :: byte = 4
   real(byte), intent(in)  :: s(:,:)
   real(byte), intent(out) :: t(:,:)
@@ -146,7 +117,42 @@ integer(4) function interpolate_linear__real_2d(&
   enddo
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end function interpolate_linear__real_2d
+end function interp_fv2fv_conserve1st__real_2d
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+! Bilinear interpolation
+!
+! z3 ---- z4       ↑
+! |        |       |
+! |   z -- | -- y  | ly
+! |   |    |       |
+! z1 ---- z2       ↓
+!     |
+!     x
+!
+! ←--------→
+!     lx
+!===============================================================
+real(8) function interp_bilinear__dble(&
+    z1, z2, z3, z4, lx, ly, x, y &
+) result(z)
+  implicit none
+  real(8), intent(in) :: z1, z2, z3, z4
+  real(8), intent(in) :: lx, ly, x, y
+
+  real(8) :: rx, ry
+
+  rx = x / lx
+  ry = y / ly
+  z = z1*(1-rx)*(1-ry) + z2*rx*(1-ry) + z3*(1-rx)*ry + z4*rx*ry
+end function interp_bilinear__dble
 !===============================================================
 !
 !===============================================================
