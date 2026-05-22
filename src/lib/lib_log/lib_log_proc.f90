@@ -892,7 +892,6 @@ subroutine logwrn(msg, stp, prc, mod, opt)
   logical :: echoMsg
   logical :: echoBar
   logical :: forceEcho
-
   logical :: makeNewLine
   integer :: indent, indentInc
   character(CLEN_OPT) :: opt_, opt1
@@ -915,6 +914,7 @@ subroutine logwrn(msg, stp, prc, mod, opt)
   val_echoBar = LMISS
 
   makeNewLine = .true.
+  forceEcho = .false.
 
   indent = INDENT_MISS
   indentInc = 0
@@ -949,6 +949,10 @@ subroutine logwrn(msg, stp, prc, mod, opt)
       val_echoMsg = LFALS
     case( 'f' )
       forceEcho = .true.
+    case( '+n' )
+      makeNewLine = .true.
+    case( '-n' )
+      makeNewLine = .false.
     case default
       if( opt1(:1) == 'x' )then
         read(opt1(2:),*,iostat=ios) indent
@@ -987,6 +991,9 @@ subroutine logwrn(msg, stp, prc, mod, opt)
   endif
   if( echoMsg )then
     call echo_lines(trim(msg), STDOUT, set%indent(depth), makeNewLine)
+  endif
+  if( echoBar )then
+    call echo_lines('********************', STDOUT, set%indent(depth), .true.)
   endif
   !-------------------------------------------------------------
   !
