@@ -398,6 +398,7 @@ integer(4) function make_idxmap__latlon(&
   fg_in => al%f_grid_in
 
   al%status_idxmap = GRID_STATUS__PREPARED
+  al%status_mskmap = GRID_STATUS__PREPARED
   allocate(al%idxmap(al%hi:al%hf,al%vi:al%vf))
   allocate(al%mskmap(al%hi:al%hf,al%vi:al%vf))
   !-------------------------------------------------------------
@@ -1416,6 +1417,7 @@ integer(4) function make_idxmap__raster(&
   fr => ar%f_raster_in
 
   ar%status_idxmap = GRID_STATUS__PREPARED
+  ar%status_mskmap = GRID_STATUS__PREPARED
   do iz = 1, ar%nZone
     arz => ar%zone(iz)
     allocate(arz%idxmap(arz%hi:arz%hf,arz%vi:arz%vf))
@@ -2876,10 +2878,10 @@ integer(4) function make_grdidx__polygon(ap) result(info)
 
   g%status_idx = GRID_STATUS__PREPARED
   g%status_msk = GRID_STATUS__PREPARED
-  g%nij = ap%nij
-  allocate(g%idx(g%nij))
-  allocate(g%idxarg(g%nij))
-  allocate(g%msk(g%nij))
+  g%nij = ap%ije - ap%ijs + 1_8
+  allocate(g%idx(ap%ijs:ap%ije))
+  allocate(g%idxarg(ap%ijs:ap%ije))
+  allocate(g%msk(ap%ijs:ap%ije))
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2894,20 +2896,15 @@ integer(4) function make_grdidx__polygon(ap) result(info)
 
     call argsort(g%idx, g%idxarg)
 
-    do ij = 1_8, g%nij
-      g%msk(ij) = g%idx(ij) /= ap%idx_miss
-    enddo
-
     call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
     call logent('Case: No input', PRCNAM, MODNAM)
 
-    do ij = 1_8, g%nij
+    do ij = ap%ijs, ap%ije
       g%idx(ij) = ij + fg_in%idx_bgn - 1_8
       g%idxarg(ij) = ij
-      g%msk(ij) = .true.
     enddo
 
     call logext()
@@ -2915,8 +2912,24 @@ integer(4) function make_grdidx__polygon(ap) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  g%idxmin = g%idx(g%idxarg(1))
-  g%idxmax = g%idx(g%idxarg(g%nij))
+  if( associated(ap%polygon) )then
+    where( g%idx == ap%idx_miss .or. ap%polygon(:)%n < 3 )
+      g%msk = .false.
+    elsewhere
+      g%msk = .true.
+    endwhere
+  else
+    where( g%idx == ap%idx_miss )
+      g%msk = .false.
+    elsewhere
+      g%msk = .true.
+    endwhere
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  g%idxmin = g%idx(g%idxarg(ap%ijs))
+  g%idxmax = g%idx(g%idxarg(ap%ije))
 
   ap%idxmin = g%idxmin
   ap%idxmax = g%idxmax
@@ -2932,7 +2945,7 @@ integer(4) function make_grdidx__polygon(ap) result(info)
     if( loc == 0_8 .or. ap%idx_debug == ap%idx_miss )then
       ap%is_valid = .false.
     else
-      g%ij_debug = g%idxarg(loc)
+      g%ij_debug = g%idxarg(ap%ijs+loc-1)
       g%msk(g%ij_debug) = .true.
     endif
   endif
@@ -2972,7 +2985,7 @@ integer(4) function make_grduwa__polygon(ap) result(info)
   g     => ap%grid
 
   g%status_uwa = GRID_STATUS__PREPARED
-  allocate(g%uwa(g%nij))
+  allocate(g%uwa(ap%ijs:ap%ije))
 
   if( .not. ap%is_valid )then
     g%uwa(:) = ap%uwa_miss
@@ -2985,7 +2998,7 @@ integer(4) function make_grduwa__polygon(ap) result(info)
   !
   !-------------------------------------------------------------
   g%uwa(:) = ap%uwa_miss
-  do ij = 1_8, g%nij
+  do ij = ap%ijs, ap%ije
     if( .not. g%msk(ij) ) cycle
 
     p => ap%polygon(ij)
@@ -3046,7 +3059,7 @@ integer(4) function make_grdara__polygon(ap) result(info)
   g     => ap%grid
 
   g%status_ara = GRID_STATUS__PREPARED
-  allocate(g%ara(g%nij))
+  allocate(g%ara(ap%ijs:ap%ije))
 
   if( .not. ap%is_valid )then
     g%ara(:) = ap%ara_miss
@@ -3070,16 +3083,15 @@ integer(4) function make_grdara__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
-    do ij = 1_8, g%nij
-      if( g%msk(ij) )then
-        if( g%ara(ij) <= 0.d0 )then
-          info = 1
-          call errret(msg_unexpected_condition()//&
-                    '\n  g%ara('//str(ij)//') <= 0.0'//&
-                    '\n  idx: '//str(g%idx(ij))//&
-                    '\n  ara: '//str(g%ara(ij)))
-          return
-        endif
+    do ij = ap%ijs, ap%ije
+      if( .not. g%msk(ij) ) cycle
+      if( g%ara(ij) <= 0.d0 )then
+        info = 1
+        call errret(msg_unexpected_condition()//&
+                  '\n  g%ara('//str(ij)//') <= 0.0'//&
+                  '\n  idx: '//str(g%idx(ij))//&
+                  '\n  ara: '//str(g%ara(ij)))
+        return
       endif
     enddo
 
@@ -3096,13 +3108,11 @@ integer(4) function make_grdara__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
-    do ij = 1_8, g%nij
-      if( g%msk(ij) )then
-        g%ara(ij) = g%uwa(ij) * g%wgt(ij)
-      else
-        g%ara(ij) = ap%ara_miss
-      endif
-    enddo
+    where( g%msk )
+      g%ara = g%uwa * g%wgt
+    elsewhere
+      g%ara = ap%ara_miss
+    endwhere
 
     call logext()
   !-------------------------------------------------------------
@@ -3158,7 +3168,7 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
   g     => ap%grid
 
   g%status_wgt = GRID_STATUS__PREPARED
-  allocate(g%wgt(g%nij))
+  allocate(g%wgt(ap%ijs:ap%ije))
 
   if( .not. ap%is_valid )then
     g%wgt(:) = ap%wgt_miss
@@ -3181,11 +3191,11 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
-    g%wgt(:) = ap%wgt_miss
-    do ij = 1_8, g%nij
-      if( .not. g%msk(ij) ) cycle
-      g%wgt(ij) = g%ara(ij) / g%uwa(ij)
-    enddo
+    where( g%msk )
+      g%wgt = g%ara / g%uwa
+    elsewhere
+      g%wgt = ap%wgt_miss
+    endwhere
 
     call logext()
   !-------------------------------------------------------------
@@ -3198,32 +3208,38 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
+    where( .not. g%msk )
+      g%wgt = ap%wgt_miss
+    endwhere
+
     call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
     call logent('Case: No input', PRCNAM, MODNAM)
 
-    g%wgt(:) = 1.d0
+    where( g%msk )
+      g%wgt = 1.d0
+    elsewhere
+      g%wgt = ap%wgt_miss
+    endwhere
 
     call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
   !-------------------------------------------------------------
-  do ij = 1_8, g%nij
-    if( g%msk(ij) )then
-      if( g%wgt(ij) < 0.d0 )then
-        info = 1
-        call errret(msg_unexpected_condition()//&
-                  '\n  g%wgt(ij) < 0.d0'//&
-                  '\n  ij: '//str(ij)//&
-                  '\n  idx: '//str(g%idx(ij))//&
-                  '\n  wgt: '//str(g%wgt(ij)))
-        return
-      endif
-    else
-      g%wgt(ij) = ap%wgt_miss
+  do ij = ap%ijs, ap%ije
+    if( .not. g%msk(ij) ) cycle
+
+    if( g%wgt(ij) < 0.d0 )then
+      info = 1
+      call errret(msg_unexpected_condition()//&
+                '\n  g%wgt(ij) < 0.d0'//&
+                '\n  ij: '//str(ij)//&
+                '\n  idx: '//str(g%idx(ij))//&
+                '\n  wgt: '//str(g%wgt(ij)))
+      return
     endif
   enddo  ! ij/
   !-------------------------------------------------------------
@@ -3266,9 +3282,9 @@ integer(4) function make_grdxyz__polygon(ap) result(info)
   g     => ap%grid
 
   g%status_xyz = GRID_STATUS__PREPARED
-  allocate(g%x(g%nij))
-  allocate(g%y(g%nij))
-  allocate(g%z(g%nij))
+  allocate(g%x(ap%ijs:ap%ije))
+  allocate(g%y(ap%ijs:ap%ije))
+  allocate(g%z(ap%ijs:ap%ije))
 
   if( .not. ap%is_valid )then
     g%x(:) = ap%xyz_miss
@@ -3309,7 +3325,7 @@ integer(4) function make_grdxyz__polygon(ap) result(info)
     g%x(:) = ap%xyz_miss
     g%y(:) = ap%xyz_miss
     g%z(:) = ap%xyz_miss
-    do ij = 1_8, g%nij
+    do ij = ap%ijs, ap%ije
       if( .not. g%msk(ij) ) cycle
 
       p => ap%polygon(ij)
@@ -3367,8 +3383,8 @@ integer(4) function make_grdlonlat__polygon(ap) result(info)
   g     => ap%grid
 
   g%status_lonlat = GRID_STATUS__PREPARED
-  allocate(g%lon(g%nij))
-  allocate(g%lat(g%nij))
+  allocate(g%lon(ap%ijs:ap%ije))
+  allocate(g%lat(ap%ije:ap%ije))
 
   if( .not. ap%is_valid )then
     g%lon(:) = ap%lonlat_miss

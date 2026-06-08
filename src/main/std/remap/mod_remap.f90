@@ -112,10 +112,6 @@ subroutine remap(s, t, rt)
       !---------------------------------------------------------
       ! Read input
       !---------------------------------------------------------
-!      call traperr( rbin(&
-!             sval_2d, sf%path, sf%dtype, sf%endian, sf%rec, &
-!             sz=sfg%sz(:2), lb=sfg%lb(:2)) )
-
       selectcase( sfg%ny )
       case( 1_8 )
         call traperr( rbin(&
