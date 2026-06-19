@@ -267,15 +267,15 @@ integer(4) function read_data_plainbinary(ap) result(info)
       do ij = ap%ije-2_8, ap%ije
         p => ap%polygon(ij)
         call logmsg('ij '//str(ij,dgt(ap%ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
+                  '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
+                  '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
       enddo
     else
       do ij = ap%ijs, ap%ije
         p => ap%polygon(ij)
         call logmsg('ij '//str(ij,dgt(ap%ije))//&
-                '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
-                '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
+                  '\n  lon: '//str_coords(p%lon,1.d0,ap%coord_miss_s,WFMT_COORD)//&
+                  '\n  lat: '//str_coords(p%lat,1.d0,ap%coord_miss_s,WFMT_COORD))
       enddo
     endif
 
@@ -700,7 +700,7 @@ integer(4) function count_vertices(ap) result(info)
       p%arctyp(p%n) = p_%arctyp(n)
     enddo  ! n/
 
-    if( p%n < 3 )then
+    if( p%n > 0 .and. p%n < 3 )then
       call logwrn('The number of vertices with valid coordinates is less than 3.'//&
           '\n  ij: '//str(ij)//&
           '\n  n: '//str(n)//&
