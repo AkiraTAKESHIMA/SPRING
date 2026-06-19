@@ -6,7 +6,7 @@ import json
 import util
 
 
-def block_mesh(refinement, meshType, resolution):
+def block_mesh(refinement: str, meshType: str, resolution: int):
     meshName, meshDir, nk, nij = util.get_mesh(refinement, meshType, resolution)
 
     s = f'\
@@ -24,7 +24,7 @@ def block_mesh(refinement, meshType, resolution):
     return s
 
 
-def block_remapping_rt(srcMeshName, tgtMeshName, isForth):
+def block_remapping_rt(srcMeshName: str, tgtMeshName: str, isForth: bool):
     rtDir = util.get_rtDir(srcMeshName, tgtMeshName, isForth)
 
     s = f'\
@@ -40,7 +40,8 @@ def block_remapping_rt(srcMeshName, tgtMeshName, isForth):
     return s
 
 
-def block_remapping_remap(srcMeshName, tgtMeshName, isForth, var, i):
+def block_remapping_remap(
+        srcMeshName: str, tgtMeshName: str, isForth: bool, var: str, i: int):
     rtDir = util.get_rtDir(srcMeshName, tgtMeshName, isForth)
     nij = int(os.path.getsize(f'{rtDir}/grid.bin') / 8)
     fin_grdval, fout_grdval = util.get_fieldBinFile(isForth, var, i)
@@ -74,11 +75,11 @@ def block_options():
 
 
 def make_remapping_table(
-  srcRefinement, srcMeshType, srcResolution,
-  tgtRefinement, tgtMeshType, tgtResolution,
-  isForth,
-  overwrite,
-  log):
+  srcRefinement: str, srcMeshType: str, srcResolution: str,
+  tgtRefinement: str, tgtMeshType: str, tgtResolution: str,
+  isForth: bool,
+  overwrite: bool,
+  log: bool):
 
     srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
     tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
@@ -149,11 +150,11 @@ path_report: "{util.get_rtDir(srcMeshName, tgtMeshName, isForth)}/report.txt"\n\
 
 
 def remap_field(
-  srcRefinement, srcMeshType, srcResolution,
-  tgtRefinement, tgtMeshType, tgtResolution, 
-  isForth, var, i,
-  overwrite, 
-  log):
+  srcRefinement: str, srcMeshType: str, srcResolution: str,
+  tgtRefinement: str, tgtMeshType: str, tgtResolution: str, 
+  isForth: bool, var: str, i: int,
+  overwrite: bool, 
+  log: bool):
 
     srcMeshName, srcMeshDir, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
     tgtMeshName, tgtMeshDir, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
@@ -344,11 +345,11 @@ def plot_field(
 
 
 def make_netCDF(
-  srcRefinement, srcMeshType, srcResolution,
-  tgtRefinement, tgtMeshType, tgtResolution,
-  var,
-  overwrite,
-  log):
+  srcRefinement: str, srcMeshType: str, srcResolution: str,
+  tgtRefinement: str, tgtMeshType: str, tgtResolution: str,
+  var: str,
+  overwrite: bool,
+  log: bool):
 
     import numpy as np
     import netCDF4
@@ -393,11 +394,11 @@ def make_netCDF(
 
 
 def calc_metrics(
-  srcRefinement, srcMeshType, srcResolution,
-  tgtRefinement, tgtMeshType, tgtResolution,
-  var,
-  overwrite,
-  log):
+  srcRefinement: str, srcMeshType: str, srcResolution: str,
+  tgtRefinement: str, tgtMeshType: str, tgtResolution: str,
+  var: str,
+  overwrite: bool,
+  log: bool):
 
     srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
     tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
@@ -430,14 +431,14 @@ def calc_metrics(
 
 
 def plot_metrics(
-  refinement, 
-  srcMeshType, srcResolution,
-  tgtMeshType, tgtResolution,
-  metric, var,
-  ymin, ymax,
-  plot_GMLS, figname_add,
-  overwrite,
-  log):
+  refinement: str, 
+  srcMeshType: str, srcResolution: str,
+  tgtMeshType: str, tgtResolution: str,
+  metric: str, var: str,
+  ymin: float, ymax: float,
+  plot_GMLS: bool, figname_add: str,
+  overwrite: bool,
+  log: bool):
 
     import pandas as pd
     import numpy as np
@@ -541,6 +542,105 @@ def plot_metrics(
     plt.show()
 
 
+def list_output(dataName: str):
+    if dataName == 'metrics':
+        list_output__metrics()
+
+
+def list_output__metrics():
+    lst_mesh = {}
+    for refinement in util.DICT_MESH:
+        lst_mesh[refinement] = []
+        d1 = util.DICT_MESH[refinement]
+        for meshType in d1:
+            d2 = d1[meshType]
+            for resolution in d2:
+                lst_mesh[refinement].append((meshType, resolution))
+
+    def list_all(lst_mesh, srcRefinement, tgtRefinement):
+        print(f'{" "*9}{tgtRefinement}')
+
+        line = ' '*9
+        for tgtMeshType in util.DICT_MESH[tgtRefinement]:
+            line += f'{tgtMeshType:<{6*len(util.DICT_MESH[tgtRefinement][tgtMeshType])}s}'
+        print(line)
+
+        line = ' '*9
+        for tgtMeshType in util.DICT_MESH[tgtRefinement]:
+            for tgtResolution in util.DICT_MESH[tgtRefinement][tgtMeshType]:
+                line += f'{str(tgtResolution):<6s}'
+        print(line)
+
+        is_first = True
+        srcMeshType_prev = ''
+        for srcMeshInfo in lst_mesh[srcRefinement]:
+            srcMeshType, srcResolution = srcMeshInfo
+            srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
+
+            if is_first:
+                line = f'{srcRefinement}'
+            else:
+                line = ' '
+            if srcMeshType != srcMeshType_prev:
+                line += f' {srcMeshType:<4s}'
+            else:
+                line += f' {"":<4s}'
+            line += f' {srcResolution}'
+
+            is_first = False
+            srcMeshType_prev = srcMeshType
+
+            for tgtMeshInfo in lst_mesh[tgtRefinement]:
+                tgtMeshType, tgtResolution = tgtMeshInfo
+                tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
+
+                line += ' '
+                for var in util.DICT_VAR:
+                    f_metrics, *_ = util.get_metricsFile(srcMeshName, tgtMeshName, var)
+                    if os.path.isfile(f_metrics):
+                        stat = 0
+                    else:
+                        stat = 1
+
+                    line += get_char_stat(stat)
+            print(line)
+
+    for srcRefinement in util.DICT_MESH:
+        for tgtRefinement in util.DICT_MESH:
+            list_all(lst_mesh, srcRefinement, tgtRefinement)
+
+
+def get_char_stat(stat):
+    if stat == 0:
+        return '✓'
+    elif stat == 1:
+        return 'X'
+    else:
+        raise Exception(f'Invalid value in `stat`: {stat}')
+
+
+"""
+        u
+        CS        ICO       RLL
+        0     1     2     3     4     0     1     2     3     4     0     1     2     3     4
+u CS  0 ✓XXXX
+      1
+      2    
+      3
+      4
+      5
+  ICO 0
+      1
+      2
+      3
+      4
+  RLL 0
+      1
+      2
+      3
+      4
+"""
+
 job = sys.argv[1]
 
 if job == 'make_rt':
@@ -560,7 +660,7 @@ if job == 'make_rt':
     make_remapping_table(
       args.srcRefinement, args.srcMeshType, args.srcResolution, 
       args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
-      args.isForth, 
+      args.isForth=='True', 
       args.overwrite, 
       args.log)
 
@@ -583,7 +683,7 @@ elif job == 'remap':
     remap_field(
       args.srcRefinement, args.srcMeshType, args.srcResolution, 
       args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
-      args.isForth, args.variable, args.iteration,
+      args.isForth=='True', args.variable, args.iteration,
       args.overwrite, 
       args.log)
 
@@ -757,3 +857,15 @@ elif job == 'all':
       args.variable, 
       args.overwrite,
       args.log)
+
+elif job == 'list_outputs':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('job')
+    parser.add_argument('data', choices=('remapping_table', 'remap_iter', 'metrics'))
+    args = parser.parse_args()
+
+    list_output(args.data)
+
+else:
+    raise Exception(f'Invalid value in `job`: {job}')
+

@@ -23,6 +23,12 @@ TBL_RFN = dict(
 )
 
 DICT_VAR = dict(
+  A1 = dict(
+    name = 'AnalyticalFun1',
+  ),
+  A2 = dict(
+    name = 'AnalyticalFun2',
+  ),
   TPW = dict(
     name = 'TotalPrecipWater',
     cmap = "plasma",
@@ -43,12 +49,6 @@ DICT_VAR = dict(
     vmin = -12000,
     vmax = 10000,
     dmax = 1000,
-  ),
-  A1 = dict(
-    name = 'AnalyticalFun1',
-  ),
-  A2 = dict(
-    name = 'AnalyticalFun2',
   ),
 )
 
@@ -113,51 +113,78 @@ DICT_METRIC = {
 DICT_MESH = {
   "u": {
     "CS": {
-      "name": "CS",
-      "file": {
-        "r16": "sample_NM16_O10_CS-{r}_TPW_CFR_TPO_A1_A2.nc",
-        "r32": None,
-        "r64": None,
-        "r128": None,
-        "r256": None
+      0: {
+        "file": "sample_NM16_O10_CS-r16_TPW_CFR_TPO_A1_A2.nc",
+      },
+      1: {
+        "file": "sample_NM16_O10_CS-r32_TPW_CFR_TPO_A1_A2.nc",
+      },
+      2: {
+        "file": "sample_NM16_O10_CS-r64_TPW_CFR_TPO_A1_A2.nc",
+      },
+      3: {
+        "file": "sample_NM16_O10_CS-r128_TPW_CFR_TPO_A1_A2.nc",
+      },
+      4: {
+        "file": "sample_NM16_O10_CS-r256_TPW_CFR_TPO_A1_A2.nc",
       }
     },
     "ICOD": {
-      "name": "ICOD",
-      "file": {
-        "r16": "sample_NM16_O10_ICOD-{r}_TPW_CFR_TPO_A1_A2.nc",
-        "r32": None,
-        "r64": None,
-        "r128": None,
-        "r256": None
+      0: {
+        "file": "sample_NM16_O10_ICOD-r16_TPW_CFR_TPO_A1_A2.nc",
+      },
+      1: {
+        "file": "sample_NM16_O10_ICOD-r32_TPW_CFR_TPO_A1_A2.nc",
+      },
+      2: {
+        "file": "sample_NM16_O10_ICOD-r64_TPW_CFR_TPO_A1_A2.nc",
+      },
+      3: {
+        "file": "sample_NM16_O10_ICOD-r128_TPW_CFR_TPO_A1_A2.nc",
+      },
+      4: {
+        "file": "sample_NM16_O10_ICOD-r256_TPW_CFR_TPO_A1_A2.nc",
       }
     },
     "RLL": {
-      "name": "RLL",
-      "file": {
-        "r30-60": "sample_NM16_O10_RLL-{r}_TPW_CFR_TPO_A1_A2.nc",
-        "r90-180": None,
-        "r180-360": None,
-        "r360-720": None,
-        "r720-1440": None
+      0: {
+        "file": "sample_NM16_O10_RLL-r30-60_TPW_CFR_TPO_A1_A2.nc",
+      },
+      1: {
+        "file": "sample_NM16_O10_RLL-r90-180_TPW_CFR_TPO_A1_A2.nc",
+      },
+      2: {
+        "file": "sample_NM16_O10_RLL-r180-360_TPW_CFR_TPO_A1_A2.nc",
+      },
+      3: {
+        "file": "sample_NM16_O10_RLL-r360-720_TPW_CFR_TPO_A1_A2.nc",
+      },
+      4: {
+        "file": "sample_NM16_O10_RLL-r720-1440_TPW_CFR_TPO_A1_A2.nc",
       }
     }
   },
   "r": {
     "CS": {
-      "name": "CS",
-      "file": {
-        "r32": "sample_NM32_O18_{r}_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
-        "r64": "sample_NM32_O18_{r}_lev2_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
-        "r128": "sample_NM32_O18_{r}_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc"
+      0: {
+        "file": "sample_NM32_O18_r32_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+      },
+      1: {
+        "file": "sample_NM32_O18_r64_lev2_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+      },
+      2: {
+        "file": "sample_NM32_O18_r128_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc"
       }
     },
     "ICOD": {
-      "name": "MPAS",
-      "file": {
-        "r3": "sample_NM32_O18_mpas_{r}_enhanced_TPW_CFR_TPO_A1_A2.nc",
-        "r4": None,
-        "r5": None
+      0: {
+        "file": "sample_NM32_O18_mpas_r3_enhanced_TPW_CFR_TPO_A1_A2.nc",
+      },
+      1: {
+        "file": "sample_NM32_O18_mpas_r4_enhanced_TPW_CFR_TPO_A1_A2.nc",
+      },
+      2: {
+        "file": "sample_NM32_O18_mpas_r5_enhanced_TPW_CFR_TPO_A1_A2.nc",
       }
     }
   }
@@ -549,24 +576,11 @@ def get_nk(refinement: str, meshType: str, resolution: int):
     return nk
 
 
-def get_meshType(refinement: str, meshType: str):
-    return DICT_MESH[refinement][meshType]['name']
-
-
-def get_resolution(refinement: str, meshType: str, resolution: int):
-    return tuple(DICT_MESH[refinement][meshType]['file'].keys())[resolution]
-
-
 def get_mesh(refinement: str, meshType: str, resolution: int):
-    meshType_ = get_meshType(refinement, meshType)
-
     refinement_ = TBL_RFN[refinement]
 
-    resolution_ = get_resolution(refinement, meshType, resolution)
-
-
     meshName = f'MIRA{refinement}{meshType}{resolution}'
-    meshDir = f'../../dat/mesh/MIRA/{refinement_}/{meshType_}/{resolution_}'
+    meshDir = f'../../dat/mesh/MIRA/{refinement_}/{meshType}/r{resolution}'
 
     nk = get_nk(refinement, meshType, resolution)
     nij = int(os.path.getsize(f'{meshDir}/xyz.bin') / (8*3*nk))
@@ -583,13 +597,9 @@ def get_sForth(isForth: bool):
 
 def get_meshNCFile(refinement: str, meshType: str, resolution: int):
     refinement_ = TBL_RFN[refinement]
-    resolution_ = get_resolution(refinement, meshType, resolution)
 
-    m = DICT_MESH[refinement][meshType]
-    f = m["file"][resolution_]
-    if f is None:
-        f = m["file"][tuple(m["file"].keys())[0]]
-    return f'{MIRAMESHDIR}/{refinement_}/{m["name"]}/{f.format(r=resolution_)}'
+    filename = DICT_MESH[refinement][meshType][resolution]["file"]
+    return f'{MIRAMESHDIR}/{refinement_}/{resolution}/{filename}'
 
 
 def get_remapDir(srcMeshName: str, tgtMeshName: str):
