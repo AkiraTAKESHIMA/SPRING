@@ -1,4 +1,6 @@
 out/
 tmp/
+bin/
+ext/
 dat
 updates.txt
