@@ -22,15 +22,15 @@ TARGETS = \
 	$(TARGET8)\
 	$(TARGET9)
 
-TARGET1 = make_gcmmap
-TARGET2 = modify_hires
-TARGET3 = calc_uparea
-TARGET4 = const_network
-TARGET5 = define_catchment
-TARGET6 = visual_check
-TARGET7 = gcm_rivermap
-TARGET8 = set_map
-TARGET9 = calc_inpmat
+TARGET1 = make_gcmmap.exe
+TARGET2 = modify_hires.exe
+TARGET3 = calc_uparea.exe
+TARGET4 = const_network.exe
+TARGET5 = define_catchment.exe
+TARGET6 = visual_check.exe
+TARGET7 = gcm_rivermap.exe
+TARGET8 = set_map.exe
+TARGET9 = calc_inpmat.exe
 
 .PHONY: all
 all:
@@ -43,7 +43,7 @@ mods:
 
 .PHONY: clean
 clean:
-	rm -f *~ $(TARGETS) *.o *.mod
+	rm -f *~ *.o *.mod *.exe
 
 
 $(TARGET1): $(TARGET1).o $(MODS) $(CMNDIR1)/*.o $(LIB)
