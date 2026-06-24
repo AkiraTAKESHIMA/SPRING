@@ -5,27 +5,29 @@ DIR_SUBMIT="submit"
 DIR_LOG="log"
 FILE_PYENV=".venv/bin/activate"
 FILE_PYTHON_SCRIPT="src/remap.py"
-FILE_SUBMISSION_HISTORY="log/submission_history.txt"
+FILE_SUBMISSION_HISTORY="log/history.txt"
 FILE_SIF="/data10/imageshare/cuda/cuda116_py39.sif"
 
-TBL_REFIN_SRC="u"
-TBL_MESH_SRC="ICOD"
+TBL_REFIN_SRC="r"
+TBL_MESH_SRC="CS"
 #TBL_RESL_SRC="0 1 2 3 4"
-TBL_RESL_SRC="0 1 2 3 4"
-TBL_REFIN_TGT="u"
+TBL_RESL_SRC="0 1 2"
+
+TBL_REFIN_TGT="r"
 #TBL_MESH_TGT="CS ICOD RLL"
 TBL_MESH_TGT="ICOD"
 #TBL_RESL_TGT="0 1 2 3 4"
-TBL_RESL_TGT="0 1 2 3 4"
+TBL_RESL_TGT="0 1 2"
+
 TBL_VAR="A1 A2 TPW CFR TPO"
 #TBL_VAR="TPW CFR TPO"
-#TBL_VAR="A1 A2 CFR"
+#TBL_VAR="A1"
 
 #STEP=1  # make_rt
 
-STEP=2  # remap_iter, make_netCDF, calc_metrics
-DO_REMAP_ITER=true
-DO_MAKE_NETCDF=true
+STEP=2  # remap_iter, make_NetCDF, calc_metrics
+DO_REMAP_ITER=false
+DO_MAKE_NETCDF=false
 DO_CALC_METRICS=true
 
 OVERWRITE=true
@@ -147,7 +149,7 @@ EOF
     cat << EOF >> ${FILE_RUN_SCRIPT}
 
 date
-python ${FILE_PYTHON_SCRIPT} make_netCDF ${OPT_PYTHON_SCRIPT}
+python ${FILE_PYTHON_SCRIPT} make_NetCDF ${OPT_PYTHON_SCRIPT}
 EOF
   fi
 
