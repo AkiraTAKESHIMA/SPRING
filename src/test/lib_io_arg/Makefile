@@ -7,7 +7,7 @@ include $(TOPSRCDIR)/Mkinclude
 %.mod: %.f90 %.o
 	@:
 
-TARGET = main
+TARGET = main.exe
 
 OBJ_F = \
 main.o

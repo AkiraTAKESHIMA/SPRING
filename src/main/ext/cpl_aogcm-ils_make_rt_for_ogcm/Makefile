@@ -12,7 +12,7 @@ include $(TOPSRCDIR)/Mkinclude
 %.mod: %.f90 %.o
 	@:
 
-TARGET = main
+TARGET = main.exe
 BINDIR = $(TOPSRCDIR)/../bin/ext
 BIN = $(BINDIR)/cpl_aogcm-ils_make_rt_for_ogcm.exe
 
