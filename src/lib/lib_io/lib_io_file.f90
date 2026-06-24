@@ -1633,20 +1633,26 @@ integer(4) function try_make_empty_file__dir(dir) result(info)
 
       inquire(file=f, opened=opened, exist=exist)
       if( .not. opened .and. .not. exist )then
-        call logwrn('Deletion of temporal file received iostat of failure '//&
-                    'but the file does not already exist.')
+        call logwrn(msg_io_error()//&
+            '\nFailed to delete the temporal file: '//str(f)//&
+            '\nThe file does not already exist.')
         ios = 0
         exit
       elseif( opened .and. exist )then
         if( iTry < NTRY )then
-          call logwrn('Failed to remove the empty file. Trying again...')
+          call logwrn('Failed to remove the temporal file. Trying again...')
         else
           info = 1
           call errret(msg_io_error()//&
-                    '\nFailed to remove the temporal file: '//str(f))
+              '\nFailed to remove the temporal file: '//str(f))
           return
         endif
-      else
+      elseif( .not. opened .and. exist )then
+        call logwrn(msg_io_error()//&
+            '\nFailed to remove the temporal file: '//str(f)//&
+            '\nThe file exists and has been closed now.')
+        exit
+      elseif( opened .and. .not. exist )then
         info = 1
         call logerr(msg_io_error()//&
                   '\nUnknown I/O error.'//&
