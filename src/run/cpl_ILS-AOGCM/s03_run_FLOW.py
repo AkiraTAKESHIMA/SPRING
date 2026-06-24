@@ -80,15 +80,15 @@ def run_FLOW(cnf, update_data):
     os.chdir(env.dir_tmp)
 
     for i, prog in enumerate([
-      'make_gcmmap',
-      'modify_hires', 
-      'calc_uparea',
-      'const_network',
-      'define_catchment',
-      'visual_check',
-      'gcm_rivermap',
-      'set_map',
-      'calc_inpmat',
+      'make_gcmmap.exe',
+      'modify_hires.exe', 
+      'calc_uparea.exe',
+      'const_network.exe',
+      'define_catchment.exe',
+      'visual_check.exe',
+      'gcm_rivermap.exe',
+      'set_map.exe',
+      'calc_inpmat.exe',
     ]):
         if update_data:
             print(f'Executing {prog}...')
