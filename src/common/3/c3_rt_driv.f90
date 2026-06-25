@@ -112,34 +112,49 @@ integer(4) function make_rt(&
   !-------------------------------------------------------------
   ! Case: LatLon and LatLon
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__LATLON) )
-    if( make_rt_latlon_latlon(s, t, rt) /= 0 )then
+    if( make_rt_latlon_latlon(&
+            s, t, rt, &
+            ct_ &
+        ) /= 0 )then
       info = 1; call errret(); return
     endif
   !-------------------------------------------------------------
   ! Case: LatLon and Raster
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__RASTER), &
         trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__LATLON) )
-    if( make_rt_latlon_raster(s, t, rt) /= 0 )then
+    if( make_rt_latlon_raster(&
+            s, t, rt, &
+            ct_ &
+        ) /= 0 )then
       info = 1; call errret(); return
     endif
   !-------------------------------------------------------------
   ! Case: LatLon and Polygon
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__POLYGON), &
         trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__LATLON) )
-    if( make_rt_latlon_polygon(s, t, rt) /= 0 )then
+    if( make_rt_latlon_polygon(&
+            s, t, rt, &
+            ct_ &
+        ) /= 0 )then
       info = 1; call errret(); return
     endif
   !-------------------------------------------------------------
   ! Case: Raster and Raster
   case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__RASTER) )
-    if( make_rt_raster_raster(s, t, rt) /= 0 )then
+    if( make_rt_raster_raster(&
+            s, t, rt, &
+            ct_ &
+        ) /= 0 )then
       info = 1; call errret(); return
     endif
   !-------------------------------------------------------------
   ! Case: Raster and Polygon
   case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__POLYGON), &
         trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__RASTER) )
-    if( make_rt_raster_polygon(s, t, rt) /= 0 )then
+    if( make_rt_raster_polygon(&
+            s, t, rt, &
+            ct_ &
+        ) /= 0 )then
       info = 1; call errret(); return
     endif
   !-------------------------------------------------------------

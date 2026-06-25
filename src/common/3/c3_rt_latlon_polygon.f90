@@ -8,6 +8,7 @@ module c3_rt_latlon_polygon
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -26,7 +27,10 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
+integer(4) function make_rt_latlon_polygon(&
+    s, t, rt, &
+    ct &
+) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c1_gs_util, only: &
@@ -41,6 +45,9 @@ integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
   type(gs_), intent(inout), target :: s
   type(gs_), intent(inout), target :: t
   type(rt_), intent(inout), target :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   type(gs_)             , pointer :: a  ! latlon
   type(gs_)             , pointer :: b  ! polygon
@@ -65,6 +72,11 @@ integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
 
   info = 0
   call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
@@ -117,14 +129,20 @@ integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   allocate(rt1d(bp%nij))
   if( init_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
   call logent('Making remapping table')
+
+  call start_timer(ct_%timer, 'intersection')
 
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.true.)
@@ -225,20 +243,28 @@ integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
 
+  call stop_timer(ct_%timer, 'intersection')
+
   call logext()
   !-------------------------------------------------------------
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
   call logent('Reshaping remapping table')
 
+  call start_timer(ct_%timer, 'rt_post')
+
   if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_timer(ct_%timer, 'rt_post')
 
   call logext()
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -250,6 +276,8 @@ integer(4) function make_rt_latlon_polygon(s, t, rt) result(info)
   nullify(afl, bfp)
   nullify(al, bp)
   nullify(a, b)
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_rt_latlon_polygon

@@ -7,6 +7,7 @@ module c3_rt_raster_raster
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -23,7 +24,10 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_raster_raster(s, t, rt) result(info)
+integer(4) function make_rt_raster_raster(&
+    s, t, rt, &
+    ct &
+) result(info)
   use c2_rt1d, only: &
         init_rt1d   , &
         clear_rt1d  , &
@@ -34,6 +38,9 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_raster_raster'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   type(gs_)         , pointer :: a, b
   type(gs_raster_)  , pointer :: ar, br
@@ -61,6 +68,11 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   info = 0
   call logbgn(PRCNAM, MODNAM)
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
+  !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
   if( s%typ /= MESHTYPE__RASTER .or. &
@@ -82,15 +94,21 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'raster_bounds')
+
   if( calc_relations_llbnds(ar, br) /= 0 )then
     info = 1; call errret(); return
   endif
   if( calc_relations_llbnds(br, ar) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_timer(ct_%timer, 'raster_bounds')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   allocate(iibh(br%hi-1_8:br%hf+1_8))
 
   allocate(rt1d(ar%nij))
@@ -108,6 +126,8 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   bidx_prev(:) = br%idx_miss
 
   allocate(ij_prev(ar%nij))
+
+  call stop_timer(ct_%timer, 'buffer')
 
   !
   !-------------------------------------------------------------
@@ -136,6 +156,8 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'intersection')
+
   rtm%nij = 0_8
 
   do iaz = 1, ar%nZone
@@ -232,16 +254,24 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
     enddo  ! ibz/
   enddo  ! iaz/
 
-  rtm%nij = sum(rt1d(:)%mij)
+  call stop_timer(ct_%timer, 'intersection')
 
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'rt_post')
+
+  rtm%nij = sum(rt1d(:)%mij)
+
   if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_timer(ct_%timer, 'rt_post')
   !-------------------------------------------------------------
   ! Free pointers and arrays
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -258,6 +288,8 @@ integer(4) function make_rt_raster_raster(s, t, rt) result(info)
   nullify(arz, brz)
   nullify(ar, br)
   nullify(a, b)
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------

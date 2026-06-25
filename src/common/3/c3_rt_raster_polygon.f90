@@ -9,6 +9,7 @@ module c3_rt_raster_polygon
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -25,7 +26,10 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
+integer(4) function make_rt_raster_polygon(&
+    s, t, rt, &
+    ct &
+) result(info)
   use c2_area_raster_polygon, only: &
         c2arp_initialize      => initialize     , &
         c2arp_finalize        => finalize       , &
@@ -51,6 +55,9 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_raster_polygon'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   type(gs_)         , pointer :: a  ! raster
   type(gs_)         , pointer :: b  ! polygon
@@ -74,6 +81,11 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
 
   info = 0
   call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   ! Set the pointers
   !-------------------------------------------------------------
@@ -100,6 +112,7 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
 
   !
   !-------------------------------------------------------------
@@ -130,6 +143,8 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
       info = 1; call errret(); return
     endif
   endif
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
@@ -162,6 +177,8 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
     !-------------------------------------------------------------
     ! Make a remapping table
     !-------------------------------------------------------------
+    call start_timer(ct_%timer, 'intersection')
+
     do bij = bp%ijs, bp%ije
       if( .not. bp%grid%msk(bij) ) cycle
 
@@ -190,6 +207,8 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
         endif
       endif
     enddo  ! bij/
+
+    call stop_timer(ct_%timer, 'intersection')
     !-------------------------------------------------------------
     ! Finalize module for zone
     !-------------------------------------------------------------
@@ -201,9 +220,15 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
     ! Make raster verification data
     !-------------------------------------------------------------
     if( do_calc_iarea_sum .or. do_calc_iratio_sum )then
+      call start_timer(ct_%timer, 'rt_post')
+
       if( .not. ar%is_south_to_north ) call reverse(arz%mskmap,2)
 
+      call stop_timer(ct_%timer, 'rt_post')
+
       if( do_calc_iarea_sum )then
+        call start_timer(ct_%timer, 'io')
+
         f => rtv%f%out_iarea_sum
         if( f%path /= '' )then
           call logmsg('Writing iarea_sum  '//str(fileinfo(f))//&
@@ -225,12 +250,21 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
             endif
           endif
         endif
+
+        call stop_timer(ct_%timer, 'io')
       endif
 
       if( do_calc_iratio_sum )then
+        call start_timer(ct_%timer, 'rt_post')
+
         if( calc_iratio_sum(iarea_sum, arz%mskmap) /= 0 )then
           info = 1; call errret(); return
         endif
+
+        call stop_timer(ct_%timer, 'rt_post')
+
+        call start_timer(ct_%timer, 'io')
+
         f => rtv%f%out_iratio_sum
         if( f%path /= '' )then
           call logmsg('Writing iratio_sum '//str(fileinfo(f))//&
@@ -252,9 +286,15 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
             endif
           endif
         endif
+
+        call stop_timer(ct_%timer, 'io')
       endif
 
+      call start_timer(ct_%timer, 'rt_post')
+
       if( .not. ar%is_south_to_north ) call reverse(arz%mskmap,2)
+
+      call stop_timer(ct_%timer, 'rt_post')
     endif
 
     ! Kill flag
@@ -262,18 +302,24 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
     !-----------------------------------------------------------
     ! Finalize module for zone
     !-----------------------------------------------------------
+    call start_timer(ct_%timer, 'buffer')
+
     if( do_calc_iarea_sum )then
       deallocate(iarea_sum)
       if( c2ar_finalize_zone() /= 0 )then
         info = 1; call errret(); return
       endif
     endif
+
+    call stop_timer(ct_%timer, 'buffer')
     !-----------------------------------------------------------
     if( ar%nZone > 1 ) call logext()
   enddo  ! iaz/
 
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'post_rt')
+
   if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
@@ -282,10 +328,13 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
     info = 1; call errret(); return
   endif
 
+  call stop_timer(ct_%timer, 'post_rt')
+
   call logext()
   !-------------------------------------------------------------
   ! Finalize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
 
   ! Finalize modules
   !-------------------------------------------------------------
@@ -312,6 +361,8 @@ integer(4) function make_rt_raster_polygon(s, t, rt) result(info)
   nullify(arz)
   nullify(ar, bp)
   nullify(a, b)
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_rt_raster_polygon

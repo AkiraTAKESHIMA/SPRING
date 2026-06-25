@@ -6,6 +6,7 @@ module c3_rt_latlon_latlon
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -22,7 +23,10 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
+integer(4) function make_rt_latlon_latlon(&
+    s, t, rt, &
+    ct &
+) result(info)
   use c2_rt1d, only: &
         init_rt1d   , &
         clear_rt1d  , &
@@ -33,6 +37,9 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_latlon_latlon'
   type(gs_), intent(in)   , target :: s, t
   type(rt_), intent(inout), target :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   type(gs_)       , pointer :: a, b
   type(gs_latlon_), pointer :: al, bl
@@ -50,6 +57,11 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
 
   info = 0
   call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
@@ -72,12 +84,16 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'grid_bounds')
+
   if( calc_relations_llbnds(al, bl) /= 0 )then
     info = 1; call errret(); return
   endif
   if( calc_relations_llbnds(bl, al) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_timer(ct_%timer, 'grid_bounds')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
@@ -91,6 +107,8 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'intersection')
+
   rtm%nij = 0_8
 
   aij = 0_8
@@ -162,11 +180,17 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
     enddo  ! ish/
   enddo  ! isv/
 
+  call stop_timer(ct_%timer, 'intersection')
+
   ! Respahe rt and output intermediates
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'rt_post')
+
   if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_timer(ct_%timer, 'rt_post')
   !-------------------------------------------------------------
   ! Deallocate
   !-------------------------------------------------------------
