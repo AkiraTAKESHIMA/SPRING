@@ -1,8 +1,11 @@
 module mod_finalize
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
+  use lib_math
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   !-------------------------------------------------------------
@@ -18,7 +21,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine finalize(s, t, rt)
+subroutine finalize(s, t, rt, ct)
   use c1_file, only: &
         close_report_file
   use c1_gs_base, only: &
@@ -29,8 +32,24 @@ subroutine finalize(s, t, rt)
   character(CLEN_PROC), parameter :: PRCNAM = 'finalize'
   type(gs_), intent(inout) :: s, t
   type(rt_), intent(inout) :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
+
+  type(timer_), pointer :: timer
+  type(timer_elem_), pointer :: te, te1, te2
+  real(8) :: time_total
+  integer :: i
+  integer :: cl
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
+
+  timer => ct_%timer
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -38,6 +57,34 @@ subroutine finalize(s, t, rt)
   call traperr( clear_mesh(t) )
 
   call traperr( clear_rt(rt) )
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( timer%is_active )then
+    time_total = sum(ct%timer%elem(:timer%n)%time)
+    call logmsg('total (original): '//str(time_total))
+
+    te1 => timer%elem(get_idx_timer(timer, 'searching_intersecting_grids (2)'))
+    te2 => timer%elem(get_idx_timer(timer, 'intersection'))
+    call add(te2%time, -te1%time)
+    te1%name = ''
+    te1%time = 0.d0
+
+    cl = 0
+    do i = 1, timer%n
+      cl = max(cl, len_trim(timer%elem(i)%name))
+    enddo
+
+    time_total = sum(timer%elem(:timer%n)%time)
+    do i = 1, timer%n
+      te => timer%elem(i)
+      if( te%name == '' ) cycle
+      call logmsg(str(te%name,cl)//': '//str(te%time)//' (sec) '//&
+          ' ('//str(te%time/time_total*1d2,'f6.2')//' %)')
+    enddo
+    call logmsg('total: '//str(time_total)//' (sec)')
+
+  endif
 
   call traperr( close_report_file() )
   !-------------------------------------------------------------

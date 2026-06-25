@@ -226,7 +226,6 @@ function msg_syntax_error() result(res)
 
   allocate(character(1) :: res)
   res = 'Syntax error.'
-
 end function msg_syntax_error
 !===============================================================
 !

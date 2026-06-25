@@ -1,6 +1,7 @@
 module c1_gs_define
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_util
   use lib_array
@@ -8,6 +9,7 @@ module c1_gs_define
   use lib_math
   use c1_const
   use c1_type_gs
+  use c1_type_timer
   use c1_gs_define_polygon, only: &
         set_gs__polygon
   implicit none
@@ -37,16 +39,25 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function set_mesh__any(a) result(info)
+integer(4) function set_mesh__any(&
+    a, &
+    ct &
+) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'set_mesh__any'
   type(gs_), intent(inout) :: a
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   info = 0
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
+
   selectcase( a%typ )
 
   case( MESHTYPE__LATLON )
@@ -60,7 +71,7 @@ integer(4) function set_mesh__any(a) result(info)
     endif
 
   case( MESHTYPE__POLYGON )
-    if( set_gs__polygon(a%polygon) /= 0 )then
+    if( set_gs__polygon(a%polygon, ct_) /= 0 )then
       info = 1; call errret(); return
     endif
 

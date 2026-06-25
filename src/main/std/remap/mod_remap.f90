@@ -1,6 +1,7 @@
 module mod_remap
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_io
   use lib_array
@@ -8,6 +9,7 @@ module mod_remap
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -24,11 +26,14 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine remap(s, t, rt)
+subroutine remap(s, t, rt, ct)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'remap'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   type(gs_common_)    , pointer :: sgc, tgc
   type(file_grid_in_) , pointer :: sfg
@@ -36,7 +41,6 @@ subroutine remap(s, t, rt)
   type(grid_)         , pointer :: sg, tg
   type(file_)         , pointer :: sf, tf
   type(rt_main_)      , pointer :: rtm
-  type(file_), pointer :: f
   real(8), allocatable :: sval(:), tval(:)
   real(8), allocatable :: sval_2d(:,:), tval_2d(:,:)
   integer(1), allocatable :: tval_mask(:)
@@ -46,6 +50,11 @@ subroutine remap(s, t, rt)
   integer(8) :: loc
 
   call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -70,37 +79,18 @@ subroutine remap(s, t, rt)
   ! Case: 1st order conservative
   case( REMAP_MODE_1ST_ORDER_CONSERVATIVE )
     !-----------------------------------------------------------
-    ! Read the remapping table
-    !-----------------------------------------------------------
-!    allocate(rtm%sidx(rtm%nij))
-!    allocate(rtm%tidx(rtm%nij))
-!    allocate(rtm%coef(rtm%nij))
-!
-!    f => rtm%f%sidx
-!    call logmsg('Reading sidx '//str(fileinfo(f)))
-!    call traperr( rbin(rtm%sidx, f%path, f%dtype, f%endian, f%rec) )
-!
-!    f => rtm%f%tidx
-!    call logmsg('Reading tidx '//str(fileinfo(f)))
-!    call traperr( rbin(rtm%tidx, f%path, f%dtype, f%endian, f%rec) )
-!
-!    f => rtm%f%coef
-!    call logmsg('Reading coef '//str(fileinfo(f)))
-!    call traperr( rbin(rtm%coef, f%path, f%dtype, f%endian, f%rec) )
-    !-----------------------------------------------------------
-    ! Set grid indices
-    !-----------------------------------------------------------
-!    call set_grdidx(s)
-!    call set_grdidx(t)
-    !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
+    call start_timer(ct%timer, 'buffer')
+
     allocate(sval(sfg%nij))
     allocate(tval(tfg%nij))
     allocate(tval_mask(tfg%nij))
 
     allocate(sval_2d(sfg%nx,sfg%ny))
     allocate(tval_2d(tfg%nx,tfg%ny))
+
+    call stop_timer(ct%timer, 'buffer')
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -112,6 +102,8 @@ subroutine remap(s, t, rt)
       !---------------------------------------------------------
       ! Read input
       !---------------------------------------------------------
+      call start_timer(ct%timer, 'io')
+
       selectcase( sfg%ny )
       case( 1_8 )
         call traperr( rbin(&
@@ -125,9 +117,13 @@ subroutine remap(s, t, rt)
       case( :0_8 )
         call errend(msg_invalid_value('sfg%ny', sfg%ny))
       endselect
+
+      call stop_timer(ct%timer, 'io')
       !---------------------------------------------------------
-      ! Remap
+      ! Interpolate
       !---------------------------------------------------------
+      call start_timer(ct%timer, 'interpolate')
+
       tval(:) = 0.d0
       tval_mask(:) = 0_1
 
@@ -155,14 +151,20 @@ subroutine remap(s, t, rt)
           tval(tij) = tfg%val_miss
         endif
       enddo
+
+      call stop_timer(ct%timer, 'interpolate')
       !---------------------------------------------------------
       ! Write output
       !---------------------------------------------------------
+      call start_timer(ct%timer, 'io')
+
       tval_2d = reshape(tval,(/tfg%nx,tfg%ny/))
 
       call traperr( wbin(&
              tval_2d, tf%path, tf%dtype, tf%endian, tf%rec, &
              sz=tf%sz(:2), lb=tf%lb(:2)) )
+
+      call stop_timer(ct%timer, 'io')
     enddo  ! iFile/
     !-----------------------------------------------------------
     !
@@ -181,113 +183,6 @@ subroutine remap(s, t, rt)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine remap
-!===============================================================
-!
-!===============================================================
-subroutine set_grdidx(a)
-  implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'set_grdidx'
-  type(gs_), intent(inout), target :: a
-
-  type(gs_latlon_) , pointer :: al
-  type(gs_raster_) , pointer :: ar
-  type(gs_polygon_), pointer :: ap
-  type(gs_common_) , pointer :: ac
-  type(file_grid_in_), pointer :: afg
-  type(grid_), pointer :: ag
-
-  type(file_), pointer :: f
-  integer(8), allocatable :: int8_2d(:,:)
-  integer(8) :: ih, iv
-  integer(8) :: ij
-
-  call logbgn(PRCNAM, MODNAM)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  ac => a%cmn
-  afg => ac%f_grid_in
-  ag  => ac%grid
-
-  ag%nij = afg%nij
-  call realloc(ag%idx, ag%nij)
-  call realloc(ag%idxarg, ag%nij)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  selectcase( ac%typ )
-  !-------------------------------------------------------------
-  ! Case: LatLon
-  case( MESHTYPE__LATLON )
-    al => a%latlon
-
-    allocate(int8_2d(afg%nx,afg%ny))
-
-    f => afg%idx
-    if( f%path == '' )then
-      call logmsg('Setting grdidx')
-      ij = 0_8
-      do iv = 1_8, al%nv
-        do ih = 1_8, al%nh
-          call add(ij)
-          int8_2d(ih,iv) = ij
-        enddo  ! ih/
-      enddo  ! iv/
-    else
-      call logmsg('Reading grdidx')
-      call traperr( rbin(&
-             int8_2d, f%path, f%dtype, f%endian, f%rec, &
-             sz=afg%sz(:2), lb=afg%lb(:2)) )
-    endif
-
-    ag%idx = reshape(int8_2d,(/ag%nij/))
-
-    deallocate(int8_2d)
-  !-------------------------------------------------------------
-  ! Case: Raster
-  case( MESHTYPE__RASTER )
-    ar => a%raster
-
-    allocate(int8_2d(afg%nx,afg%ny))
-
-    f => afg%idx
-    if( f%path == '' )then
-      call errend(msg_unexpected_condition()//&
-                '\n  '//str(afg%id)//'%idx%path == ""'//&
-                '\nInput file of grid index was not specified.')
-    endif
-    call logmsg('Reading grdidx')
-    call traperr( rbin(&
-           int8_2d, f%path, f%dtype, f%endian, f%rec, &
-           sz=afg%sz(:2), lb=afg%lb(:2)) )
-    ag%idx = reshape(int8_2d,(/ag%nij/))
-
-    deallocate(int8_2d)
-  !-------------------------------------------------------------
-  ! Case: Polygon
-  case( MESHTYPE__POLYGON )
-    ap => a%polygon
-
-    f => afg%idx
-    if( f%path == '' )then
-      call logmsg('Setting grdidx')
-      do ij = 1_8, ap%nij
-        ag%idx(ij) = ij
-      enddo
-    else
-      call logmsg('Reading grdidx')
-      call traperr( rbin(&
-             ag%idx, f%path, f%dtype, f%endian, f%rec, &
-             sz=afg%sz(1), lb=afg%lb(1)) )
-    endif
-  endselect
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  call argsort(ag%idx, ag%idxarg)
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine set_grdidx
 !===============================================================
 !
 !===============================================================

@@ -1,6 +1,7 @@
 module c3_rt_polygon_polygon
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_array
   use lib_math
@@ -8,6 +9,7 @@ module c3_rt_polygon_polygon
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -59,7 +61,10 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
+integer(4) function make_rt_polygon_polygon(&
+    s, t, rt, &
+    ct &
+) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c1_gs_util, only: &
@@ -72,6 +77,9 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   character(CLEN_PROC), parameter :: PRCNAM = 'make_rt_polygon_polygon'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   type(gs_)        , pointer :: a, b
   type(gs_polygon_), pointer :: ap, bp
@@ -91,6 +99,11 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
 
   info = 0
   call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   ! Set pointers
   !-------------------------------------------------------------
@@ -125,12 +138,48 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Set regions
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'searching_intersecting_grids')
+
   if( make_regions(ap, bp, regions) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  if( ct_%timer%is_active )then
+    call start_timer(ct_%timer, 'searching_intersecting_grids (2)')
+
+    do iRegion = 1, regions%nRegions
+      region => regions%region(iRegion)
+
+      do bbij = 1_8, region%mbij
+        bij = region%list_bij(bbij)
+        if( .not. bg%msk(bij) ) cycle
+        bp0 => bp%polygon(bij)
+
+        do aaij = 1_8, region%maij
+          aij = region%list_aij(aaij)
+          if( .not. ag%msk(aij) ) cycle
+          ap0 => ap%polygon(aij)
+
+          if( is_skipped(iRegion, regions%a(aij), regions%b(bij)) ) cycle
+
+          if( .not. bboxes_intersect(&
+                bp0%south, bp0%north, bp0%west, bp0%east, bp0%pos==POLYGON_POSITION_LON0, &
+                ap0%south, ap0%north, ap0%west, ap0%east, ap0%pos==POLYGON_POSITION_LON0) )then
+            cycle
+          endif
+        enddo
+      enddo
+    enddo
+
+    call stop_timer(ct_%timer, 'searching_intersecting_grids (2)')
+  endif
+
+  call stop_timer(ct_%timer, 'searching_intersecting_grids')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   allocate(rt1d(bp%nij))
   if( init_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -148,9 +197,12 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
     call set_modvar_lib_math_sphere(debug=.true.)
   endif
 
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'intersection')
+
   rtm%nij = 0_8
 
   do iRegion = 1, regions%nRegions
@@ -224,8 +276,12 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
     enddo  ! ttij/
   enddo  ! iRegion/
 
+  call stop_timer(ct_%timer, 'intersection')
+
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'rt_post')
+
   if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
@@ -233,6 +289,8 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
+
+  call stop_timer(ct_%timer, 'rt_post')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

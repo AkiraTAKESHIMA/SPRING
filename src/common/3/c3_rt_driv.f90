@@ -1,6 +1,7 @@
 module c3_rt_driv
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_array
   use lib_math
@@ -8,6 +9,7 @@ module c3_rt_driv
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
   use c2_type_rt
   implicit none
   private
@@ -25,7 +27,9 @@ contains
 !
 !===============================================================
 integer(4) function make_rt(&
-    s, t, rt, calc_coef, make_vrf, output) result(info)
+    s, t, rt, calc_coef, make_vrf, output, &
+    ct &
+) result(info)
   use c1_file, only: &
         is_report_file_opened, &
         report
@@ -62,9 +66,17 @@ integer(4) function make_rt(&
   logical  , intent(in)    :: calc_coef
   logical  , intent(in)    :: make_vrf
   logical  , intent(in)    :: output
+  type(ctimer_), intent(inout), target, optional :: ct
+
+  type(ctimer_), pointer :: ct_
 
   info = 0
   call logbgn(PRCNAM, MODNAM)
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(ct_)
+  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   ! Make grid data
   !-------------------------------------------------------------
@@ -133,7 +145,10 @@ integer(4) function make_rt(&
   !-------------------------------------------------------------
   ! Case: Polygon and Polygon
   case( trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__POLYGON) )
-    if( make_rt_polygon_polygon(s, t, rt) /= 0 )then
+    if( make_rt_polygon_polygon(&
+            s, t, rt, &
+            ct_ &
+        ) /= 0 )then
       info = 1; call errret(); return
     endif
   !-------------------------------------------------------------
@@ -148,14 +163,20 @@ integer(4) function make_rt(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'rt_post')
+
   if( calc_coef )then
     if( finish_rt_main(rt, s, t) /= 0 )then
       info = 1; call errret(); return
     endif
   endif
+
+  call stop_timer(ct_%timer, 'rt_post')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'rt_post')
+
   if( make_vrf )then
     if( make_rt_vrf(rt, s) /= 0 )then
       info = 1; call errret(); return
@@ -164,9 +185,13 @@ integer(4) function make_rt(&
       info = 1; call errret(); return
     endif
   endif
+
+  call stop_timer(ct_%timer, 'rt_post')
   !-------------------------------------------------------------
-  !
+  ! Output
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'io')
+
   if( output )then
     if( write_rt_main(rt%main) /= 0 )then
       info = 1; call errret(); return
@@ -179,6 +204,10 @@ integer(4) function make_rt(&
     endif
   endif
 
+  call stop_timer(ct_%timer, 'io')
+  !-------------------------------------------------------------
+  ! Report
+  !-------------------------------------------------------------
   if( .not. is_report_file_opened() )then
     info = 1
     call errret(msg_unexpected_condition()//&

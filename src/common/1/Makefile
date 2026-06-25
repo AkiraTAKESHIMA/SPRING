@@ -19,6 +19,7 @@ c1_const.o\
 c1_const_util.o\
 c1_type_opt.o\
 c1_type_gs.o\
+c1_type_timer.o\
 c1_file.o\
 c1_set.o\
 c1_opt_ctrl.o\
