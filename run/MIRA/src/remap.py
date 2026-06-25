@@ -443,6 +443,8 @@ def measure_time(
   itermax: int,
   overwrite_rt: bool, overwrite_summary: bool):
 
+    import numpy as np
+
     isForth = True
 
     srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
@@ -452,13 +454,14 @@ def measure_time(
     dir_report = f'out/measure_time/{srcMeshName}-{tgtMeshName}'
     os.makedirs(dir_report, exist_ok=True)
 
-    for i in range(itermax):
+    ds = {}
+    for count in range(itermax):
         make_remapping_table(
             srcRefinement, srcMeshType, srcResolution,
             tgtRefinement, tgtMeshType, tgtResolution,
             isForth, overwrite_rt, False)
 
-        path_report = f'{dir_report}/{i:06d}.txt'
+        path_report = f'{dir_report}/{count:06d}.txt'
         cp = subprocess.run(['mv', path_report_org, path_report],
                 capture_output=True)
         if cp.returncode != 0:
@@ -466,12 +469,39 @@ def measure_time(
             print(cp.stderr.decode())
             print(f'*** return code: {cp.returncode}')
             quit()
+
         lines = open(path_report, 'r').readlines()
         for i, line in enumerate(lines):
             if 'Process Time' in line: break
-        for line in lines[i:]:
-            print(line.strip())
 
+        if count == 0:
+            for line in lines[i+1:]:
+                d = line.strip().split()
+                ds[d[0]] = [float(d[1])]
+        else:
+            for line in lines[i+1:]:
+                d = line.strip().split()
+                ds[d[0]].append(float(d[1]))
+
+    for procName in ds:
+        ds[procName] = np.array(ds[procName])
+
+    path_summary = f'{dir_report}/summary.txt'
+    fp = open(path_summary, 'w')
+    for procName in ds:
+        fp.write(f'{procName} {ds[procName].mean():10.2e}\n')
+
+    line = 'iter'
+    for procName in ds:
+        line += ' ' + procName
+    fp.write(line+'\n')
+    for count in range(itermax):
+        line = f'{count:6d}'
+        for procName in ds:
+            line += f' {ds[procName][count]:10.2e}'
+        fp.write(line+'\n')
+
+    fp.close()
 
 def list_outputs(dataName: str):
     if dataName == 'remapping_table':

@@ -84,12 +84,12 @@ subroutine finalize(s, t, rt, ct)
     do i = 1, timer%n
       te => timer%elem(i)
       if( te%name == '' ) cycle
-      msg = str(te%name,cl)//': '//str(te%time)//' (sec) '//&
+      msg = str(te%name,cl)//' '//str(te%time)//' (sec) '//&
           ' ('//str(te%time/time_total*1d2,'f6.2')//' %)'
       call logmsg(msg)
       call report(msg)
     enddo
-    msg = str('Total',cl)//': '//str(time_total)//' (sec)'
+    msg = str('Total',cl)//' '//str(time_total)//' (sec)'
     call logmsg(msg)
     call report(msg)
   endif
