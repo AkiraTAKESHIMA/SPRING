@@ -201,6 +201,8 @@ integer(4) function make_rt_polygon_polygon(&
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making a remapping table')
+
   call start_timer(ct_%timer, 'intersection')
 
   rtm%nij = 0_8
@@ -291,9 +293,13 @@ integer(4) function make_rt_polygon_polygon(&
   endif
 
   call stop_timer(ct_%timer, 'rt_post')
+
+  call logext()
   !-------------------------------------------------------------
-  !
+  ! Finalize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -309,6 +315,8 @@ integer(4) function make_rt_polygon_polygon(&
   nullify(ap0, bp0)
   nullify(ag, bg)
   nullify(ap, bp)
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_rt_polygon_polygon

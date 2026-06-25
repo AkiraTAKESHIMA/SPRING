@@ -437,6 +437,42 @@ def calc_metrics(
         print(f'*** return code: {cp.returncode}')
 
 
+def measure_time(
+  srcRefinement: str, srcMeshType: str, srcResolution: str,
+  tgtRefinement: str, tgtMeshType: str, tgtResolution: str,
+  itermax: int,
+  overwrite_rt: bool, overwrite_summary: bool):
+
+    isForth = True
+
+    srcMeshName, *_ = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
+    tgtMeshName, *_ = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
+    path_report_org = f"{util.get_rtDir(srcMeshName, tgtMeshName, isForth)}/report.txt"
+
+    dir_report = f'out/measure_time/{srcMeshName}-{tgtMeshName}'
+    os.makedirs(dir_report, exist_ok=True)
+
+    for i in range(itermax):
+        make_remapping_table(
+            srcRefinement, srcMeshType, srcResolution,
+            tgtRefinement, tgtMeshType, tgtResolution,
+            isForth, overwrite_rt, False)
+
+        path_report = f'{dir_report}/{i:06d}.txt'
+        cp = subprocess.run(['mv', path_report_org, path_report],
+                capture_output=True)
+        if cp.returncode != 0:
+            print(cp.stdout.decode())
+            print(cp.stderr.decode())
+            print(f'*** return code: {cp.returncode}')
+            quit()
+        lines = open(path_report, 'r').readlines()
+        for i, line in enumerate(lines):
+            if 'Process Time' in line: break
+        for line in lines[i:]:
+            print(line.strip())
+
+
 def list_outputs(dataName: str):
     if dataName == 'remapping_table':
         list_output__remappingTable()
@@ -1136,6 +1172,26 @@ elif job == 'all':
       args.variable, 
       args.overwrite,
       args.log)
+
+elif job == 'measure_time':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('job')
+    parser.add_argument('srcRefinement', type=str)
+    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('srcResolution', type=int)
+    parser.add_argument('tgtRefinement', type=str)
+    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtResolution', type=int)
+    parser.add_argument('itermax', type=int)
+    parser.add_argument('--overwrite_rt', action='store_true')
+    parser.add_argument('--overwrite_summary', action='store_true')
+    args = parser.parse_args()
+
+    measure_time(
+      args.srcRefinement, args.srcMeshType, args.srcResolution,
+      args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
+      args.itermax,
+      args.overwrite_rt, args.overwrite_summary)
 
 elif job == 'list_outputs':
     parser = argparse.ArgumentParser()

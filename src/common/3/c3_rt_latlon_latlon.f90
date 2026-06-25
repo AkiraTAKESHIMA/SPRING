@@ -84,7 +84,7 @@ integer(4) function make_rt_latlon_latlon(&
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
-  call start_timer(ct_%timer, 'grid_bounds')
+  call start_timer(ct_%timer, 'bounds_relation')
 
   if( calc_relations_llbnds(al, bl) /= 0 )then
     info = 1; call errret(); return
@@ -93,7 +93,7 @@ integer(4) function make_rt_latlon_latlon(&
     info = 1; call errret(); return
   endif
 
-  call stop_timer(ct_%timer, 'grid_bounds')
+  call stop_timer(ct_%timer, 'bounds_relation')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
@@ -107,6 +107,8 @@ integer(4) function make_rt_latlon_latlon(&
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making a remapping table')
+
   call start_timer(ct_%timer, 'intersection')
 
   rtm%nij = 0_8
@@ -191,9 +193,13 @@ integer(4) function make_rt_latlon_latlon(&
   endif
 
   call stop_timer(ct_%timer, 'rt_post')
+
+  call logext()
   !-------------------------------------------------------------
-  ! Deallocate
+  ! Finalize
   !-------------------------------------------------------------
+  call start_timer(ct_%timer, 'buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -208,6 +214,8 @@ integer(4) function make_rt_latlon_latlon(&
   deallocate(bl%hrel, bl%vrel)
   nullify(al, bl)
   nullify(a, b)
+
+  call stop_timer(ct_%timer, 'buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_rt_latlon_latlon

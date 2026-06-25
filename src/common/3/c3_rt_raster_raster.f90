@@ -94,7 +94,7 @@ integer(4) function make_rt_raster_raster(&
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
-  call start_timer(ct_%timer, 'raster_bounds')
+  call start_timer(ct_%timer, 'bounds_relation')
 
   if( calc_relations_llbnds(ar, br) /= 0 )then
     info = 1; call errret(); return
@@ -103,7 +103,7 @@ integer(4) function make_rt_raster_raster(&
     info = 1; call errret(); return
   endif
 
-  call stop_timer(ct_%timer, 'raster_bounds')
+  call stop_timer(ct_%timer, 'bounds_relation')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
@@ -156,6 +156,8 @@ integer(4) function make_rt_raster_raster(&
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making a remapping table')
+
   call start_timer(ct_%timer, 'intersection')
 
   rtm%nij = 0_8
@@ -267,8 +269,10 @@ integer(4) function make_rt_raster_raster(&
   endif
 
   call stop_timer(ct_%timer, 'rt_post')
+
+  call logext()
   !-------------------------------------------------------------
-  ! Free pointers and arrays
+  ! Finalize
   !-------------------------------------------------------------
   call start_timer(ct_%timer, 'buffer')
 

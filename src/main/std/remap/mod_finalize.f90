@@ -23,6 +23,7 @@ contains
 !===============================================================
 subroutine finalize(s, t, rt, ct)
   use c1_file, only: &
+        report           , &
         close_report_file
   use c1_gs_base, only: &
         clear_mesh
@@ -41,6 +42,7 @@ subroutine finalize(s, t, rt, ct)
   real(8) :: time_total
   integer :: i
   integer :: cl
+  character(:), allocatable :: msg
 
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
@@ -75,15 +77,21 @@ subroutine finalize(s, t, rt, ct)
       cl = max(cl, len_trim(timer%elem(i)%name))
     enddo
 
+    call report('------ Process Time ------')
+    allocate(character(1) :: msg)
+
     time_total = sum(timer%elem(:timer%n)%time)
     do i = 1, timer%n
       te => timer%elem(i)
       if( te%name == '' ) cycle
-      call logmsg(str(te%name,cl)//': '//str(te%time)//' (sec) '//&
-          ' ('//str(te%time/time_total*1d2,'f6.2')//' %)')
+      msg = str(te%name,cl)//': '//str(te%time)//' (sec) '//&
+          ' ('//str(te%time/time_total*1d2,'f6.2')//' %)'
+      call logmsg(msg)
+      call report(msg)
     enddo
-    call logmsg('total: '//str(time_total)//' (sec)')
-
+    msg = str('Total',cl)//': '//str(time_total)//' (sec)'
+    call logmsg(msg)
+    call report(msg)
   endif
 
   call traperr( close_report_file() )
