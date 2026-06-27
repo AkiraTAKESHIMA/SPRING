@@ -19,6 +19,7 @@ DIR_MIRAMETRICS = f'{DIR_MIRADATASET}/MetricsData'
 DIR_FIG = 'fig'
 DIR_FIG_METRICS = f'{DIR_FIG}/metrics'
 DIR_FIG_CONSISTENCY = f'{DIR_FIG}/consistency'
+DIR_FIG_TIME = f'{DIR_FIG}/time'
 
 TBL_RFN = dict(
   u = 'UniformlyRefined' ,
@@ -691,6 +692,16 @@ def get_metricsFigFile(
 
 def get_consistencyFigFile():
     return f'{DIR_FIG_CONSISTENCY}/consistency.png'
+
+
+def get_timeFigFile(
+  srcRefinement: str, srcMeshType: str, 
+  tgtRefinement: str, tgtMeshType: str):
+
+    if srcMeshType is None:
+        return f'{DIR_FIG_TIME}/all.png'
+    else:
+        return f'{DIR_FIG_TIME}/{srcMeshType}-{tgtMeshType}.png'
 
 
 def get_char_stat(stat):

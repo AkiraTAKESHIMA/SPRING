@@ -503,6 +503,7 @@ def measure_time(
 
     fp.close()
 
+
 def list_outputs(dataName: str):
     if dataName == 'remapping_table':
         list_output__remappingTable()
@@ -784,10 +785,10 @@ def plot_metrics(
                   f'min: {np.nanmin(y):9.2e}, max: {np.nanmax(y):9.2e}, '\
                   f'mean: {np.nanmean(y):9.2e}')
 
-    f_fig = util.get_metricsFigFile(
+    path_fig = util.get_metricsFigFile(
       refinement, srcMeshType, srcResolution, tgtMeshType, tgtResolution,
       metric, degree, var, figname_add)
-    os.makedirs(os.path.dirname(f_fig), exist_ok=True)
+    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
 
     fig = plt.figure(figsize=(10,6))
     ax = fig.add_subplot(position=(0.1, 0.1, 0.6, 0.8))
@@ -825,8 +826,8 @@ def plot_metrics(
     ax.set_ylabel(util.DICT_METRIC[metric]["label"], fontsize=12)
     ax.set_title(f'{srcMeshType}{srcResolution}_{tgtMeshType}{tgtResolution} {var}', fontsize=12)
     if log:
-        print(f'Fig: {f_fig}')
-    plt.savefig(f_fig, bbox_inches='tight')
+        print(f'Fig: {path_fig}')
+    plt.savefig(path_fig, bbox_inches='tight')
     plt.show()
 
 
@@ -911,7 +912,7 @@ def plot_consistency():
                 print(line)
 
     # Plot
-    f_fig = util.get_consistencyFigFile()
+    path_fig = util.get_consistencyFigFile()
 
     hratio = (6, 1)
     hspace = 0.05
@@ -1008,10 +1009,267 @@ def plot_consistency():
         lax.plot((1+kx-dx, 1+kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
         lax.plot((1-kx-dx, 1-kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
 
-    print(f_fig)
-    os.makedirs(os.path.dirname(f_fig), exist_ok=True)
-    fig.savefig(f_fig, bbox_inches='tight', pad_inches=0.1, dpi=240)
+    print(path_fig)
+    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
+    fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1, dpi=240)
 
+    plt.show()
+
+
+def plot_time(
+    srcMeshType: str, tgtMeshType: str):
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    refinement = 'u'
+
+    smt = srcMeshType
+    tmt = tgtMeshType
+
+    if srcMeshType is None:
+        is_forAllMeshType = True
+        lst_meshTypePair = (
+          ('CS', 'ICOD'),
+          ('ICOD', 'RLL'),
+          ('RLL', 'CS'),
+        )
+        lst_markerStyle_meshTypePair = (
+          dict(marker='o', ms=5),
+          dict(marker='^', ms=5),
+          dict(marker='s', ms=5),
+        )
+    else:
+        is_forAllMeshType = False
+        lst_meshTypePair = (
+          (srcMeshType, tgtMeshType),
+        )
+        lst_markerStyle_meshTypePair = (
+          dict(marker='o', ms=5),
+        )
+
+    def read_data(
+            srcRefinement: str, srcMeshType: str, srcResolution: int,
+            tgtRefinement: str, tgtMeshType: str, tgtResolution: int):
+        srcMeshName, _, nsk, nsij = util.get_mesh(srcRefinement, srcMeshType, srcResolution)
+        tgtMeshName, _, ntk, ntij = util.get_mesh(tgtRefinement, tgtMeshType, tgtResolution)
+
+        f = f'out/measure_time/{srcMeshName}-{tgtMeshName}/summary.txt'
+        if not os.path.isfile(f):
+            print(f'File not found: {f}')
+            return
+
+        fp = open(f, 'r')
+        while True:
+            proc = fp.readline().strip().split()[0]
+            if proc == 'Total': break
+        lst_proc = fp.readline().strip().split()[1:]
+
+        lines = fp.readlines()
+        fp.close()
+
+        n = len(lines)
+
+        data = np.array([[float(v) for v in line.strip().split()[1:]] for line in lines])
+        ds_time = {}
+        for i, proc in enumerate(lst_proc):
+            ds_time[proc] = data[:,i]
+
+        ds1 = {}
+        ds1['srcMesh'] = dict(
+          ref = srcRefinement, 
+          typ = srcMeshType, 
+          res = srcResolution,
+          nCell = nsij,
+          nVertex = nsk,
+        )
+        ds1['tgtMesh'] = dict(
+          ref = tgtRefinement, 
+          typ = tgtMeshType, 
+          res = tgtResolution,
+          nCell = ntij,
+          nVertex = ntk,
+        )
+        ds1['time'] = ds_time
+
+        return ds1
+
+    # Read data
+    ds = []
+    for (srcMeshType, tgtMeshType) in lst_meshTypePair:
+        for srcResolution in util.DICT_MESH[refinement][srcMeshType]['file'].keys():
+            for tgtResolution in util.DICT_MESH[refinement][tgtMeshType]['file'].keys():
+                ds.append(read_data(
+                  refinement, srcMeshType, srcResolution,
+                  refinement, tgtMeshType, tgtResolution))
+
+    # Settings for plot
+    path_fig = util.get_timeFigFile(refinement, smt, refinement, tmt)
+    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
+
+    dct_proc = dict(
+      bbox = dict(
+        style = dict(
+          color = 'dodgerblue',
+          lw = 1.5,
+          zorder=2,
+        ),
+        label = 'BBox',
+        plot = True,
+      ),
+      searching_intersecting_grids = dict(
+        style = dict(
+          color = 'mediumseagreen',
+          lw = 1.5,
+          zorder=2,
+        ),
+        label = 'Searching', 
+        plot = True,
+      ),
+      intersection = dict(
+        style = dict(
+          color = 'orangered',
+          lw = 1.5,
+          zorder=2,
+        ),
+        label = 'Intersection',
+        plot = True,
+      ),
+      rt_post = dict(
+        style = dict(
+          color = 'sandybrown',
+          lw = 1.0,
+          zorder=1,
+        ),
+        label = 'Postprocess',
+        plot = False,
+      ),
+      io = dict(
+        style = dict(
+          color = 'plum',
+          lw = 1.0,
+          zorder=1,
+        ),
+        label = 'I/O',
+        plot = False,
+      ),
+      buffer = dict(
+        style = dict(
+          color = 'silver',
+          lw = 1.0,
+          zorder=1,
+        ),
+        label = 'Others',
+        plot = False,
+      ),
+      Total = dict(
+        style = dict(
+          color = 'gray',
+          lw = 1.5,
+          zorder=2,
+        ),
+        label = 'TOTAL',
+        plot = True,
+      ),
+    )
+
+    fw, fh = 7, 5
+    left, bottom, top = 0.1, 0.1, 0.9
+    right = left + (top - bottom) * fh / fw * 1.1
+    figsize = (fw, fh)
+    gridspec = dict(left=left, bottom=bottom, right=right, top=top)
+    glargs = dict(lw=1, color='silver')
+    legendargs = dict(
+        fontsize=10, labelspacing=10*0.03, framealpha=1.0,
+        loc='upper left', bbox_to_anchor=(1.01, 1.0))
+
+    # Make data for plot
+    plotdata = {}
+    xmin, xmax = 1e20, -1e20
+    for (srcMeshType, tgtMeshType) in lst_meshTypePair:
+        xs, ys = {}, {}
+        for procName in dct_proc.keys():
+            if not dct_proc[procName]['plot']: 
+                continue
+            x, y = [], []
+            for ds1 in ds:
+                srcMesh, tgtMesh = ds1['srcMesh'], ds1['tgtMesh']
+                if srcMesh['typ'] != srcMeshType or tgtMesh['typ'] != tgtMeshType: 
+                    continue
+                if srcMesh['res'] != tgtMesh['res']: 
+                    continue
+                x.append(srcMesh['nCell'] + tgtMesh['nCell'])
+                y.append(ds1['time'][procName].mean())
+            arg = np.argsort(x)
+            xs[procName] = np.array(x)[arg]
+            ys[procName] = np.array(y)[arg]
+            xmin = min(xmin, np.min(x))
+            xmax = max(xmax, np.max(x))
+        plotdata[f'{srcMeshType}-{tgtMeshType}'] = (xs, ys)
+
+    # Plot
+    fig, ax = plt.subplots(figsize=figsize, gridspec_kw=gridspec)
+
+    for (srcMeshType, tgtMeshType), markerStyle in \
+    zip(lst_meshTypePair, lst_markerStyle_meshTypePair):
+        xs, ys = plotdata[f'{srcMeshType}-{tgtMeshType}']
+
+        for procName in dct_proc.keys():
+            proc = dct_proc[procName]
+            if not proc['plot']: 
+                continue
+            label = None if is_forAllMeshType else proc['label']
+            ax.plot(xs[procName], ys[procName], 
+                    **proc['style'], **markerStyle, mfc='w', label=label)
+
+    # Legend
+    if is_forAllMeshType:
+        for (srcMeshType, tgtMeshType), markerStyle in \
+        zip(lst_meshTypePair, lst_markerStyle_meshTypePair):
+            ax.scatter([np.nan], [np.nan], 
+                marker=markerStyle['marker'], fc='w', ec='dimgray',
+                label=f'{util.DICT_MESH[refinement][srcMeshType]["name_fig"]} - '\
+                      f'{util.DICT_MESH[refinement][tgtMeshType]["name_fig"]}')
+
+        for procName in dct_proc.keys():
+            proc = dct_proc[procName]
+            if not proc['plot']: 
+                continue
+            ax.plot([np.nan]*2, [np.nan]*2,
+                lw=1.5, color=proc['style']['color'], label=proc['label'])
+
+    # Order lines
+    for i, proc in enumerate( (
+        ('Total', np.argmax, np.max, 1.10),
+        ('intersection', np.argmin, np.min, 0.85),
+    ) ):
+        procName, f_loc, f_base, frac = proc
+
+        iPair = f_loc([plotdata[f'{srcMeshType}-{tgtMeshType}'][1][procName][0] \
+                       for (srcMeshType, tgtMeshType) in lst_meshTypePair])
+        srcMeshType, tgtMeshType = lst_meshTypePair[iPair]
+        xs, ys = plotdata[f'{srcMeshType}-{tgtMeshType}']
+        x, y = xs[procName], ys[procName]
+        xp = np.array([xmin, xmax])
+
+        yp = xp * np.log(xp) * f_base(y / (x * np.log(x))) * frac
+        label = r'$N \ \mathrm{log} \ N$' if i == 0 else None
+        ax.plot(xp, yp, lw=1, c='dimgray', ls='dotted', label=label)
+
+        yp = xp * f_base(y / x) * frac
+        label = r'$N$' if i == 0 else None
+        ax.plot(xp, yp, lw=1, c='dimgray', ls='dashed', label=label)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.grid(axis='x', **glargs)
+    ax.grid(axis='y', **glargs)
+    ax.set_xlabel('Number of grid cells (source + target)')
+    ax.set_ylabel('Time [s]')
+    ax.legend(**legendargs)
+
+    print(f'Saving {path_fig}')
+    #fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1)
     plt.show()
 
 
@@ -1284,6 +1542,16 @@ elif job == 'plot_consistency':
     args = parser.parse_args()
 
     plot_consistency()
+
+elif job == 'plot_time':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('job')
+    parser.add_argument('-smt', '--srcMeshType', type=str, default=None)
+    parser.add_argument('-tmt', '--tgtMeshType', type=str, default=None)
+    args = parser.parse_args()
+
+    plot_time(
+      args.srcMeshType, args.tgtMeshType)
 
 else:
     raise Exception(f'Invalid value in `job`: {job}')
