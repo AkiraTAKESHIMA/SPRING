@@ -6,6 +6,8 @@ module mod_finalize
   use lib_math
   use c1_type_gs
   use c1_type_timer
+  use c1_timer, only: &
+        point_ctimer
   use c2_type_rt
   implicit none
   !-------------------------------------------------------------
@@ -21,7 +23,7 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine finalize(s, t, rt, ct)
+subroutine finalize(s, t, rt)
   use c1_file, only: &
         report           , &
         close_report_file
@@ -33,10 +35,8 @@ subroutine finalize(s, t, rt, ct)
   character(CLEN_PROC), parameter :: PRCNAM = 'finalize'
   type(gs_), intent(inout) :: s, t
   type(rt_), intent(inout) :: rt
-  type(ctimer_), intent(inout), target, optional :: ct
 
-  type(ctimer_), pointer :: ct_
-
+  type(ctimer_), pointer :: ct
   type(timer_), pointer :: timer
   type(timer_elem_), pointer :: te, te1, te2
   real(8) :: time_total
@@ -48,10 +48,8 @@ subroutine finalize(s, t, rt, ct)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(ct_)
-  if( present(ct) ) ct_ => ct
-
-  timer => ct_%timer
+  call point_ctimer(ct)
+  timer => ct%timer
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -63,7 +61,7 @@ subroutine finalize(s, t, rt, ct)
   !
   !-------------------------------------------------------------
   if( timer%is_active )then
-    time_total = sum(ct%timer%elem(:timer%n)%time)
+    time_total = sum(timer%elem(:timer%n)%time)
     call logmsg('total (original): '//str(time_total))
 
     te1 => timer%elem(get_idx_timer(timer, 'searching_intersecting_grids (2)'))

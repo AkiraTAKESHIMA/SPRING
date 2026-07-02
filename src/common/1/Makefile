@@ -24,6 +24,7 @@ c1_file.o\
 c1_set.o\
 c1_opt_ctrl.o\
 c1_opt_set.o\
+c1_timer.o\
 c1_gs_util.o\
 c1_gs_grid_base.o\
 c1_gs_base.o\

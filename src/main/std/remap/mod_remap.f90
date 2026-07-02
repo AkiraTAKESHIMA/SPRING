@@ -10,6 +10,9 @@ module mod_remap
   use c1_type_opt
   use c1_type_gs
   use c1_type_timer
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer
   use c2_type_rt
   implicit none
   private
@@ -26,14 +29,11 @@ contains
 !===============================================================
 !
 !===============================================================
-subroutine remap(s, t, rt, ct)
+subroutine remap(s, t, rt)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'remap'
   type(gs_), intent(inout), target :: s, t
   type(rt_), intent(inout), target :: rt
-  type(ctimer_), intent(inout), target, optional :: ct
-
-  type(ctimer_), pointer :: ct_
 
   type(gs_common_)    , pointer :: sgc, tgc
   type(file_grid_in_) , pointer :: sfg
@@ -50,11 +50,6 @@ subroutine remap(s, t, rt, ct)
   integer(8) :: loc
 
   call logbgn(PRCNAM, MODNAM)
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  allocate(ct_)
-  if( present(ct) ) ct_ => ct
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -81,7 +76,7 @@ subroutine remap(s, t, rt, ct)
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
-    call start_timer(ct%timer, 'buffer')
+    call start_ctimer('buffer')
 
     allocate(sval(sfg%nij))
     allocate(tval(tfg%nij))
@@ -90,7 +85,7 @@ subroutine remap(s, t, rt, ct)
     allocate(sval_2d(sfg%nx,sfg%ny))
     allocate(tval_2d(tfg%nx,tfg%ny))
 
-    call stop_timer(ct%timer, 'buffer')
+    call stop_ctimer('buffer')
     !-----------------------------------------------------------
     !
     !-----------------------------------------------------------
@@ -102,7 +97,7 @@ subroutine remap(s, t, rt, ct)
       !---------------------------------------------------------
       ! Read input
       !---------------------------------------------------------
-      call start_timer(ct%timer, 'io')
+      call start_ctimer('io')
 
       selectcase( sfg%ny )
       case( 1_8 )
@@ -118,11 +113,11 @@ subroutine remap(s, t, rt, ct)
         call errend(msg_invalid_value('sfg%ny', sfg%ny))
       endselect
 
-      call stop_timer(ct%timer, 'io')
+      call stop_ctimer('io')
       !---------------------------------------------------------
       ! Interpolate
       !---------------------------------------------------------
-      call start_timer(ct%timer, 'interpolate')
+      call start_ctimer('interpolate')
 
       tval(:) = 0.d0
       tval_mask(:) = 0_1
@@ -152,11 +147,11 @@ subroutine remap(s, t, rt, ct)
         endif
       enddo
 
-      call stop_timer(ct%timer, 'interpolate')
+      call stop_ctimer('interpolate')
       !---------------------------------------------------------
       ! Write output
       !---------------------------------------------------------
-      call start_timer(ct%timer, 'io')
+      call start_ctimer('io')
 
       tval_2d = reshape(tval,(/tfg%nx,tfg%ny/))
 
@@ -164,7 +159,7 @@ subroutine remap(s, t, rt, ct)
              tval_2d, tf%path, tf%dtype, tf%endian, tf%rec, &
              sz=tf%sz(:2), lb=tf%lb(:2)) )
 
-      call stop_timer(ct%timer, 'io')
+      call stop_ctimer('io')
     enddo  ! iFile/
     !-----------------------------------------------------------
     !

@@ -10,6 +10,9 @@ module c1_gs_define
   use c1_const
   use c1_type_gs
   use c1_type_timer
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer
   use c1_gs_define_polygon, only: &
         set_gs__polygon
   implicit none
@@ -39,25 +42,16 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function set_mesh__any(&
-    a, &
-    ct &
-) result(info)
+integer(4) function set_mesh__any(a) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'set_mesh__any'
   type(gs_), intent(inout) :: a
-  type(ctimer_), intent(inout), target, optional :: ct
-
-  type(ctimer_), pointer :: ct_
 
   info = 0
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(ct_)
-  if( present(ct) ) ct_ => ct
-
   selectcase( a%typ )
 
   case( MESHTYPE__LATLON )
@@ -71,7 +65,7 @@ integer(4) function set_mesh__any(&
     endif
 
   case( MESHTYPE__POLYGON )
-    if( set_gs__polygon(a%polygon, ct_) /= 0 )then
+    if( set_gs__polygon(a%polygon) /= 0 )then
       info = 1; call errret(); return
     endif
 
@@ -104,6 +98,8 @@ integer(4) function set_gs__latlon(ul, lon, lat) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('define_lattice')
+
   fl => ul%f_latlon_in
 
   allocate(ul%lon(0:ul%nh))
@@ -278,10 +274,11 @@ integer(4) function set_gs__latlon(ul, lon, lat) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  !ul%lon0(:) = ul%lon(:ul%nh-1) > ul%lon(1:)
   do ih = 1, ul%nh
     ul%lon0(ih) = ul%lon(ih-1) > ul%lon(ih) .and. ul%lon(ih-1) /= rad_360deg
   enddo
+
+  call stop_ctimer('define_lattice')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -308,6 +305,8 @@ integer(4) function set_gs__raster(ar) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('define_lattice')
+
   allocate(ar%lon(ar%hi-1_8:ar%hf))
   allocate(ar%lat(ar%vi-1_8:ar%vf))
 
@@ -472,6 +471,8 @@ integer(4) function set_gs__raster(ar) result(info)
     ar%zone(:)%xi = ar%zone(:)%hi
     ar%zone(:)%xf = ar%zone(:)%hf
   endif
+
+  call stop_ctimer('define_lattice')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function set_gs__raster

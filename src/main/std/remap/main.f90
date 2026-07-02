@@ -7,6 +7,9 @@ program main
   use c1_type_opt
   use c1_type_gs
   use c1_type_timer
+  use c1_timer, only: &
+        init_ctimer, &
+        clear_ctimer
   use c1_gs_define, only: &
         set_gs
   use c1_gs_grid_core, only: &
@@ -30,22 +33,21 @@ program main
   logical :: calc_coef = .true.
   logical :: calc_vrf  = .true.
   logical :: output    = .true.
-  type(ctimer_) :: ct
 
   call logbgn('program remap', '', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call init_timer(ct%timer, 16)
+  call init_ctimer(16)
 
   call read_settings(s, t, rt)
 
   selectcase( rt%status )
 
   case( RT_STATUS__MAKE )
-    call traperr( set_gs(s, ct) )
-    call traperr( set_gs(t, ct) )
-    call traperr( make_rt(s, t, rt, calc_coef, calc_vrf, output, ct) )
+    call traperr( set_gs(s) )
+    call traperr( set_gs(t) )
+    call traperr( make_rt(s, t, rt, calc_coef, calc_vrf, output) )
 
   case( RT_STATUS__READ )
     call traperr( make_grdidx(s) )
@@ -60,9 +62,11 @@ program main
     call errend(msg_invalid_value('rt%status', rt%status))
   endselect
 
-  call remap(s, t, rt, ct)
+  call remap(s, t, rt)
 
-  call finalize(s, t, rt, ct)
+  call finalize(s, t, rt)
+
+  call clear_ctimer()
   !-------------------------------------------------------------
   call logret()
 end program main

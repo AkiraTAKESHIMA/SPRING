@@ -9,7 +9,7 @@ module c1_gs_define_polygon
   use lib_math
   use c1_const
   use c1_type_gs
-  use c1_type_timer
+  use c1_timer
   implicit none
   private
   !-------------------------------------------------------------
@@ -31,16 +31,10 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function set_gs__polygon(&
-    ap, &
-    ct &
-) result(info)
+integer(4) function set_gs__polygon(ap) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'set_gs__polygon'
   type(gs_polygon_), intent(inout), target :: ap
-  type(ctimer_), intent(inout), target, optional :: ct
-
-  type(ctimer_), pointer :: ct_
 
   type(file_polygon_in_), pointer :: fp
   type(grid_)           , pointer :: g
@@ -53,9 +47,6 @@ integer(4) function set_gs__polygon(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  allocate(ct_)
-  if( present(ct) ) ct_ => ct
-
 !  if( .not. ap%is_valid )then
 !    call logret(PRCNAM, MODNAM)
 !    return
@@ -88,7 +79,7 @@ integer(4) function set_gs__polygon(&
     endif
   endif
 
-  call start_timer(ct%timer, 'buffer')
+  call start_ctimer('buffer')
 
   allocate(ap%polygon(ijs:ije))
 
@@ -116,20 +107,20 @@ integer(4) function set_gs__polygon(&
     endif
   enddo  ! ij/
 
-  call stop_timer(ct%timer, 'buffer')
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  call start_timer(ct%timer, 'io')
+  call start_ctimer('io')
 
   call logmsg('Reading grid system data')
   if( read_data_plainbinary(ap) /= 0 )then
     info = 1; call errret(); return
   endif
 
-  call stop_timer(ct%timer, 'io')
+  call stop_ctimer('io')
 
-  call start_timer(ct%timer, 'bbox')
+  call start_ctimer('bbox')
 
   call logmsg('Modifying coords.')
   if( modify_coords(ap) /= 0 )then
@@ -181,7 +172,7 @@ integer(4) function set_gs__polygon(&
     info = 1; call errret(); return
   endif
 
-  call stop_timer(ct%timer, 'bbox')
+  call stop_ctimer('bbox')
 
   call print_info(ap)
   !-------------------------------------------------------------

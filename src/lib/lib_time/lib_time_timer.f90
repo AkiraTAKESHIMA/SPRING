@@ -10,6 +10,7 @@ module lib_time_timer
   public :: timer_elem_
 
   public :: init_timer
+  public :: clear_timer
   public :: start_timer
   public :: stop_timer
   public :: add_time
@@ -43,11 +44,19 @@ contains
 !===============================================================
 subroutine init_timer(timer, sz)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'init_timer'
   type(timer_), intent(out) :: timer
   integer, intent(in) :: sz
 
   type(timer_elem_), pointer :: te
   integer :: i
+
+  if( timer%is_active )then
+    write(STDERR, "(a)") '****** ERROR ******'
+    write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
+    write(STDERR, "(a)") 'Timer is already used.'
+    stop 1
+  endif
 
   timer%n = 0
   timer%is_active = .true.
@@ -62,6 +71,22 @@ subroutine init_timer(timer, sz)
   enddo
   nullify(te)
 end subroutine init_timer
+!===============================================================
+!
+!===============================================================
+subroutine clear_timer(timer)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'clear_timer'
+  type(timer_), intent(inout) :: timer
+
+  if( .not. timer%is_active )then
+    write(STDERR, "(a)") '****** ERROR ******'
+    write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
+    write(STDERR, "(a)") 'Timer is inactive.'
+    stop 1
+  endif
+  deallocate(timer%elem)
+end subroutine clear_timer
 !===============================================================
 !
 !===============================================================
