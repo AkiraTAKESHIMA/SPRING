@@ -71,7 +71,7 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
     fp = open(f_conf, 'w')
     fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
     fp.write(conf.remap.block_mesh(dat))
-    fp.write(conf.remap.block_mesh(mat))
+    fp.write(conf.remap.block_mesh(mat, fin_grdidx='fin_grdbndidx'))
     fp.write(conf.remap.block_remapping(cnf[k.rtc], dir_tmp,
                fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
                fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
@@ -81,7 +81,7 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
 
     f_log = f'{env.dir_log}/{dataName}/{tileName}_{landType}.out'
     f_err = f'{env.dir_log}/{dataName}/{tileName}_{landType}.err'
-    util.exec_program(const.prog_remap, f_conf, f_log, f_err)
+    #util.exec_program(const.prog_remap, f_conf, f_log, f_err)
 
 
 def mkdir(dataName, landType):

@@ -15,16 +15,34 @@ path_report: "{dir_out}/{fname_report}.txt"\n'
     return s
 
 
-def block_mesh(gs, use_grdara=False):
+def block_mesh(
+  gs: dict, 
+  fin_grdidx: str = None,
+  fin_rstidx: str = None,
+  fin_grdara: str = None):
+
     if gs['type'] == 'latlon':
-        return block_mesh_latlon(gs, use_grdara)
+
+        return block_mesh_latlon(
+                gs, fin_grdidx, fin_grdara)
+
     elif gs['type'] == 'raster':
-        return block_mesh_raster(gs, use_grdara)
+
+        return block_mesh_raster(
+                gs, fin_rstidx, fin_grdidx, fin_grdara)
+
     elif gs['type'] == 'polygon':
-        return block_mesh_polygon(gs, use_grdara)
+
+        return block_mesh_polygon(
+                gs, fin_grdidx, fin_grdara)
 
 
-def block_mesh_latlon(gs, use_grdara):
+def block_mesh_latlon(
+  gs: dict, 
+  fin_grdidx: str,
+  fin_grdara: str,
+):
+
     s = f'\
 \n\
 [mesh_latlon]\n\
@@ -59,13 +77,15 @@ def block_mesh_latlon(gs, use_grdara):
     s += f'\
   is_south_to_north: {gs["is_south_to_north"]}\n'
 
-    if util.key_val_exist(gs, 'fin_grdidx'):
+    val = util.get_val(gs, fin_grdidx, 'fin_grdidx')
+    if val is not None:
         s += f'\
-  fin_grdidx: {util.str_file_bin(gs["fin_grdidx"])}\n'
+  fin_grdidx: {util.str_file_bin(val)}\n'
 
-    if use_grdara:
+    val = util.get_val(gs, fin_grdara, 'fin_grdara')
+    if val is not None:
         s += f'\
-  fin_grdara: {util.str_file_bin(gs["fin_grdara"])}\n'
+  fin_grdara: {util.str_file_bin(val)}\n'
 
     if util.key_val_exist(gs, 'idx_bgn'):
         s += f'\
@@ -82,7 +102,11 @@ def block_mesh_latlon(gs, use_grdara):
     return s
 
 
-def block_mesh_raster(gs, use_grdara):
+def block_mesh_raster(
+    gs: dict, 
+    fin_rstidx: str,
+    fin_grdidx: str, fin_grdara: str,
+):
     s = f'\
 \n\
 [mesh_raster]\n\
@@ -108,16 +132,19 @@ def block_mesh_raster(gs, use_grdara):
         s += f'\
   dir: "{gs["dir"]}"\n'
 
+    val = util.get_val(gs, fin_rstidx, 'fin_rstidx', allow_empty=False)
     s += f'\
-  fin_rstidx: {util.str_file_bin(gs["fin_rstidx"])}\n'
+  fin_rstidx: {util.str_file_bin(val)}\n'
 
-    if util.key_val_exist(gs, 'fin_grdidx'):
+    val = util.get_val(gs, fin_grdidx, 'fin_grdidx')
+    if val is not None:
         s += f'\
-  fin_grdidx: {util.str_file_bin(gs["fin_grdidx"])}\n'
+  fin_grdidx: {util.str_file_bin(val)}\n'
 
-    if use_grdara:
+    val = util.get_val(gs, fin_grdara, 'fin_grdara')
+    if val is not None:
         s += f'\
-  fin_grdara: {util.str_file_bin(gs["fin_grdara"])}\n'
+  fin_grdara: {util.str_file_bin(val)}\n'
 
     s += f'\
   in_grid_sz: {gs["nx_grid"]}, {gs["ny_grid"]}\n'
