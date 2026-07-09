@@ -4,4 +4,5 @@ bin/
 ext/
 dat
 updates.txt
-.venv/
+
+.venv*/

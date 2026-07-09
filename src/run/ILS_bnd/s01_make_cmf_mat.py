@@ -57,13 +57,20 @@ def make_cmf_mat(cnf, update_data):
         CMF_pre[f'fout_grdidx_{landType}'] = file_bin(f'{landType}/grdidx.bin')
 
         MAT = cnf[k.m][f'MATSIRO_{landType}']
+
         MAT['fout_grdmsk'] = file_bin(
              f'{landType}/land_mask.bin', 
              dtype=const.str_dtype_real,
              endian=const.endian_big)
+
         MAT['fout_rstidx'] = file_bin(f'{landType}/rstidx.bin')
         MAT['fout_grdidx'] = file_bin(f'{landType}/grdidx.bin')
+
+        MAT['fout_rstbndidx'] = file_bin(f'{landType}/rstbndidx.bin')
         MAT['fout_grdbndidx'] = file_bin(f'{landType}/grdbndidx.bin')
+
+        MAT['fout_rstmkbndidx'] = file_bin(f'{landType}/rstmkbndidx.bin')
+        MAT['fout_grdmkbndidx'] = file_bin(f'{landType}/grdmkbndidx.bin')
 
     f_conf = f'{env.dir_set}/a.conf'
     print('config: '+f_conf)
@@ -87,7 +94,10 @@ def make_cmf_mat(cnf, update_data):
             CMF[key]['path'] = os.path.join(os.getcwd(), dir_tmp_cmf, CMF[key]['path'])
 
         MAT = cnf[k.m][f'MATSIRO_{landType}']
-        for dname in ['rstidx', 'grdidx', 'grdbndidx']:
+        for dname in [
+                'rstidx'     , 'grdidx'     , 
+                'rstbndidx'  , 'grdbndidx'  ,
+                'rstmkbndidx', 'grdmkbndidx']:
             key = f'fin_{dname}'
             util.copy_dict_elem(MAT, MAT, f'fin_{dname}', f'fout_{dname}')
             MAT[key]['path'] = os.path.join(os.getcwd(), dir_tmp_mat, MAT[key]['path'])
