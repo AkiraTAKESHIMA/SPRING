@@ -46,17 +46,17 @@ ln -s ../../src .
 #---------------------------------------------------------------
 #
 #---------------------------------------------------------------
-./src/make_gcmmap
+./src/make_gcmmap.exe
 
-./src/modify_hires
-./src/calc_uparea
+./src/modify_hires.exe
+./src/calc_uparea.exe
 
-./src/const_network
-./src/define_catchment
-./src/visual_check
-./src/gcm_rivermap
-./src/set_map
-./src/calc_inpmat
+./src/const_network.exe
+./src/define_catchment.exe
+./src/visual_check.exe
+./src/gcm_rivermap.exe
+./src/set_map.exe
+./src/calc_inpmat.exe
 #---------------------------------------------------------------
 #
 #---------------------------------------------------------------

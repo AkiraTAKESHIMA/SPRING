@@ -7,7 +7,7 @@ import conf_cpl_define_mat as cpl_define_mat
 import conf_cpl_make_rt as cpl_make_rt
 
 
-def head(dir_tmp):
+def head(dir_tmp: str):
     s = f'\
 #\n\
 path_report: "{dir_tmp}/report.txt"\n'

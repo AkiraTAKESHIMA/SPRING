@@ -1,10 +1,15 @@
 program main
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
+  use c1_timer, only: &
+        init_ctimer, &
+        clear_ctimer
   use c1_gs_define, only: &
         set_gs
   use c1_gs_grid_core, only: &
@@ -33,6 +38,8 @@ program main
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call init_ctimer(16)
+
   call read_settings(s, t, rt)
 
   selectcase( rt%status )
@@ -58,6 +65,8 @@ program main
   call remap(s, t, rt)
 
   call finalize(s, t, rt)
+
+  call clear_ctimer()
   !-------------------------------------------------------------
   call logret()
 end program main

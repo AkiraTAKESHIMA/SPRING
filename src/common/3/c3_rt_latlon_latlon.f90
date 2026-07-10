@@ -6,6 +6,10 @@ module c3_rt_latlon_latlon
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer
   use c2_type_rt
   implicit none
   private
@@ -22,7 +26,9 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
+integer(4) function make_rt_latlon_latlon(&
+    s, t, rt &
+) result(info)
   use c2_rt1d, only: &
         init_rt1d   , &
         clear_rt1d  , &
@@ -72,12 +78,16 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
+  call start_ctimer('bounds_relation')
+
   if( calc_relations_llbnds(al, bl) /= 0 )then
     info = 1; call errret(); return
   endif
   if( calc_relations_llbnds(bl, al) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('bounds_relation')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
@@ -91,6 +101,10 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making a remapping table')
+
+  call start_ctimer('intersection')
+
   rtm%nij = 0_8
 
   aij = 0_8
@@ -162,14 +176,24 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
     enddo  ! ish/
   enddo  ! isv/
 
+  call stop_ctimer('intersection')
+
   ! Respahe rt and output intermediates
   !-------------------------------------------------------------
+  call start_ctimer('rt_post')
+
   if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('rt_post')
+
+  call logext()
   !-------------------------------------------------------------
-  ! Deallocate
+  ! Finalize
   !-------------------------------------------------------------
+  call start_ctimer('buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -184,6 +208,8 @@ integer(4) function make_rt_latlon_latlon(s, t, rt) result(info)
   deallocate(bl%hrel, bl%vrel)
   nullify(al, bl)
   nullify(a, b)
+
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_rt_latlon_latlon

@@ -255,14 +255,24 @@ class ComputeGradientFV:
             NP = int(self.varStenDex.shape[1])
 
             pool = multiprocessing.Pool(processes=self.NPROCS)
+            #[260620 Takeshima]
             results = pool.starmap(
                 precomputeGradientFV3Data_Private, zip(
                     repeat(NC), repeat(NP), range(NC), repeat(
-                        self.varCon), repeat(
-                        self.varCoords), repeat(
-                        self.varStenDex), repeat(
+                        self.varCon.data), repeat(
+                        self.varCoords.data), repeat(
+                        self.varStenDex.data), repeat(
                         self.radius), repeat(
                             self.cellCoords)))
+            #results = pool.starmap(
+            #    precomputeGradientFV3Data_Private, zip(
+            #        repeat(NC), repeat(NP), range(NC), repeat(
+            #            self.varCon), repeat(
+            #            self.varCoords), repeat(
+            #            self.varStenDex), repeat(
+            #            self.radius), repeat(
+            #                self.cellCoords)))
+            #[260620 Takeshima/]
             pool.close()
             pool.join()
 
@@ -310,13 +320,23 @@ class ComputeGradientFV:
         else:
             varGradient = np.zeros((nc, NC))
             t_fluxIntegralTotal = np.zeros(nc, dtype=np.float64)
+            #[260620 Takeshima]
             gradientLoop(
                 varGradient,
                 t_fluxIntegralTotal,
-                varField,
+                varField.data,
                 self.areaInvD,
                 self.NS,
                 self.sid,
                 self.fluxIntegral)
+            #gradientLoop(
+            #    varGradient,
+            #    t_fluxIntegralTotal,
+            #    varField,
+            #    self.areaInvD,
+            #    self.NS,
+            #    self.sid,
+            #    self.fluxIntegral)
+            #[260620 Takeshima/]
 
         return varGradient

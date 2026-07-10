@@ -9,6 +9,9 @@ module c1_gs_grid_core
   use c1_const
   use c1_type_gs
   use c1_type_opt
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer
   implicit none
   private
   !-------------------------------------------------------------
@@ -394,6 +397,8 @@ integer(4) function make_idxmap__latlon(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fl    => al%f_latlon_in
   fg_in => al%f_grid_in
 
@@ -401,6 +406,8 @@ integer(4) function make_idxmap__latlon(&
   al%status_mskmap = GRID_STATUS__PREPARED
   allocate(al%idxmap(al%hi:al%hf,al%vi:al%vf))
   allocate(al%mskmap(al%hi:al%hf,al%vi:al%vf))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -409,6 +416,8 @@ integer(4) function make_idxmap__latlon(&
       present(mi4) .or. present(mi8) .or. &
       present(mr4) .or. present(mr8) )then
     call logent('Case: Index data were given as an argument', PRCNAM, MODNAM)
+
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
 
     if( al%is_south_to_north )then
       v0 = al%vi - 1_8
@@ -449,22 +458,30 @@ integer(4) function make_idxmap__latlon(&
 
     endif
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
+
     call logext()
   !-------------------------------------------------------------
   ! Case: Index data were given via a file
   elseif( fg_in%idx%path /= '' )then
     call logent('Case: Index data were given via a file', PRCNAM, MODNAM)
 
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
+
     if( read_lattice_data(&
           al%idxmap, fg_in%idx, al%is_south_to_north) /= 0 )then
       info = 1; call errret(); return
     endif
+
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
 
     call logext()
   !-------------------------------------------------------------
   ! Case: Index data were not given
   else
     call logent('Case: Index data were not given', PRCNAM, MODNAM)
+
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
 
     if( al%is_south_to_north )then
       do iv = al%vi, al%vf
@@ -484,11 +501,15 @@ integer(4) function make_idxmap__latlon(&
       al%idxmax = al%idxmap(al%hf,al%vi)
     endif
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
+
     call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   al%nij = size(al%idxmap)
 
   if( get_minmax(al%idxmap, stat, vmin=al%idxmin, vmax=al%idxmax, miss=al%idx_miss) /= 0 )then
@@ -517,6 +538,8 @@ integer(4) function make_idxmap__latlon(&
       al%mskmap = .false.
     endwhere
   endif
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_idxmap__latlon
@@ -1414,6 +1437,8 @@ integer(4) function make_idxmap__raster(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fr => ar%f_raster_in
 
   ar%status_idxmap = GRID_STATUS__PREPARED
@@ -1423,6 +1448,8 @@ integer(4) function make_idxmap__raster(&
     allocate(arz%idxmap(arz%hi:arz%hf,arz%vi:arz%vf))
     allocate(arz%mskmap(arz%hi:arz%hf,arz%vi:arz%vf))
   enddo
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   ! Set the index map
   !-------------------------------------------------------------
@@ -1431,6 +1458,8 @@ integer(4) function make_idxmap__raster(&
       present(mi4) .or. present(mi8) .or. &
       present(mr4) .or. present(mr8) )then
     call logent('Case: Index data were given as an argument', PRCNAM, MODNAM)
+
+    call start_ctimer('raster_index') !:::::::::::::::::::::::::
 
     if( ar%is_south_to_north )then
       v0 = ar%vi - 1_8
@@ -1479,11 +1508,15 @@ integer(4) function make_idxmap__raster(&
 
     endif
 
+    call stop_ctimer('raster_index') !::::::::::::::::::::::::::
+
     call logext()
   !-------------------------------------------------------------
   ! Case: Index data were given via a file
   else
     call logent('Case: Index data were given via a file', PRCNAM, MODNAM)
+
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
 
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
@@ -1494,6 +1527,8 @@ integer(4) function make_idxmap__raster(&
       endif
     enddo
 
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
+
     call logext()
   endif
 
@@ -1503,6 +1538,8 @@ integer(4) function make_idxmap__raster(&
   !-------------------------------------------------------------
   ! Get stats.
   !-------------------------------------------------------------
+  call start_ctimer('raster_index') !:::::::::::::::::::::::::::
+
   n_valid = 0_8
   do iz = 1, ar%nZone
     arz => ar%zone(iz)
@@ -1571,6 +1608,8 @@ integer(4) function make_idxmap__raster(&
       call logmsg('No valid raster was found in debugging mode.')
     endif
   endif
+
+  call stop_ctimer('raster_index') !::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_idxmap__raster
@@ -1641,7 +1680,11 @@ integer(4) function make_wgtmap__raster(ar) result(info)
     ij_prev = 0_8
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
+      call start_ctimer('buffer') !:::::::::::::::::::::::::::::
       allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call stop_ctimer('buffer') !::::::::::::::::::::::::::::::
+
+      call start_ctimer('raster_data') !::::::::::::::::::::::::
       do iv = arz%vi, arz%vf
         do ih = arz%hi, arz%hf
           if( .not. arz%mskmap(ih,iv) ) cycle
@@ -1655,6 +1698,7 @@ integer(4) function make_wgtmap__raster(ar) result(info)
           arz%wgtmap(ih,iv) = g%ara(ij) / g%uwa(ij)
         enddo  ! ih/
       enddo  ! iv/
+      call stop_ctimer('raster_data') !:::::::::::::::::::::::::
     enddo  ! iz/
 
     call logext()
@@ -1679,7 +1723,11 @@ integer(4) function make_wgtmap__raster(ar) result(info)
       ij_prev = 0_8
       do iz = 1, ar%nZone
         arz => ar%zone(iz)
+        call start_ctimer('buffer') !:::::::::::::::::::::::::::
         allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+        call stop_ctimer('buffer') !::::::::::::::::::::::::::::
+
+        call start_ctimer('raster_data') !::::::::::::::::::::::
         do iv = arz%vi, arz%vf
           do ih = arz%hi, arz%hf
             if( .not. arz%mskmap(ih,iv) ) cycle
@@ -1687,6 +1735,7 @@ integer(4) function make_wgtmap__raster(ar) result(info)
             arz%wgtmap(ih,iv) = g%wgt(ij)
           enddo  ! ih/
         enddo  ! iv/
+        call stop_ctimer('raster_data') !:::::::::::::::::::::::
       enddo  ! iz/
     endif
 
@@ -1695,6 +1744,8 @@ integer(4) function make_wgtmap__raster(ar) result(info)
   ! Case: Raster data of weighted area were given
   elseif( fr%ara%path /= '' )then
     call logent('Case: Raster data of weighted area were given', PRCNAM, MODNAM)
+
+    call start_ctimer('raster_data') !::::::::::::::::::::::::::
 
     ar%status_wgtmap = GRID_STATUS__PREPARED
 
@@ -1713,13 +1764,20 @@ integer(4) function make_wgtmap__raster(ar) result(info)
       return
     endselect
 
+    call stop_ctimer('raster_data') !:::::::::::::::::::::::::::
+
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
+      call start_ctimer('buffer') !:::::::::::::::::::::::::::::
       allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call stop_ctimer('buffer') !::::::::::::::::::::::::::::::
+      call start_ctimer('io') !:::::::::::::::::::::::::::::::::
       if( read_lattice_data(&
             arz%wgtmap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi) /= 0 )then
         info = 1; call errret(); return
       endif
+      call stop_ctimer('io') !::::::::::::::::::::::::::::::::::
+      call start_ctimer('raster_data') !::::::::::::::::::::::::
       if( conv_unit(arz%wgtmap, fr%unit_ara, UNIT_SQUARE_METER) /= 0 )then
         info = 1; call errret(); return
       endif
@@ -1742,6 +1800,7 @@ integer(4) function make_wgtmap__raster(ar) result(info)
           endif
         enddo  ! ih/
       enddo  ! iv/
+      call stop_ctimer('raster_data') !:::::::::::::::::::::::::
     enddo  ! iz/
 
     deallocate(rstuwa_col)
@@ -1756,12 +1815,17 @@ integer(4) function make_wgtmap__raster(ar) result(info)
 
     do iz = 1, ar%nZone
       arz => ar%zone(iz)
+      call start_ctimer('buffer') !:::::::::::::::::::::::::::::
       allocate(arz%wgtmap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call stop_ctimer('buffer') !::::::::::::::::::::::::::::::
+      call start_ctimer('io') !:::::::::::::::::::::::::::::::::
       if( read_lattice_data(&
             arz%wgtmap, fr%wgt, ar%is_south_to_north, arz%xi, arz%yi) /= 0 )then
         info = 1; call errret(); return
       endif
+      call stop_ctimer('io') !::::::::::::::::::::::::::::::::::
 
+      call start_ctimer('raster_data') !::::::::::::::::::::::::
       do iv = arz%vi, arz%vf
         do ih = arz%hi, arz%hf
           if( arz%mskmap(ih,iv) )then
@@ -1779,6 +1843,7 @@ integer(4) function make_wgtmap__raster(ar) result(info)
           endif
         enddo  ! ih/
       enddo  ! iv/
+      call stop_ctimer('raster_data') !:::::::::::::::::::::::::
     enddo  ! iz/
 
     call logext()
@@ -1840,17 +1905,24 @@ integer(4) function make_grdidx__raster(ar) result(info)
   if( fg_in%idx%path /= '' )then
     call logent('Case: Index data were given', PRCNAM, MODNAM)
 
+    call start_ctimer('buffer') !:::::::::::::::::::::::::::::::
     ar%nij = fg_in%nij
     g%nij = fg_in%nij
     allocate(g%idx(g%nij))
     allocate(g%idxarg(g%nij))
     allocate(g%msk(g%nij))
+    call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::
 
     f => fg_in%idx
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
     if( rbin(g%idx, fg_in%nx, fg_in%ny, &
              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2)) /= 0 )then
       info = 1; call errret(); return
     endif
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
+
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
+
     call argsort(g%idx, g%idxarg)
 
     selectcase( ar%idx_condition )
@@ -2128,11 +2200,15 @@ integer(4) function make_grdidx__raster(ar) result(info)
       g%idxmax = maxval(g%idx, mask=g%msk)
     endif
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
+
     call logext()
   !-------------------------------------------------------------
   ! Case: No input
   else
     call logent('Case: No input', PRCNAM, MODNAM)
+
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
 
     allocate(is_valid(ar%idxmin:ar%idxmax))
     is_valid(:) = .false.
@@ -2167,11 +2243,15 @@ integer(4) function make_grdidx__raster(ar) result(info)
 
     deallocate(is_valid)
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
+
     call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   call print_indices(g%idx, g%idxarg, ar%idx_miss, g%idxmin, g%idxmax)
 
   g%ij_debug = 0_8
@@ -2187,6 +2267,8 @@ integer(4) function make_grdidx__raster(ar) result(info)
   endif
 
   ar%is_valid = any(g%msk)
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_grdidx__raster
@@ -2238,6 +2320,8 @@ integer(4) function make_grduwa__raster(ar) result(info)
   !-------------------------------------------------------------
   ! Calc. unweighted area of raster column
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   allocate(rstuwa_col(ar%vi:ar%vf))
 
   selectcase( earth%shptyp )
@@ -2312,6 +2396,8 @@ integer(4) function make_grduwa__raster(ar) result(info)
   endselect
 
   deallocate(rstuwa_col)
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-----------------------------------------------------------
   !
   !-----------------------------------------------------------
@@ -2391,6 +2477,8 @@ integer(4) function make_grdara__raster(ar) result(info)
   elseif( fg_in%wgt%path /= '' )then
     call logent('Case: Grid weight data were given', PRCNAM, MODNAM)
 
+    call start_ctimer('grid_data') !:::::::::::::::::::::::::::::
+
     if( make_grduwa__raster(ar) /= 0 )then
       info = 1; call errret(); return
     endif
@@ -2402,6 +2490,8 @@ integer(4) function make_grdara__raster(ar) result(info)
       if( g%msk(ij) ) g%ara(ij) = g%uwa(ij)*g%wgt(ij)
     enddo
 
+    call stop_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
     call logext()
   !-------------------------------------------------------------
   ! Case: Raster data of area were given
@@ -2412,18 +2502,27 @@ integer(4) function make_grdara__raster(ar) result(info)
     idx_prev = ar%idx_miss
     ij_prev = 0_8
     do iz = 1, ar%nZone
+      call start_ctimer('buffer') !::::::::::::::::::::::::::::::
       arz => ar%zone(iz)
       allocate(aramap(arz%hi:arz%hf,arz%vi:arz%vf))
+      call stop_ctimer('buffer') !:::::::::::::::::::::::::::::::
+
+      call start_ctimer('io') !::::::::::::::::::::::::::::::::::
       if( read_lattice_data(&
             aramap, fr%ara, ar%is_south_to_north, arz%xi, arz%yi) /= 0 )then
         info = 1; call errret(); return
       endif
+      call stop_ctimer('io') !:::::::::::::::::::::::::::::::::::
+
+      call start_ctimer('grid_data') !:::::::::::::::::::::::::::
       do iv = arz%vi, arz%vf
         do ih = arz%hi, arz%hf
           ij = find_index(arz%idxmap(ih,iv), idx_prev, ij_prev, g%idx, g%idxarg, .false.)
           call add(g%ara(ij), aramap(ih,iv))
         enddo
       enddo
+      call stop_ctimer('grid_data') !::::::::::::::::::::::::::::
+
       deallocate(aramap)
     enddo
 
@@ -2442,6 +2541,8 @@ integer(4) function make_grdara__raster(ar) result(info)
     ! Case: $wgtmap was prepared
     case( GRID_STATUS__PREPARED )
       call logent('Case: Raster weight map was prepared', PRCNAM, MODNAM)
+
+      call start_ctimer('grid_data') !:::::::::::::::::::::::::::
 
       allocate(uwacol(ar%vi:ar%vf))
       uwacol(:) &
@@ -2463,6 +2564,8 @@ integer(4) function make_grdara__raster(ar) result(info)
 
       deallocate(uwacol)
 
+      call stop_ctimer('grid_data') !::::::::::::::::::::::::::::
+
       call logext()
     !-----------------------------------------------------------
     ! Case: $wgtmap is not used
@@ -2473,7 +2576,11 @@ integer(4) function make_grdara__raster(ar) result(info)
         info = 1; call errret(); return
       endif
 
+      call start_ctimer('buffer') !::::::::::::::::::::::::::::::
+
       call cpval(g%uwa, g%ara)
+
+      call stop_ctimer('buffer') !::::::::::::::::::::::::::::::
 
       call logext()
     !-----------------------------------------------------------
@@ -2501,13 +2608,19 @@ integer(4) function make_grdara__raster(ar) result(info)
       info = 1; call errret(); return
     endif
 
+    call start_ctimer('buffer') !::::::::::::::::::::::::::::::::
+
     call cpval(g%uwa, g%ara)
+
+    call stop_ctimer('buffer') !:::::::::::::::::::::::::::::::::
 
     call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !:::::::::::::::::::::::::::::::
+
   do ij = 1_8, g%nij
     if( g%msk(ij) )then
       if( g%ara(ij) < 0.d0 )then
@@ -2523,6 +2636,8 @@ integer(4) function make_grdara__raster(ar) result(info)
       g%ara(ij) = ar%ara_miss
     endif
   enddo  ! ij/
+
+  call stop_ctimer('grid_data') !::::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2584,11 +2699,13 @@ integer(4) function make_grdwgt__raster(ar) result(info)
   if( fg_in%wgt%path /= '' )then
     call logent('Case: Grid weight data were given', PRCNAM, MODNAM)
 
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
     f => fg_in%wgt
     if( rbin(g%wgt, fg_in%nx, fg_in%ny, &
              f%path, f%dtype, f%endian, f%rec, sz=f%sz(:2), lb=f%lb(:2)) /= 0 )then
       info = 1; call errret(); return
     endif
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
 
     call logext()
   !-------------------------------------------------------------
@@ -2600,6 +2717,7 @@ integer(4) function make_grdwgt__raster(ar) result(info)
       info = 1; call errret(); return
     endif
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     do ij = 1_8, g%nij
       if( g%idx(ij) /= ar%idx_miss )then
         g%wgt(ij) = g%ara(ij) / g%uwa(ij)
@@ -2607,6 +2725,7 @@ integer(4) function make_grdwgt__raster(ar) result(info)
         g%wgt(ij) = ar%wgt_miss
       endif
     enddo
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   !-------------------------------------------------------------
@@ -2614,13 +2733,16 @@ integer(4) function make_grdwgt__raster(ar) result(info)
   else
     call logent('Case: No input', PRCNAM, MODNAM)
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     g%wgt(:) = 1.d0
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
   do ij = 1_8, g%nij
     if( g%msk(ij) )then
       if( g%wgt(ij) < 0.d0 )then
@@ -2636,6 +2758,8 @@ integer(4) function make_grdwgt__raster(ar) result(info)
       g%wgt(ij) = ar%wgt_miss
     endif
   enddo  ! ij/
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2699,6 +2823,8 @@ integer(4) function make_grdxyz__raster(ar) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   allocate(cos_rstlon(ar%hi:ar%hf))
   allocate(sin_rstlon(ar%hi:ar%hf))
   allocate(cos_rstlat(ar%vi:ar%vf))
@@ -2754,6 +2880,8 @@ integer(4) function make_grdxyz__raster(ar) result(info)
       g%z(ij) = ar%xyz_miss
     endif
   enddo  ! ij/
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2827,18 +2955,22 @@ integer(4) function make_grdlonlat__raster(ar) result(info)
     info = 1; call errret(); return
   endif
 
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   if( cartesian_to_spherical_rad(&
         g%x, g%y, g%z, g%lon, g%lat, &
         ar%xyz_miss, ar%lonlat_miss) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   call logmsg('lon min: '//str(minval(g%lon,mask=g%lon/=ar%lonlat_miss))//&
-              ', max: '//str(maxval(g%lon,mask=g%lon/=ar%lonlat_miss)))
+                ', max: '//str(maxval(g%lon,mask=g%lon/=ar%lonlat_miss)))
   call logmsg('lat min: '//str(minval(g%lat,mask=g%lat/=ar%lonlat_miss))//&
-              ', max: '//str(maxval(g%lat,mask=g%lat/=ar%lonlat_miss)))
+                ', max: '//str(maxval(g%lat,mask=g%lat/=ar%lonlat_miss)))
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_grdlonlat__raster
@@ -2873,6 +3005,8 @@ integer(4) function make_grdidx__polygon(ap) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fg_in => ap%f_grid_in
   g     => ap%grid
 
@@ -2882,6 +3016,8 @@ integer(4) function make_grdidx__polygon(ap) result(info)
   allocate(g%idx(ap%ijs:ap%ije))
   allocate(g%idxarg(ap%ijs:ap%ije))
   allocate(g%msk(ap%ijs:ap%ije))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -2890,9 +3026,11 @@ integer(4) function make_grdidx__polygon(ap) result(info)
     call logent('Case: Index data were given', PRCNAM, MODNAM)
 
     f => fg_in%idx
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
     if( rbin(g%idx, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1)) /= 0 )then
       info = 1; call errret(); return
     endif
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
 
     call argsort(g%idx, g%idxarg)
 
@@ -2902,16 +3040,20 @@ integer(4) function make_grdidx__polygon(ap) result(info)
   else
     call logent('Case: No input', PRCNAM, MODNAM)
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     do ij = ap%ijs, ap%ije
       g%idx(ij) = ij + fg_in%idx_bgn - 1_8
       g%idxarg(ij) = ij
     enddo
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   endif
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   if( associated(ap%polygon) )then
     where( g%idx == ap%idx_miss .or. ap%polygon(:)%n < 3 )
       g%msk = .false.
@@ -2951,6 +3093,8 @@ integer(4) function make_grdidx__polygon(ap) result(info)
   endif
 
   ap%is_valid = any(g%msk)
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_grdidx__polygon
@@ -2981,11 +3125,15 @@ integer(4) function make_grduwa__polygon(ap) result(info)
     info = 1; call errret(); return
   endif
 
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fg_in => ap%f_grid_in
   g     => ap%grid
 
   g%status_uwa = GRID_STATUS__PREPARED
   allocate(g%uwa(ap%ijs:ap%ije))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
 
   if( .not. ap%is_valid )then
     g%uwa(:) = ap%uwa_miss
@@ -2997,6 +3145,8 @@ integer(4) function make_grduwa__polygon(ap) result(info)
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
+
   g%uwa(:) = ap%uwa_miss
   do ij = ap%ijs, ap%ije
     if( .not. g%msk(ij) ) cycle
@@ -3019,6 +3169,8 @@ integer(4) function make_grduwa__polygon(ap) result(info)
       return
     endif
   enddo  ! ij/
+
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3058,8 +3210,12 @@ integer(4) function make_grdara__polygon(ap) result(info)
   fg_in => ap%f_grid_in
   g     => ap%grid
 
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   g%status_ara = GRID_STATUS__PREPARED
   allocate(g%ara(ap%ijs:ap%ije))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
 
   if( .not. ap%is_valid )then
     g%ara(:) = ap%ara_miss
@@ -3076,9 +3232,13 @@ integer(4) function make_grdara__polygon(ap) result(info)
     call logent('Case: Weighted area data were given', PRCNAM, MODNAM)
 
     f => fg_in%ara
-    if( rbin(g%ara, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1)) /= 0 )then
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
+    if( rbin(g%ara, f%path, f%dtype, f%endian, f%rec, &
+             sz=f%sz(1), lb=f%lb(1)) /= 0 )then
       info = 1; call errret(); return
     endif
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     if( conv_unit(g%ara, fg_in%unit_ara, UNIT_SQUARE_METER) /= 0 )then
       info = 1; call errret(); return
     endif
@@ -3095,6 +3255,7 @@ integer(4) function make_grdara__polygon(ap) result(info)
       endif
     enddo
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
     call logext()
   !-------------------------------------------------------------
   ! Case: Weight data were given
@@ -3108,11 +3269,13 @@ integer(4) function make_grdara__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     where( g%msk )
       g%ara = g%uwa * g%wgt
     elsewhere
       g%ara = ap%ara_miss
     endwhere
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   !-------------------------------------------------------------
@@ -3124,7 +3287,9 @@ integer(4) function make_grdara__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     call cpval(g%uwa, g%ara)
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   endif
@@ -3164,11 +3329,15 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
     info = 1; call errret(); return
   endif
 
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fg_in => ap%f_grid_in
   g     => ap%grid
 
   g%status_wgt = GRID_STATUS__PREPARED
   allocate(g%wgt(ap%ijs:ap%ije))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
 
   if( .not. ap%is_valid )then
     g%wgt(:) = ap%wgt_miss
@@ -3191,11 +3360,13 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     where( g%msk )
       g%wgt = g%ara / g%uwa
     elsewhere
       g%wgt = ap%wgt_miss
     endwhere
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   !-------------------------------------------------------------
@@ -3204,13 +3375,17 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
     call logent('Case: Weight data were given', PRCNAM, MODNAM)
 
     f => fg_in%wgt
+    call start_ctimer('io') !:::::::::::::::::::::::::::::::::::
     if( rbin(g%wgt, f%path, f%dtype, f%endian, f%rec, sz=f%sz(1), lb=f%lb(1)) /= 0 )then
       info = 1; call errret(); return
     endif
+    call stop_ctimer('io') !::::::::::::::::::::::::::::::::::::
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     where( .not. g%msk )
       g%wgt = ap%wgt_miss
     endwhere
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   !-------------------------------------------------------------
@@ -3218,17 +3393,20 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
   else
     call logent('Case: No input', PRCNAM, MODNAM)
 
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
     where( g%msk )
       g%wgt = 1.d0
     elsewhere
       g%wgt = ap%wgt_miss
     endwhere
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
 
     call logext()
   endif
   !-------------------------------------------------------------
   ! Check values and put the missing value in
   !-------------------------------------------------------------
+  call start_ctimer('grid_data') !::::::::::::::::::::::::::::::
   do ij = ap%ijs, ap%ije
     if( .not. g%msk(ij) ) cycle
 
@@ -3242,6 +3420,7 @@ integer(4) function make_grdwgt__polygon(ap) result(info)
       return
     endif
   enddo  ! ij/
+  call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::::
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -3278,6 +3457,8 @@ integer(4) function make_grdxyz__polygon(ap) result(info)
     info = 1; call errret(); return
   endif
 
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fg_in => ap%f_grid_in
   g     => ap%grid
 
@@ -3285,6 +3466,8 @@ integer(4) function make_grdxyz__polygon(ap) result(info)
   allocate(g%x(ap%ijs:ap%ije))
   allocate(g%y(ap%ijs:ap%ije))
   allocate(g%z(ap%ijs:ap%ije))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
 
   if( .not. ap%is_valid )then
     g%x(:) = ap%xyz_miss
@@ -3321,6 +3504,7 @@ integer(4) function make_grdxyz__polygon(ap) result(info)
   ! Case: No input
   else
     call logent('Case: No input', PRCNAM, MODNAM)
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
 
     g%x(:) = ap%xyz_miss
     g%y(:) = ap%xyz_miss
@@ -3340,6 +3524,7 @@ integer(4) function make_grdxyz__polygon(ap) result(info)
       g%z(ij) = g%z(ij) / r * earth%r
     enddo  ! ij/
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
     call logext()
   endif
   !-------------------------------------------------------------
@@ -3379,12 +3564,16 @@ integer(4) function make_grdlonlat__polygon(ap) result(info)
     info = 1; call errret(); return
   endif
 
+  call start_ctimer('buffer') !:::::::::::::::::::::::::::::::::
+
   fg_in => ap%f_grid_in
   g     => ap%grid
 
   g%status_lonlat = GRID_STATUS__PREPARED
   allocate(g%lon(ap%ijs:ap%ije))
-  allocate(g%lat(ap%ije:ap%ije))
+  allocate(g%lat(ap%ijs:ap%ije))
+
+  call stop_ctimer('buffer') !::::::::::::::::::::::::::::::::::
 
   if( .not. ap%is_valid )then
     g%lon(:) = ap%lonlat_miss
@@ -3420,6 +3609,7 @@ integer(4) function make_grdlonlat__polygon(ap) result(info)
   ! Case: No input
   else
     call logent('Case: No input', PRCNAM, MODNAM)
+    call start_ctimer('grid_data') !::::::::::::::::::::::::::::
 
     if( make_grdxyz__polygon(ap) /= 0 )then
       info = 1; call errret(); return
@@ -3431,6 +3621,7 @@ integer(4) function make_grdlonlat__polygon(ap) result(info)
       info = 1; call errret(); return
     endif
 
+    call stop_ctimer('grid_data') !:::::::::::::::::::::::::::::
     call logext()
   endif
   !-------------------------------------------------------------

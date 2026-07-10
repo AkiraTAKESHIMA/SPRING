@@ -22,11 +22,14 @@ def make_rt_untiled(cnf, dataName, landType):
     fp = open(f_conf, 'w')
     fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
     fp.write(conf.remap.block_mesh(cnf['inputData'][dataName]))
-    fp.write(conf.remap.block_mesh(cnf[k.m][f'MATSIRO_{landType}']))
+    fp.write(conf.remap.block_mesh(
+            cnf[k.m][f'MATSIRO_{landType}'],
+            fin_grdidx='fin_grdmkbndidx',
+            fin_rstidx='fin_rstmkbndidx'))
     fp.write(conf.remap.block_remapping(cnf[k.rtc], dir_tmp,
-               fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
-               fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
-               fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
+            fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
+            fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
+            fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
     fp.write(conf.remap.block_options(cnf[k.opt]))
     fp.close()
 
@@ -71,11 +74,14 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
     fp = open(f_conf, 'w')
     fp.write(conf.remap.head(dir_tmp, f'report_{tileName}_{landType}'))
     fp.write(conf.remap.block_mesh(dat))
-    fp.write(conf.remap.block_mesh(mat))
+    fp.write(conf.remap.block_mesh(
+            mat, 
+            fin_grdidx='fin_grdmkbndidx',
+            fin_rstidx='fin_rstmkbndidx'))
     fp.write(conf.remap.block_remapping(cnf[k.rtc], dir_tmp,
-               fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
-               fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
-               fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
+            fname_rt_grid=f'mapping_table_idx_{tileName}_{landType}',
+            fname_rt_area=f'mapping_table_area_{tileName}_{landType}',
+            fname_rt_coef=f'mapping_table_coef_{tileName}_{landType}'))
     fp.write(conf.remap.block_options(cnf[k.opt]))
     fp.close()
 

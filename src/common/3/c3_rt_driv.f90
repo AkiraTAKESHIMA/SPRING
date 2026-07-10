@@ -1,6 +1,7 @@
 module c3_rt_driv
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_array
   use lib_math
@@ -8,6 +9,10 @@ module c3_rt_driv
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer
   use c2_type_rt
   implicit none
   private
@@ -25,7 +30,8 @@ contains
 !
 !===============================================================
 integer(4) function make_rt(&
-    s, t, rt, calc_coef, make_vrf, output) result(info)
+    s, t, rt, calc_coef, make_vrf, output &
+) result(info)
   use c1_file, only: &
         is_report_file_opened, &
         report
@@ -100,41 +106,56 @@ integer(4) function make_rt(&
   !-------------------------------------------------------------
   ! Case: LatLon and LatLon
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__LATLON) )
+
     if( make_rt_latlon_latlon(s, t, rt) /= 0 )then
+
       info = 1; call errret(); return
+
     endif
   !-------------------------------------------------------------
   ! Case: LatLon and Raster
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__RASTER), &
         trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__LATLON) )
+
     if( make_rt_latlon_raster(s, t, rt) /= 0 )then
+
       info = 1; call errret(); return
+
     endif
   !-------------------------------------------------------------
   ! Case: LatLon and Polygon
   case( trim(MESHTYPE__LATLON)//'_'//trim(MESHTYPE__POLYGON), &
         trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__LATLON) )
+
     if( make_rt_latlon_polygon(s, t, rt) /= 0 )then
+
       info = 1; call errret(); return
+
     endif
   !-------------------------------------------------------------
   ! Case: Raster and Raster
   case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__RASTER) )
     if( make_rt_raster_raster(s, t, rt) /= 0 )then
+
       info = 1; call errret(); return
+
     endif
   !-------------------------------------------------------------
   ! Case: Raster and Polygon
   case( trim(MESHTYPE__RASTER)//'_'//trim(MESHTYPE__POLYGON), &
         trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__RASTER) )
     if( make_rt_raster_polygon(s, t, rt) /= 0 )then
+
       info = 1; call errret(); return
+
     endif
   !-------------------------------------------------------------
   ! Case: Polygon and Polygon
   case( trim(MESHTYPE__POLYGON)//'_'//trim(MESHTYPE__POLYGON) )
     if( make_rt_polygon_polygon(s, t, rt) /= 0 )then
+
       info = 1; call errret(); return
+
     endif
   !-------------------------------------------------------------
   ! Case: ERROR
@@ -148,14 +169,20 @@ integer(4) function make_rt(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('rt_post')
+
   if( calc_coef )then
     if( finish_rt_main(rt, s, t) /= 0 )then
       info = 1; call errret(); return
     endif
   endif
+
+  call stop_ctimer('rt_post')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('rt_post')
+
   if( make_vrf )then
     if( make_rt_vrf(rt, s) /= 0 )then
       info = 1; call errret(); return
@@ -164,9 +191,13 @@ integer(4) function make_rt(&
       info = 1; call errret(); return
     endif
   endif
+
+  call stop_ctimer('rt_post')
   !-------------------------------------------------------------
-  !
+  ! Output
   !-------------------------------------------------------------
+  call start_ctimer('io')
+
   if( output )then
     if( write_rt_main(rt%main) /= 0 )then
       info = 1; call errret(); return
@@ -179,6 +210,10 @@ integer(4) function make_rt(&
     endif
   endif
 
+  call stop_ctimer('io')
+  !-------------------------------------------------------------
+  ! Report
+  !-------------------------------------------------------------
   if( .not. is_report_file_opened() )then
     info = 1
     call errret(msg_unexpected_condition()//&

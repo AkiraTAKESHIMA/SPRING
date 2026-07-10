@@ -1,6 +1,7 @@
 module c1_gs_define_polygon
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_util
   use lib_array
@@ -8,6 +9,7 @@ module c1_gs_define_polygon
   use lib_math
   use c1_const
   use c1_type_gs
+  use c1_timer
   implicit none
   private
   !-------------------------------------------------------------
@@ -77,6 +79,8 @@ integer(4) function set_gs__polygon(ap) result(info)
     endif
   endif
 
+  call start_ctimer('buffer')
+
   allocate(ap%polygon(ijs:ije))
 
   do ij = ijs, ije
@@ -102,13 +106,21 @@ integer(4) function set_gs__polygon(ap) result(info)
       p%idx = ij
     endif
   enddo  ! ij/
+
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call start_ctimer('io')
+
   call logmsg('Reading grid system data')
   if( read_data_plainbinary(ap) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('io')
+
+  call start_ctimer('bbox')
 
   call logmsg('Modifying coords.')
   if( modify_coords(ap) /= 0 )then
@@ -159,6 +171,8 @@ integer(4) function set_gs__polygon(ap) result(info)
   if( modify_loop_directions(ap) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('bbox')
 
   call print_info(ap)
   !-------------------------------------------------------------

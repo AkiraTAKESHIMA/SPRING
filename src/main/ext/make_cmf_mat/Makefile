@@ -12,7 +12,7 @@ include $(TOPSRCDIR)/Mkinclude
 %.mod: %.f90 %.o
 	@:
 
-TARGET = main
+TARGET = main.exe
 BINDIR = $(TOPSRCDIR)/../bin/ext
 BIN = $(BINDIR)/make_cmf_mat.exe
 

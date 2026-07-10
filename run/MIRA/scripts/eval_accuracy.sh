@@ -1,31 +1,34 @@
 #!/bin/bash
 
+NAME_SELF="eval_accuracy"
 
-DIR_SUBMIT="submit"
+DIR_SCRIPT="scripts"
 DIR_LOG="log"
 FILE_PYENV=".venv/bin/activate"
 FILE_PYTHON_SCRIPT="src/remap.py"
-FILE_SUBMISSION_HISTORY="log/submission_history.txt"
+FILE_SUBMISSION_HISTORY="log/history.txt"
 FILE_SIF="/data10/imageshare/cuda/cuda116_py39.sif"
 
-TBL_REFIN_SRC="u"
-TBL_MESH_SRC="ICOD"
+TBL_REFIN_SRC="r"
+TBL_MESH_SRC="CS"
 #TBL_RESL_SRC="0 1 2 3 4"
-TBL_RESL_SRC="0 1 2 3 4"
-TBL_REFIN_TGT="u"
+TBL_RESL_SRC="0 1 2"
+
+TBL_REFIN_TGT="r"
 #TBL_MESH_TGT="CS ICOD RLL"
 TBL_MESH_TGT="ICOD"
 #TBL_RESL_TGT="0 1 2 3 4"
-TBL_RESL_TGT="0 1 2 3 4"
+TBL_RESL_TGT="0 1 2"
+
 TBL_VAR="A1 A2 TPW CFR TPO"
 #TBL_VAR="TPW CFR TPO"
-#TBL_VAR="A1 A2 CFR"
+#TBL_VAR="A1"
 
-#STEP=1  # make_rt
+STEP=1  # make_rt
 
-STEP=2  # remap_iter, make_netCDF, calc_metrics
-DO_REMAP_ITER=true
-DO_MAKE_NETCDF=true
+#STEP=2  # remap_iter, make_NetCDF, calc_metrics
+DO_REMAP_ITER=false
+DO_MAKE_NETCDF=false
 DO_CALC_METRICS=true
 
 OVERWRITE=true
@@ -50,16 +53,18 @@ for RESL_TGT in ${TBL_RESL_TGT}; do
 
   [ "${OPT_SRC_MESH}" == "${OPT_TGT_MESH}" ] && continue
 
-  JOB_ID="step${STEP}_${REFIN_SRC}${MESH_SRC}${RESL_SRC}_${REFIN_TGT}${MESH_TGT}${RESL_TGT}"
+  JOB_ID="${REFIN_SRC}${MESH_SRC}${RESL_SRC}_${REFIN_TGT}${MESH_TGT}${RESL_TGT}"
   WDATE=`date +"%Y%m%d%H%M%S"`
 
-  mkdir -p "${DIR_LOG}/step${STEP}"
-  FILE_LOG="${DIR_LOG}/step${STEP}/${JOB_ID}_${WDATE}.txt"
+  DIR_LOG_THIS="${DIR_LOG}/child/${NAME_SELF}/step${STEP}"
+  FILE_LOG="${DIR_LOG_THIS}/${JOB_ID}_${WDATE}.txt"
+  mkdir -p ${DIR_LOG_THIS}
 
-  mkdir -p "${DIR_SUBMIT}/step${STEP}"
-  FILE_RUN_SCRIPT="${DIR_SUBMIT}/step${STEP}/${JOB_ID}.sh"
+  DIR_SCRIPT_THIS="${DIR_SCRIPT}/child/${NAME_SELF}/step${STEP}"
+  FILE_SCRIPT="${DIR_SCRIPT_THIS}/${JOB_ID}.sh"
+  mkdir -p ${DIR_SCRIPT_THIS}
 
-  cat << EOF > ${FILE_RUN_SCRIPT}
+  cat << EOF > ${FILE_SCRIPT}
 #!/bin/bash
 set -e
 set -x
@@ -75,14 +80,14 @@ done
 date
 EOF
 
-  chmod 744 ${FILE_RUN_SCRIPT}
+  chmod 744 ${FILE_SCRIPT}
 
-  srun --chdir `pwd` -o ${FILE_LOG} -e ${FILE_LOG} singularity exec ${FILE_SIF} ./${FILE_RUN_SCRIPT} &
+  #srun --chdir `pwd` -o ${FILE_LOG} -e ${FILE_LOG} singularity exec ${FILE_SIF} ./${FILE_SCRIPT} &
 
-  echo "${WDATE} ${FILE_RUN_SCRIPT}"
-  echo "${WDATE} ${FILE_RUN_SCRIPT}" >> ${FILE_SUBMISSION_HISTORY}
+  echo "${WDATE} ${FILE_SCRIPT}"
+  echo "${WDATE} ${FILE_SCRIPT}" >> ${FILE_SUBMISSION_HISTORY}
 
-  sleep 1
+  #sleep 1
 
 done  # RESL_TGT
 done  # MESH_TGT
@@ -113,18 +118,20 @@ for VAR in ${TBL_VAR}; do
 
   [ "${OPT_SRC_MESH}" == "${OPT_TGT_MESH}" ] && continue
 
-  JOB_ID="step${STEP}_${REFIN_SRC}${MESH_SRC}${RESL_SRC}_${REFIN_TGT}${MESH_TGT}${RESL_TGT}_${VAR}"
+  JOB_ID="${REFIN_SRC}${MESH_SRC}${RESL_SRC}_${REFIN_TGT}${MESH_TGT}${RESL_TGT}_${VAR}"
   WDATE=`date +"%Y%m%d%H%M%S"`
 
-  mkdir -p "${DIR_LOG}/step${STEP}"
-  FILE_LOG="${DIR_LOG}/step${STEP}/${JOB_ID}_${WDATE}.txt"
+  DIR_LOG_THIS="${DIR_LOG}/child/${NAME_SELF}/step${STEP}"
+  FILE_LOG="${DIR_LOG_THIS}/${JOB_ID}_${WDATE}.txt"
+  mkdir -p ${DIR_LOG_THIS}
 
-  mkdir -p "${DIR_SUBMIT}/step${STEP}"
-  FILE_RUN_SCRIPT="${DIR_SUBMIT}/step${STEP}/${JOB_ID}.sh"
+  DIR_SCRIPT_THIS="${DIR_SCRIPT}/child/${NAME_SELF}/step${STEP}"
+  FILE_SCRIPT="${DIR_SCRIPT_THIS}/${JOB_ID}.sh"
+  mkdir -p ${DIR_SCRIPT_THIS}
 
   OPT_PYTHON_SCRIPT="${OPT_SRC_MESH} ${OPT_TGT_MESH} ${OPT_OTHERS}"
 
-  cat << EOF > ${FILE_RUN_SCRIPT}
+  cat << EOF > ${FILE_SCRIPT}
 #!/bin/bash
 set -e
 set -x
@@ -134,7 +141,7 @@ EOF
 
   # Remap iteratively
   if ${DO_REMAP_ITER}; then
-    cat << EOF >> ${FILE_RUN_SCRIPT}
+    cat << EOF >> ${FILE_SCRIPT}
 
 date
 python ${FILE_PYTHON_SCRIPT} remap_iter ${OPT_PYTHON_SCRIPT}
@@ -144,35 +151,35 @@ EOF
 
   # Make NetCDF files
   if ${DO_MAKE_NETCDF}; then
-    cat << EOF >> ${FILE_RUN_SCRIPT}
+    cat << EOF >> ${FILE_SCRIPT}
 
 date
-python ${FILE_PYTHON_SCRIPT} make_netCDF ${OPT_PYTHON_SCRIPT}
+python ${FILE_PYTHON_SCRIPT} make_NetCDF ${OPT_PYTHON_SCRIPT}
 EOF
   fi
 
   # Calc. metrics
   if ${DO_CALC_METRICS}; then
-    cat << EOF >> ${FILE_RUN_SCRIPT}
+    cat << EOF >> ${FILE_SCRIPT}
 
 date
 python ${FILE_PYTHON_SCRIPT} calc_metrics ${OPT_PYTHON_SCRIPT}
 EOF
   fi
 
-    cat << EOF >> ${FILE_RUN_SCRIPT}
+    cat << EOF >> ${FILE_SCRIPT}
 
 date
 EOF
 
-  chmod 744 ${FILE_RUN_SCRIPT}
+  chmod 744 ${FILE_SCRIPT}
 
-  srun --chdir `pwd` -o ${FILE_LOG} -e ${FILE_LOG} singularity exec ${FILE_SIF} ./${FILE_RUN_SCRIPT} &
+  #srun --chdir `pwd` -o ${FILE_LOG} -e ${FILE_LOG} singularity exec ${FILE_SIF} ./${FILE_SCRIPT} &
 
-  echo "${WDATE} ${FILE_RUN_SCRIPT}"
-  echo "${WDATE} ${FILE_RUN_SCRIPT}" >> ${FILE_SUBMISSION_HISTORY}
+  echo "${WDATE} ${FILE_SCRIPT}"
+  echo "${WDATE} ${FILE_SCRIPT}" >> ${FILE_SUBMISSION_HISTORY}
 
-  sleep 1
+  #sleep 1
 
 done  # VAR
 done  # RESL_TGT

@@ -7,6 +7,10 @@ module c3_rt_latlon_raster
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer
   use c2_type_rt
   implicit none
   private
@@ -23,7 +27,9 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
+integer(4) function make_rt_latlon_raster(&
+    s, t, rt &
+) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c2_rt1d, only: &
@@ -93,15 +99,21 @@ integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Calc. relations of grid bounds.
   !-------------------------------------------------------------
+  call start_ctimer('bounds_relation')
+
   if( calc_relations_llbnds(al, br) /= 0 )then
     info = 1; call errret(); return
   endif
   if( calc_relations_llbnds(br, al) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('bounds_relation')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call start_ctimer('buffer')
+
   allocate(iibh(br%hi-1_8:br%hf+1_8))
 
   allocate(rt1d(al%nij))
@@ -130,9 +142,15 @@ integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
               '\nbr%status_wgtmap == '//str(br%status_wgtmap))
     return
   endif
+
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making a remapping table')
+
+  call start_ctimer('intersection')
+
   rt1%mij = 0_8
 
   if( br%debug )then
@@ -231,14 +249,24 @@ integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
     call logmsg('lapara_sum_b: '//str(lapara_sum_b,'es20.13'))
   endif
 
+  call stop_ctimer('intersection')
+
   ! Reshape $rt1d and output intermediates
   !-------------------------------------------------------------
+  call start_ctimer('rt_post')
+
   if( reshape_rt1d(rt1d, a%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  call stop_ctimer('rt_post')
+
+  call logext()
   !-------------------------------------------------------------
-  ! Deallocate
+  ! Finalize
   !-------------------------------------------------------------
+  call start_ctimer('buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -256,6 +284,8 @@ integer(4) function make_rt_latlon_raster(s, t, rt) result(info)
   deallocate(br%hrel, br%vrel)
   nullify(al, br)
   nullify(a, b)
+
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 !---------------------------------------------------------------

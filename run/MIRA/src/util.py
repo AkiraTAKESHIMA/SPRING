@@ -7,15 +7,19 @@ ITERMAX = 1000
 ITERINT_PLOT = 10
 ITERINT_TICK = 200
 
+ALGORITHM_SPRING = 'SPRING'
 PROGRAM_REMAP = './bin/std/remap.exe'
 SCRIPT_PLOT_FIELD = 'bin/std/mkfig_remap.py'
 SCRIPT_CANGAMETRICSDRIVER = 'src/MIRA/CANGAMetricsDriver.py'
 
-MIRADATASETDIR = '../../ext/MIRA-Datasets'
-MIRAMESHDIR = f'{MIRADATASETDIR}/Meshes'
-BINMESHDIR = '../../dat/mesh/MIRA'
-MIRAMETRICSDIR = f'{MIRADATASETDIR}/MetricsData'
-METRICSFIGDIR = 'fig/metrics'
+DIR_MIRADATASET = '../../ext/MIRA-Datasets'
+DIR_MIRAMESH    = f'{DIR_MIRADATASET}/Meshes'
+DIR_MIRAMETRICS = f'{DIR_MIRADATASET}/MetricsData'
+
+DIR_FIG = 'fig'
+DIR_FIG_METRICS = f'{DIR_FIG}/metrics'
+DIR_FIG_CONSISTENCY = f'{DIR_FIG}/consistency'
+DIR_FIG_TIME = f'{DIR_FIG}/time'
 
 TBL_RFN = dict(
   u = 'UniformlyRefined' ,
@@ -60,23 +64,30 @@ DICT_METRIC = {
   "GC": {
     "function": metrics_log10,
     "label": r'Global Conservation Error, $\mathrm{log}_{10}L_g$',
+    "tick_zero": r'$L_g = 0$',
   },
   "GL1": {
     "function": metrics_log10,
     "label": r'L1 of Standard Error, $\mathrm{log}_{10}E_{L_1}$',
+    "tick_zero": r'$E_{L_1} = 0$',
   },
   "GL2": {
     "function": metrics_log10,
     "label": r'L2 of Standard Error, $\mathrm{log}_{10}E_{L_2}$',
+    "tick_zero": r'$E_{L_2} = 0$',
   },
   "GLinf": {
     "label": r'Largest Pointwise Error, $E_{L_max}$',
   },
   "GMaxE": {
-    "label": 'Global Overshoot, ${|G_{max}|}$',
+    "function": metrics_log10,
+    "label": 'Global Overshoot, $\mathrm{log}_{10}|G_{max}|$',
+    "tick_zero": r'$G_{max} = 0$',
   },
   "GMinE": {
-    "label": 'Global Undershoot, ${|G_{min}|}$',
+    "function": metrics_log10,
+    "label": 'Global Undershoot, $\mathrm{log}_{10}|G_{min}|$',
+    "tick_zero": r'$G_{min} = 0$',
   },
   "LMaxL1": {
     "label": 'L1 of Local Maxima Error, $L_{max,1}$',
@@ -99,13 +110,13 @@ DICT_METRIC = {
   "H12T": {
     "label": '',
   },
-  "H1T": {
-    "label": '',
+  "H1S": {
+    "label": '$||E||_{H_{1}}$',
   },
   "H12S": {
-    "label": '',
+    "label": '$|E|_{H_{1}}$',
   },
-  "H1S": {
+  "H1T": {
     "label": '',
   },
 }
@@ -113,79 +124,57 @@ DICT_METRIC = {
 DICT_MESH = {
   "u": {
     "CS": {
-      0: {
-        "file": "sample_NM16_O10_CS-r16_TPW_CFR_TPO_A1_A2.nc",
+      "name_dir": "CS",
+      "file": {
+        0: "sample_NM16_O10_CS-r16_TPW_CFR_TPO_A1_A2.nc",
+        1: "sample_NM16_O10_CS-r32_TPW_CFR_TPO_A1_A2.nc",
+        2: "sample_NM16_O10_CS-r64_TPW_CFR_TPO_A1_A2.nc",
+        3: "sample_NM16_O10_CS-r128_TPW_CFR_TPO_A1_A2.nc",
+        4: "sample_NM16_O10_CS-r256_TPW_CFR_TPO_A1_A2.nc",
       },
-      1: {
-        "file": "sample_NM16_O10_CS-r32_TPW_CFR_TPO_A1_A2.nc",
-      },
-      2: {
-        "file": "sample_NM16_O10_CS-r64_TPW_CFR_TPO_A1_A2.nc",
-      },
-      3: {
-        "file": "sample_NM16_O10_CS-r128_TPW_CFR_TPO_A1_A2.nc",
-      },
-      4: {
-        "file": "sample_NM16_O10_CS-r256_TPW_CFR_TPO_A1_A2.nc",
-      }
+      "name_fig": "CS"
     },
     "ICOD": {
-      0: {
-        "file": "sample_NM16_O10_ICOD-r16_TPW_CFR_TPO_A1_A2.nc",
+      "name_dir": "ICOD",
+      "file": {
+        0: "sample_NM16_O10_ICOD-r16_TPW_CFR_TPO_A1_A2.nc",
+        1: "sample_NM16_O10_ICOD-r32_TPW_CFR_TPO_A1_A2.nc",
+        2: "sample_NM16_O10_ICOD-r64_TPW_CFR_TPO_A1_A2.nc",
+        3: "sample_NM16_O10_ICOD-r128_TPW_CFR_TPO_A1_A2.nc",
+        4: "sample_NM16_O10_ICOD-r256_TPW_CFR_TPO_A1_A2.nc",
       },
-      1: {
-        "file": "sample_NM16_O10_ICOD-r32_TPW_CFR_TPO_A1_A2.nc",
-      },
-      2: {
-        "file": "sample_NM16_O10_ICOD-r64_TPW_CFR_TPO_A1_A2.nc",
-      },
-      3: {
-        "file": "sample_NM16_O10_ICOD-r128_TPW_CFR_TPO_A1_A2.nc",
-      },
-      4: {
-        "file": "sample_NM16_O10_ICOD-r256_TPW_CFR_TPO_A1_A2.nc",
-      }
+      "name_fig": "ICO"
     },
     "RLL": {
-      0: {
-        "file": "sample_NM16_O10_RLL-r30-60_TPW_CFR_TPO_A1_A2.nc",
+      "name_dir": "RLL",
+      "file": {
+        0: "sample_NM16_O10_RLL-r30-60_TPW_CFR_TPO_A1_A2.nc",
+        1: "sample_NM16_O10_RLL-r90-180_TPW_CFR_TPO_A1_A2.nc",
+        2: "sample_NM16_O10_RLL-r180-360_TPW_CFR_TPO_A1_A2.nc",
+        3: "sample_NM16_O10_RLL-r360-720_TPW_CFR_TPO_A1_A2.nc",
+        4: "sample_NM16_O10_RLL-r720-1440_TPW_CFR_TPO_A1_A2.nc",
       },
-      1: {
-        "file": "sample_NM16_O10_RLL-r90-180_TPW_CFR_TPO_A1_A2.nc",
-      },
-      2: {
-        "file": "sample_NM16_O10_RLL-r180-360_TPW_CFR_TPO_A1_A2.nc",
-      },
-      3: {
-        "file": "sample_NM16_O10_RLL-r360-720_TPW_CFR_TPO_A1_A2.nc",
-      },
-      4: {
-        "file": "sample_NM16_O10_RLL-r720-1440_TPW_CFR_TPO_A1_A2.nc",
-      }
+      "name_fig": "RLL",
     }
   },
   "r": {
     "CS": {
-      0: {
-        "file": "sample_NM32_O18_r32_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+      "name_dir": "CS",
+      "file": {
+        0: "sample_NM32_O18_r32_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        1: "sample_NM32_O18_r64_lev2_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        2: "sample_NM32_O18_r128_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
       },
-      1: {
-        "file": "sample_NM32_O18_r64_lev2_tr_enhanced_TPW_CFR_TPO_A1_A2.nc",
-      },
-      2: {
-        "file": "sample_NM32_O18_r128_lev1_tr_enhanced_TPW_CFR_TPO_A1_A2.nc"
-      }
+      "name_fig": "CS",
     },
     "ICOD": {
-      0: {
-        "file": "sample_NM32_O18_mpas_r3_enhanced_TPW_CFR_TPO_A1_A2.nc",
+      "name_dir": "MPAS",
+      "file": {
+        0: "sample_NM32_O18_mpas_r3_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        1: "sample_NM32_O18_mpas_r4_enhanced_TPW_CFR_TPO_A1_A2.nc",
+        2: "sample_NM32_O18_mpas_r5_enhanced_TPW_CFR_TPO_A1_A2.nc",
       },
-      1: {
-        "file": "sample_NM32_O18_mpas_r4_enhanced_TPW_CFR_TPO_A1_A2.nc",
-      },
-      2: {
-        "file": "sample_NM32_O18_mpas_r5_enhanced_TPW_CFR_TPO_A1_A2.nc",
-      }
+      "name_fig": "ICO",
     }
   }
 }
@@ -221,13 +210,13 @@ DICT_METRICSDATA = {
         },
       }
     },
-    "mode": {
-      1: {
+    "degree": {
+      0: {
         "dir": "conserve",
         "file": "conserve",
         "label": "conserve"
       },
-      2: {
+      1: {
         "dir": "conserve2nd",
         "file": "conserve2nd",
         "label": "conserve2nd"
@@ -265,7 +254,7 @@ DICT_METRICSDATA = {
         },
       }
     },
-    "mode": {
+    "degree": {
       1: {
         "dir": "degree-1",
         "file": "O2",
@@ -319,7 +308,7 @@ DICT_METRICSDATA = {
         },
       },
     },
-    "mode": {
+    "degree": {
       1: {
         "dir": "degree-1",
         "file": "O2",
@@ -373,7 +362,7 @@ DICT_METRICSDATA = {
         },
       }
     },
-    "mode": {
+    "degree": {
       0: {
         "dir": "degree-0",
         "file": "O1",
@@ -427,7 +416,7 @@ DICT_METRICSDATA = {
         }
       },
     },
-    "mode": {
+    "degree": {
       2: {
         "dir": "degree-2",
         "file": "p=2",
@@ -447,19 +436,8 @@ DICT_METRICSDATA = {
     "color": "mediumseagreen",
   }
 }
-"""
-for alrogithm in DICT_METRICSDATA["r"].keys():
-    d = DICT_METRICSDATA["r"][algorithm]
-    for refinement in d["mesh"].keys():
-        for srcMeshType, tgtMeshType in zip(
-        ("CS", "ICOD"), ("ICOD", "RLL"), ("RLL", "CS")):
-            for mode in  d["mode"].keys():
-                mode_dir = d["mode"][mode]["dir"]
-                mode_file = d["mode"][mode]["file"]
-                for srcResolution in d["mesh"][meshType]["resolution"]:
-                    for tgtResolution in d["mesh"][meshType]["resolution"]:
-"""
-            
+
+COLOR_ALGORITHM_SPRING = 'red'
 
 TBL_RANGE = dict(
   TPW = (0., 70.),
@@ -552,6 +530,21 @@ COLOR_CFR = (
   ( 87,   0, 136),  # 0.95 - 1.00
 )
 
+LST_MESH_TYPE = ('CS', 'ICOD', 'RLL')
+
+DICT_MESH_RESOLUTION = {}
+for refinement in TBL_RFN:
+    DICT_MESH_RESOLUTION[refinement] \
+    = tuple(DICT_MESH[refinement][next(iter(DICT_MESH[refinement]))].keys())
+
+LST_VAR = tuple(DICT_VAR.keys())
+
+LST_METRIC = tuple(DICT_METRIC.keys())
+
+LST_ALGORITHM = tuple(DICT_METRICSDATA.keys()) + ('SPRING',)
+
+CLEN_ALGORITHM = max([len(s) for s in DICT_METRICSDATA])
+
 
 def get_nk(refinement: str, meshType: str, resolution: int):
     if refinement == 'u':
@@ -598,8 +591,13 @@ def get_sForth(isForth: bool):
 def get_meshNCFile(refinement: str, meshType: str, resolution: int):
     refinement_ = TBL_RFN[refinement]
 
-    filename = DICT_MESH[refinement][meshType][resolution]["file"]
-    return f'{MIRAMESHDIR}/{refinement_}/{resolution}/{filename}'
+    filename = DICT_MESH[refinement][meshType]['file'][resolution]
+    meshType_ = DICT_MESH[refinement][meshType]['name_dir']
+    return f'{DIR_MIRAMESH}/{refinement_}/{meshType_}/{filename}'
+
+
+def get_rtDir(srcMeshName: str, tgtMeshName: str, isForth: bool):
+    return f'out/remapping_table/{srcMeshName}_to_{tgtMeshName}/{get_sForth(isForth)}'
 
 
 def get_remapDir(srcMeshName: str, tgtMeshName: str):
@@ -608,10 +606,6 @@ def get_remapDir(srcMeshName: str, tgtMeshName: str):
 
 def get_fieldDir(srcMeshName: str, tgtMeshName: str, var: str):
     return f'{get_remapDir(srcMeshName, tgtMeshName)}/field/{var}'
-
-
-def get_rtDir(srcMeshName: str, tgtMeshName: str, isForth: bool):
-    return f'out/remapping_table/{srcMeshName}_to_{tgtMeshName}/{get_sForth(isForth)}'
 
 
 def get_fieldBinFile(isForth: bool, var: str, i: int):
@@ -629,7 +623,7 @@ def get_fieldNCFile(srcMeshName: str, tgtMeshName: str, var: str):
     return f'{get_fieldDir(srcMeshName, tgtMeshName, var)}/{var}.nc'
 
 
-def get_metricsFile(srcMeshName: str, tgtMeshName: str, var: str):
+def get_SPRINGMetricsFile(srcMeshName: str, tgtMeshName: str, var: str):
     return f'out/metrics/{srcMeshName}_to_{tgtMeshName}_{DICT_VAR[var]["name"]}.csv',\
            f'out/metrics/{srcMeshName}_to_{tgtMeshName}.csv'
 
@@ -638,36 +632,82 @@ def get_MIRAMetricsFile(
   refinement: str, algorithm: str, 
   srcMeshType: str, srcResolution: int, 
   tgtMeshType: str, tgtResolution: int,
-  mode: int, var: str):
+  degree: int, var: str):
 
     d = DICT_METRICSDATA[algorithm]
-    srcMesh = d["mesh"][refinement][srcMeshType]
-    tgtMesh = d["mesh"][refinement][tgtMeshType]
-    mode_dir = d["mode"][mode]["dir"]
-    mode_file = d["mode"][mode]["file"]
+    srcMesh = d['mesh'][refinement][srcMeshType]
+    tgtMesh = d['mesh'][refinement][tgtMeshType]
+    mode_dir = d['degree'][degree]['dir']
+    mode_file = d['degree'][degree]['file']
 
     s = f'{srcMesh["file"]}{srcMesh["resolution"][srcResolution]}'
     t = f'{tgtMesh["file"]}{tgtMesh["resolution"][tgtResolution]}'
     f = f'metrics_{s}_{t}_{mode_file}_{DICT_VAR[var]["name"]}.csv'
     if refinement == 'u':
-        return f'{MIRAMETRICSDIR}/{TBL_RFN[refinement]}/{algorithm}/'\
+        return f'{DIR_MIRAMETRICS}/{TBL_RFN[refinement]}/{algorithm}/'\
                f'{srcMesh["dir"]}-{tgtMesh["dir"]}/{mode_dir}/{f}'
     elif refinement == 'r':
-        return f'{MIRAMETRICSDIR}/{TBL_RFN[refinement]}/{algorithm}/{mode_dir}/{f}'
+        return f'{DIR_MIRAMETRICS}/{TBL_RFN[refinement]}/{algorithm}/{mode_dir}/{f}'
 
 
+def get_metricsFile(
+  refinement: str, algorithm: str, 
+  srcMeshType: str, srcResolution: int, 
+  tgtMeshType: str, tgtResolution: int,
+  degree: int, var: str):
+
+    if algorithm == ALGORITHM_SPRING:
+        if degree != 0:
+            raise Exception(f'degree != 0 is invalid for {algorithm}.')
+        srcMeshName, *_ = get_mesh(refinement, srcMeshType, srcResolution)
+        tgtMeshName, *_ = get_mesh(refinement, tgtMeshType, tgtResolution)
+        return get_SPRINGMetricsFile(srcMeshName, tgtMeshName, var)[0]
+    else:
+        return get_MIRAMetricsFile(
+          refinement, algorithm, 
+          srcMeshType, srcResolution, tgtMeshType, tgtResolution,
+          degree, var)
+        
+    
 def get_metricsFigFile(
   refinement: str, 
   srcMeshType: str, srcResolution: int, 
   tgtMeshType: str, tgtResolution: int,
-  metric: str, var: str, add: str=''):
+  metric: str, degree: int, var: str, add: str=''):
+
+    if degree is None:
+        sdeg = 'px'
+    else:
+        sdeg = f'p{degree}'
 
     if add is None or add == '':
         add_ = 'default'
     else:
         add_ = add
 
-    return f'{METRICSFIGDIR}/{TBL_RFN[refinement]}/'\
+    return f'{DIR_FIG_METRICS}/{TBL_RFN[refinement]}/'\
            f'{srcMeshType}{srcResolution}-{tgtMeshType}{tgtResolution}/'\
-           f'{metric}_{var}_{add_}.png'
+           f'{metric}_{sdeg}_{var}_{add_}.png'
 
+
+def get_consistencyFigFile():
+    return f'{DIR_FIG_CONSISTENCY}/consistency.png'
+
+
+def get_timeFigFile(
+  srcRefinement: str, srcMeshType: str, 
+  tgtRefinement: str, tgtMeshType: str):
+
+    if srcMeshType is None:
+        return f'{DIR_FIG_TIME}/all.png'
+    else:
+        return f'{DIR_FIG_TIME}/{srcMeshType}-{tgtMeshType}.png'
+
+
+def get_char_stat(stat):
+    if stat == 0:
+        return '✓'
+    elif stat == 1:
+        return 'X'
+    else:
+        raise Exception(f'Invalid value in `stat`: {stat}')

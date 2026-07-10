@@ -11,6 +11,26 @@ MODS = \
 	def_consts.o\
 	mod_utils.o
 
+BASE1 = make_gcmmap
+BASE2 = modify_hires
+BASE3 = calc_uparea
+BASE4 = const_network
+BASE5 = define_catchment
+BASE6 = visual_check
+BASE7 = gcm_rivermap
+BASE8 = set_map
+BASE9 = calc_inpmat
+
+TARGET1 = $(BASE1).exe
+TARGET2 = $(BASE2).exe
+TARGET3 = $(BASE3).exe
+TARGET4 = $(BASE4).exe
+TARGET5 = $(BASE5).exe
+TARGET6 = $(BASE6).exe
+TARGET7 = $(BASE7).exe
+TARGET8 = $(BASE8).exe
+TARGET9 = $(BASE9).exe
+
 TARGETS = \
 	$(TARGET1)\
 	$(TARGET2)\
@@ -21,16 +41,6 @@ TARGETS = \
 	$(TARGET7)\
 	$(TARGET8)\
 	$(TARGET9)
-
-TARGET1 = make_gcmmap
-TARGET2 = modify_hires
-TARGET3 = calc_uparea
-TARGET4 = const_network
-TARGET5 = define_catchment
-TARGET6 = visual_check
-TARGET7 = gcm_rivermap
-TARGET8 = set_map
-TARGET9 = calc_inpmat
 
 .PHONY: all
 all:
@@ -43,33 +53,33 @@ mods:
 
 .PHONY: clean
 clean:
-	rm -f *~ $(TARGETS) *.o *.mod
+	rm -f *~ *.o *.mod *.exe
 
 
-$(TARGET1): $(TARGET1).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET1): $(BASE1).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET2): $(TARGET2).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET2): $(BASE2).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET3): $(TARGET3).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET3): $(BASE3).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET4): $(TARGET4).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET4): $(BASE4).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET5): $(TARGET5).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET5): $(BASE5).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET6): $(TARGET6).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET6): $(BASE6).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET7): $(TARGET7).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET7): $(BASE7).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET8): $(TARGET8).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET8): $(BASE8).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 
-$(TARGET9): $(TARGET9).o $(MODS) $(CMNDIR1)/*.o $(LIB)
+$(TARGET9): $(BASE9).o $(MODS) $(CMNDIR1)/*.o $(LIB)
 	$(FC) $(FCFLAGS) -o $@ $^
 

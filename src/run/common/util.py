@@ -152,6 +152,39 @@ def key_val_exist(dct, key):
     else:
         return True
 
+
+def get_val(dct: dict, key: str, key_default: str, allow_empty: bool = True):
+    if key == '':
+        val = None
+    else:
+        if key is None:
+            if key_val_exist(dct, key_default):
+                val = dct[key_default]
+            else:
+                val = None
+        else:
+            if not key_val_exist(dct, key):
+                raise Exception(f'Key "{key}" is not used.')
+            val = dct[key]
+
+    if not allow_empty and val is None:
+        raise Exception(f'Key "{key}" is not used although `allow_empty` is False.')
+
+    return val
+
+
+def set_dict_default(d, key, val):
+    if key not in d.keys():
+        d[key] = val
+
+
+def copy_dict_elem(dout, din, kout, kin=None):
+    if kin is None:
+        kin = kout
+    if not kout in dout.keys() and kin in din.keys():
+        dout[kout] = copy.deepcopy(din[kin])
+
+
 def filepath(dct, key_file):
     return os.path.join(dct['dir'], dct[key_file]['path'])
 
@@ -226,18 +259,6 @@ def set_dir(dir_top, runName, job):
     for step in job.keys():
         d[step] = os.path.join(dir_top, runName, f'{step:02d}_{job[step]}')
     return d
-
-
-def set_dict_default(d, key, val):
-    if key not in d.keys():
-        d[key] = val
-
-
-def copy_dict_elem(dout, din, kout, kin=None):
-    if kin is None:
-        kin = kout
-    if not kout in dout.keys() and kin in din.keys():
-        dout[kout] = copy.deepcopy(din[kin])
 
 
 def read_bin(f, d='', miss=None):

@@ -18,6 +18,17 @@ def make_rt(cnf, update_data,
             srcMeshNameFmt, tgtMeshNameFmt, 
             use_grdara_src, use_grdara_tgt, 
             lst_landType):
+
+    if use_grdara_src:
+        key_fin_grdara_src = 'fin_grdara'
+    else:
+        key_fin_grdara_src = ''
+
+    if use_grdara_tgt:
+        key_fin_grdara_tgt = 'fin_grdara'
+    else:
+        key_fin_grdara_tgt = ''
+
     for landType in lst_landType:
         srcMeshName = srcMeshNameFmt.format(landType=landType)
         tgtMeshName = tgtMeshNameFmt.format(landType=landType)
@@ -30,8 +41,8 @@ def make_rt(cnf, update_data,
         print('config: '+f_conf)
         fp = open(f_conf, 'w')
         fp.write(conf.head(dir_tmp))
-        fp.write(conf.remap.block_mesh(cnf[k.m][srcMeshName], use_grdara_src))
-        fp.write(conf.remap.block_mesh(cnf[k.m][tgtMeshName], use_grdara_tgt))
+        fp.write(conf.remap.block_mesh(cnf[k.m][srcMeshName], fin_grdara=key_fin_grdara_src))
+        fp.write(conf.remap.block_mesh(cnf[k.m][tgtMeshName], fin_grdara=key_fin_grdara_tgt))
         fp.write(conf.remap.block_remapping(cnf[k.rtc], dir_tmp))
         fp.write(conf.remap.block_options(cnf[k.opt]))
         fp.close()

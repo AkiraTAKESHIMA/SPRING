@@ -12,7 +12,7 @@ include $(TOPSRCDIR)/Mkinclude
 %.mod: %.f90 %.o
 	@:
 
-TARGET = main
+TARGET = main.exe
 BINDIR = $(TOPSRCDIR)/../bin/std
 BIN = $(BINDIR)/merge_remapping_tables.exe
 

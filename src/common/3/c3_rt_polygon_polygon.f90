@@ -1,6 +1,7 @@
 module c3_rt_polygon_polygon
   use lib_const
   use lib_base
+  use lib_time
   use lib_log
   use lib_array
   use lib_math
@@ -8,6 +9,11 @@ module c3_rt_polygon_polygon
   use c1_const
   use c1_type_opt
   use c1_type_gs
+  use c1_type_timer
+  use c1_timer, only: &
+        start_ctimer, &
+        stop_ctimer, &
+        is_ctimer_active
   use c2_type_rt
   implicit none
   private
@@ -59,7 +65,9 @@ contains
 !===============================================================
 !
 !===============================================================
-integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
+integer(4) function make_rt_polygon_polygon(&
+    s, t, rt &
+) result(info)
   use c1_opt_ctrl, only: &
         get_opt_earth
   use c1_gs_util, only: &
@@ -125,12 +133,48 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   !-------------------------------------------------------------
   ! Set regions
   !-------------------------------------------------------------
+  call start_ctimer('searching_intersecting_grids')
+
   if( make_regions(ap, bp, regions) /= 0 )then
     info = 1; call errret(); return
   endif
+
+  if( is_ctimer_active() )then
+    call start_ctimer('searching_intersecting_grids (2)')
+
+    do iRegion = 1, regions%nRegions
+      region => regions%region(iRegion)
+
+      do bbij = 1_8, region%mbij
+        bij = region%list_bij(bbij)
+        if( .not. bg%msk(bij) ) cycle
+        bp0 => bp%polygon(bij)
+
+        do aaij = 1_8, region%maij
+          aij = region%list_aij(aaij)
+          if( .not. ag%msk(aij) ) cycle
+          ap0 => ap%polygon(aij)
+
+          if( is_skipped(iRegion, regions%a(aij), regions%b(bij)) ) cycle
+
+          if( .not. bboxes_intersect(&
+                bp0%south, bp0%north, bp0%west, bp0%east, bp0%pos==POLYGON_POSITION_LON0, &
+                ap0%south, ap0%north, ap0%west, ap0%east, ap0%pos==POLYGON_POSITION_LON0) )then
+            cycle
+          endif
+        enddo
+      enddo
+    enddo
+
+    call stop_ctimer('searching_intersecting_grids (2)')
+  endif
+
+  call stop_ctimer('searching_intersecting_grids')
   !-------------------------------------------------------------
   ! Initialize
   !-------------------------------------------------------------
+  call start_ctimer('buffer')
+
   allocate(rt1d(bp%nij))
   if( init_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -148,9 +192,14 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
     call set_modvar_lib_math_sphere(debug=.true.)
   endif
 
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   ! Make a remapping table
   !-------------------------------------------------------------
+  call logent('Making a remapping table')
+
+  call start_ctimer('intersection')
+
   rtm%nij = 0_8
 
   do iRegion = 1, regions%nRegions
@@ -224,8 +273,12 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
     enddo  ! ttij/
   enddo  ! iRegion/
 
+  call stop_ctimer('intersection')
+
   ! Reshape 1d-remapping table
   !-------------------------------------------------------------
+  call start_ctimer('rt_post')
+
   if( reshape_rt1d(rt1d, b%is_source, rtm) /= 0 )then
     info = 1; call errret(); return
   endif
@@ -233,9 +286,15 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   if( debug )then
     call set_modvar_lib_math_sphere(debug=.false.)
   endif
+
+  call stop_ctimer('rt_post')
+
+  call logext()
   !-------------------------------------------------------------
-  !
+  ! Finalize
   !-------------------------------------------------------------
+  call start_ctimer('buffer')
+
   nullify(rt1)
   if( clear_rt1d(rt1d) /= 0 )then
     info = 1; call errret(); return
@@ -251,6 +310,8 @@ integer(4) function make_rt_polygon_polygon(s, t, rt) result(info)
   nullify(ap0, bp0)
   nullify(ag, bg)
   nullify(ap, bp)
+
+  call stop_ctimer('buffer')
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end function make_rt_polygon_polygon

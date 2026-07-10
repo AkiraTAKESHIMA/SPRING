@@ -5,9 +5,8 @@ include $(TOPSRCDIR)/Mkinclude
 OBJ1 = test_remap_latlon_latlon.o
 OBJ2 = test_remap_raster_raster.o
 
-TARGET1 = test_remap_latlon_latlon
-TARGET2 = test_remap_raster_raster
-TARGETALL = $(TARGET1) $(TARGET2)
+TARGET1 = test_remap_latlon_latlon.exe
+TARGET2 = test_remap_raster_raster.exe
 
 LIBSPRINGDIR=$(TOPSRCDIR)/libspring
 
@@ -22,7 +21,7 @@ $(TARGET2): $(OBJ2) $(LIBSPRINGDIR)/libspring.a
 	$(FC) $(FCFLAGS) -o $@ $^
 
 clean:
-	$(RM) $(RMFLAGS) *.o *.mod *.a core *~ *trace temp* $(TARGETALL)
+	$(RM) $(RMFLAGS) *.o *.mod *.a *.exe core *~ *trace temp*
 
 .SUFFIXES: 
 .SUFFIXES: .o .f90 .mod
