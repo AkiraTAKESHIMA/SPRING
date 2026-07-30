@@ -16,17 +16,14 @@ program main
   call addarg('output', '', 'Output directory')
   call addarg('-k', '--kinematic', .false., .false., 'Use kinematic mode')
   call addarg('', '--overwrite', .false., .false., 'Overwrite')
-  call addarg('-r', '--iteration', 100, .false., 'Iteration limit')
+  call addarg('-r', '--iteration', 100, .true., 'Iteration limit')
   call addarg('-m', '--method', '1st_order_conservative', .false., 'Interpolation Method')
 
-  call logmsg('Arguments:')
+  call logmsg('------ Test showarg', opt='x0')
   call showarg()
 
-  call logmsg('Parsing arguments.')
+  call logmsg('------ Test parsearg', opt='x0')
   call parsearg()
-
-  call logmsg('Arguments:')
-  call showarg()
 
   nx = arg_int4('nx')
   ny = arg_int4('ny')
