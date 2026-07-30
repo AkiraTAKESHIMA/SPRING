@@ -591,9 +591,22 @@ subroutine parsearg(istart, iend)
     endif
   enddo
   !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  do i = 1, ad%n_pos
+    cmn => ad%cmn_pos(i)
+    cmn%used = .false.
+  enddo
+
+  do i = 1, ad%n_opt
+    cmn => ad%cmn_opt(i)
+    cmn%used = .false.
+  enddo
+  !-------------------------------------------------------------
   ! Read arguments
   !-------------------------------------------------------------
-  j_pos = 0
+  !j_pos = 0
+  j_pos = istart_ - 1
 
   i = istart_
   do while( i <= iend_ )
@@ -695,23 +708,25 @@ subroutine parsearg(istart, iend)
   !-------------------------------------------------------------
   ! List missing required arguments
   !-------------------------------------------------------------
-  s = ''
+  if( .not. (present(istart) .or. present(iend)) )then
+    s = ''
 
-  do j = j_pos+1, ad%n_pos
-    cmn => ad%cmn_pos(j)
-    if( cmn%used ) cycle
-    s = s//' '//str(cmn%name)
-  enddo
+    do j = j_pos+1, ad%n_pos
+      cmn => ad%cmn_pos(j)
+      if( cmn%used ) cycle
+      s = s//' '//str(cmn%name)
+    enddo
 
-  do j = 1, ad%n_opt
-    cmn => ad%cmn_opt(j)
-    if( cmn%is_required .and. .not. cmn%used )then
-      s = s//' '//get_keys(cmn%key_short, cmn%key_long)
+    do j = 1, ad%n_opt
+      cmn => ad%cmn_opt(j)
+      if( cmn%is_required .and. .not. cmn%used )then
+        s = s//' '//get_keys(cmn%key_short, cmn%key_long)
+      endif
+    enddo
+
+    if( s /= '' )then
+      call errend('The following arguments are required: '//str(s))
     endif
-  enddo
-
-  if( s /= '' )then
-    call errend('The following arguments are required: '//str(s))
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
