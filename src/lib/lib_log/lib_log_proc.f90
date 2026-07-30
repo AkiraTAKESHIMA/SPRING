@@ -1559,7 +1559,6 @@ subroutine echo_lines(msg, un, idt, adv)
   character(len_trim(msg)) :: msg_
   character(16) :: wfmt
   character(4)  :: advance
-  integer :: leng
   integer :: loc
   !-------------------------------------------------------------
   ! Start a new line after writing the message if $adv is true
@@ -1585,7 +1584,6 @@ subroutine echo_lines(msg, un, idt, adv)
 
   else
     msg_ = msg
-    leng = len_trim(msg)
 
     do
       loc = index(msg_,'\n')

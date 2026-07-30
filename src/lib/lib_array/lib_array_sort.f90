@@ -28,6 +28,7 @@ module lib_array_sort
     module procedure sort_arg__int8_arg8
     module procedure sort_arg__real_arg8
     module procedure sort_arg__dble_arg8
+    module procedure sort_arg__char_arg8
     module procedure sort_arg__log4_arg4
     module procedure sort_arg__int1_arg4
     module procedure sort_arg__int2_arg4
@@ -35,6 +36,7 @@ module lib_array_sort
     module procedure sort_arg__int8_arg4
     module procedure sort_arg__real_arg4
     module procedure sort_arg__dble_arg4
+    module procedure sort_arg__char_arg4
   end interface
 
   interface argsort
@@ -265,6 +267,27 @@ end subroutine sort_arg__dble_arg8
 !==============================================================
 !
 !==============================================================
+subroutine sort_arg__char_arg8(array, arg)
+  implicit none
+  character(*), intent(inout) :: array(:)
+  integer(8), intent(in)    :: arg(:)
+
+  character(len(array(1))), allocatable :: arr(:)
+  integer(8) :: n, i
+
+  n = size(arg,kind=8)
+  allocate(arr(n))
+  do i = 1_8, n
+    arr(i) = array(arg(i))
+  enddo
+  do i = 1_8, n
+    array(i) = arr(i)
+  enddo
+  deallocate(arr)
+end subroutine sort_arg__char_arg8
+!==============================================================
+!
+!==============================================================
 subroutine sort_arg__log4_arg4(array, arg)
   implicit none
   logical(4), intent(inout) :: array(:)
@@ -409,6 +432,27 @@ subroutine sort_arg__dble_arg4(array, arg)
   enddo
   deallocate(arr)
 end subroutine sort_arg__dble_arg4
+!==============================================================
+!
+!==============================================================
+subroutine sort_arg__char_arg4(array, arg)
+  implicit none
+  character(*), intent(inout) :: array(:)
+  integer(4), intent(in)    :: arg(:)
+
+  character(len(array(1))), allocatable :: arr(:)
+  integer(4) :: n, i
+
+  n = size(arg)
+  allocate(arr(n))
+  do i = 1, n
+    arr(i) = array(arg(i))
+  enddo
+  do i = 1, n
+    array(i) = arr(i)
+  enddo
+  deallocate(arr)
+end subroutine sort_arg__char_arg4
 !==============================================================
 !
 !==============================================================
