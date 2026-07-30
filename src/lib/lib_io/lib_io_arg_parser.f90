@@ -43,6 +43,7 @@ module lib_io_arg_parser
   integer, parameter :: ITYPE_INT8 = 6
   integer, parameter :: ITYPE_REAL = 7
   integer, parameter :: ITYPE_DBLE = 8
+  integer, parameter :: ITYPE_UNDEF = -9
 
   character(CLEN_KEY), parameter :: STYPE_FLAG = 'flag'
   character(CLEN_KEY), parameter :: STYPE_CHAR = 'string'
@@ -58,61 +59,62 @@ module lib_io_arg_parser
 
   ! Definitions of arguments
   type arg_flag_
-    logical :: positional
+    logical :: is_positional
+    character(:), pointer :: name
+    character(:), pointer :: key_short
+    character(:), pointer :: key_long
+    logical, pointer :: is_required
+    character(:), pointer :: description
+    logical, pointer :: used
     logical :: val
-    logical :: used
-    character(:), allocatable :: name
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    character(:), allocatable :: description
-    logical :: required
   end type
 
   type arg_char_
-    logical :: positional
+    logical :: is_positional
+    character(:), pointer :: name
+    character(:), pointer :: key_short
+    character(:), pointer :: key_long
+    logical, pointer :: is_required
+    character(:), pointer :: description
+    logical, pointer :: used
     character(:), allocatable :: val
-    logical :: used
-    character(:), allocatable :: name
-    character(:), allocatable :: key_short
-    character(:), allocatable :: key_long
-    character(:), allocatable :: description
-    logical :: required
   end type
 
   type arg_int4_
-    logical :: positional
+    logical :: is_positional
+    character(:), pointer :: name
+    character(:), pointer :: key_short
+    character(:), pointer :: key_long
+    logical, pointer :: is_required
+    character(:), pointer :: description
+    logical, pointer :: used
     integer(4) :: val
-    logical :: used
+  end type
+
+  type arg_cmn_
+    integer :: typ
+    integer :: idx
     character(:), allocatable :: name
     character(:), allocatable :: key_short
     character(:), allocatable :: key_long
+    logical :: is_required
     character(:), allocatable :: description
-    logical :: required
+    logical :: used
   end type
 
   type arg_
-    integer, pointer :: typ(:)
-    integer, pointer :: idx(:)
-    integer, pointer :: typ_positional(:)
-    integer, pointer :: idx_positional(:)
-    integer, pointer :: typ_optional(:)
-    integer, pointer :: idx_optional(:)
     integer :: nall = 0
     integer :: nflag = 0
     integer :: nchar = 0
     integer :: nint4 = 0
-    integer :: n_positional = 0
-    integer :: n_optional = 0
+    integer :: n_pos = 0
+    integer :: n_opt = 0
     type(arg_flag_), pointer :: lst_flag(:)
     type(arg_char_), pointer :: lst_char(:)
     type(arg_int4_), pointer :: lst_int4(:)
+    type(arg_cmn_), pointer :: cmn_opt(:)
+    type(arg_cmn_), pointer :: cmn_pos(:)
   end type
-
-
-  ! Input arguments
-!  type argin
-  
-!  end type
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
@@ -128,13 +130,13 @@ contains
 subroutine addarg__positional__char(&
     name, v, description)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__positional__char'
   character(*), intent(in) :: name
   character(*), intent(in) :: v  ! for distinction
   character(*), intent(in) :: description
 
   type(arg_char_), pointer :: a
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__positional__char'
+  type(arg_cmn_), pointer :: cmn
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -142,16 +144,21 @@ subroutine addarg__positional__char(&
   !-------------------------------------------------------------
   call inc_n_arg(.true., ITYPE_CHAR)
 
-  ad%typ(ad%nall) = ITYPE_CHAR
-  ad%idx(ad%nall) = ad%nchar
-  ad%typ_positional(ad%n_positional) = ITYPE_CHAR
-  ad%idx_positional(ad%n_positional) = ad%nchar
+  cmn => ad%cmn_pos(ad%n_pos)
+  cmn%typ = ITYPE_CHAR
+  cmn%idx = ad%nchar
+  cmn%name        = trim(name)
+  cmn%key_short   = ''
+  cmn%key_long    = ''
+  cmn%is_required = .true.
+  cmn%description = trim(description)
 
   a => ad%lst_char(ad%nchar)
 
-  a%positional = .true.
-  a%name = trim(name)
-  a%description = trim(description)
+  a%is_positional = .true.
+  a%name        => cmn%name
+  a%description => cmn%description
+  a%used => cmn%used
 
   nullify(a)
   !-------------------------------------------------------------
@@ -163,13 +170,13 @@ end subroutine addarg__positional__char
 subroutine addarg__positional__int4(&
     name, v, description)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__positional__int4'
   character(*), intent(in) :: name
   integer(4)  , intent(in) :: v  ! for distinction
   character(*), intent(in) :: description
 
   type(arg_int4_), pointer :: a
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__positional__int4'
+  type(arg_cmn_), pointer :: cmn
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -177,16 +184,21 @@ subroutine addarg__positional__int4(&
   !-------------------------------------------------------------
   call inc_n_arg(.true., ITYPE_INT4)
 
-  ad%typ(ad%nall) = ITYPE_INT4
-  ad%idx(ad%nall) = ad%nint4
-  ad%typ_positional(ad%n_positional) = ITYPE_INT4
-  ad%idx_positional(ad%n_positional) = ad%nint4
+  cmn => ad%cmn_pos(ad%n_pos)
+  cmn%typ = ITYPE_INT4
+  cmn%idx = ad%nint4
+  cmn%name        = trim(name)
+  cmn%key_short   = ''
+  cmn%key_long    = ''
+  cmn%is_required = .true.
+  cmn%description = trim(description)
 
   a => ad%lst_int4(ad%nint4)
 
-  a%positional = .true.
-  a%name = trim(name)
-  a%description = trim(description)
+  a%is_positional = .true.
+  a%name        => cmn%name
+  a%description => cmn%description
+  a%used => cmn%used
 
   nullify(a)
   !-------------------------------------------------------------
@@ -196,17 +208,17 @@ end subroutine addarg__positional__int4
 !
 !===============================================================
 subroutine addarg__optional__flag(&
-    key_short, key_long, val_default, required, description)
+    key_short, key_long, val_default, is_required, description)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__flag'
   character(*), intent(in) :: key_short
   character(*), intent(in) :: key_long
   logical     , intent(in) :: val_default
-  logical     , intent(in) :: required
+  logical     , intent(in) :: is_required
   character(*), intent(in) :: description
 
   type(arg_flag_), pointer :: a
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__flag'
+  type(arg_cmn_), pointer :: cmn
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -216,20 +228,26 @@ subroutine addarg__optional__flag(&
 
   call inc_n_arg(.false., ITYPE_FLAG)
 
-  ad%typ(ad%nall) = ITYPE_FLAG
-  ad%idx(ad%nall) = ad%nflag
-  ad%typ_optional(ad%n_optional) = ITYPE_FLAG
-  ad%idx_optional(ad%n_optional) = ad%nflag
+  cmn => ad%cmn_opt(ad%n_opt)
+  cmn%typ = ITYPE_FLAG
+  cmn%idx = ad%nflag
+  cmn%name        = upper(get_key_single(key_short, key_long, remove_hyphen=.true.))
+  cmn%key_short   = trim(key_short)
+  cmn%key_long    = trim(key_long)
+  cmn%is_required = is_required
+  cmn%description = trim(description)
 
   a => ad%lst_flag(ad%nflag)
 
   a%val = val_default
 
-  a%positional  = .false.
-  a%key_short   = trim(key_short)
-  a%key_long    = trim(key_long)
-  a%required    = required
-  a%description = trim(description)
+  a%is_positional = .false.
+  a%name        => cmn%name
+  a%key_short   => cmn%key_short
+  a%key_long    => cmn%key_long
+  a%is_required => cmn%is_required
+  a%description => cmn%description
+  a%used => cmn%used
 
   nullify(a)
 
@@ -242,17 +260,17 @@ end subroutine addarg__optional__flag
 !
 !===============================================================
 subroutine addarg__optional__char(&
-    key_short, key_long, val_default, required, description)
+    key_short, key_long, val_default, is_required, description)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__char'
   character(*), intent(in) :: key_short
   character(*), intent(in) :: key_long
   character(*), intent(in) :: val_default
-  logical     , intent(in) :: required
+  logical     , intent(in) :: is_required
   character(*), intent(in) :: description
 
   type(arg_char_), pointer :: a
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__char'
+  type(arg_cmn_), pointer :: cmn
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -262,21 +280,27 @@ subroutine addarg__optional__char(&
 
   call inc_n_arg(.false., ITYPE_CHAR)
 
-  ad%typ(ad%nall) = ITYPE_CHAR
-  ad%idx(ad%nall) = ad%nchar
-  ad%typ_optional(ad%n_optional) = ITYPE_CHAR
-  ad%idx_optional(ad%n_optional) = ad%nchar
+  cmn => ad%cmn_opt(ad%n_opt)
+  cmn%typ = ITYPE_CHAR
+  cmn%idx = ad%nchar
+  cmn%name        = upper(get_key_single(key_short, key_long, remove_hyphen=.true.))
+  cmn%key_short   = trim(key_short)
+  cmn%key_long    = trim(key_long)
+  cmn%is_required = is_required
+  cmn%description = trim(description)
 
   a => ad%lst_char(ad%nchar)
 
   ! a%val has already been allocated when initialized
   a%val = val_default
 
-  a%positional  = .false.
-  a%key_short   = trim(key_short)
-  a%key_long    = trim(key_long)
-  a%required    = required
-  a%description = trim(description)
+  a%is_positional = .false.
+  a%name        => cmn%name
+  a%key_short   => cmn%key_short
+  a%key_long    => cmn%key_long
+  a%is_required => cmn%is_required
+  a%description => cmn%description
+  a%used => cmn%used
 
   nullify(a)
 
@@ -289,17 +313,17 @@ end subroutine addarg__optional__char
 !
 !===============================================================
 subroutine addarg__optional__int4(&
-    key_short, key_long, val_default, required, description)
+    key_short, key_long, val_default, is_required, description)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__int4'
   character(*), intent(in) :: key_short
   character(*), intent(in) :: key_long
   integer(4)  , intent(in) :: val_default
-  logical     , intent(in) :: required
+  logical     , intent(in) :: is_required
   character(*), intent(in) :: description
 
   type(arg_int4_), pointer :: a
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'addarg__optional__int4'
+  type(arg_cmn_), pointer :: cmn
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -309,20 +333,26 @@ subroutine addarg__optional__int4(&
 
   call inc_n_arg(.false., ITYPE_INT4)
 
-  ad%typ(ad%nall) = ITYPE_INT4
-  ad%idx(ad%nall) = ad%nint4
-  ad%typ_optional(ad%n_optional) = ITYPE_INT4
-  ad%idx_optional(ad%n_optional) = ad%nint4
+  cmn => ad%cmn_opt(ad%n_opt)
+  cmn%typ = ITYPE_INT4
+  cmn%idx = ad%nint4
+  cmn%name        = upper(get_key_single(key_short, key_long, remove_hyphen=.true.))
+  cmn%key_short   = trim(key_short)
+  cmn%key_long    = trim(key_long)
+  cmn%is_required = is_required
+  cmn%description = trim(description)
 
   a => ad%lst_int4(ad%nint4)
 
   a%val = val_default
 
-  a%positional  = .false.
-  a%key_short   = trim(key_short)
-  a%key_long    = trim(key_long)
-  a%required    = required
-  a%description = trim(description)
+  a%is_positional = .false.
+  a%name        => cmn%name
+  a%key_short   => cmn%key_short
+  a%key_long    => cmn%key_long
+  a%is_required => cmn%is_required
+  a%description => cmn%description
+  a%used => cmn%used
 
   nullify(a)
 
@@ -334,9 +364,10 @@ end subroutine addarg__optional__int4
 !===============================================================
 !
 !===============================================================
-subroutine inc_n_arg(positional, itype)
+subroutine inc_n_arg(is_positional, itype)
   implicit none
-  logical, intent(in) :: positional
+  character(CLEN_PROC), parameter :: PRCNAM = 'inc_n_arg'
+  logical, intent(in) :: is_positional
   integer, intent(in) :: itype
 
   integer :: i
@@ -344,33 +375,27 @@ subroutine inc_n_arg(positional, itype)
   integer, parameter :: NMAX_ALL_INIT = 64
   integer, parameter :: NMAX_LST_INIT = 32
 
-  character(CLEN_PROC), parameter :: PRCNAM = 'inc_n_arg'
-
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
   ! Update length of the list of data types and indices
   !-------------------------------------------------------------
   if( ad%nall == 0 )then
-    allocate(ad%typ(NMAX_ALL_INIT))
-    allocate(ad%idx(NMAX_ALL_INIT))
-    allocate(ad%typ_positional(NMAX_ALL_INIT))
-    allocate(ad%idx_positional(NMAX_ALL_INIT))
-    allocate(ad%typ_optional(NMAX_ALL_INIT))
-    allocate(ad%idx_optional(NMAX_ALL_INIT))
-  elseif( ad%nall == size(ad%typ) )then
-    call realloc(ad%typ, ad%nall*2, clear=.false.)
-    call realloc(ad%idx, ad%nall*2, clear=.false.)
-    call realloc(ad%typ_positional, ad%nall*2, clear=.false.)
-    call realloc(ad%idx_positional, ad%nall*2, clear=.false.)
-    call realloc(ad%typ_optional, ad%nall*2, clear=.false.)
-    call realloc(ad%idx_optional, ad%nall*2, clear=.false.)
+    allocate(ad%cmn_pos(NMAX_ALL_INIT))
+    allocate(ad%cmn_opt(NMAX_ALL_INIT))
+    do i = 1, NMAX_ALL_INIT
+      call init_arg_cmn(ad%cmn_pos(i))
+      call init_arg_cmn(ad%cmn_opt(i))
+    enddo
+  elseif( ad%nall == size(ad%cmn_pos) )then
+    call realloc_arg_cmn(ad%cmn_pos, ad%nall*2)
+    call realloc_arg_cmn(ad%cmn_opt, ad%nall*2)
   endif
   call add(ad%nall)
 
-  if( positional )then
-    call add(ad%n_positional)
+  if( is_positional )then
+    call add(ad%n_pos)
   else
-    call add(ad%n_optional)
+    call add(ad%n_opt)
   endif
   !-------------------------------------------------------------
   ! Update length of the list correspondent to the type of the 
@@ -416,20 +441,16 @@ subroutine init_arg_flag(a)
   implicit none
   type(arg_flag_), intent(out) :: a
 
-  allocate(character(1) :: a%key_short)
-  allocate(character(1) :: a%key_long)
-  allocate(character(1) :: a%name)
-  allocate(character(1) :: a%description)
+  nullify(a%name)
+  nullify(a%key_short)
+  nullify(a%key_long)
+  nullify(a%is_required)
+  nullify(a%description)
 
-  a%used = .false.
+  nullify(a%used)
+
+  a%is_positional = .false.
   a%val = .false.
-
-  a%positional = .false.
-  a%key_short = ''
-  a%key_long = ''
-  a%required = .false.
-  a%name = ''
-  a%description = ''
 end subroutine init_arg_flag
 !===============================================================
 !
@@ -438,21 +459,17 @@ subroutine init_arg_char(a)
   implicit none
   type(arg_char_), intent(out) :: a
 
-  allocate(character(1) :: a%key_short)
-  allocate(character(1) :: a%key_long)
-  allocate(character(1) :: a%name)
-  allocate(character(1) :: a%description)
+  nullify(a%name)
+  nullify(a%key_short)
+  nullify(a%key_long)
+  nullify(a%is_required)
+  nullify(a%description)
 
-  a%used = .false.
+  nullify(a%used)
+
+  a%is_positional = .false.
   allocate(character(1) :: a%val)
   a%val = ''
-
-  a%positional = .false.
-  a%key_short = ''
-  a%key_long = ''
-  a%required = .false.
-  a%name = ''
-  a%description = ''
 end subroutine init_arg_char
 !===============================================================
 !
@@ -461,20 +478,16 @@ subroutine init_arg_int4(a)
   implicit none
   type(arg_int4_), intent(out) :: a
 
-  allocate(character(1) :: a%key_short)
-  allocate(character(1) :: a%key_long)
-  allocate(character(1) :: a%name)
-  allocate(character(1) :: a%description)
+  nullify(a%name)
+  nullify(a%key_short)
+  nullify(a%key_long)
+  nullify(a%is_required)
+  nullify(a%description)
 
-  a%used = .false.
+  nullify(a%used)
+
+  a%is_positional = .false.
   a%val = 0
-
-  a%positional = .false.
-  a%key_short = ''
-  a%key_long = ''
-  a%required = .false.
-  a%name = ''
-  a%description = ''
 end subroutine init_arg_int4
 !===============================================================
 !
@@ -540,178 +553,184 @@ end function is_key_optional
 !===============================================================
 subroutine parsearg(istart, iend)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'parsearg'
   integer, intent(in), optional :: istart, iend
 
   integer :: istart_, iend_
 
   integer :: narg
-  character(CLEN_LINE) :: key
-  logical :: is_ok
-  integer :: i, ii, j, jj
+  type(arg_cmn_), pointer :: cmn
+  type(arg_flag_), pointer :: aflag
+  type(arg_char_), pointer :: achar
+  type(arg_int4_), pointer :: aint4
+  logical :: is_found
+  logical :: is_key
+  character(:), allocatable :: arg
+  character(:), allocatable :: s
+  integer :: i
+  integer :: j, jj
+  integer :: j_pos
 
-  character(CLEN_PROC), parameter :: PRCNAM = 'parsearg'
-
-  call logbgn(PRCNAM, MODNAM, '-p')
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
   narg = argnum()
 
   istart_ = 1
-  iend_ = max(ad%n_positional, narg)
+  iend_ = max(ad%n_pos, narg)
   if( present(istart) ) istart_ = istart
   if( present(iend) ) iend_ = iend
   !-------------------------------------------------------------
-  ! Read positional arguments
+  ! Print help message and stop if `-h` option is used
   !-------------------------------------------------------------
-  if( narg < min(ad%n_positional, iend_) )then
-    call errend('Positional argument is missing.')
-  endif
-
-  do i = istart_, min(ad%n_positional, iend_)
+  do i = istart_, min(narg, iend_)
     if( argument(i) == KEY_HELP_SHORT .or. argument(i) == KEY_HELP_LONG )then
       call showarg()
       stop
     endif
-
-    ii = ad%idx_positional(i)
-
-    selectcase( ad%typ_positional(i) )
-    !-----------------------------------------------------------
-    ! Case: Char
-    case( ITYPE_CHAR )
-      call update_arg_pos_char(ad%lst_char(ii), i)
-    !-----------------------------------------------------------
-    ! Case: Int4
-    case( ITYPE_INT4 )
-      call update_arg_pos_int4(ad%lst_int4(ii), i)
-    !-----------------------------------------------------------
-    ! Case: ERROR
-    case default
-      call errend(msg_invalid_value(&
-             'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
-    endselect
   enddo
   !-------------------------------------------------------------
-  ! Read optional arguments
+  ! Read arguments
   !-------------------------------------------------------------
-  ! -- Return of TRUE by `update_arg_opt_*` means the value was 
-  !    updated.
-  i = ad%n_positional
-  do while( i < iend_ )
-    i = i + 1
-    key = argument(i)
+  j_pos = 0
 
-    if( key == KEY_HELP_SHORT .or. key == KEY_HELP_LONG )then
-      call showarg()
-      stop
+  i = istart_
+  do while( i <= iend_ )
+    arg = argument(i)
+    !-----------------------------------------------------------
+    ! Determine if its a key of an optional argument
+    !-----------------------------------------------------------
+    is_key = .false.
+
+    if( len_trim(arg) > 2 )then
+      is_key = arg(1:2) == '--'
     endif
 
-    is_ok = .false.
-    do j = 1, ad%n_optional
-      jj = ad%idx_optional(j)
+    if( .not. is_key )then
+      if( len_trim(arg) > 1 )then
+        is_key = arg(1:1) == '-'
+      endif
+    endif
+    !-----------------------------------------------------------
+    ! Case: Optional argument
+    if( is_key )then
+      is_found = .false.
+      do j = 1, ad%n_opt
+        cmn => ad%cmn_opt(j)
+        if( cmn%key_short == arg .or. cmn%key_long == arg )then
+          is_found = .true.
+          exit
+        endif
+      enddo
 
-      selectcase( ad%typ_optional(j) )
-      !---------------------------------------------------------
-      ! Case: Flag
+      if( .not. is_found )then
+        call errend('Unrecognized argument: '//str(arg))
+      endif
+
+      if( cmn%typ /= ITYPE_FLAG )then
+        if( i == iend_ )then
+          call errend('Argument '//arg//' '//get_keys(cmn%key_short, cmn%key_long)//&
+              ': expected one argument')
+        endif
+      endif
+
+      selectcase( cmn%typ )
       case( ITYPE_FLAG )
-        if( update_arg_opt_flag(ad%lst_flag(jj), key) )then
-          is_ok = .true.
-          exit
-        endif
-      !---------------------------------------------------------
-      ! Case: Char
-      case( ITYPE_CHAR )
-        if( update_arg_opt_char(ad%lst_char(jj), key, i, narg) )then
-          i = i + 1
-          is_ok = .true.
-          exit
-        endif
-      !---------------------------------------------------------
-      ! Case: Int4
+        aflag => ad%lst_flag(cmn%idx)
+        call update_used_status(aflag%used, aflag%name)
+        aflag%val = .not. aflag%val
       case( ITYPE_INT4 )
-        if( update_arg_opt_int4(ad%lst_int4(jj), key, i, narg) )then
-          i = i + 1
-          is_ok = .true.
-          exit
+        call add(i)
+        arg = argument(i)
+        aint4 => ad%lst_int4(cmn%idx)
+        call update_used_status(aint4%used, aint4%name)
+        if( c2v(arg, aint4%val) /= 0 )then
+          call errend_pos_reading_failure(aint4%name, j)
         endif
-      !---------------------------------------------------------
-      ! Case: ERROR
+      case( ITYPE_CHAR )
+        call add(i)
+        arg = argument(i)
+        achar => ad%lst_char(cmn%idx)
+        call update_used_status(achar%used, achar%name)
+        achar%val = arg
       case default
-        call errend(msg_invalid_value(&
-               'ad%typ_optional('//str(j)//')', ad%typ_optional(j)))
+        call errend(msg_invalid_value('ad%cmn_opt('//str(j)//')%typ', cmn%typ))
       endselect
-    enddo
+    !-----------------------------------------------------------
+    ! Case: Positional argument
+    else
+      call add(j_pos)
+      if( j_pos > ad%n_pos )then
+        call errend('Unrecognized argument: '//str(arg))
+      endif
+      cmn => ad%cmn_pos(j_pos)
 
-    if( .not. is_ok )then
-      call errend('Key "'//str(key)//'" is invalid.')
+      jj = cmn%idx
+      selectcase( cmn%typ )
+      case( ITYPE_FLAG )
+        call errend(msg_unexpected_condition()//&
+            'ad%cmn_pos('//str(j_pos)//')%typ == ITYPE_FLAG')
+      case( ITYPE_CHAR )
+        achar => ad%lst_char(jj)
+        call update_used_status(achar%used, achar%name)
+        achar%val = arg
+      case( ITYPE_INT4 )
+        aint4 => ad%lst_int4(jj)
+        call update_used_status(aint4%used, aint4%name)
+        if( c2v(arg, aint4%val) /= 0 )then
+          call errend_pos_reading_failure(aint4%name, j_pos)
+        endif
+      case( ITYPE_INT1, ITYPE_INT2, ITYPE_INT8, &
+            ITYPE_REAL, ITYPE_DBLE )
+        call errend('ad%cmn_pos('//str(j_pos)//')%typ == '//str(cmn%typ)//&
+            '\n'//str(msg_not_implemented()))
+      case default
+        call errend(msg_invalid_value('ad%cmn_pos('//str(j_pos)//')%typ', cmn%typ))
+      endselect
+    endif
+
+    call add(i)
+  enddo  ! while i <= iend_
+  !-------------------------------------------------------------
+  ! List missing required arguments
+  !-------------------------------------------------------------
+  s = ''
+
+  do j = j_pos+1, ad%n_pos
+    cmn => ad%cmn_pos(j)
+    if( cmn%used ) cycle
+    s = s//' '//str(cmn%name)
+  enddo
+
+  do j = 1, ad%n_opt
+    cmn => ad%cmn_opt(j)
+    if( cmn%is_required .and. .not. cmn%used )then
+      s = s//' '//get_keys(cmn%key_short, cmn%key_long)
     endif
   enddo
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine parsearg
-!===============================================================
-!
-!===============================================================
-subroutine update_arg_pos_char(a, i)
-  implicit none
-  type(arg_char_), intent(inout) :: a
-  integer        , intent(in) :: i
 
-  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_pos_char'
-
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  if( a%used )then
-    call errend_pos_already_input(a%name, i)
-  endif
-
-  a%used = .true.
-
-  a%val = trim(argument(i))
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end subroutine update_arg_pos_char
-!===============================================================
-!
-!===============================================================
-subroutine update_arg_pos_int4(a, i)
-  implicit none
-  type(arg_int4_), intent(inout) :: a
-  integer        , intent(in) :: i
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_pos_int4'
-
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  if( a%used )then
-    call errend_pos_already_input(a%name, i)
-  endif
-
-  a%used = .true.
-
-  if( c2v(argument(i), a%val) /= 0 )then
-    call errend_pos_reading_failure(a%name, i)
+  if( s /= '' )then
+    call errend('The following arguments are required: '//str(s))
   endif
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
-end subroutine update_arg_pos_int4
-!===============================================================
-!
-!===============================================================
-subroutine errend_pos_already_input(name, i)
-  implicit none
+!---------------------------------------------------------------
+contains
+!---------------------------------------------------------------
+subroutine update_used_status(used, name)
+  character(CLEN_PROC), parameter :: PRCNAM = '__IP__update_used_status'
+  logical, intent(inout) :: used
   character(*), intent(in) :: name
-  integer     , intent(in) :: i
 
-  character(CLEN_PROC), parameter :: PRCNAM = 'errend_pos_reading_failure'
+  if( used )then
+    call errend('Argument `'//str(name)//'` has already been given.', &
+      '', PRCNAM, MODNAM)
+  endif
 
-  call errend(msg_internal_error()//' The usage status of the '//&
-              ordinal(i)//' positional argument is "used".')
-end subroutine errend_pos_already_input
-!===============================================================
-!
-!===============================================================
+  used = .true.
+end subroutine update_used_status
+!---------------------------------------------------------------
 subroutine errend_pos_reading_failure(name, i)
   implicit none
   character(*), intent(in) :: name
@@ -723,146 +742,8 @@ subroutine errend_pos_reading_failure(name, i)
               ' positional argument `'//trim(name)//'`.', &
               PRCNAM, MODNAM)
 end subroutine errend_pos_reading_failure
-!===============================================================
-!
-!===============================================================
-logical function update_arg_opt_flag(a, key) result(res)
-  implicit none
-  type(arg_flag_), intent(inout) :: a
-  character(*), intent(in) :: key
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_opt_flag'
-
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  res = a%key_short == key .or. a%key_long == key
-  if( .not. res )then
-    call logret(PRCNAM, MODNAM)
-    return
-  endif
-
-  if( a%used )then
-    call errend_opt_duplicated_input(a%key_short, a%key_long)
-  endif
-
-  a%used = .true.
-
-  a%val = .not. a%val
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end function update_arg_opt_flag
-!===============================================================
-!
-!===============================================================
-logical function update_arg_opt_char(a, key, i, narg) result(res)
-  implicit none
-  type(arg_char_), intent(inout) :: a
-  character(*), intent(in) :: key
-  integer, intent(in) :: i
-  integer, intent(in) :: narg
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_opt_char'
-
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  res = a%key_short == key .or. a%key_long == key
-  if( .not. res )then
-    call logret(PRCNAM, MODNAM)
-    return
-  endif
-
-  if( a%used )then
-    call errend_opt_duplicated_input(a%key_short, a%key_long)
-  endif
-
-  a%used = .true.
-
-  if( i == narg )then
-    call errend_opt_no_value(a%key_short, a%key_long)
-  endif
-
-  a%val = trim(argument(i+1))
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end function update_arg_opt_char
-!===============================================================
-!
-!===============================================================
-logical function update_arg_opt_int4(a, key, i, narg) result(res)
-  implicit none
-  type(arg_int4_), intent(inout) :: a
-  character(*), intent(in) :: key
-  integer, intent(in) :: i
-  integer, intent(in) :: narg
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'update_arg_opt_int4'
-
-  call logbgn(PRCNAM, MODNAM, '-p')
-  !-------------------------------------------------------------
-  res = a%key_short == key .or. a%key_long == key
-  if( .not. res )then
-    call logret(PRCNAM, MODNAM)
-    return
-  endif
-
-  if( a%used )then
-    call errend_opt_duplicated_input(a%key_short, a%key_long)
-  endif
-
-  a%used = .true.
-
-  if( i == narg )then
-    call errend_opt_no_value(a%key_short, a%key_long)
-  endif
-
-  if( c2v(argument(i+1), a%val) /= 0 )then
-    call errend_opt_reading_failure(a%key_short, a%key_long)
-  endif
-  !-------------------------------------------------------------
-  call logret(PRCNAM, MODNAM)
-end function update_arg_opt_int4
-!===============================================================
-!
-!===============================================================
-subroutine errend_opt_duplicated_input(keys, keyl)
-  implicit none
-  character(*), intent(in) :: keys, keyl
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'errend_opt_duplicated_input'
-
-  call errend('Duplicated input of the argument, '//&
-              'that is specified by "'//&
-              trim(keys)//'" or "'//trim(keyl)//'".', &
-              PRCNAM, MODNAM)
-end subroutine errend_opt_duplicated_input
-!===============================================================
-!
-!===============================================================
-subroutine errend_opt_no_value(keys, keyl)
-  implicit none
-  character(*), intent(in) :: keys, keyl
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'errend_opt_no_value'
-
-  call errend('No value was given for the optional argument, '//&
-              'that is specified by "'//&
-              trim(keys)//'" or "'//trim(keyl)//'".', &
-              PRCNAM, MODNAM)
-end subroutine errend_opt_no_value
-!===============================================================
-!
-!===============================================================
-subroutine errend_opt_reading_failure(keys, keyl)
-  implicit none
-  character(*), intent(in) :: keys, keyl
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'errend_opt_reading_failure'
-
-  call errend('Failed to read the value of the optional argument, '//&
-              'that is specified by "'//&
-              trim(keys)//'" or "'//trim(keyl)//'".', &
-              PRCNAM, MODNAM)
-end subroutine errend_opt_reading_failure
+!---------------------------------------------------------------
+end subroutine parsearg
 !===============================================================
 !
 !===============================================================
@@ -876,13 +757,14 @@ end subroutine errend_opt_reading_failure
 !===============================================================
 logical(4) function arg_flag(s) result(v)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'arg_flag'
   character(*), intent(in) :: s
 
   type(arg_flag_), pointer :: a
+  type(arg_cmn_), pointer :: cmn
   logical :: is_ok
   integer :: i
 
-  character(CLEN_PROC), parameter :: PRCNAM = 'arg_flag'
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -895,10 +777,12 @@ logical(4) function arg_flag(s) result(v)
   ! -- $s is key.
   elseif( is_key_optional(s) )then
     is_ok = .false.
-    do i = 1, ad%n_optional
-      selectcase( ad%typ_optional(i) )
+    do i = 1, ad%n_opt
+      cmn => ad%cmn_opt(i)
+
+      selectcase( cmn%typ )
       case( ITYPE_FLAG )
-        a => ad%lst_flag(ad%idx_optional(i))
+        a => ad%lst_flag(cmn%idx)
         if( a%key_short == s .or. a%key_long == s )then
           v = a%val
           is_ok = .true.
@@ -910,7 +794,7 @@ logical(4) function arg_flag(s) result(v)
         continue
       case default
         call errend(msg_invalid_value(&
-               'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+               'ad%cmn_opt('//str(i)//')%typ', cmn%typ))
       endselect
     enddo
 
@@ -922,10 +806,12 @@ logical(4) function arg_flag(s) result(v)
   ! -- $s is name.
   else
     is_ok = .false.
-    do i = 1, ad%n_positional
-      selectcase( ad%typ_positional(i) )
+    do i = 1, ad%n_pos
+      cmn => ad%cmn_pos(i)
+
+      selectcase( cmn%typ )
       case( ITYPE_FLAG )
-        a => ad%lst_flag(ad%idx_positional(i))
+        a => ad%lst_flag(cmn%idx)
         if( a%name == s )then
           v = a%val
           is_ok = .true.
@@ -937,7 +823,7 @@ logical(4) function arg_flag(s) result(v)
         continue
       case default
         call errend(msg_invalid_value(&
-               'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+               'ad%cmn_pos('//str(i)//')%typ', cmn%typ))
       endselect
     enddo
 
@@ -953,13 +839,13 @@ end function arg_flag
 !===============================================================
 character(CLEN_PATH) function arg_char(s) result(v)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'arg_char'
   character(*), intent(in) :: s
 
   type(arg_char_), pointer :: a
+  type(arg_cmn_), pointer :: cmn
   logical :: is_ok
   integer :: i
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'arg_char'
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -972,10 +858,12 @@ character(CLEN_PATH) function arg_char(s) result(v)
   ! -- $s is key.
   elseif( is_key_optional(s) )then
     is_ok = .false.
-    do i = 1, ad%n_optional
-      selectcase( ad%typ_optional(i) )
+    do i = 1, ad%n_opt
+      cmn => ad%cmn_opt(i)
+
+      selectcase( cmn%typ )
       case( ITYPE_CHAR )
-        a => ad%lst_char(ad%idx_optional(i))
+        a => ad%lst_char(cmn%idx)
         if( a%key_short == s .or. a%key_long == s )then
           v = a%val
           is_ok = .true.
@@ -987,7 +875,7 @@ character(CLEN_PATH) function arg_char(s) result(v)
         continue
       case default
         call errend(msg_invalid_value(&
-               'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+               'ad%cmn_opt('//str(i)//')%typ', cmn%typ))
       endselect
     enddo
 
@@ -999,10 +887,12 @@ character(CLEN_PATH) function arg_char(s) result(v)
   ! -- $s is name.
   else
     is_ok = .false.
-    do i = 1, ad%n_positional
-      selectcase( ad%typ_positional(i) )
+    do i = 1, ad%n_pos
+      cmn => ad%cmn_pos(i)
+
+      selectcase( cmn%typ )
       case( ITYPE_CHAR )
-        a => ad%lst_char(ad%idx_positional(i))
+        a => ad%lst_char(cmn%idx)
         if( a%name == s )then
           v = a%val
           is_ok = .true.
@@ -1014,7 +904,7 @@ character(CLEN_PATH) function arg_char(s) result(v)
         continue
       case default
         call errend(msg_invalid_value(&
-               'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+               'ad%cmn_pos('//str(i)//')%typ', cmn%typ))
       endselect
     enddo
 
@@ -1030,13 +920,13 @@ end function arg_char
 !===============================================================
 integer(4) function arg_int4(s) result(v)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'arg_int4'
   character(*), intent(in) :: s
 
   type(arg_int4_), pointer :: a
+  type(arg_cmn_), pointer :: cmn
   logical :: is_ok
   integer :: i
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'arg_int4'
 
   call logbgn(PRCNAM, MODNAM, '-p')
   !-------------------------------------------------------------
@@ -1049,10 +939,12 @@ integer(4) function arg_int4(s) result(v)
   ! -- $s is key.
   elseif( is_key_optional(s) )then
     is_ok = .false.
-    do i = 1, ad%n_optional
-      selectcase( ad%typ_optional(i) )
+    do i = 1, ad%n_opt
+      cmn => ad%cmn_opt(i)
+
+      selectcase( cmn%typ )
       case( ITYPE_INT4 )
-        a => ad%lst_int4(ad%idx_optional(i))
+        a => ad%lst_int4(cmn%idx)
         if( a%key_short == s .or. a%key_long == s )then
           v = a%val
           is_ok = .true.
@@ -1065,7 +957,7 @@ integer(4) function arg_int4(s) result(v)
         continue
       case default
         call errend(msg_invalid_value(&
-               'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+               'ad%cmn_opt('//str(i)//')%typ', cmn%typ))
       endselect
     enddo
 
@@ -1077,10 +969,12 @@ integer(4) function arg_int4(s) result(v)
   ! -- $s is name.
   else
     is_ok = .false.
-    do i = 1, ad%n_positional
-      selectcase( ad%typ_positional(i) )
+    do i = 1, ad%n_pos
+      cmn => ad%cmn_pos(i)
+
+      selectcase( cmn%typ )
       case( ITYPE_INT4 )
-        a => ad%lst_int4(ad%idx_positional(i))
+        a => ad%lst_int4(cmn%idx)
         if( a%name == s )then
           if( .not. a%used )then
             call errend('The '//ordinal(i)//' positional argument is missing.')
@@ -1096,7 +990,7 @@ integer(4) function arg_int4(s) result(v)
         continue
       case default
         call errend(msg_invalid_value(&
-               'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
+               'ad%cmn_pos('//str(i)//')%typ', cmn%typ))
       endselect
     enddo
 
@@ -1120,145 +1014,109 @@ end function arg_int4
 !===============================================================
 subroutine showarg()
   implicit none
-
-  type(arg_flag_), pointer :: aflag
-  type(arg_char_), pointer :: achar
-  type(arg_int4_), pointer :: aint4
-  integer :: i
-
   character(CLEN_PROC), parameter :: PRCNAM = 'showarg'
 
-  call logbgn(PRCNAM, MODNAM, '-p')
+  type(arg_cmn_), pointer :: cmn
+  integer :: i
+  character(:), allocatable :: s
+  character(1) :: parenthl, parenthr
+
+  call logbgn(PRCNAM, MODNAM, '-p -x2')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  allocate(character(1) :: s)
+  s = 'usage: ./*.exe [-h]'
+
+  do i = 1, ad%n_opt
+    cmn => ad%cmn_opt(i)
+
+    parenthl = ''
+    parenthr = ''
+    if( .not. cmn%is_required )then
+      parenthl = '['
+      parenthr = ']'
+    endif  
+
+    selectcase( cmn%typ )
+    case( ITYPE_FLAG )
+      s = trim(s)//' '//trim(parenthl)//&
+          get_key_single(cmn%key_short, cmn%key_long)//&
+          trim(parenthr)
+
+    case( ITYPE_CHAR, &
+          ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+          ITYPE_REAL, ITYPE_DBLE )
+      s = trim(s)//' '//trim(parenthl)//&
+          get_key_single(cmn%key_short, cmn%key_long)//&
+          ' '//trim(cmn%name)//trim(parenthr)
+
+    case default
+      call errend(msg_invalid_value('ad%cmn_opt('//str(i)//')%typ', cmn%typ))
+    endselect
+  enddo  ! i = 1, ad%n_opt/
+
+  do i = 1, ad%n_pos
+    cmn => ad%cmn_pos(i)
+
+    selectcase( cmn%typ )
+    case( ITYPE_FLAG )
+      call errend(msg_unexpected_condition()//&
+                '\n  ad%cmn_pos('//str(i)//')%typ == ITYPE_FLAG')
+
+    case( ITYPE_CHAR, &
+          ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+          ITYPE_REAL, ITYPE_DBLE )
+      s = trim(s)//' '//trim(cmn%name)
+
+    case default
+      call errend(msg_invalid_value('ad%cmn_pos('//str(i)//')%typ', cmn%typ))
+    endselect
+  enddo  ! i = 1, ad%n_pos/
+
+  call logmsg(s, opt='x0')
   !-------------------------------------------------------------
   ! Positional arguments
   !-------------------------------------------------------------
-  do i = 1, ad%n_positional
-    selectcase( ad%typ_positional(i) )
-    !-----------------------------------------------------------
-    ! Case: Flag
-    ! -- No positional arguments
-    case( ITYPE_FLAG )
-      call errend(msg_unexpected_condition()//&
-                '\n  ad%typ_positional('//str(i)//') == ITYPE_FLAG')
-    !-----------------------------------------------------------
-    ! Case: Char
-    case( ITYPE_CHAR )
-      achar => ad%lst_char(ad%idx_positional(i))
-      call logmsg(&
-             str_val_positional(&
-               achar%name, achar%description,              &
-               ITYPE_CHAR, achar%val        , achar%used), &
-             opt='x1')
-    !-----------------------------------------------------------
-    ! Case: Int4
-    case( ITYPE_INT4 )
-      aint4 => ad%lst_int4(ad%idx_positional(i))
-      call logmsg(&
-             str_val_positional(&
-               aint4%name, aint4%description,              &
-               ITYPE_INT4, str(aint4%val)   , aint4%used), &
-             opt='x1')
-    !-----------------------------------------------------------
-    case default
-      call errend(msg_invalid_value(&
-             'ad%typ_positional('//str(i)//')', ad%typ_positional(i)))
-    endselect
+  if( ad%n_pos > 0 )then
+    call logmsg('')
+    call logmsg('positional arguments:', opt='x0')
+  endif
+
+  do i = 1, ad%n_pos
+    call logmsg(ad%cmn_pos(i)%name, opt='x2')
   enddo
   !-------------------------------------------------------------
   ! Optional arguments
   !-------------------------------------------------------------
-  do i = 1, ad%n_optional
-    selectcase( ad%typ_optional(i) )
-    !-----------------------------------------------------------
-    ! Case: Flag
+  if( ad%n_opt > 0 )then
+    call logmsg('')
+    call logmsg('optional arguments:', opt='x0')
+  endif
+
+  do i = 1, ad%n_opt
+    cmn => ad%cmn_opt(i)
+
+    s = get_keys(cmn%key_short, cmn%key_long)
+
+    selectcase( cmn%typ )
     case( ITYPE_FLAG )
-      aflag => ad%lst_flag(ad%idx_optional(i))
-      call logmsg(&
-             str_val_optional(&
-               aflag%key_short, aflag%key_long, aflag%description, &
-               ITYPE_FLAG     , str(aflag%val), aflag%required   , &
-               aflag%used)                                       , &
-             opt='x1')
-    !-----------------------------------------------------------
-    ! Case: Char
-    case( ITYPE_CHAR )
-      achar => ad%lst_char(ad%idx_optional(i))
-      call logmsg(&
-             str_val_optional(&
-               achar%key_short, achar%key_long, achar%description, &
-               ITYPE_CHAR     , achar%val     , achar%required   , &
-               achar%used)                                       , &
-             opt='x1')
-    !-----------------------------------------------------------
-    ! Case: Int4
-    case( ITYPE_INT4 )
-      aint4 => ad%lst_int4(ad%idx_optional(i))
-      call logmsg(str_val_optional(&
-             aint4%key_short, aint4%key_long, aint4%description, &
-             ITYPE_INT4     , str(aint4%val), aint4%required   , &
-             aint4%used)                                       , &
-           opt='x1')
-    !-----------------------------------------------------------
-    ! Case: ERROR
-    case default
-      call errend(msg_invalid_value(&
-             'ad%typ_optional('//str(i)//')', ad%typ_optional(i)))
+      continue
+    case( ITYPE_CHAR, &
+          ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
+          ITYPE_REAL, ITYPE_DBLE )
+      s = trim(s)//' '//trim(cmn%name)
     endselect
+
+    if( cmn%description /= '' )then
+      s = s//'    '//cmn%description
+    endif
+
+    call logmsg(s, opt='x2')
   enddo
-  !-------------------------------------------------------------
-  !
-  !-------------------------------------------------------------
-  nullify(aflag, aint4)
   !-------------------------------------------------------------
   call logret(PRCNAM, MODNAM)
 end subroutine showarg
-!===============================================================
-!
-!===============================================================
-function str_val_positional(&
-    name, description, ityp, sval, used) result(s)
-  implicit none
-  character(*), intent(in) :: name
-  character(*), intent(in) :: description
-  integer     , intent(in) :: ityp
-  character(*), intent(in) :: sval
-  logical     , intent(in) :: used
-
-  character(:), allocatable :: s
-
-  allocate(character(1) :: s)
-
-  s = '*Positional* '//trim(name)//&
-    '\n  '//trim(description)//&
-    '\n  value='//sval//&
-      ' (type='//styp(ityp)//', input='//str(used)//')'
-end function str_val_positional
-!===============================================================
-!
-!===============================================================
-function str_val_optional(&
-    key_short, key_long, description, ityp, sval, &
-    required, used) result(s)
-  implicit none
-  character(*), intent(in) :: key_short
-  character(*), intent(in) :: key_long
-  character(*), intent(in) :: description
-  integer     , intent(in) :: ityp
-  character(*), intent(in) :: sval
-  logical     , intent(in) :: required
-  logical     , intent(in) :: used
-
-  character(:), allocatable :: s
-
-  allocate(character(1) :: s)
-
-  s = '*Optional* '//str(key_short,clenmax_key_short)//&
-      ' '//str(key_long,clenmax_key_long)//&
-    '\n  '//trim(description)//&
-    '\n  value='//sval//&
-      ' (type='//styp(ityp)//', required='//str(required)//&
-      ', input='//str(used)//')'
-end function str_val_optional
 !===============================================================
 !
 !===============================================================
@@ -1292,6 +1150,119 @@ function styp(ityp) result(s)
     call errend(msg_invalid_value('ityp', ityp))
   endselect
 end function styp
+!===============================================================
+!
+!===============================================================
+function get_key_single(&
+    key_short, key_long, get_long, remove_hyphen) result(res)
+  implicit none
+  character(*), intent(in) :: key_short
+  character(*), intent(in) :: key_long
+  logical, intent(in), optional :: get_long
+  logical, intent(in), optional :: remove_hyphen
+  character(:), allocatable :: res
+
+  logical :: get_long_
+  logical :: remove_hyphen_
+
+  get_long_ = .false.
+  remove_hyphen_ = .false.
+  if( present(get_long) ) get_long_ = get_long
+  if( present(remove_hyphen) ) remove_hyphen_ = remove_hyphen
+
+  allocate(character(1) :: res)
+
+  if( get_long_ )then
+    if( key_long == '' )then
+      res = trim(key_short)
+    else
+      res = trim(key_long)
+    endif
+  else
+    if( key_short == '' )then
+      res = trim(key_long)
+    else
+      res = trim(key_short)
+    endif
+  endif
+
+  if( remove_hyphen_ )then
+    if( res(2:2) == '-' )then
+      res = res(3:)  ! long
+    else
+      res = res(2:)  ! short
+    endif
+  endif
+end function get_key_single
+!===============================================================
+!
+!===============================================================
+function get_keys(key_short, key_long) result(s)
+  implicit none
+  character(*), intent(in) :: key_short
+  character(*), intent(in) :: key_long
+  character(:), allocatable :: s
+
+  if( key_short == '' )then
+    s = trim(key_long)
+  elseif( key_long == '' )then
+    s = trim(key_short)
+  else
+    s = trim(key_short)//'/'//trim(key_long)
+  endif
+end function get_keys
+!===============================================================
+!
+!===============================================================
+!
+!
+!
+!
+!
+!===============================================================
+!
+!===============================================================
+subroutine init_arg_cmn(cmn)
+  implicit none
+  type(arg_cmn_), intent(inout) :: cmn
+
+  integer :: i
+
+  allocate(character(1) :: cmn%name)
+  allocate(character(1) :: cmn%key_short)
+  allocate(character(1) :: cmn%key_long)
+  allocate(character(1) :: cmn%description)
+
+  cmn%used = .false.
+  cmn%typ = ITYPE_UNDEF
+  cmn%idx = 0
+  cmn%name = ''
+  cmn%key_short = ''
+  cmn%key_long = ''
+  cmn%is_required = .false.
+  cmn%description = ''
+end subroutine init_arg_cmn
+!===============================================================
+!
+!===============================================================
+subroutine realloc_arg_cmn(arr, n)
+  implicit none
+  type(arg_cmn_), pointer :: arr(:)
+  integer, intent(in) :: n
+
+  type(arg_cmn_), allocatable :: tmp(:)
+  integer :: i
+
+  allocate(tmp(size(arr)))
+  tmp(:) = arr(:)
+  deallocate(arr)
+  allocate(arr(n))
+  arr(:size(tmp)) = tmp(:)
+  do i = size(tmp)+1, n
+    call init_arg_cmn(arr(i))
+  enddo
+  deallocate(tmp)
+end subroutine realloc_arg_cmn
 !===============================================================
 !
 !===============================================================
