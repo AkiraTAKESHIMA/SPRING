@@ -2544,7 +2544,7 @@ integer(4) function rb__as1d__log4_2d(&
   shp(1) = n1
   shp(2) = n2
 
-  dtype_ = DTYPE_LOG1  !--dtype--
+  dtype_ = DTYPE_LOG4  !--dtype--
   endian_ = ENDIAN_DEFAULT
   rec_ = 1
   sz_(:) = shp(:)
@@ -3992,7 +3992,7 @@ integer(4) function wb__int4_1d(&
   !-------------------------------------------------------------
   shp = size(dat,kind=8)
 
-  dtype_ = DTYPE_INT1  !--dtype--
+  dtype_ = DTYPE_INT4  !--dtype--
   endian_ = ENDIAN_DEFAULT
   rec_ = 1
   sz_ = shp

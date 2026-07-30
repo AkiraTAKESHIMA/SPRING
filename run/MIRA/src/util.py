@@ -17,8 +17,10 @@ DIR_MIRAMESH    = f'{DIR_MIRADATASET}/Meshes'
 DIR_MIRAMETRICS = f'{DIR_MIRADATASET}/MetricsData'
 
 DIR_FIG = 'fig'
+DIR_FIG_MESH = f'{DIR_FIG}/mesh'
+DIR_FIG_FIELD = f'{DIR_FIG}/field'
 DIR_FIG_METRICS = f'{DIR_FIG}/metrics'
-DIR_FIG_CONSISTENCY = f'{DIR_FIG}/consistency'
+DIR_FIG_SENSITIVITY = f'{DIR_FIG}/sensitivity'
 DIR_FIG_TIME = f'{DIR_FIG}/time'
 
 TBL_RFN = dict(
@@ -29,29 +31,45 @@ TBL_RFN = dict(
 DICT_VAR = dict(
   A1 = dict(
     name = 'AnalyticalFun1',
+    label = r'AnalyticalFun1: $Y_3^2 + Y_3^3$',
+    cmap = "Spectral_r",
+    vmin = -3.5,
+    vmax = 3.5,
+    intvl = 0.5,
   ),
   A2 = dict(
     name = 'AnalyticalFun2',
+    label = r'AnalyticalFun2: $2 + \mathrm{cos}^2\theta\ \mathrm{cos}(2\lambda)$',
+    cmap = "Spectral_r",
+    vmin = 1.0,
+    vmax = 3.0,
+    intvl = 0.2,
   ),
   TPW = dict(
     name = 'TotalPrecipWater',
-    cmap = "plasma",
+    label = 'Total Precipitable Water (mm)',
+    cmap = "turbo",
     vmin = 0,
-    vmax = 70,
+    vmax = 72,
+    intvl = 4,
     dmax = 10,
   ),
   CFR = dict(
-    name = 'CloudFraction'   ,
-    cmap = "plasma",
+    name = 'CloudFraction',
+    label = 'Cloud Fraction (-)',
+    cmap = "turbo",
     vmin = 0,
     vmax = 1,
+    intvl = 0.05,
     dmax = 0.2,
   ),
   TPO = dict(
     name = 'Topography',
-    cmap = "plasma",
-    vmin = -12000,
-    vmax = 10000,
+    label = 'Topography (m)',
+    cmap = "turbo",
+    vmin = -11000,
+    vmax = 9000,
+    intvl = 1000,
     dmax = 1000,
   ),
 )
@@ -77,35 +95,41 @@ DICT_METRIC = {
     "tick_zero": r'$E_{L_2} = 0$',
   },
   "GLinf": {
-    "label": r'Largest Pointwise Error, $E_{L_max}$',
+    "label": r'Largest Pointwise Error, $E_{L_\mathrm{max}}$',
   },
   "GMaxE": {
+    "label": 'Global Overshoot, $G_\mathrm{max}$',
+  },
+  "log_GMaxE": {
     "function": metrics_log10,
-    "label": 'Global Overshoot, $\mathrm{log}_{10}|G_{max}|$',
-    "tick_zero": r'$G_{max} = 0$',
+    "label": 'Global Overshoot, $\mathrm{log}_{10}|G_\mathrm{max}|$',
+    "tick_zero": r'$|G_\mathrm{max}| = 0$',
   },
   "GMinE": {
+    "label": 'Global Undershoot, $G_\mathrm{min}$',
+  },
+  "log_GMinE": {
     "function": metrics_log10,
-    "label": 'Global Undershoot, $\mathrm{log}_{10}|G_{min}|$',
-    "tick_zero": r'$G_{min} = 0$',
+    "label": 'Global Undershoot, $\mathrm{log}_{10}|G_\mathrm{min}|$',
+    "tick_zero": r'$|G_\mathrm{min}| = 0$',
   },
   "LMaxL1": {
-    "label": 'L1 of Local Maxima Error, $L_{max,1}$',
+    "label": 'L1 of Local Maxima Error, $L_\mathrm{max,1}$',
   },
   "LMaxL2": {
-    "label": 'L2 of Local Maxima Error, $L_{max,2}$',
+    "label": 'L2 of Local Maxima Error, $L_\mathrm{max,2}$',
   },
   "LMaxLm": {
-    "label": 'Largest Error in Local Maxima, $L_{max,inf}$',
+    "label": 'Largest Error in Local Maxima, $L_\mathrm{max,inf}$',
   },
   "LMinL1": {
-    "label": 'L1 of Local Minima Error, $L_{min,1}$',
+    "label": 'L1 of Local Minima Error, $L_\mathrm{min,1}$',
   },
   "LMinL2": {
-    "label": 'L2 of Local Minima Error, $L_{min,2}$',
+    "label": 'L2 of Local Minima Error, $L_\mathrm{min,2}$',
   },
   "LMinLm": {
-    "label": 'Largest Error in Local Minima, $L_{min,inf}$',
+    "label": 'Largest Error in Local Minima, $L_\mathrm{min,inf}$',
   },
   "H12T": {
     "label": '',
@@ -530,23 +554,23 @@ COLOR_CFR = (
   ( 87,   0, 136),  # 0.95 - 1.00
 )
 
-LST_MESH_TYPE = ('CS', 'ICOD', 'RLL')
+LST_MESH_TYPE = ['CS', 'ICOD', 'RLL']
 
 DICT_MESH_RESOLUTION = {}
 for refinement in TBL_RFN:
     DICT_MESH_RESOLUTION[refinement] \
     = tuple(DICT_MESH[refinement][next(iter(DICT_MESH[refinement]))].keys())
 
-LST_VAR = tuple(DICT_VAR.keys())
+LST_VAR = list(DICT_VAR.keys())
 
-LST_METRIC = tuple(DICT_METRIC.keys())
+LST_METRIC = list(DICT_METRIC.keys())
 
-LST_ALGORITHM = tuple(DICT_METRICSDATA.keys()) + ('SPRING',)
+LST_ALGORITHM = list(DICT_METRICSDATA.keys()) + ['SPRING',]
 
 CLEN_ALGORITHM = max([len(s) for s in DICT_METRICSDATA])
 
 
-def get_nk(refinement: str, meshType: str, resolution: int):
+def get_nk(refinement: str, meshType: str, resolution: int) -> int:
     if refinement == 'u':
         if meshType == 'CS':
             nk = 4
@@ -569,7 +593,8 @@ def get_nk(refinement: str, meshType: str, resolution: int):
     return nk
 
 
-def get_mesh(refinement: str, meshType: str, resolution: int):
+def get_mesh(refinement: str, meshType: str, resolution: int
+) -> (str, str, int, int):
     refinement_ = TBL_RFN[refinement]
 
     meshName = f'MIRA{refinement}{meshType}{resolution}'
@@ -581,14 +606,14 @@ def get_mesh(refinement: str, meshType: str, resolution: int):
     return meshName, meshDir, nk, nij
 
 
-def get_sForth(isForth: bool):
+def get_sForth(isForth: bool) -> str:
     if isForth:
         return 'forth'
     else:
         return 'back'
 
 
-def get_meshNCFile(refinement: str, meshType: str, resolution: int):
+def get_meshNCFile(refinement: str, meshType: str, resolution: int) -> str:
     refinement_ = TBL_RFN[refinement]
 
     filename = DICT_MESH[refinement][meshType]['file'][resolution]
@@ -596,19 +621,19 @@ def get_meshNCFile(refinement: str, meshType: str, resolution: int):
     return f'{DIR_MIRAMESH}/{refinement_}/{meshType_}/{filename}'
 
 
-def get_rtDir(srcMeshName: str, tgtMeshName: str, isForth: bool):
+def get_rtDir(srcMeshName: str, tgtMeshName: str, isForth: bool) -> str:
     return f'out/remapping_table/{srcMeshName}_to_{tgtMeshName}/{get_sForth(isForth)}'
 
 
-def get_remapDir(srcMeshName: str, tgtMeshName: str):
+def get_remapDir(srcMeshName: str, tgtMeshName: str) -> str:
     return f'out/remap_iter/{srcMeshName}_to_{tgtMeshName}'
 
 
-def get_fieldDir(srcMeshName: str, tgtMeshName: str, var: str):
+def get_fieldDir(srcMeshName: str, tgtMeshName: str, var: str) -> str:
     return f'{get_remapDir(srcMeshName, tgtMeshName)}/field/{var}'
 
 
-def get_fieldBinFile(isForth: bool, var: str, i: int):
+def get_fieldBinFile(isForth: bool, var: str, i: int) -> str:
     if isForth:
         fin_grdval = f'{var}_src_{i:04d}.bin'
         fout_grdval = f'{var}_tgt_{i+1:04d}.bin'
@@ -619,11 +644,11 @@ def get_fieldBinFile(isForth: bool, var: str, i: int):
     return fin_grdval, fout_grdval
 
 
-def get_fieldNCFile(srcMeshName: str, tgtMeshName: str, var: str):
+def get_fieldNCFile(srcMeshName: str, tgtMeshName: str, var: str) -> str:
     return f'{get_fieldDir(srcMeshName, tgtMeshName, var)}/{var}.nc'
 
 
-def get_SPRINGMetricsFile(srcMeshName: str, tgtMeshName: str, var: str):
+def get_SPRINGMetricsFile(srcMeshName: str, tgtMeshName: str, var: str) -> str:
     return f'out/metrics/{srcMeshName}_to_{tgtMeshName}_{DICT_VAR[var]["name"]}.csv',\
            f'out/metrics/{srcMeshName}_to_{tgtMeshName}.csv'
 
@@ -632,7 +657,8 @@ def get_MIRAMetricsFile(
   refinement: str, algorithm: str, 
   srcMeshType: str, srcResolution: int, 
   tgtMeshType: str, tgtResolution: int,
-  degree: int, var: str):
+  degree: int, var: str,
+) -> str:
 
     d = DICT_METRICSDATA[algorithm]
     srcMesh = d['mesh'][refinement][srcMeshType]
@@ -654,7 +680,8 @@ def get_metricsFile(
   refinement: str, algorithm: str, 
   srcMeshType: str, srcResolution: int, 
   tgtMeshType: str, tgtResolution: int,
-  degree: int, var: str):
+  degree: int, var: str,
+) -> str:
 
     if algorithm == ALGORITHM_SPRING:
         if degree != 0:
@@ -668,12 +695,25 @@ def get_metricsFile(
           srcMeshType, srcResolution, tgtMeshType, tgtResolution,
           degree, var)
         
+
+def get_meshFigFile(
+  refinement: str, meshType: str, resolution: int,
+) -> str:
+    return f'{DIR_FIG_MESH}/{refinement}{meshType}{resolution}.png'
+
+
+def get_fieldFigFile(
+  var: str,
+) -> str:
+    return f'{DIR_FIG_FIELD}/{var}.png'
+
     
 def get_metricsFigFile(
   refinement: str, 
   srcMeshType: str, srcResolution: int, 
   tgtMeshType: str, tgtResolution: int,
-  metric: str, degree: int, var: str, add: str=''):
+  metric: str, degree: int, var: str, add: str='',
+) -> str:
 
     if degree is None:
         sdeg = 'px'
@@ -690,13 +730,19 @@ def get_metricsFigFile(
            f'{metric}_{sdeg}_{var}_{add_}.png'
 
 
-def get_consistencyFigFile():
-    return f'{DIR_FIG_CONSISTENCY}/consistency.png'
+
+def get_sensitivityFile(metric: str, algorithm: str) -> str:
+    return f'out/sensitivity/{metric}_{algorithm}.csv'
+
+
+def get_sensitivityFigFile(metric: str) -> str:
+    return f'{DIR_FIG_SENSITIVITY}/sensitivity_{metric}.png'
 
 
 def get_timeFigFile(
   srcRefinement: str, srcMeshType: str, 
-  tgtRefinement: str, tgtMeshType: str):
+  tgtRefinement: str, tgtMeshType: str,
+) -> str:
 
     if srcMeshType is None:
         return f'{DIR_FIG_TIME}/all.png'
@@ -704,7 +750,7 @@ def get_timeFigFile(
         return f'{DIR_FIG_TIME}/{srcMeshType}-{tgtMeshType}.png'
 
 
-def get_char_stat(stat):
+def get_char_stat(stat: int) -> str:
     if stat == 0:
         return '✓'
     elif stat == 1:

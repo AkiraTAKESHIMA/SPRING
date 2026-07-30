@@ -240,7 +240,7 @@ path_report: "{util.get_remapDir(srcMeshName, tgtMeshName)}/report/{var}_{i:04d}
         sys.exit(1)
 
 
-def plot_field(
+def plot_remappedField(
   srcRefinement: str, srcMeshType: str, srcResolution: int,
   tgtRefinement: str, tgtMeshType: str, tgtResolution: int, 
   mesh: str, var: str, i: int,
@@ -712,15 +712,160 @@ def calc_convergence_rate(
     print(f'convergence rate r = {r:.3f}, constant C = {np.exp(b):.3e}')
 
 
+def plot_mesh(
+    refinement: str, meshType: str, resolution: int, 
+) -> None:
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import cartopy.crs as ccrs
+
+    meshName, meshDir, nk, nij = util.get_mesh(refinement, meshType, resolution)
+
+    xyz = np.fromfile(f'{meshDir}/xyz.bin').reshape(3,nij,nk)
+    x, y, z = xyz[0], xyz[1], xyz[2]
+    mask = x != -1e20
+    r = np.full(x.shape, np.nan)
+    r[mask] = np.sqrt(x[mask]**2 + y[mask]**2 + z[mask]**2)
+    x[mask] /= r[mask]
+    y[mask] /= r[mask]
+    z[mask] /= r[mask]
+    lat = np.full_like(x, np.nan, dtype=float)
+    lon = np.full_like(x, np.nan, dtype=float)
+    lat[mask] = np.rad2deg(np.arcsin(z[mask]))
+    lon[mask] = np.rad2deg(np.arctan2(y[mask], x[mask]))
+    del(xyz, x, y, z, r)
+
+    pltlon, pltlat = [], []
+    for ij in range(nij):
+        lat1 = lat[ij,:][mask[ij,:]]
+        lon1 = lon[ij,:][mask[ij,:]]
+
+        if (np.abs(lat1) == 90).any():
+            nk1 = lat1.size
+            for k in range(nk1):
+                if abs(lat1[k]) != 90: 
+                    continue
+                if abs(lat1[k-1]) != 90:
+                    lon1[k] = lon1[k-1]
+                elif abs(lat1[(k+1)%nk]) != 90:
+                    lon1[k] = lon1[(k+1)%nk]
+                else:
+                    raise Exception(f'Failed to modify coordinates.\n'\
+                     f'ij: {ij}\n'\
+                     f'lat1: {lat1}\n'\
+                     f'lon1: {lon1}')
+
+        if (abs(np.r_[lon1[1:], lon1[0]] - lon1) > 180).any():
+            lon1[lon1 >= 0] -= 360
+
+        pltlon += [*lon1, lon1[0], np.nan]
+        pltlat += [*lat1, lat1[0], np.nan]
+    del(lon, lat, lon1, lat1, mask)
+
+    # Plot
+    path_fig = util.get_meshFigFile(refinement, meshType, resolution)
+    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
+
+    fig, ax = plt.subplots(
+      figsize=(8,8), 
+      subplot_kw={
+        'projection': ccrs.NearsidePerspective(
+          central_longitude = -80,
+          central_latitude = 40,
+        ),
+      }
+    )
+    ax.plot(
+      pltlon, 
+      pltlat, 
+      transform=ccrs.PlateCarree(),
+      lw=0.5, color='dimgray', 
+    )
+    #ax.gridlines(draw_labels=True)
+    #ax.coastlines(linewidth=1.0, color='royalblue')
+
+    print(f'Saving {path_fig}')
+    fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1)
+    plt.show()
+
+
+def plot_field(
+    var: str,
+) -> None:
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import colors
+    import cartopy.crs as ccrs
+
+    meshName, meshDir, nk, nij = util.get_mesh('u', 'RLL', 4)
+    NY, NX = 720, 1440
+
+    val = np.fromfile(f'{meshDir}/val_{var}.bin').reshape(NY,NX)
+    print(f'val min: {val.min():.3e}, max: {val.max():.3e}')
+
+    lon = np.arange(360./NX/2, 360, 360./NX)
+    lat = np.arange(-90+180./NY/2, 90, 180./NY)
+    lon2d, lat2d = np.meshgrid(lon, lat)
+
+    varopt = util.DICT_VAR[var]
+    vmin, vmax, intvl = varopt['vmin'], varopt['vmax'], varopt['intvl']
+    
+    cmap = plt.get_cmap(varopt['cmap'])
+    cmapticks = np.arange(vmin, vmax, intvl)
+    cmap = colors.ListedColormap(
+      cmap( (cmapticks - vmin) / ((vmax-intvl)-vmin) ),
+    )
+
+    path_fig = util.get_fieldFigFile(var)
+    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
+
+    fig, ax = plt.subplots(
+      figsize=(9,6), 
+      subplot_kw={
+        'projection': ccrs.PlateCarree(central_longitude=0),
+      }
+    )
+    im = ax.pcolormesh(
+      lon2d, lat2d, val, 
+      cmap=cmap,
+      vmin=vmin, vmax=vmax,
+    )
+    cb = fig.colorbar(
+      im, ax = ax, 
+      orientation = 'vertical', 
+      shrink = 0.58,
+      aspect = 30, 
+      pad = 0.03,
+    )
+    cb.ax.set_yticks(np.r_[cmapticks, vmax][::2])
+    cb.ax.tick_params(labelsize=12)
+
+    gl = ax.gridlines(color='none', draw_labels=True)
+    gl.top_labels = False
+    gl.right_labels = False
+    gl.xlabel_style = {'size': 12,}
+    gl.ylabel_style = {'size': 12,}
+
+    ax.set_title(varopt['label'], fontsize=12)
+
+    print(f'Saving {path_fig}')
+    fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1)
+
+    plt.show()
+
+
 def plot_metrics(
   refinement: str, 
   srcMeshType: str, srcResolution: str,
   tgtMeshType: str, tgtResolution: str,
-  metric: str, degree: int, var: str,
+  metric: str, log: bool, var: str,
   ymin: float, ymax: float,
-  plot_GMLS: bool, figname_add: str,
+  degree: int, plot_GMLS: bool, 
+  figname_add: str,
   overwrite: bool,
-  log: bool):
+) -> None:
 
     import pandas as pd
     import numpy as np
@@ -729,14 +874,19 @@ def plot_metrics(
     srcMeshName, *_ = util.get_mesh(refinement, srcMeshType, srcResolution)
     tgtMeshName, *_ = util.get_mesh(refinement, tgtMeshType, tgtResolution)
 
+    if log:
+        metric_ = 'log_' + metric
+    else:
+        metric_ = metric
+    metricopt = util.DICT_METRIC[metric_]
+
     x = np.arange(0, util.ITERMAX+1, util.ITERINT_PLOT)
 
     ds = {}
     lst_label = []
 
     f_metrics, _ = util.get_SPRINGMetricsFile(srcMeshName, tgtMeshName, var)
-    if log:
-        print(f'Metrics: {f_metrics}')
+    print(f'Metrics: {f_metrics}')
     df = pd.read_csv(f_metrics)[metric]
     df = df.drop(df.index[0])
     y = df.values.astype(np.float64)
@@ -765,29 +915,27 @@ def plot_metrics(
           tgtMeshType, tgtResolution, 
           deg, var)
 
-        if log:
-            print(f'Metrics: {f_metrics}')
+        print(f'Metrics: {f_metrics}')
         df = pd.read_csv(f_metrics)[metric]
         y = df.drop(df.index[0]).values
         ds[algorithm] = y
         lst_label.append(f'{algorithm} ({d["degree"][deg]["label"]})')
 
 
-    if "function" in util.DICT_METRIC[metric].keys():
+    if "function" in metricopt.keys():
         for algorithm in ds.keys():
-            ds[algorithm] = util.DICT_METRIC[metric]["function"](ds[algorithm])
-    if log:
-        for algorithm in ds.keys():
-            y = ds[algorithm]
-            print(f'{algorithm:<{util.CLEN_ALGORITHM}s} '\
-                  f'0: {y[0]:9.2e} {util.ITERMAX}: {y[-1]:9.2e}, '\
-                  f'isnan: {np.isnan(y).any():1b} '\
-                  f'min: {np.nanmin(y):9.2e}, max: {np.nanmax(y):9.2e}, '\
-                  f'mean: {np.nanmean(y):9.2e}')
+            ds[algorithm] = metricopt["function"](ds[algorithm])
+    for algorithm in ds.keys():
+        y = ds[algorithm]
+        print(f'{algorithm:<{util.CLEN_ALGORITHM}s} '\
+              f'0: {y[0]:9.2e} {util.ITERMAX}: {y[-1]:9.2e}, '\
+              f'isnan: {np.isnan(y).any():1b} '\
+              f'min: {np.nanmin(y):9.2e}, max: {np.nanmax(y):9.2e}, '\
+              f'mean: {np.nanmean(y):9.2e}')
 
     path_fig = util.get_metricsFigFile(
       refinement, srcMeshType, srcResolution, tgtMeshType, tgtResolution,
-      metric, degree, var, figname_add)
+      metric_, degree, var, figname_add)
     os.makedirs(os.path.dirname(path_fig), exist_ok=True)
 
     fig = plt.figure(figsize=(10,6))
@@ -823,15 +971,25 @@ def plot_metrics(
 
     ax.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left', borderaxespad=0, fontsize=12)
     ax.set_xlabel('Remap iteration', fontsize=12)
-    ax.set_ylabel(util.DICT_METRIC[metric]["label"], fontsize=12)
+    ax.set_ylabel(metricopt["label"], fontsize=12)
     ax.set_title(f'{srcMeshType}{srcResolution}_{tgtMeshType}{tgtResolution} {var}', fontsize=12)
     if log:
-        print(f'Fig: {path_fig}')
+        print(f'Saving {path_fig}')
     plt.savefig(path_fig, bbox_inches='tight')
     plt.show()
 
 
-def plot_consistency():
+def plot_sensitivity(
+    metric:str,
+    overwrite: bool,
+    plot: bool,
+    show: bool,
+    savefig: bool,
+    reduce_reslPair: bool,
+) -> None:
+    """
+    Plot metric in the single (not iterative) remapping between kinds of combinations of meshes and summarize them to the csv file.
+    """
 
     import pandas as pd
     import numpy as np
@@ -841,9 +999,6 @@ def plot_consistency():
     lst_algorithm = ['SPRING'] + \
                     [a for a in util.DICT_METRICSDATA \
                      if degree in util.DICT_METRICSDATA[a]['degree'].keys()]
-    #lst_metric = ('GC', 'GL1', 'GL2')
-    lst_metric = ('GC', 'GMaxE', 'GMinE')
-
     lst_meshTypePair = (
         ('u', 'CS'  , 'ICOD'), 
         ('u', 'ICOD', 'RLL' ), 
@@ -851,15 +1006,28 @@ def plot_consistency():
         ('r', 'CS'  , 'ICOD'),
     )
 
-    lst_resolutionPair = {
-      'u': ((0, 0), (0, 2), (0, 4), (2, 2), (2, 4), (4, 4)),
-      'r': ((0, 0), (0, 2), (2, 2))
-    }
+    if reduce_reslPair:
+        lst_resolutionPair = {
+          'u': ((0, 0), (0, 2), (0, 4), (2, 2), (2, 4), (4, 4)),
+          'r': ((0, 0), (0, 2), (2, 2)),
+        }
+    else:
+        lst_resolutionPair = {
+          'u': [],
+          'r': []
+        }
+        for resl_src in range(5):
+            for resl_tgt in range(resl_src,5):
+                lst_resolutionPair['u'].append((resl_src, resl_tgt))
+        for resl_src in range(3):
+            for resl_tgt in range(resl_src,3):
+                lst_resolutionPair['r'].append((resl_src, resl_tgt))
 
     def get_meshPair(refinement, srcMeshType, srcResolution, tgtMeshType, tgtResolution):
         srcMeshType_ = util.DICT_MESH[refinement][srcMeshType]['name_fig']
         tgtMeshType_ = util.DICT_MESH[refinement][tgtMeshType]['name_fig']
-        return f'({refinement}) {srcMeshType_}{srcResolution}-{tgtMeshType_}{tgtResolution}'
+        return f'{refinement}{srcMeshType_}{srcResolution}-'\
+               f'{refinement}{tgtMeshType_}{tgtResolution}'
 
     lst_meshPair = []
     for (refinement, srcMeshType, tgtMeshType) in lst_meshTypePair:
@@ -872,19 +1040,21 @@ def plot_consistency():
                      for refinement in util.TBL_RFN])
     clen_meshPair = max([sum([len(mesh) for mesh in meshPair])+1 for meshPair in lst_meshPair])
 
-    line = ' ' * (clen_algorithm + 1 + clen_meshPair + 1)
-    for metric in lst_metric:
-        line += f'{metric:{11*len(util.LST_VAR)}s}'
+    line = ' ' * (clen_algorithm + 1 + clen_meshPair + 1)\
+           + f'{metric:{11*len(util.LST_VAR)}s}'
     print(line)
 
     line = ' ' * (clen_algorithm + 1 + clen_meshPair + 1)
-    for metric in lst_metric:
-        for var in util.LST_VAR:
-            line += f'{var:11s}'
+    for var in util.LST_VAR:
+        line += f'{var:11s}'
     print(line)
+
 
     ds = {}
     for algorithm in lst_algorithm:
+        if overwrite:
+            dout = {key: [] for key in ['Meshes'] + util.LST_VAR}
+
         ds[algorithm] = {}
         for (refinement, srcMeshType, tgtMeshType) in lst_meshTypePair:
             for (srcResolution, tgtResolution) in lst_resolutionPair[refinement]:
@@ -906,13 +1076,25 @@ def plot_consistency():
                     d = pd.read_csv(f_metrics, skiprows=range(1,2), nrows=1)
                     ds[algorithm][meshPair][var] = d
 
-                for metric in lst_metric:
-                    for var in util.LST_VAR:
-                        line += f' {ds[algorithm][meshPair][var][metric].iloc[0]:10.3e}'
+                for var in util.LST_VAR:
+                    line += f' {ds[algorithm][meshPair][var][metric].iloc[0]:10.3e}'
                 print(line)
 
+                if overwrite:
+                    dout['Meshes'].append(meshPair)
+                    for var in util.LST_VAR:
+                        dout[var].append(ds[algorithm][meshPair][var][metric].iloc[0])
+        if overwrite:
+            path_out = util.get_sensitivityFile(metric, algorithm)
+            print(f'Writing {path_out}')
+            pd.DataFrame(dout).to_csv(path_out)
+
     # Plot
-    path_fig = util.get_consistencyFigFile()
+    if not plot: 
+        return
+
+    path_fig = util.get_sensitivityFigFile(metric)
+    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
 
     hratio = (6, 1)
     hspace = 0.05
@@ -925,95 +1107,93 @@ def plot_consistency():
     for algorithm in lst_algorithm[1:]:
         color[algorithm] = util.DICT_METRICSDATA[algorithm]['color']
 
-    for metric in lst_metric[:1]:
-        fs_title = 12
-        fs_ylabel = 10
-        x = np.arange(len(lst_meshPair))
+    fs_title = 12
+    fs_ylabel = 10
+    x = np.arange(len(lst_meshPair))
 
-        fig = plt.figure(figsize=(16,6))
-        axes = fig.subplots(2, len(lst_algorithm), sharex=True, sharey=False, 
-            height_ratios=hratio,
-            gridspec_kw=dict(bottom=0.2, top=0.90, wspace=0, hspace=hspace))
-        uaxes = axes[0,:]
-        laxes = axes[1,:]
+    fig = plt.figure(figsize=(16,6))
+    axes = fig.subplots(2, len(lst_algorithm), sharex=True, sharey=False, 
+        height_ratios=hratio,
+        gridspec_kw=dict(bottom=0.2, top=0.90, wspace=0, hspace=hspace))
+    uaxes = axes[0,:]
+    laxes = axes[1,:]
 
-        ymin, ymax = 1e20, -1e20
-        for algorithm, uax, lax in zip(lst_algorithm, uaxes, laxes):
-            for var in util.LST_VAR:
-                y = np.array([ds[algorithm][meshPair][var][metric].iloc[0] \
-                             for meshPair in lst_meshPair])
-                if "function" in util.DICT_METRIC[metric].keys():
-                    y = util.DICT_METRIC[metric]["function"](y)
+    ymin, ymax = 1e20, -1e20
+    for algorithm, uax, lax in zip(lst_algorithm, uaxes, laxes):
+        for var in util.LST_VAR:
+            y = np.array([ds[algorithm][meshPair][var][metric].iloc[0] \
+                         for meshPair in lst_meshPair])
+            if "function" in util.DICT_METRIC[metric].keys():
+                y = util.DICT_METRIC[metric]["function"](y)
 
-                kwargs = dict(marker=marker[var],
-                    facecolor='none', edgecolor='k', linewidth=1)
+            kwargs = dict(marker=marker[var],
+                facecolor='none', edgecolor='k', linewidth=1)
 
-                uax.scatter(x, y, **kwargs)
-                lax.scatter(x, [0 if np.isnan(yy) else np.nan for yy in y], **kwargs)
+            uax.scatter(x, y, **kwargs)
+            lax.scatter(x, [0 if np.isnan(yy) else np.nan for yy in y], **kwargs)
 
-                if not np.isnan(y).all():
-                    ymin = min(ymin, np.nanmin(y))
-                    ymax = max(ymax, np.nanmax(y))
-
-
-            uax.set_title(algorithm, fontsize=fs_title)
+            if not np.isnan(y).all():
+                ymin = min(ymin, np.nanmin(y))
+                ymax = max(ymax, np.nanmax(y))
+        uax.set_title(algorithm, fontsize=fs_title)
 
 
-        if ymin == 1e20:
-            ymin, ymax = -1, 1
-        yrange = ymax - ymin
-        ymin -= yrange * 0.1
-        ymax += yrange * 0.05
-        xmin = -0.5
-        xmax = len(lst_meshPair) - 0.5
-        for (uax, lax) in zip(uaxes, laxes):
-            uax.spines['bottom'].set_visible(False)
-            uax.tick_params(axis='x', which='both', bottom=False, labelbottom=False)
+    if ymin == 1e20:
+        ymin, ymax = -1, 1
+    yrange = ymax - ymin
+    ymin -= yrange * 0.1
+    ymax += yrange * 0.05
+    xmin = -0.5
+    xmax = len(lst_meshPair) - 0.5
+    for (uax, lax) in zip(uaxes, laxes):
+        uax.spines['bottom'].set_visible(False)
+        uax.tick_params(axis='x', which='both', bottom=False, labelbottom=False)
 
-            lax.spines['top'].set_visible(False)
-            lax.set_xticks(x, lst_meshPair, rotation=270)
+        lax.spines['top'].set_visible(False)
+        lax.set_xticks(x, lst_meshPair, rotation=270)
 
-            uax.set_ylim(ymin, ymax)
-            uax.hlines(uax.get_yticks(), xmin, xmax, **linestyle_hlines)
-            uax.vlines(range(len(lst_meshPair)), ymin, ymax, **linestyle_vlines)
+        uax.set_ylim(ymin, ymax)
+        uax.hlines(uax.get_yticks(), xmin, xmax, **linestyle_hlines)
+        uax.vlines(range(len(lst_meshPair)), ymin, ymax, **linestyle_vlines)
 
-            lax.set_ylim(-1, 1)
-            lax.hlines(0, xmin, xmax, **linestyle_hlines)
-            lax.vlines(range(len(lst_meshPair)), -1, 1, **linestyle_vlines)
-            if 'tick_zero' in util.DICT_METRIC[metric].keys():
-                lax.set_yticks([0], [util.DICT_METRIC[metric]['tick_zero']])
-            else:
-                lax.set_yticks([0])
+        lax.set_ylim(-1, 1)
+        lax.hlines(0, xmin, xmax, **linestyle_hlines)
+        lax.vlines(range(len(lst_meshPair)), -1, 1, **linestyle_vlines)
+        if 'tick_zero' in util.DICT_METRIC[metric].keys():
+            lax.set_yticks([0], [util.DICT_METRIC[metric]['tick_zero']])
+        else:
+            lax.set_yticks([0])
 
-            lax.tick_params(axis='x', direction='in')
-            lax.set_xlim(xmin, xmax)
-            for ax in (uax, lax):
-                ax.tick_params(axis='y', direction='in')
+        lax.tick_params(axis='x', direction='in')
+        lax.set_xlim(xmin, xmax)
+        for ax in (uax, lax):
+            ax.tick_params(axis='y', direction='in')
 
-        uax, lax = axes[:,0]
-        uax.set_ylabel(util.DICT_METRIC[metric]['label'], fontsize=fs_ylabel)
-        for uax, lax in zip(uaxes[1:], laxes[1:]):
-            for ax in (uax, lax):
-                ax.tick_params(axis='y', labelleft=False)
+    uax, lax = axes[:,0]
+    uax.set_ylabel(util.DICT_METRIC[metric]['label'], fontsize=fs_ylabel)
+    for uax, lax in zip(uaxes[1:], laxes[1:]):
+        for ax in (uax, lax):
+            ax.tick_params(axis='y', labelleft=False)
 
-        # 切断線
-        kwargs = dict(clip_on=False, lw=1.0, zorder=1, color='dimgray')
-        kx = 0.005
-        dx, dy = 0.015, 0.09
-        y0 = 1 + np.mean(hratio) * hspace * 0.5
+    # 切断線
+    kwargs = dict(clip_on=False, lw=1.0, zorder=1, color='dimgray')
+    kx = 0.005
+    dx, dy = 0.015, 0.09
+    y0 = 1 + np.mean(hratio) * hspace * 0.5
 
-        for lax in laxes:
-            lax.plot((-kx-dx, -kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
-            lax.plot((+kx-dx, +kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
-        lax = laxes[-1]
-        lax.plot((1+kx-dx, 1+kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
-        lax.plot((1-kx-dx, 1-kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
+    for lax in laxes:
+        lax.plot((-kx-dx, -kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
+        lax.plot((+kx-dx, +kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
+    lax = laxes[-1]
+    lax.plot((1+kx-dx, 1+kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
+    lax.plot((1-kx-dx, 1-kx+dx), (y0-dy, y0+dy), transform=lax.transAxes, **kwargs)
 
-    print(path_fig)
-    os.makedirs(os.path.dirname(path_fig), exist_ok=True)
-    fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1, dpi=240)
+    if savefig:
+        print(f'Saving {path_fig}')
+        fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1, dpi=240)
 
-    plt.show()
+    if show:
+        plt.show()
 
 
 def plot_time(
@@ -1269,22 +1449,22 @@ def plot_time(
     ax.legend(**legendargs)
 
     print(f'Saving {path_fig}')
-    #fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1)
+    fig.savefig(path_fig, bbox_inches='tight', pad_inches=0.1)
     plt.show()
 
 
-job = sys.argv[1]
+task = sys.argv[1]
 
-if job == 'make_rt':
+if task == 'make_rt':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('isForth', type=str)
+    parser.add_argument('isForth')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -1296,17 +1476,17 @@ if job == 'make_rt':
       args.overwrite, 
       args.log)
 
-elif job == 'remap':
+elif task == 'remap':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('isForth', type=str)
-    parser.add_argument('variable', type=str)
+    parser.add_argument('isForth')
+    parser.add_argument('variable')
     parser.add_argument('iteration', type=int)
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
@@ -1320,16 +1500,16 @@ elif job == 'remap':
       args.log)
 
 
-elif job == 'remap_iter':
+elif task == 'remap_iter':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('variable', type=str)
+    parser.add_argument('variable')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -1344,17 +1524,17 @@ elif job == 'remap_iter':
               args.log)
 
 
-elif job == 'plot_field': 
+elif task == 'plot_remappedField': 
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('mesh', choices=['src', 'tgt'], type=str)
-    parser.add_argument('variable', type=str)
+    parser.add_argument('mesh', choices=['src', 'tgt'])
+    parser.add_argument('variable')
     parser.add_argument('iteration', type=int)
     parser.add_argument('--val', action='store_false')
     parser.add_argument('--vmin', type=float)
@@ -1365,7 +1545,7 @@ elif job == 'plot_field':
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
 
-    plot_field(
+    plot_remappedField(
       args.srcRefinement, args.srcMeshType, args.srcResolution, 
       args.tgtRefinement, args.tgtMeshType, args.tgtResolution,
       args.mesh, args.variable, args.iteration,
@@ -1374,16 +1554,16 @@ elif job == 'plot_field':
       args.overwrite, 
       args.log)
 
-elif job == 'make_NetCDF':
+elif task == 'make_NetCDF':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('variable', type=str)
+    parser.add_argument('variable')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -1395,16 +1575,16 @@ elif job == 'make_NetCDF':
       args.overwrite,
       args.log)
 
-elif job == 'calc_metrics':
+elif task == 'calc_metrics':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('variable', type=str)
+    parser.add_argument('variable')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -1416,16 +1596,16 @@ elif job == 'calc_metrics':
       args.overwrite,
       args.log)
 
-elif job == 'all':
+elif task == 'all':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
-    parser.add_argument('variable', type=str)
+    parser.add_argument('variable')
     parser.add_argument('--overwrite', action='store_true')
     parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
@@ -1461,14 +1641,14 @@ elif job == 'all':
       args.overwrite,
       args.log)
 
-elif job == 'measure_time':
+elif task == 'measure_time':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('srcRefinement', type=str)
-    parser.add_argument('srcMeshType', type=str)
+    parser.add_argument('task')
+    parser.add_argument('srcRefinement')
+    parser.add_argument('srcMeshType')
     parser.add_argument('srcResolution', type=int)
-    parser.add_argument('tgtRefinement', type=str)
-    parser.add_argument('tgtMeshType', type=str)
+    parser.add_argument('tgtRefinement')
+    parser.add_argument('tgtMeshType')
     parser.add_argument('tgtResolution', type=int)
     parser.add_argument('itermax', type=int)
     parser.add_argument('--overwrite_rt', action='store_true')
@@ -1481,17 +1661,17 @@ elif job == 'measure_time':
       args.itermax,
       args.overwrite_rt, args.overwrite_summary)
 
-elif job == 'list_outputs':
+elif task == 'list_outputs':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
+    parser.add_argument('task')
     parser.add_argument('data', choices=('remapping_table', 'remapped', 'NetCDF', 'metrics'))
     args = parser.parse_args()
 
     list_outputs(args.data)
 
-elif job == 'calc_convergence_rate':
+elif task == 'calc_convergence_rate':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
+    parser.add_argument('task')
     parser.add_argument('refinement', choices=tuple(util.TBL_RFN.keys()))
     parser.add_argument('srcMeshType', choices=util.LST_MESH_TYPE)
     parser.add_argument('tgtMeshType', choices=util.LST_MESH_TYPE)
@@ -1504,11 +1684,35 @@ elif job == 'calc_convergence_rate':
     calc_convergence_rate(
       args.refinement, 
       args.srcMeshType, args.tgtMeshType,
-      args.algorithm, args.order, args.var, args.metric)
+      args.algorithm, args.order, args.var, args.metric,
+    )
 
-elif job == 'plot_metrics':
+elif task == 'plot_mesh':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
+    parser.add_argument('task')
+    parser.add_argument('refinement')
+    parser.add_argument('meshType')
+    parser.add_argument('resolution', type=int)
+    args = parser.parse_args()
+
+    plot_mesh(
+      args.refinement, args.meshType, args.resolution,
+    )
+
+elif task == 'plot_field':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('task')
+    parser.add_argument('var')
+    args = parser.parse_args()
+
+    plot_field(
+      args.var,
+    )
+
+
+elif task == 'plot_metrics':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('task')
     parser.add_argument('refinement', type=str)
     parser.add_argument('srcMeshType', type=str)
     parser.add_argument('srcResolution', type=int)
@@ -1516,43 +1720,57 @@ elif job == 'plot_metrics':
     parser.add_argument('tgtResolution', type=int)
     parser.add_argument('metric', type=str)
     parser.add_argument('variable', type=str)
+    parser.add_argument('--log', action='store_false')  # log10 of metric
     parser.add_argument('--min', type=float)
     parser.add_argument('--max', type=float)
     parser.add_argument('--degree', type=int, default=None)
     parser.add_argument('--GMLS', action='store_false')
     parser.add_argument('--figadd', type=str)
     parser.add_argument('--overwrite', action='store_true')
-    parser.add_argument('--log', action='store_false')
     args = parser.parse_args()
 
     plot_metrics(
       args.refinement, 
       args.srcMeshType, args.srcResolution,
       args.tgtMeshType, args.tgtResolution,
-      args.metric, args.degree, args.variable, 
+      args.metric, args.log, args.variable, 
       args.min, args.max,
-      args.GMLS,
+      args.degree, args.GMLS,
       args.figadd, 
       args.overwrite,
-      args.log)
+    )
 
-elif job == 'plot_consistency':
+elif task == 'plot_sensitivity':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
+    parser.add_argument('task')
+    parser.add_argument('metric', choices=util.LST_METRIC)
+    parser.add_argument('--overwrite', action='store_true')
+    parser.add_argument('--not-plot', action='store_true')
+    parser.add_argument('--not-show', action='store_true')
+    parser.add_argument('--not-savefig', action='store_true')
+    parser.add_argument('--reduceReslPair', action='store_true')
     args = parser.parse_args()
 
-    plot_consistency()
+    plot_sensitivity(
+        args.metric,
+        args.overwrite,
+        not args.not_plot,
+        not args.not_show,
+        not args.not_savefig,
+        args.reduceReslPair
+    )
 
-elif job == 'plot_time':
+elif task == 'plot_time':
     parser = argparse.ArgumentParser()
-    parser.add_argument('job')
-    parser.add_argument('-smt', '--srcMeshType', type=str, default=None)
-    parser.add_argument('-tmt', '--tgtMeshType', type=str, default=None)
+    parser.add_argument('task')
+    parser.add_argument('-smt', '--srcMeshType')
+    parser.add_argument('-tmt', '--tgtMeshType')
     args = parser.parse_args()
 
     plot_time(
-      args.srcMeshType, args.tgtMeshType)
+      args.srcMeshType, args.tgtMeshType,
+    )
 
 else:
-    raise Exception(f'Invalid value in `job`: {job}')
+    raise Exception(f'Invalid value in `task`: {task}')
 
