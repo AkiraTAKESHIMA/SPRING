@@ -120,28 +120,27 @@ function ordinal__int8(i) result(s)
   character(:), allocatable :: s
 
   character(64) :: c
-  integer(8) :: i1, i10, i100
+  integer(8) :: i1, i10
 
   allocate(character(1) :: s)
 
   write(c,"(i0)") i
 
   i1 = mod(i, 10_8)
-  i10 = i / 10_8
-  i100 = i / 100_8
+  i10 = mod(i, 100_8)
 
   selectcase( i1 )
   case( 1 )
-    s = trim(c)//'th'
+    s = trim(c)//'st'
   case( 2 )
-    selectcase( i100 )
+    selectcase( i10 )
     case( 12 )
       s = trim(c)//'th'
     case default
       s = trim(c)//'nd'
     endselect
   case( 3 )
-    selectcase( i100 )
+    selectcase( i10 )
     case( 13 )
       s = trim(c)//'th'
     case default
