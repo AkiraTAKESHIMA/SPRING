@@ -12,7 +12,7 @@ from const import k
 
 class Env():
     def __init__(self):
-        self.job = None
+        self.task = None
         self.step_max = None
         self.f_cnf = None
         self.runName = None
@@ -23,8 +23,8 @@ class Env():
         self.dir_set = None
         self.dir_log = None
 
-    def put_job(self, a):
-        self.job = a
+    def put_tasks(self, a):
+        self.tasks = a
         self.step_max = len(a.keys()) - 1
 
     def put_f_cnf(self, a):
@@ -35,8 +35,8 @@ class Env():
         cnf = json.load(open(a, 'r'))
         self.runName = cnf[k.run]
 
-    def get_job(self):
-        return self.job
+    def get_tasks(self):
+        return self.tasks
 
     def get_f_cnf(self):
         return self.f_cnf
@@ -46,13 +46,13 @@ class Env():
         self.sdir_set = {}
         self.sdir_log = {}
         for i in range(self.step_max+1):
-            jobId = f'{i:02d}_{self.job[i]}'
-            #self.sdir_tmp[i] = os.path.join(self.runName, 'tmp', jobId)
-            #self.sdir_set[i] = os.path.join(self.runName, 'set', jobId)
-            #self.sdir_log[i] = os.path.join(self.runName, 'log', jobId)
-            self.sdir_tmp[i] = 'tmp/' + jobId
-            self.sdir_set[i] = 'set/' + jobId
-            self.sdir_log[i] = 'log/' + jobId
+            taskId = f'{i:02d}_{self.tasks[i]}'
+            #self.sdir_tmp[i] = os.path.join(self.runName, 'tmp', taskId)
+            #self.sdir_set[i] = os.path.join(self.runName, 'set', taskId)
+            #self.sdir_log[i] = os.path.join(self.runName, 'log', taskId)
+            self.sdir_tmp[i] = 'tmp/' + taskId
+            self.sdir_set[i] = 'set/' + taskId
+            self.sdir_log[i] = 'log/' + taskId
         self.dir_tmp = self.sdir_tmp[step]
         self.dir_set = self.sdir_set[step]
         self.dir_log = self.sdir_log[step]
@@ -64,6 +64,18 @@ class Env():
         os.makedirs(self.dir_out, exist_ok=True)
 
 env = Env()
+
+
+def get_help_tasks(tasks):
+    s = f'step number'
+    for i, (step, task) in enumerate(tasks.items()):
+        if i == 0:
+            s += ' | '
+        else:
+            s += ', '
+        s+= f'{step}: {task}'
+
+    return s
 
 
 def read_cnf(step):
@@ -82,10 +94,34 @@ def make_new_f_cnf(cnf):
         fp.write(json.dumps(cnf, indent=2))
 
 
-def exec_program(prog, f_conf, f_log, f_err):
-    pc = subprocess.run([prog, f_conf],
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                       encoding='utf-8')
+def exec_program(
+    system: str, 
+    prog: str, 
+    f_conf: str, 
+    f_log: str, 
+    f_err: str,
+) -> None:
+
+    kwargs_default = dict(
+        stdout=subprocess.PIPE, 
+        stderr=subprocess.PIPE,
+        encoding='utf-8',
+    )
+
+    if system is None:
+        commands = [prog, f_conf]
+        kwargs = kwargs_default
+
+    elif system == 'srun':
+        commands = ['srun', prog, f_conf]
+        kwargs = kwargs_default
+
+    else:
+        raise Exception(f'Invalid input of `system`: {system}')
+    
+    print('executing: ' + ' '.join(map(str, commands)))
+
+    pc = subprocess.run(commands, **kwargs)
 
     with open(f_log, 'w') as fp:
         fp.write(pc.stdout)
@@ -135,11 +171,11 @@ def path_abs_to_rel(abspath):
 
 
 def istep(name):
-    if env.job is None:
-        raise Exception('`env.job` is undefined.')
+    if env.tasks is None:
+        raise Exception('`env.tasks` is undefined.')
 
-    for key in env.job.keys():
-        if env.job[key] == name:
+    for key in env.tasks.keys():
+        if env.tasks[key] == name:
             return key
     raise Exception(f'Invalid value in $name: {name}')
 
@@ -254,10 +290,10 @@ def set_gs_dir(gs, dir_top):
         gs['dir'] = os.path.join(dir_top, gs['dir'])
 
 
-def set_dir(dir_top, runName, job):
+def set_dir(dir_top, runName, tasks):
     d = {}
-    for step in job.keys():
-        d[step] = os.path.join(dir_top, runName, f'{step:02d}_{job[step]}')
+    for step, task in tasks.items():
+        d[step] = os.path.join(dir_top, runName, f'{step:02d}_{task}')
     return d
 
 

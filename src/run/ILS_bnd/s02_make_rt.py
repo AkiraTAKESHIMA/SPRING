@@ -13,7 +13,12 @@ import s___const as lconst
 import s___util as lutil
 
 
-def make_rt_untiled(cnf, dataName, landType):
+def make_rt_untiled(
+    cnf: dict, 
+    dataName: str, 
+    landType: str,
+) -> None:
+
     tileName = 'global'
     dir_tmp = f'{env.dir_tmp}/{dataName}'
 
@@ -35,7 +40,13 @@ def make_rt_untiled(cnf, dataName, landType):
 
     f_log = f'{env.dir_log}/{dataName}/{tileName}_{landType}.out'
     f_err = f'{env.dir_log}/{dataName}/{tileName}_{landType}.err'
-    util.exec_program(const.prog_remap, f_conf, f_log, f_err)
+    util.exec_program(
+        cnf['system'],
+        const.prog_remap, 
+        f_conf, 
+        f_log, 
+        f_err,
+    )
 
 
 def make_rt_tiled(cnf, dataName, landType, tileName):
@@ -87,7 +98,13 @@ def make_rt_tiled(cnf, dataName, landType, tileName):
 
     f_log = f'{env.dir_log}/{dataName}/{tileName}_{landType}.out'
     f_err = f'{env.dir_log}/{dataName}/{tileName}_{landType}.err'
-    util.exec_program(const.prog_remap, f_conf, f_log, f_err)
+    util.exec_program(
+        cnf['system'],
+        const.prog_remap, 
+        f_conf, 
+        f_log, 
+        f_err,
+    )
 
 
 def mkdir(dataName, landType):
@@ -96,8 +113,14 @@ def mkdir(dataName, landType):
     os.makedirs(f'{env.dir_log}/{dataName}', exist_ok=True)
 
 
-def driv_make_rt(update_data, cnf, 
-                 dataName_run, landType_run, tileName_run):
+def driv_make_rt(
+    update_data: bool, 
+    cnf: dict, 
+    dataName_run: str, 
+    landType_run: str, 
+    tileName_run: str,
+) -> None:
+
     lst_dataName = cnf['inputData'].keys()
 
     if dataName_run is not None and dataName_run not in lst_dataName:

@@ -25,6 +25,7 @@ def make_cmf_mat(cnf, update_data):
 
     CMF_pre = cnf[k.m]['CMF_pre']
 
+    # Return if output data already exist
     is_ok = True
     for landType in cnf[k.lt]:
         is_ok = is_ok and\
@@ -51,6 +52,7 @@ def make_cmf_mat(cnf, update_data):
                                 os.path.join(dir_out_mat, f'{landType}/grdbndidx.bin'))
         return
 
+    # Make a config file
     for landType in cnf[k.lt]:
         CMF = cnf[k.m][f'CMF_{landType}']
         CMF_pre[f'fout_rstidx_{landType}'] = file_bin(f'{landType}/rstidx.bin')
@@ -81,11 +83,19 @@ def make_cmf_mat(cnf, update_data):
     fp.write(conf.make_cmf_mat.block_options(cnf[k.opt]))
     fp.close()
 
+    # Execute SPRING program
     if update_data:
         f_log = f'{env.dir_log}/a.out'
         f_err = f'{env.dir_log}/a.err'
-        util.exec_program(const.prog_make_cmf_mat, f_conf, f_log, f_err)
+        util.exec_program(
+            cnf['system'], 
+            const.prog_make_cmf_mat, 
+            f_conf, 
+            f_log, 
+            f_err,
+        )
 
+    # Update config
     for landType in cnf[k.lt]:
         CMF = cnf[k.m][f'CMF_{landType}']
         for dname in ['rstidx', 'grdidx']:

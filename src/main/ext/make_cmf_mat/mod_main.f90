@@ -3623,6 +3623,10 @@ subroutine cmf_check_if_grdidx_in_rstidx(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
+  call logent('Checking if the set of indices of rstidx is in that of grdidx '//&
+    ' (landType='//str(landType)//')', &
+    PRCNAM, MODNAM)
+
   num_invalid = 0
   do icgy = 1, size(grdidx,2)
   do icgx = 1, size(grdidx,1)

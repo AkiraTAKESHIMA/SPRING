@@ -16,7 +16,7 @@ import s00_preprocess        , \
        s11_merge_rt
 
 
-job = {
+tasks = {
    0: 'preprocess', 
    1: 'make_grid_data_GCM',
    2: 'rasterize_OGCM',

@@ -7,7 +7,7 @@ import s00_preprocess  , \
        s02_make_rt
 
 
-job = {
+tasks = {
   0: 'preprocess', 
   1: 'make_cmf_mat',
   2: 'make_rt',
