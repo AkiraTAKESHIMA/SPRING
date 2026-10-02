@@ -1,7 +1,18 @@
-# SPRING version 2.5.5
+# SPRING version 2.5.6
 
-User's Guide:
-https://drive.google.com/file/d/17KhNHE7XJ060nWIQQG6LIi9mAGLqN4F9/view?usp=sharing
+## Author
 
-Sample Data:
-https://drive.google.com/file/d/14bYGj-3GdmVnwSVRwh36ZSnKH93E0Ocx/view?usp=sharing
+Akira Takeshima
+Chiba University
+
+## Resources
+
+- [User's Guide](https://drive.google.com/file/d/17KhNHE7XJ060nWIQQG6LIi9mAGLqN4F9/view?usp=sharing)
+
+- [Sample Data](https://drive.google.com/file/d/14bYGj-3GdmVnwSVRwh36ZSnKH93E0Ocx/view?usp=sharing)
+
+## License
+
+This software is released under the MIT License.
+See the LICENSE file for details.
+
