@@ -15,6 +15,7 @@ TARGET = lib_base.a
 OBJ_F = \
   lib_base_message.o\
   lib_base_char.o\
+  lib_base_str.o\
   lib_base.o
 
 OBJ_C = \

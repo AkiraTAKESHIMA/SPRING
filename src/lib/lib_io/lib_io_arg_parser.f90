@@ -709,6 +709,7 @@ subroutine parsearg(istart, iend)
   ! List missing required arguments
   !-------------------------------------------------------------
   if( .not. (present(istart) .or. present(iend)) )then
+    allocate(character(1) :: s)
     s = ''
 
     do j = j_pos+1, ad%n_pos
@@ -1120,7 +1121,7 @@ subroutine showarg()
     case( ITYPE_CHAR, &
           ITYPE_INT1, ITYPE_INT2, ITYPE_INT4, ITYPE_INT8, &
           ITYPE_REAL, ITYPE_DBLE )
-      s = trim(s)//' '//trim(cmn%name)
+      s = s//' '//trim(cmn%name)
     endselect
 
     if( cmn%description /= '' )then
@@ -1137,10 +1138,9 @@ end subroutine showarg
 !===============================================================
 function styp(ityp) result(s)
   implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'styp'
   integer, intent(in) :: ityp
   character(:), allocatable :: s
-
-  character(CLEN_PROC), parameter :: PRCNAM = 'styp'
 
   allocate(character(1) :: s)
 
@@ -1162,7 +1162,8 @@ function styp(ityp) result(s)
   case( ITYPE_DBLE )
     s = trim(STYPE_DBLE)
   case default
-    call errend(msg_invalid_value('ityp', ityp))
+    call errend(msg_invalid_value('ityp', ityp), &
+                PRCNAM, MODNAM)
   endselect
 end function styp
 !===============================================================
@@ -1203,9 +1204,9 @@ function get_key_single(&
 
   if( remove_hyphen_ )then
     if( res(2:2) == '-' )then
-      res = res(3:)  ! long
+      res = str(res(3:))  ! long
     else
-      res = res(2:)  ! short
+      res = str(res(2:))  ! short
     endif
   endif
 end function get_key_single
@@ -1240,8 +1241,6 @@ end function get_keys
 subroutine init_arg_cmn(cmn)
   implicit none
   type(arg_cmn_), intent(inout) :: cmn
-
-  integer :: i
 
   allocate(character(1) :: cmn%name)
   allocate(character(1) :: cmn%key_short)

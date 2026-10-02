@@ -1,7 +1,7 @@
 module lib_log_array
   use lib_const
+  use lib_base
   use lib_log_proc
-  use lib_log_str
   implicit none
   private
   !-------------------------------------------------------------

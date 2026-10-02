@@ -1,8 +1,17 @@
 module lib_log_proc
   use lib_const
-  use lib_time , only: &
-    date_and_time_values, &
-    timediff
+  use lib_base, only: &
+    strerr, &
+    strprc, &
+    strstp, &
+    echo_lines, &
+    str
+  use lib_time, only: &
+    datetime_   , &
+    datetime_now, &
+    timedelta   , &
+    operator(+) , &
+    operator(-)
   implicit none
   private
   !-------------------------------------------------------------
@@ -64,7 +73,7 @@ module lib_log_proc
                         msrTime(:)
     integer, pointer :: indent(:)
     integer, pointer :: indentInc(:)
-    integer, pointer :: time_bgn(:,:)  !(0:DEPTH_MAX,8)
+    type(datetime_), pointer :: time_bgn(:)  !(0:DEPTH_MAX)
     character(CLEN_PROC), pointer :: mod(:)
     character(CLEN_PROC), pointer :: prc(:)
     character(CLEN_LINE), pointer :: stp(:)
@@ -96,8 +105,6 @@ module lib_log_proc
 
   integer, parameter :: DEPTH_MAX = 20
   integer, parameter :: CLEN_OPT = 32
-
-  integer, parameter :: STOP_CODE_ERROR = 1
 
   type err_
     character(:), allocatable :: mod, prc, stp
@@ -134,7 +141,7 @@ subroutine initialize()
     allocate(set%indentInc(1:DEPTH_MAX))
     set%indent(0) = 1
 
-    allocate(set%time_bgn(0:DEPTH_MAX,8))
+    allocate(set%time_bgn(0:DEPTH_MAX))
 
     allocate(set%mod(0:DEPTH_MAX))
     allocate(set%prc(0:DEPTH_MAX))
@@ -395,7 +402,7 @@ subroutine logbgn(prc, mod, opt)
   ! Start the timer
   !-------------------------------------------------------------
   if( set%msrTime(depth) )then
-    set%time_bgn(depth,:) = date_and_time_values()
+    set%time_bgn(depth) = datetime_now()
   endif
   !-------------------------------------------------------------
   ! Update the indent
@@ -453,7 +460,7 @@ subroutine logret(prc, mod)
 
     if( set%msrTime(depth) )then
       allocate(character(8) :: c_)
-      write(c_,"(f8.3)") timediff(set%time_bgn(depth,:), date_and_time_values())
+      write(c_,"(f8.3)") datetime_now() - set%time_bgn(depth)
       allocate(character(1) :: c)
       c = '[- '//strprc(prc_, mod_)//' ('//trim(c_)//' sec)]'
     else
@@ -735,7 +742,7 @@ subroutine logent(stp, prc, mod, opt)
   ! Start the timer
   !-------------------------------------------------------------
   if( set%msrTime(depth) )then
-    set%time_bgn(depth,:) = date_and_time_values()
+    set%time_bgn(depth) = datetime_now()
   endif
   !-------------------------------------------------------------
   ! Update the indent
@@ -801,6 +808,10 @@ subroutine logmsg(msg, un, opt)
   integer :: indent, indentInc
   character(CLEN_OPT) :: opt_, opt1
   integer :: ios
+  !-------------------------------------------------------------
+  ! Initialize
+  !-------------------------------------------------------------
+  call initialize()
   !-------------------------------------------------------------
   ! Read inputs
   !-------------------------------------------------------------
@@ -1111,7 +1122,7 @@ subroutine logerr(msg, stp, prc, mod, opt)
   !
   !-------------------------------------------------------------
   if( echoBar )then
-    call echo_lines('****** ERROR ******', STDOUT, set%indent(depth), .true.)
+    call echo_lines(strerr(), STDOUT, set%indent(depth), .true.)
   endif
   if( echoPrc )then
     call echo_lines(strstp(stp_, prc_, mod_), STDOUT, set%indent(depth), .true.)
@@ -1195,7 +1206,7 @@ recursive subroutine errend(msg, stp, prc, mod, opt)
   !-------------------------------------------------------------
   ! Print messages
   !-------------------------------------------------------------
-  write(STDOUT, "(a)") '****** ERROR ******'
+  write(STDOUT, "(a)") strerr()
   do i = n_err, 1, -1
     call echo_lines(strstp(err(i)%stp, err(i)%prc, err(i)%mod), &
                     STDOUT, 0, .true.)
@@ -1265,8 +1276,8 @@ subroutine errret(msg, prc, mod)
   else
     allocate(character(1) :: errmsg)
     errmsg = 'present(prc) .neqv. present(mod)'
-    if( present(prc) ) errmsg = trim(errmsg)//'\nprc: '//trim(prc)
-    if( present(mod) ) errmsg = trim(errmsg)//'\nmod: '//trim(mod)
+    if( present(prc) ) errmsg = str(trim(errmsg)//'\nprc: '//trim(prc))
+    if( present(mod) ) errmsg = str(trim(errmsg)//'\nmod: '//trim(mod))
     call errend(errmsg, &
                 '', PRCNAM, MODNAM)
   endif
@@ -1318,9 +1329,9 @@ subroutine errapd(msg, newline)
   if( present(newline) ) newline_ = newline
 
   if( newline_ )then
-    err(n_err)%msg = trim(err(n_err)%msg)//'\n'//trim(msg)
+    err(n_err)%msg = str(trim(err(n_err)%msg)//'\n'//trim(msg))
   else
-    err(n_err)%msg = trim(err(n_err)%msg)//trim(msg)
+    err(n_err)%msg = str(trim(err(n_err)%msg)//trim(msg))
   endif
 end subroutine errapd
 !===============================================================
@@ -1547,106 +1558,6 @@ end subroutine traperr
 !
 !
 !
-!===============================================================
-!
-!===============================================================
-subroutine echo_lines(msg, un, idt, adv)
-  implicit none
-  character(*), intent(in) :: msg
-  integer     , intent(in) :: un
-  integer     , intent(in) :: idt
-  logical     , intent(in) :: adv
-  character(len_trim(msg)) :: msg_
-  character(16) :: wfmt
-  character(4)  :: advance
-  integer :: loc
-  !-------------------------------------------------------------
-  ! Start a new line after writing the message if $adv is true
-  !-------------------------------------------------------------
-  if( adv )then
-    advance = 'yes'
-  else
-    advance = 'no'
-  endif
-  !-------------------------------------------------------------
-  ! Modify indent
-  !-------------------------------------------------------------
-  if( idt == 0 )then
-    wfmt = "(a)"
-  else
-    write(wfmt,"(a,i0,a)") '(',idt,'x,a)'
-  endif
-  !-------------------------------------------------------------
-  ! Write the message
-  !-------------------------------------------------------------
-  if( index(msg,'\n') == 0 )then
-    write(un, wfmt, advance=advance) trim(msg)
-
-  else
-    msg_ = msg
-
-    do
-      loc = index(msg_,'\n')
-
-      selectcase( loc )
-
-      case( 0 )
-        write(un, wfmt, advance=advance) trim(msg_)
-        exit
-
-      case( 1 )
-        write(un, wfmt) ''
-
-      case( 2: )
-        write(un, wfmt) trim(msg_(:loc-1))
-
-      endselect
-
-      if( loc+1 == len_trim(msg_) )then
-        exit
-      else
-        msg_ = msg_(loc+2:)
-      endif
-    enddo
-
-  endif
-end subroutine echo_lines
-!===============================================================
-!
-!===============================================================
-function strprc(prc, mod) result(s)
-  implicit none
-  character(*), intent(in) :: prc
-  character(*), intent(in) :: mod
-  character(:), allocatable :: s
-
-  allocate(character(1) :: s)
-  if( len_trim(mod) == 0 )then
-    s = trim(prc)
-  else
-    s = trim(prc)//'__MOD__'//trim(mod)
-  endif
-end function strprc
-!===============================================================
-!
-!===============================================================
-function strstp(stp, prc, mod) result(s)
-  implicit none
-  character(*), intent(in) :: stp
-  character(*), intent(in) :: prc
-  character(*), intent(in) :: mod
-  character(:), allocatable :: s
-
-  allocate(character(1) :: s)
-  if( stp == '' )then
-    s = 'MOD__'//trim(mod)//&
-        '__PROC__'//trim(prc)
-  else
-    s = 'MOD__'//trim(mod)//&
-        '__PROC__'//trim(prc)//&
-        ' step "'//trim(stp)//'"'
-  endif
-end function strstp
 !===============================================================
 !
 !===============================================================

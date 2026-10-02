@@ -1,7 +1,7 @@
-module lib_log_str
+module lib_base_str
   use lib_const
-  use lib_base
-  use lib_log_proc
+  use lib_base_char, only: &
+    lower
   implicit none
   private
   !------------------------------------------------------------
@@ -115,7 +115,7 @@ module lib_log_str
   !-------------------------------------------------------------
   ! Private module variables
   !-------------------------------------------------------------
-  character(CLEN_PROC), parameter :: MODNAM = 'lib_log_str'
+  character(CLEN_PROC), parameter :: MODNAM = 'lib_base_str'
 
   character(CLEN_WFMT), parameter :: WFMT_REAL_DEFAULT = 'es12.5'
   character(CLEN_WFMT) :: wfmt_real = WFMT_REAL_DEFAULT
@@ -162,7 +162,7 @@ end subroutine init_wfmt_real
 !===============================================================
 integer pure function dgt_char_0d(x) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_char_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_char_0d'
   character(*), intent(in) :: x
 
   digit = len_trim(x)
@@ -172,7 +172,7 @@ end function dgt_char_0d
 !===============================================================
 integer pure function dgt_int1_0d(x) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_0d'
   integer(1), intent(in) :: x
 
   selectcase( x )
@@ -188,6 +188,8 @@ end function dgt_int1_0d
 !
 !===============================================================
 integer pure function dgt_int2_0d(x) result(digit)
+  implicit none
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_0d'
   integer(2), intent(in) :: x
 
   selectcase( x )
@@ -208,7 +210,7 @@ end function dgt_int2_0d
 !===============================================================
 integer pure function dgt_int4_0d(x) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_0d'
   integer(4), intent(in) :: x
 
   selectcase( x )
@@ -239,7 +241,7 @@ end function dgt_int4_0d
 !===============================================================
 integer pure function dgt_int8_0d(x) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_0d'
   integer(8), intent(in) :: x
 
   selectcase( x )
@@ -288,7 +290,7 @@ end function dgt_int8_0d
 !===============================================================
 integer pure function dgt_int8_0d_log(x) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_0d_log'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_0d_log'
   integer(8), intent(in) :: x
 
   selectcase( x )
@@ -305,7 +307,7 @@ end function dgt_int8_0d_log
 !===============================================================
 integer pure function dgt_int1_1d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_1d'
   integer(1)  , intent(in)           :: x(:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -331,7 +333,7 @@ end function dgt_int1_1d
 !===============================================================
 integer pure function dgt_int2_1d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_1d'
   integer(2)  , intent(in)           :: x(:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -357,7 +359,7 @@ end function dgt_int2_1d
 !===============================================================
 integer pure function dgt_int4_1d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_1d'
   integer(4)  , intent(in)           :: x(:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -383,7 +385,7 @@ end function dgt_int4_1d
 !===============================================================
 integer pure function dgt_int8_1d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_1d'
   integer(8)  , intent(in)           :: x(:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -409,7 +411,7 @@ end function dgt_int8_1d
 !===============================================================
 integer pure function dgt_int1_2d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_2d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_2d'
   integer(1)  , intent(in)           :: x(:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -437,7 +439,7 @@ end function dgt_int1_2d
 !===============================================================
 integer pure function dgt_int2_2d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_2d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_2d'
   integer(2)  , intent(in)           :: x(:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -465,7 +467,7 @@ end function dgt_int2_2d
 !===============================================================
 integer pure function dgt_int4_2d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_2d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_2d'
   integer(4)  , intent(in)           :: x(:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -493,7 +495,7 @@ end function dgt_int4_2d
 !===============================================================
 integer pure function dgt_int8_2d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_2d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_2d'
   integer(8)  , intent(in)           :: x(:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -521,7 +523,7 @@ end function dgt_int8_2d
 !===============================================================
 integer pure function dgt_int1_3d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_3d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int1_3d'
   integer(1)  , intent(in)           :: x(:,:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -551,7 +553,7 @@ end function dgt_int1_3d
 !===============================================================
 integer pure function dgt_int2_3d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_3d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int2_3d'
   integer(2)  , intent(in)           :: x(:,:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -581,7 +583,7 @@ end function dgt_int2_3d
 !===============================================================
 integer pure function dgt_int4_3d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_3d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int4_3d'
   integer(4)  , intent(in)           :: x(:,:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -611,7 +613,7 @@ end function dgt_int4_3d
 !===============================================================
 integer pure function dgt_int8_3d(x, opt) result(digit)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_3d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'dgt_int8_3d'
   integer(8)  , intent(in)           :: x(:,:,:)
   character(*), intent(in), optional :: opt
   character(CLEN_KEY) :: opt_
@@ -649,7 +651,7 @@ end function dgt_int8_3d
 !===============================================================
 integer pure function cl_fmt_float(wfmt) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_fmt_float'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_fmt_float'
   character(*), intent(in) :: wfmt
   character(CLEN_WFMT) :: wfmt_
 
@@ -671,7 +673,7 @@ end function cl_fmt_float
 !===============================================================
 integer pure function cl_char_0d(x, d) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_char_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_char_0d'
   character(*), intent(in) :: x
   integer     , intent(in) :: d
 
@@ -687,7 +689,7 @@ end function cl_char_0d
 !===============================================================
 integer pure function cl_char_1d(x, d, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_char_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_char_1d'
   character(*), intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -708,7 +710,7 @@ end function cl_char_1d
 !===============================================================
 integer pure function cl_log1_1d(x, digit, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_log1_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_log1_1d'
   logical(1)  , intent(in) :: x(:)
   integer     , intent(in) :: digit
   character(*), intent(in) :: dlm
@@ -720,7 +722,7 @@ end function cl_log1_1d
 !===============================================================
 integer pure function cl_log4_1d(x, digit, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_log4_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_log4_1d'
   logical(4)  , intent(in) :: x(:)
   integer     , intent(in) :: digit
   character(*), intent(in) :: dlm
@@ -732,7 +734,7 @@ end function cl_log4_1d
 !===============================================================
 integer pure function cl_int1_0d(x, digit) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int1_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int1_0d'
   integer(1), intent(in) :: x
   integer   , intent(in) :: digit
 
@@ -748,7 +750,7 @@ end function cl_int1_0d
 !===============================================================
 integer pure function cl_int1_1d(x, digit, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int1_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int1_1d'
   integer(1)  , intent(in) :: x(:)
   integer     , intent(in) :: digit
   character(*), intent(in) :: dlm
@@ -765,7 +767,7 @@ end function cl_int1_1d
 !===============================================================
 integer pure function cl_int2_0d(x, digit) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int2_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int2_0d'
   integer(2), intent(in) :: x
   integer   , intent(in) :: digit
 
@@ -781,7 +783,7 @@ end function cl_int2_0d
 !===============================================================
 integer pure function cl_int2_1d(x, digit, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int2_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int2_1d'
   integer(2)  , intent(in) :: x(:)
   integer     , intent(in) :: digit
   character(*), intent(in) :: dlm
@@ -798,7 +800,7 @@ end function cl_int2_1d
 !===============================================================
 integer pure function cl_int4_0d(x, digit) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int4_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int4_0d'
   integer(4), intent(in) :: x
   integer   , intent(in) :: digit
 
@@ -814,7 +816,7 @@ end function cl_int4_0d
 !===============================================================
 integer pure function cl_int4_1d(x, digit, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int4_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int4_1d'
   integer(4)  , intent(in) :: x(:)
   integer     , intent(in) :: digit
   character(*), intent(in) :: dlm
@@ -831,7 +833,7 @@ end function cl_int4_1d
 !===============================================================
 integer pure function cl_int8_0d(x, digit) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int8_0d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int8_0d'
   integer(8), intent(in) :: x
   integer   , intent(in) :: digit
 
@@ -847,7 +849,7 @@ end function cl_int8_0d
 !===============================================================
 integer pure function cl_int8_1d(x, digit, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_int8_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_int8_1d'
   integer(8)  , intent(in) :: x(:)
   integer     , intent(in) :: digit
   character(*), intent(in) :: dlm
@@ -864,7 +866,7 @@ end function cl_int8_1d
 !===============================================================
 integer pure function cl_real_1d(x, fmt, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_real_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_real_1d'
   real(4)     , intent(in) :: x(:)
   character(*), intent(in) :: fmt
   character(*), intent(in) :: dlm
@@ -880,7 +882,7 @@ end function cl_real_1d
 !===============================================================
 integer pure function cl_dble_1d(x, fmt, dlm) result(l)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'cl_dble_1d'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'cl_dble_1d'
   real(8)     , intent(in) :: x(:)
   character(*), intent(in) :: fmt
   character(*), intent(in) :: dlm
@@ -904,7 +906,7 @@ end function cl_dble_1d
 !===============================================================
 function str_char_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_0d_min'
   character(*), intent(in) :: x
   character(len_trim(x)) :: c
 
@@ -915,7 +917,7 @@ end function str_char_0d_min
 !===============================================================
 function str_char_0d_fmt_nofill(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_0d_fmt_nofill'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_0d_fmt_nofill'
   character(*), intent(in) :: x
   integer     , intent(in) :: d
   character(cl_char_0d(x,d)) :: c
@@ -927,7 +929,7 @@ end function str_char_0d_fmt_nofill
 !===============================================================
 function str_char_0d_fmt_fill(x, d, fill) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_0d_fmt_fill'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_0d_fmt_fill'
   character(*), intent(in) :: x
   integer     , intent(in) :: d
   character(*), intent(in) :: fill
@@ -964,7 +966,7 @@ end function str_char_0d_fmt_fill
 !===============================================================
 function str_char_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_min_nodlm'
   character(*), intent(in) :: x(:)
   character(cl_char_1d(x,0,' ')) :: c
 
@@ -985,7 +987,7 @@ end function str_char_1d_min_nodlm
 !===============================================================
 function str_char_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_min_dlm'
   character(*), intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_char_1d(x,0,dlm)) :: c
@@ -1012,7 +1014,7 @@ end function str_char_1d_min_dlm
 !===============================================================
 function str_char_1d_fmt_nodlm_nofill(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_fmt_nodlm_nofill'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_fmt_nodlm_nofill'
   character(*), intent(in) :: x(:)
   integer     , intent(in) :: d
   character(cl_char_1d(x,d,' ')) :: c
@@ -1046,7 +1048,7 @@ end function str_char_1d_fmt_nodlm_nofill
 !===============================================================
 function str_char_1d_fmt_dlm_nofill(x, d, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_fmt_dlm_nofill'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_fmt_dlm_nofill'
   character(*), intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1086,7 +1088,7 @@ end function str_char_1d_fmt_dlm_nofill
 !===============================================================
 function str_char_1d_fmt_dlm_fill(x, d, dlm, fill) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_fmt_dlm_fill'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_char_1d_fmt_dlm_fill'
   character(*), intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1154,7 +1156,7 @@ end function str_char_1d_fmt_dlm_fill
 !===============================================================
 function str_log1_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_0d_min'
   logical(1), intent(in) :: x
   character(1)           :: c
 
@@ -1165,7 +1167,7 @@ end function str_log1_0d_min
 !===============================================================
 function str_log1_0d_fmt(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_0d_fmt'
   logical(1), intent(in) :: x
   integer   , intent(in) :: d
   character(max(1,d))    :: c
@@ -1177,7 +1179,7 @@ end function str_log1_0d_fmt
 !===============================================================
 function str_log1_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_min_nodlm'
   logical(1), intent(in) :: x(:)
   character(cl_log1_1d(x,0,' ')) :: c
 
@@ -1188,7 +1190,7 @@ end function str_log1_1d_min_nodlm
 !===============================================================
 function str_log1_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_min_dlm'
   logical(1)  , intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_log1_1d(x,0,dlm)) :: c
@@ -1200,7 +1202,7 @@ end function str_log1_1d_min_dlm
 !===============================================================
 function str_log1_1d_fmt_nodlm(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_fmt_nodlm'
   logical(1), intent(in) :: x(:)
   integer   , intent(in) :: d
   character(cl_log1_1d(x,d,' ')) :: c
@@ -1212,7 +1214,7 @@ end function str_log1_1d_fmt_nodlm
 !===============================================================
 function str_log1_1d_fmt_dlm(x,d,dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log1_1d_fmt_dlm'
   logical(1)  , intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1225,7 +1227,7 @@ end function str_log1_1d_fmt_dlm
 !===============================================================
 function str_log4_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_0d_min'
   logical(4), intent(in) :: x
   character(1)           :: c
 
@@ -1236,7 +1238,7 @@ end function str_log4_0d_min
 !===============================================================
 function str_log4_0d_fmt(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_0d_fmt'
   logical(4), intent(in) :: x
   integer   , intent(in) :: d
   character(max(1,d))    :: c
@@ -1248,7 +1250,7 @@ end function str_log4_0d_fmt
 !===============================================================
 function str_log4_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_min_nodlm'
   logical(4), intent(in) :: x(:)
   character(cl_log4_1d(x,0,' ')) :: c
 
@@ -1259,7 +1261,7 @@ end function str_log4_1d_min_nodlm
 !===============================================================
 function str_log4_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_min_dlm'
   logical(4)  , intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_log4_1d(x,0,dlm)) :: c
@@ -1271,7 +1273,7 @@ end function str_log4_1d_min_dlm
 !===============================================================
 function str_log4_1d_fmt_nodlm(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_fmt_nodlm'
   logical(4), intent(in) :: x(:)
   integer   , intent(in) :: d
   character(cl_log4_1d(x,d,' ')) :: c
@@ -1283,7 +1285,7 @@ end function str_log4_1d_fmt_nodlm
 !===============================================================
 function str_log4_1d_fmt_dlm(x,d,dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_log4_1d_fmt_dlm'
   logical(4)  , intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1296,7 +1298,7 @@ end function str_log4_1d_fmt_dlm
 !===============================================================
 function str_int1_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_0d_min'
   integer(1), intent(in) :: x
   character(dgt(x))      :: c
 
@@ -1307,7 +1309,7 @@ end function str_int1_0d_min
 !===============================================================
 function str_int1_0d_fmt(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_0d_fmt'
   integer(1)  , intent(in)  :: x
   integer     , intent(in)  :: d
   character(cl_int1_0d(x,d)) :: c
@@ -1346,7 +1348,7 @@ end function str_int1_0d_fmt
 !===============================================================
 function str_int1_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_min_nodlm'
   integer(1), intent(in) :: x(:)
   character(cl_int1_1d(x,0,' ')) :: c
   integer :: l, ll
@@ -1355,9 +1357,6 @@ function str_int1_1d_min_nodlm(x) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     write(c,"(i0)") x(1)
   case( 2: )
@@ -1376,7 +1375,7 @@ end function str_int1_1d_min_nodlm
 !===============================================================
 function str_int1_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_min_dlm'
   integer(1)  , intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_int1_1d(x,0,dlm)) :: c
@@ -1386,9 +1385,6 @@ function str_int1_1d_min_dlm(x, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1))
   case( 2: )
@@ -1408,7 +1404,7 @@ end function str_int1_1d_min_dlm
 !===============================================================
 function str_int1_1d_fmt_nodlm(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_fmt_nodlm'
   integer(1), intent(in) :: x(:)
   integer   , intent(in) :: d
   character(cl_int1_1d(x,d,' ')) :: c
@@ -1418,9 +1414,6 @@ function str_int1_1d_fmt_nodlm(x, d) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case default
@@ -1442,7 +1435,7 @@ end function str_int1_1d_fmt_nodlm
 !===============================================================
 function str_int1_1d_fmt_dlm(x, d, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int1_1d_fmt_dlm'
   integer(1)  , intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1453,9 +1446,6 @@ function str_int1_1d_fmt_dlm(x, d, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case( 2: )
@@ -1478,7 +1468,7 @@ end function str_int1_1d_fmt_dlm
 !===============================================================
 function str_int2_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_0d_min'
   integer(2), intent(in) :: x
   character(dgt(x))      :: c
 
@@ -1489,7 +1479,7 @@ end function str_int2_0d_min
 !===============================================================
 function str_int2_0d_fmt(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_0d_fmt'
   integer(2)  , intent(in)  :: x
   integer     , intent(in)  :: d
   character(cl_int2_0d(x,d)) :: c
@@ -1528,7 +1518,7 @@ end function str_int2_0d_fmt
 !===============================================================
 function str_int2_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_min_nodlm'
   integer(2), intent(in) :: x(:)
   character(cl_int2_1d(x,0,' ')) :: c
   integer :: l, ll
@@ -1537,9 +1527,6 @@ function str_int2_1d_min_nodlm(x) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     write(c,"(i0)") x(1)
   case( 2: )
@@ -1558,7 +1545,7 @@ end function str_int2_1d_min_nodlm
 !===============================================================
 function str_int2_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_min_dlm'
   integer(2)  , intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_int2_1d(x,0,dlm)) :: c
@@ -1568,9 +1555,6 @@ function str_int2_1d_min_dlm(x, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1))
   case( 2: )
@@ -1590,7 +1574,7 @@ end function str_int2_1d_min_dlm
 !===============================================================
 function str_int2_1d_fmt_nodlm(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_fmt_nodlm'
   integer(2), intent(in) :: x(:)
   integer   , intent(in) :: d
   character(cl_int2_1d(x,d,' ')) :: c
@@ -1600,9 +1584,6 @@ function str_int2_1d_fmt_nodlm(x, d) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case default
@@ -1624,7 +1605,7 @@ end function str_int2_1d_fmt_nodlm
 !===============================================================
 function str_int2_1d_fmt_dlm(x, d, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int2_1d_fmt_dlm'
   integer(2)  , intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1635,9 +1616,6 @@ function str_int2_1d_fmt_dlm(x, d, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case( 2: )
@@ -1660,7 +1638,7 @@ end function str_int2_1d_fmt_dlm
 !===============================================================
 function str_int4_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_0d_min'
   integer(4), intent(in) :: x
   character(dgt(x))      :: c
 
@@ -1671,7 +1649,7 @@ end function str_int4_0d_min
 !===============================================================
 function str_int4_0d_fmt(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_0d_fmt'
   integer(4)  , intent(in)  :: x
   integer     , intent(in)  :: d
   character(cl_int4_0d(x,d)) :: c
@@ -1710,7 +1688,7 @@ end function str_int4_0d_fmt
 !===============================================================
 function str_int4_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_min_nodlm'
   integer(4), intent(in) :: x(:)
   character(cl_int4_1d(x,0,' ')) :: c
   integer :: l, ll
@@ -1719,9 +1697,6 @@ function str_int4_1d_min_nodlm(x) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     write(c,"(i0)") x(1)
   case( 2: )
@@ -1740,7 +1715,7 @@ end function str_int4_1d_min_nodlm
 !===============================================================
 function str_int4_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_min_dlm'
   integer(4)  , intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_int4_1d(x,0,dlm)) :: c
@@ -1750,9 +1725,6 @@ function str_int4_1d_min_dlm(x, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1))
   case( 2: )
@@ -1772,7 +1744,7 @@ end function str_int4_1d_min_dlm
 !===============================================================
 function str_int4_1d_fmt_nodlm(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_fmt_nodlm'
   integer(4), intent(in) :: x(:)
   integer   , intent(in) :: d
   character(cl_int4_1d(x,d,' ')) :: c
@@ -1782,9 +1754,6 @@ function str_int4_1d_fmt_nodlm(x, d) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case default
@@ -1806,7 +1775,7 @@ end function str_int4_1d_fmt_nodlm
 !===============================================================
 function str_int4_1d_fmt_dlm(x, d, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int4_1d_fmt_dlm'
   integer(4)  , intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1817,9 +1786,6 @@ function str_int4_1d_fmt_dlm(x, d, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case( 2: )
@@ -1842,7 +1808,7 @@ end function str_int4_1d_fmt_dlm
 !===============================================================
 function str_int8_0d_min(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_0d_min'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_0d_min'
   integer(8), intent(in) :: x
   character(dgt(x))      :: c
 
@@ -1853,7 +1819,7 @@ end function str_int8_0d_min
 !===============================================================
 function str_int8_0d_fmt(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_0d_fmt'
   integer(8)  , intent(in)  :: x
   integer     , intent(in)  :: d
   character(cl_int8_0d(x,d)) :: c
@@ -1892,7 +1858,7 @@ end function str_int8_0d_fmt
 !===============================================================
 function str_int8_1d_min_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_min_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_min_nodlm'
   integer(8), intent(in) :: x(:)
   character(cl_int8_1d(x,0,' ')) :: c
   integer :: l, ll
@@ -1901,9 +1867,6 @@ function str_int8_1d_min_nodlm(x) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     write(c,"(i0)") x(1)
   case( 2: )
@@ -1922,7 +1885,7 @@ end function str_int8_1d_min_nodlm
 !===============================================================
 function str_int8_1d_min_dlm(x, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_min_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_min_dlm'
   integer(8)  , intent(in) :: x(:)
   character(*), intent(in) :: dlm
   character(cl_int8_1d(x,0,dlm)) :: c
@@ -1932,9 +1895,6 @@ function str_int8_1d_min_dlm(x, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1))
   case( 2: )
@@ -1954,7 +1914,7 @@ end function str_int8_1d_min_dlm
 !===============================================================
 function str_int8_1d_fmt_nodlm(x, d) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_fmt_nodlm'
   integer(8), intent(in) :: x(:)
   integer   , intent(in) :: d
   character(cl_int8_1d(x,d,' ')) :: c
@@ -1964,9 +1924,6 @@ function str_int8_1d_fmt_nodlm(x, d) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case default
@@ -1988,7 +1945,7 @@ end function str_int8_1d_fmt_nodlm
 !===============================================================
 function str_int8_1d_fmt_dlm(x, d, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_int8_1d_fmt_dlm'
   integer(8)  , intent(in) :: x(:)
   integer     , intent(in) :: d
   character(*), intent(in) :: dlm
@@ -1999,9 +1956,6 @@ function str_int8_1d_fmt_dlm(x, d, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str(x(1), d)
   case( 2: )
@@ -2024,7 +1978,7 @@ end function str_int8_1d_fmt_dlm
 !===============================================================
 function str_real_0d_nofmt(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_real_0d_nofmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_real_0d_nofmt'
   real(4), intent(in) :: x
   character(cl_fmt_float('')) :: c
 
@@ -2035,7 +1989,7 @@ end function str_real_0d_nofmt
 !===============================================================
 function str_real_0d_fmt(x, fmt) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_real_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_real_0d_fmt'
   real(4)     , intent(in) :: x
   character(*), intent(in) :: fmt
   character(cl_fmt_float(fmt)) :: c
@@ -2047,7 +2001,7 @@ end function str_real_0d_fmt
 !===============================================================
 function str_real_1d_nofmt_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_real_1d_nofmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_real_1d_nofmt_nodlm'
   real(4), intent(in) :: x(:)
   character(cl_real_1d(x,'',' ')) :: c
   character(CLEN_WFMT) :: wfmt
@@ -2055,9 +2009,6 @@ function str_real_1d_nofmt_nodlm(x) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str_real_0d_nofmt(x(1))
   case( 2: )
@@ -2071,7 +2022,7 @@ end function str_real_1d_nofmt_nodlm
 !===============================================================
 function str_real_1d_fmt_nodlm(x, fmt) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_real_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_real_1d_fmt_nodlm'
   real(4)     , intent(in) :: x(:)
   character(*), intent(in) :: fmt
   character(cl_real_1d(x,fmt,' ')) :: c
@@ -2081,9 +2032,6 @@ function str_real_1d_fmt_nodlm(x, fmt) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str_real_0d_fmt(x(1), fmt)
   case( 2: )
@@ -2099,7 +2047,7 @@ end function str_real_1d_fmt_nodlm
 !===============================================================
 function str_real_1d_fmt_dlm(x, fmt, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_real_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_real_1d_fmt_dlm'
   real(4)     , intent(in) :: x(:)
   character(*), intent(in) :: fmt
   character(*), intent(in) :: dlm
@@ -2110,9 +2058,6 @@ function str_real_1d_fmt_dlm(x, fmt, dlm) result(c)
   selectcase( size(x) )
   case( 0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str_real_0d_fmt(x(1), fmt)
   case( 2: )
@@ -2128,7 +2073,7 @@ end function str_real_1d_fmt_dlm
 !===============================================================
 function str_dble_0d_nofmt(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_0d_nofmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_0d_nofmt'
   real(8), intent(in) :: x
   character(cl_fmt_float('')) :: c
 
@@ -2139,7 +2084,7 @@ end function str_dble_0d_nofmt
 !===============================================================
 function str_dble_0d_fmt(x, fmt) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_0d_fmt'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_0d_fmt'
   real(8)     , intent(in) :: x
   character(*), intent(in) :: fmt
   character(cl_fmt_float(fmt)) :: c
@@ -2151,7 +2096,7 @@ end function str_dble_0d_fmt
 !===============================================================
 function str_dble_1d_nofmt_nodlm(x) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_1d_nofmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_1d_nofmt_nodlm'
   real(8), intent(in) :: x(:)
   character(cl_dble_1d(x,'',' ')) :: c
   character(CLEN_WFMT) :: wfmt
@@ -2159,9 +2104,6 @@ function str_dble_1d_nofmt_nodlm(x) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str_dble_0d_nofmt(x(1))
   case( 2: )
@@ -2175,7 +2117,7 @@ end function str_dble_1d_nofmt_nodlm
 !===============================================================
 function str_dble_1d_fmt_nodlm(x, fmt) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_1d_fmt_nodlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_1d_fmt_nodlm'
   real(8)     , intent(in) :: x(:)
   character(*), intent(in) :: fmt
   character(cl_dble_1d(x,fmt,' ')) :: c
@@ -2185,9 +2127,6 @@ function str_dble_1d_fmt_nodlm(x, fmt) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str_dble_0d_fmt(x(1), fmt)
   case( 2: )
@@ -2203,7 +2142,7 @@ end function str_dble_1d_fmt_nodlm
 !===============================================================
 function str_dble_1d_fmt_dlm(x, fmt, dlm) result(c)
   implicit none
-  character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_1d_fmt_dlm'
+  !character(CLEN_PROC), parameter :: PRCNAM = 'str_dble_1d_fmt_dlm'
   real(8)     , intent(in) :: x(:)
   character(*), intent(in) :: fmt
   character(*), intent(in) :: dlm
@@ -2214,9 +2153,6 @@ function str_dble_1d_fmt_dlm(x, fmt, dlm) result(c)
   selectcase( size(x) )
   case( :0 )
     c = ''
-    call logerr('Size of array is invalid.', &
-                '', PRCNAM, MODNAM)
-    return
   case( 1 )
     c = str_dble_0d_fmt(x(1), fmt)
   case( 2: )
@@ -2230,4 +2166,4 @@ end function str_dble_1d_fmt_dlm
 !===============================================================
 !
 !===============================================================
-end module lib_log_str
+end module lib_base_str

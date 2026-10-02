@@ -3,9 +3,11 @@ module lib_const
   !=============================================================
   ! Environmental parameters
   !=============================================================
-  integer, parameter :: stdin  = 5
-  integer, parameter :: stdout = 6
-  integer, parameter :: stderr = 0
+  integer, parameter :: STDIN  = 5
+  integer, parameter :: STDOUT = 6
+  integer, parameter :: STDERR = 0
+
+  integer, parameter :: STOP_CODE_ERROR = 1
   !=============================================================
   ! Length of string
   !=============================================================

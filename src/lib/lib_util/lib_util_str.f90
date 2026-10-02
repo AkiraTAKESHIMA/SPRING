@@ -1,5 +1,6 @@
 module lib_util_str
   use lib_const
+  use lib_base
   use lib_log
   implicit none
   private

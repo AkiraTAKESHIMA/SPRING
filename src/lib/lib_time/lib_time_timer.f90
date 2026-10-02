@@ -1,5 +1,6 @@
 module lib_time_timer
   use lib_const
+  use lib_base
   use lib_time_base
   implicit none
   private
@@ -20,7 +21,7 @@ module lib_time_timer
   !------------------------------------------------------------
   type timer_elem_
     character(:), allocatable :: name
-    integer :: t0(8)
+    type(datetime_) :: t0
     real(8) :: time
     logical :: is_active
   end type
@@ -52,10 +53,10 @@ subroutine init_timer(timer, sz)
   integer :: i
 
   if( timer%is_active )then
-    write(STDERR, "(a)") '****** ERROR ******'
-    write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
+    write(STDERR, "(a)") strerr()
+    write(STDERR, "(a)") strprc(PRCNAM, MODNAM)
     write(STDERR, "(a)") 'Timer is already used.'
-    stop 1
+    stop STOP_CODE_ERROR
   endif
 
   timer%n = 0
@@ -80,10 +81,10 @@ subroutine clear_timer(timer)
   type(timer_), intent(inout) :: timer
 
   if( .not. timer%is_active )then
-    write(STDERR, "(a)") '****** ERROR ******'
-    write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
+    write(STDERR, "(a)") strerr()
+    write(STDERR, "(a)") strprc(PRCNAM, MODNAM)
     write(STDERR, "(a)") 'Timer is inactive.'
-    stop 1
+    stop STOP_CODE_ERROR
   endif
   deallocate(timer%elem)
 end subroutine clear_timer
@@ -103,15 +104,15 @@ subroutine start_timer(timer, name)
   te => timer%elem(get_idx_timer(timer, name))
 
   if( te%is_active )then
-    write(STDERR, "(a)") '****** ERROR ******'
-    write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
+    write(STDERR, "(a)") strerr()
+    write(STDERR, "(a)") strprc(PRCNAM, MODNAM)
     write(STDERR, "(a)") 'Timer for the process "'//trim(name)//&
         '" has already been started.'
-    stop 1
+    stop STOP_CODE_ERROR
   endif
   te%is_active = .true.
 
-  te%t0 = date_and_time_values()
+  te%t0 = datetime_now()
   nullify(te)
 end subroutine start_timer
 !===============================================================
@@ -130,15 +131,15 @@ subroutine stop_timer(timer, name)
   te => timer%elem(get_idx_timer(timer, name))
 
   if( .not. te%is_active )then
-    write(STDERR, "(a)") '****** ERROR ******'
-    write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
-    write(STDERR, "(a)") 'Timer for the process "'//trim(name)//&
+    write(STDERR,"(a)") strerr()
+    write(STDERR,"(a)") strprc(PRCNAM, MODNAM)
+    write(STDERR,"(a)") 'Timer for the process "'//trim(name)//&
         '" has not been started.'
-    stop 1
+    stop STOP_CODE_ERROR
   endif
   te%is_active = .false.
 
-  te%time = te%time + timediff(te%t0, date_and_time_values())
+  te%time = te%time + (datetime_now() - te%t0)
   nullify(te)
 end subroutine stop_timer
 !===============================================================
@@ -178,10 +179,10 @@ integer function get_idx_timer(timer, name) result(i)
     enddo
     if( i == timer%n+1 )then
       if( i > size(timer%elem) )then
-        write(STDERR, "(a)") '****** ERROR ******'
-        write(STDERR, "(a)") 'MOD__'//trim(MODNAM)//'__PROC__'//trim(PRCNAM)
-        write(STDERR, "(a)") 'Size of %elem reached the limit.'
-        stop 1
+        write(STDERR,"(a)") strerr()
+        write(STDERR,"(a)") strprc(PRCNAM, MODNAM)
+        write(STDERR,"(a)") 'Size of %elem reached the limit.'
+        stop STOP_CODE_ERROR
       endif
       timer%n = i
       te => timer%elem(i)
