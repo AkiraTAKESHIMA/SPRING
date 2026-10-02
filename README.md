@@ -2,7 +2,7 @@
 
 ## Author
 
-Akira Takeshima
+Akira Takeshima  
 Chiba University
 
 ## Resources
@@ -13,6 +13,6 @@ Chiba University
 
 ## License
 
-This software is released under the MIT License.
+This software is released under the MIT License.  
 See the LICENSE file for details.
 
