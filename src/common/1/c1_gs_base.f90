@@ -85,11 +85,11 @@ integer(4) function init_mesh(a) result(info)
     return
   case( MESH_STATUS__MODIFIED )
     info = 1
-    call errret(msg_unexpected_condition()//&
-              '\n  a%status == MESH_STATUS__MODIFIED'//&
-              '\nThe mesh has been modified.'//&
-              '\n  id : '//str(a%id)//&
-              '\n  nam: '//str(a%nam))
+    call errret(ERROR_CODE__CONDITION, &
+      ' a%status == MESH_STATUS__MODIFIED'//&
+    '\nThe mesh has already been modified.'//&
+    '\n  id : '//str(a%id)//&
+    '\n  nam: '//str(a%nam))
     return
   endselect
   a%status = MESH_STATUS__INITIALIZED
@@ -979,16 +979,16 @@ integer(4) function set_bounds_file_raster_in(&
       fr%ub(2) - fr%lb(2) + 1_8 /= yf - yi + 1_8 )then
     info = 1
     dgt_xy = max(dgt(fr%sz(:2),dgt_opt_max), dgt(max(nx,ny)))
-    call errret(msg_unexpected_condition()//&
-              '\nShape of input and that of grid system mismatch.'//&
-              '\ninput x: '//str(fr%ub(1)-fr%lb(1)+1_8)//&
-                ' ('//str((/fr%lb(1),fr%ub(1)/),dgt_xy,':')//' in '//str(fr%sz(1),dgt_xy)//')'//&
-              '\n      y: '//str(fr%ub(2)-fr%lb(2)+1_8)//&
-                ' ('//str((/fr%lb(2),fr%ub(2)/),dgt_xy,':')//' in '//str(fr%sz(2),dgt_xy)//')'//&
-              '\ngs    x: '//str(xf-xi+1_8)//&
-                ' ('//str((/xi,xf/),dgt_xy,':')//' in '//str(nx,dgt_xy)//')'//&
-              '\ngs    y: '//str(yf-yi+1_8)//&
-                ' ('//str((/yi,yf/),dgt_xy,':')//' in '//str(ny,dgt_xy)//')')
+    call errret(ERROR_CODE__CONDITION, &
+      'Shape of input and that of grid system mismatch.'//&
+    '\ninput x: '//str(fr%ub(1)-fr%lb(1)+1_8)//&
+      ' ('//str((/fr%lb(1),fr%ub(1)/),dgt_xy,':')//' in '//str(fr%sz(1),dgt_xy)//')'//&
+    '\n      y: '//str(fr%ub(2)-fr%lb(2)+1_8)//&
+      ' ('//str((/fr%lb(2),fr%ub(2)/),dgt_xy,':')//' in '//str(fr%sz(2),dgt_xy)//')'//&
+    '\ngs    x: '//str(xf-xi+1_8)//&
+      ' ('//str((/xi,xf/),dgt_xy,':')//' in '//str(nx,dgt_xy)//')'//&
+    '\ngs    y: '//str(yf-yi+1_8)//&
+      ' ('//str((/yi,yf/),dgt_xy,':')//' in '//str(ny,dgt_xy)//')')
     return
   endif
   !-------------------------------------------------------------
@@ -1236,9 +1236,9 @@ integer(4) function set_mesh_common(a) result(info)
     ac%idx_debug   => ap%idx_debug
   case default
     info = 1
-    call errret(msg_invalid_value('meshtype', a%typ)//&
-              '\n  a%id : '//str(a%id)//&
-              '\n  a%nam: '//str(a%nam))
+    call errret(ERROR_CODE__VALUE, 'meshtype == '//str(a%typ)//&
+    '\n  a%id : '//str(a%id)//&
+    '\n  a%nam: '//str(a%nam))
     return
   endselect
 
@@ -1295,9 +1295,9 @@ integer(4) function clear_mesh(a) result(info)
     continue
   case default
     info = 1
-    call errret(msg_invalid_value('a%status', a%status)//&
-              '\n  id : '//str(a%id)//&
-              '\n  nam: '//str(a%nam))
+    call errret(ERROR_CODE__VALUE, 'a%status == '//str(a%status)//&
+    '\n  a%id : '//str(a%id)//&
+    '\n  a%nam: '//str(a%nam))
     return
   endselect
   !-------------------------------------------------------------
@@ -1488,7 +1488,7 @@ integer(4) function clear_mesh(a) result(info)
   ! Case: ERROR
   case default
     info = 1
-    call errret(msg_invalid_value('a%typ', a%typ))
+    call errret(ERROR_CODE__VALUE, 'a%typ == '//str(a%typ))
     return
   endselect
   !-------------------------------------------------------------

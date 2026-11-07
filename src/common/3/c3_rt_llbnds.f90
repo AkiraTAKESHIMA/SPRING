@@ -262,9 +262,9 @@ integer(4) function calc_relations_llbnds_core(&
         counter = counter + 1
         if( counter > 1 )then
           info = 1
-          call errret(msg_internal_error()//&
-                    '\nRelations of the grid lines were not calculated correctly.'//&
-                    '\n  ish: '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,'f12.7',' ~ ')//')')
+          call errret(ERROR_CODE__INTERNAL, &
+            'Relations of the grid lines were not calculated correctly.'//&
+          '\n  ish: '//str(ish)//' ('//str(slon(ish-1:ish)*r2d,'f12.7',' ~ ')//')')
           return
         endif
       endif
@@ -307,8 +307,8 @@ integer(4) function calc_relations_llbnds_core(&
         counter = counter + 1
         if( counter > 1 )then
           info = 1
-          call errret(msg_internal_error()//&
-                    '\nRelations of the grid lines were not calculated correctly.')
+          call errret(ERROR_CODE__INTERNAL, &
+            'Relations of the grid lines were not calculated correctly.')
           return
         endif
       endif
@@ -566,7 +566,7 @@ integer(4) function calc_relations_llbnds_core(&
     enddo
   case default
     info = 1
-    call errret(msg_invalid_value('earth%shptyp', earth%shptyp))
+    call errret(ERROR_CODE__VALUE, 'earth%shptyp == '//str(earth%shptyp))
     return
   endselect
 
@@ -599,10 +599,11 @@ integer(4) function check_consistency() result(info)
     if( shr%west(1) /= shr_prev%east(shr_prev%mh) .and. &
         abs(shr%west(1) - shr_prev%east(shr_prev%mh)) /= rad_360deg )then
       info = 1
-      call errret('Incontinuity of longitudes. \n'//&
-                  'shrel('//str(ish-1)//')%east('//str(shr_prev%mh)//'): '//&
-                  str(shr_prev%east(shr_prev%nr),'f7.3')//', \n'//&
-                  'shrel('//str(ish)//')%west(1): '//str(shr%west(1),'f7.3'))
+      call errret(ERROR_CODE__CONDITION, &
+        'Incontinuity of longitudes.'//&
+      '\nshrel('//str(ish-1)//')%east('//str(shr_prev%mh)//'): '//&
+         str(shr_prev%east(shr_prev%nr),'f7.3')//','//&
+      '\nshrel('//str(ish)//')%west(1): '//str(shr%west(1),'f7.3'))
       return
     endif
     !---------------------------------------------------------
@@ -613,10 +614,11 @@ integer(4) function check_consistency() result(info)
       if( abs(sum(shr%lonwidth(:))-londiff_rad(slon(ish),slon(ish-1))) &
              > londiff_rad(slon(ish),slon(ish-1)) * thresh_lonwidth_rerr )then
         info = 1
-        call errret('Relative error of sum(shrel('//str(ish)//')%lonwidth(:)) '//&
-                    'to the actual width of the cell exceeded the threshhold. \n'//&
-                    'sum(%lonwidth(:)): '//str(sum(shr%lonwidth(:)),'f12.8')//&
-                    ', cell width: '//str(londiff_rad(slon(ish),slon(ish-1)),'f12.8'))
+        call errret(ERROR_CODE__CONDITION, &
+          'Relative error of sum(shrel('//str(ish)//')%lonwidth(:)) '//&
+          'to the actual width of the cell exceeded the threshhold.'//&
+        '\nsum(%lonwidth(:)): '//str(sum(shr%lonwidth(:)),'f12.8')//&
+          ', cell width: '//str(londiff_rad(slon(ish),slon(ish-1)),'f12.8'))
         return
       endif
     endif
@@ -672,22 +674,22 @@ integer(4) function check_info(nam, print_this) result(info)
       if( tvsouth /= 0 )then
         if( slat(isv-1) < tlat(tvsouth-1) .or. slat(isv-1) > tlat(tvsouth) )then
           info = 1
-          call errret('slat('//str(isv-1)//'): '//str(slat(isv-1)*r2d)//&
-                      ', tv: '//str(tvsouth)//&
-                      ' ('//str(tlat(tvsouth-1:tvsouth)*r2d,'',' ~ ')//')\n'//&
-                      't_south - s: '//str((tlat(tvsouth-1)-slat(isv-1))*r2d)//'\n'//&
-                      's - t_north: '//str((slat(isv-1)-tlat(tvsouth))*r2d))
+          call errret(ERROR_CODE__CONDITION, &
+            'slat('//str(isv-1)//'): '//str(slat(isv-1)*r2d)//', tv: '//str(tvsouth)//&
+            ' ('//str(tlat(tvsouth-1:tvsouth)*r2d,'',' ~ ')//')'//&
+          '\nt_south - s: '//str((tlat(tvsouth-1)-slat(isv-1))*r2d)//&
+          '\ns - t_north: '//str((slat(isv-1)-tlat(tvsouth))*r2d))
           return
         endif
       endif
       if( tvnorth /= 0 )then
         if( slat(isv) < tlat(tvnorth-1) .or. slat(isv) > tlat(tvnorth) )then
           info = 1
-          call errret('slat('//str(isv)//'): '//str(slat(isv)*r2d)//&
-                      ', tv: '//str(tvnorth)//&
-                      ' ('//str(tlat(tvnorth-1:tvnorth),'',' ~ ')//')\n'//&
-                      't_south - s: '//str((tlat(tvnorth-1)-slat(isv))*r2d)//'\n'//&
-                      's - t_north: '//str((slat(isv)-tlat(tvnorth))*r2d))
+          call errret(ERROR_CODE__CONDITION, &
+            'slat('//str(isv)//'): '//str(slat(isv)*r2d)//', tv: '//str(tvnorth)//&
+            ' ('//str(tlat(tvnorth-1:tvnorth),'',' ~ ')//')'//&
+          '\nt_south - s: '//str((tlat(tvnorth-1)-slat(isv))*r2d)//&
+          '\ns - t_north: '//str((slat(isv)-tlat(tvnorth))*r2d))
           return
         endif
       endif
@@ -730,11 +732,12 @@ integer(4) function check_info(nam, print_this) result(info)
         !    abs(slon(ish-1)-tlon(thwest-1)) /= rad_360deg .and. &
         !    abs(slon(ish-1)-tlon(thwest)) /= rad_360deg  )then
           info = 1
-          call errret('Contradiction in shrel(:)%xi.\n'//&
-                      'Western grid line is out of the other cell.\n'//&
-                      'slon('//str(ish-1)//'): '//str(slon(ish-1)*r2d)//&
-                      ', tlon('//str(thwest-1)//'): '//str(tlon(thwest-1)*r2d)//&
-                      ', tlon('//str(thwest)//'): '//str(tlon(thwest)*r2d))
+          call errret(ERROR_CODE__CONDITION, &
+            'Contradiction in shrel(:)%xi.'//&
+          '\nWestern grid line is out of the other cell.'//&
+          '\nslon('//str(ish-1)//'): '//str(slon(ish-1)*r2d)//&
+            ', tlon('//str(thwest-1)//'): '//str(tlon(thwest-1)*r2d)//&
+            ', tlon('//str(thwest)//'): '//str(tlon(thwest)*r2d))
           return
         endif
       endif
@@ -748,11 +751,12 @@ integer(4) function check_info(nam, print_this) result(info)
         !    abs(slon(ish)-tlon(theast-1)) /= rad_360deg .and. &
         !    abs(slon(ish)-tlon(theast)) /= rad_360deg )then
           info = 1
-          call errret('Contradiction in shrel(:)%xf.\n'//&
-                      'Eastern grid line is out of the other cell.\n'//&
-                      'slon('//str(ish)//'): '//str(slon(ish)*r2d)//&
-                      ', tlon('//str(theast-1)//'): '//str(tlon(theast-1)*r2d)//&
-                      ', tlon('//str(theast)//'): '//str(tlon(theast)*r2d))
+          call errret(ERROR_CODE__CONDITION, &
+            'Contradiction in shrel(:)%xf.'//&
+          '\nEastern grid line is out of the other cell.'//&
+          '\nslon('//str(ish)//'): '//str(slon(ish)*r2d)//&
+            ', tlon('//str(theast-1)//'): '//str(tlon(theast-1)*r2d)//&
+            ', tlon('//str(theast)//'): '//str(tlon(theast)*r2d))
           return
         endif
       endif
