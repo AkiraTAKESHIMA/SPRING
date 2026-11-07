@@ -1013,29 +1013,39 @@ end function set_bounds_file_raster_in
 !
 !===============================================================
 integer(4) function set_bounds_file_polygon_in(&
-    fp, ijs, ije, np, nij) result(info)
+  ap &
+) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'set_bounds_file_polygon_in'
-  type(file_polygon_in_), intent(inout), target :: fp
-  integer(8), intent(inout) :: ijs, ije
-  integer(8), intent(in) :: np
-  integer(8), intent(in) :: nij
+  type(gs_polygon_), intent(inout), target :: ap
 
+  type(file_polygon_in_), pointer :: fp
+  type(file_grid_in_), pointer :: fg_in
+  type(file_grid_out_), pointer :: fg_out
   type(file_), pointer :: f
 
   info = 0
   call logbgn(PRCNAM, MODNAM, '-p -x2')
   !-------------------------------------------------------------
-  if( ijs == 0_8 ) ijs = 1_8
-  if( ije == 0_8 ) ije = nij
+  !
+  !-------------------------------------------------------------
+  fp     => ap%f_polygon_in
+  fg_in  => ap%f_grid_in
+  fg_out => ap%f_grid_out
+  !-------------------------------------------------------------
+  if( fg_in%lb(2) == 0_8 ) fg_in%lb(2) = 1_8
+  if( fg_in%ub(2) == 0_8 ) fg_in%ub(2) = ap%nij
 
-  fp%sz(1) = np
+  ap%ijs = fg_in%lb(2)
+  ap%ije = fg_in%ub(2)
+
+  fp%sz(1) = ap%np
   fp%lb(1) = 1_8
-  fp%ub(1) = np
+  fp%ub(1) = ap%np
 
-  if( fp%sz(2) == 0_8 ) fp%sz(2) = nij
+  if( fp%sz(2) == 0_8 ) fp%sz(2) = ap%nij
   if( fp%lb(2) == 0_8 ) fp%lb(2) = 1_8
-  if( fp%ub(2) == 0_8 ) fp%ub(2) = fp%lb(2) + nij - 1_8
+  if( fp%ub(2) == 0_8 ) fp%ub(2) = fp%lb(2) + ap%nij - 1_8
 
   f => fp%x
   f%sz(:) = fp%sz(:)
