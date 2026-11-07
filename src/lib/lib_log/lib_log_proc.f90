@@ -362,22 +362,14 @@ subroutine logbgn(prc, mod, opt)
   !-------------------------------------------------------------
   depth = depth + 1
 
-  call fwrd_dict(cmd%echoPrc, set%echoPrc, &
-                 depth, val_echoPrc, isRec_echoPrc)
-  call fwrd_dict(cmd%echoPcc, set%echoPcc, &
-                 depth, val_echoPcc, isRec_echoPcc)
-  call fwrd_dict(cmd%echoMsg, set%echoMsg, &
-                 depth, val_echoMsg, isRec_echoMsg)
-  call fwrd_dict(cmd%echoWrn, set%echoWrn, &
-                 depth, val_echoWrn, isRec_echoWrn)
-  call fwrd_dict(cmd%echoErr, set%echoErr, &
-                 depth, val_echoErr, isRec_echoErr)
-  call fwrd_dict(cmd%echoBar, set%echoBar, &
-                 depth, val_echoBar, isRec_echoBar)
-  call fwrd_dict(cmd%stopErr, set%stopErr, &
-                 depth, val_stopErr, isRec_stopErr)
-  call fwrd_dict(cmd%msrTime, set%msrTime, &
-                 depth, val_msrTime, isRec_msrTime)
+  call fwrd_dict(cmd%echoPrc, set%echoPrc, depth, val_echoPrc, isRec_echoPrc)
+  call fwrd_dict(cmd%echoPcc, set%echoPcc, depth, val_echoPcc, isRec_echoPcc)
+  call fwrd_dict(cmd%echoMsg, set%echoMsg, depth, val_echoMsg, isRec_echoMsg)
+  call fwrd_dict(cmd%echoWrn, set%echoWrn, depth, val_echoWrn, isRec_echoWrn)
+  call fwrd_dict(cmd%echoErr, set%echoErr, depth, val_echoErr, isRec_echoErr)
+  call fwrd_dict(cmd%echoBar, set%echoBar, depth, val_echoBar, isRec_echoBar)
+  call fwrd_dict(cmd%stopErr, set%stopErr, depth, val_stopErr, isRec_stopErr)
+  call fwrd_dict(cmd%msrTime, set%msrTime, depth, val_msrTime, isRec_msrTime)
 
   set%mod(depth) = trim(mod)
   set%prc(depth) = trim(prc)
@@ -695,22 +687,14 @@ subroutine logent(stp, prc, mod, opt)
   !-------------------------------------------------------------
   depth = depth + 1
 
-  call fwrd_dict(cmd%echoPrc, set%echoPrc, &
-                 depth, val_echoPrc, isRec_echoPrc)
-  call fwrd_dict(cmd%echoPcc, set%echoPcc, &
-                 depth, val_echoPcc, isRec_echoPcc)
-  call fwrd_dict(cmd%echoMsg, set%echoMsg, &
-                 depth, val_echoMsg, isRec_echoMsg)
-  call fwrd_dict(cmd%echoWrn, set%echoWrn, &
-                 depth, val_echoWrn, isRec_echoWrn)
-  call fwrd_dict(cmd%echoErr, set%echoErr, &
-                 depth, val_echoErr, isRec_echoErr)
-  call fwrd_dict(cmd%echoBar, set%echoBar, &
-                 depth, val_echoBar, isRec_echoBar)
-  call fwrd_dict(cmd%stopErr, set%stopErr, &
-                 depth, val_stopErr, isRec_stopErr)
-  call fwrd_dict(cmd%msrTime, set%msrTime, &
-                 depth, val_msrTime, isRec_msrTime)
+  call fwrd_dict(cmd%echoPrc, set%echoPrc, depth, val_echoPrc, isRec_echoPrc)
+  call fwrd_dict(cmd%echoPcc, set%echoPcc, depth, val_echoPcc, isRec_echoPcc)
+  call fwrd_dict(cmd%echoMsg, set%echoMsg, depth, val_echoMsg, isRec_echoMsg)
+  call fwrd_dict(cmd%echoWrn, set%echoWrn, depth, val_echoWrn, isRec_echoWrn)
+  call fwrd_dict(cmd%echoErr, set%echoErr, depth, val_echoErr, isRec_echoErr)
+  call fwrd_dict(cmd%echoBar, set%echoBar, depth, val_echoBar, isRec_echoBar)
+  call fwrd_dict(cmd%stopErr, set%stopErr, depth, val_stopErr, isRec_stopErr)
+  call fwrd_dict(cmd%msrTime, set%msrTime, depth, val_msrTime, isRec_msrTime)
 
   if( present(mod) )then
     set%mod(depth) = trim(mod)

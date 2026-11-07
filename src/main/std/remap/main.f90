@@ -34,7 +34,7 @@ program main
   logical :: calc_vrf  = .true.
   logical :: output    = .true.
 
-  call logbgn('program remap', '', '+tr')
+  call logbgn('', 'program remap', '+tr')
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------

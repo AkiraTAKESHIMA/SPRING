@@ -141,7 +141,11 @@ function strprc(mod, prc, stp) result(s)
   else
     if( prc_ == '' )then
       if( stp_ == '' )then
-        s = 'MOD__'//trim(mod_)
+        if( index(mod_, 'program') == 1 .and. len_trim(mod_) > len('program ') )then
+          s = 'PROGRAM '//trim(mod_(len('program ')+1:))
+        else
+          s = 'MOD__'//trim(mod_)
+        endif
       else
         s = 'MOD__'//trim(mod_)//' step "'//trim(stp_)//'"'
       endif
