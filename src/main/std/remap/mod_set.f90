@@ -1197,10 +1197,8 @@ subroutine read_settings_gs_polygon(a)
   call logent('Setting the related values', PRCNAM, MODNAM)
 
   call traperr( set_bounds_file_polygon_in(ap) )
-  call traperr( set_bounds_file_grid_in(&
-         fg_in, 1_8, ap%nij) )
-  call traperr( set_bounds_file_grid_out(&
-         fg_out, 1_8, ap%nij) )
+  call traperr( set_bounds_file_grid_in(fg_in, 1_8, ap%nij) )
+  call traperr( set_bounds_file_grid_out(fg_out, 1_8, ap%nij) )
 
   ! Coordinate system
   !-------------------------------------------------------------
