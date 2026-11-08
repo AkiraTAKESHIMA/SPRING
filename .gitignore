@@ -11,4 +11,5 @@ bak/
 .venv*/
 
 *.o
+*.mod
 *.exe
