@@ -32,6 +32,7 @@ module lib_io_plainbinary
     module procedure rb__int8_1d
     module procedure rb__real_1d
     module procedure rb__dble_1d
+    module procedure rb__log1_2d
     module procedure rb__int1_2d
     module procedure rb__int2_2d
     module procedure rb__int4_2d
@@ -922,7 +923,7 @@ integer(4) function rb__dble_1d(&
   if( present(lb) ) lb_ = lb
   if( present(check_recl) ) check_recl_ = check_recl
 
-  ub = lb_-1_8 + shp
+  ub = lb_ - 1_8 + shp
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
@@ -983,6 +984,119 @@ end function rb__dble_1d
 !
 !
 !
+!===============================================================
+!
+!===============================================================
+integer(4) function rb__log1_2d(&
+    dat, f, dtype, endian, rec, sz, lb, check_recl) result(info)
+  implicit none
+  character(CLEN_PROC), parameter :: PRCNAM = 'rb__log1_2d'
+  logical(1)  , intent(out) :: dat(:,:)  !--dtype--
+  character(*), intent(in)  :: f
+  character(*), intent(in) , optional :: dtype
+  character(*), intent(in) , optional :: endian
+  integer     , intent(in) , optional :: rec
+  integer(8)  , intent(in) , optional :: sz(:)
+  integer(8)  , intent(in) , optional :: lb(:)
+  logical     , intent(in) , optional :: check_recl
+
+  character(clen_key) :: dtype_
+  character(clen_key) :: endian_
+  integer             :: rec_
+  integer(8)          :: sz_(2)
+  integer(8)          :: lb_(2)
+  logical             :: check_recl_
+
+  integer(8) :: shp(2)
+  integer(8) :: ub(2)
+  integer(8) :: byte
+  integer(8) :: thresh_ndata
+  integer(8) :: nblock, kk
+  integer(8) :: nn, n
+  integer(8) :: i2
+  integer(8) :: is
+  integer(8) :: pos
+  integer :: un
+
+  info = 0
+  call logbgn(PRCNAM, MODNAM, '-p')
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  shp = shape(dat,kind=8)
+
+  dtype_ = DTYPE_LOG1  !--dtype--
+  endian_ = ENDIAN_DEFAULT
+  rec_ = 1
+  sz_(:) = shp(:)
+  lb_(:) = 1_8
+  check_recl_ = .false.
+
+  if( present(dtype) ) dtype_ = dtype
+  if( present(endian) ) endian_ = endian_name_long(endian)
+  if( present(rec) ) rec_ = rec
+  if( present(sz) ) sz_(:) = sz(:)
+  if( present(lb) ) lb_(:) = lb(:)
+  if( present(check_recl) ) check_recl_ = check_recl
+
+  ub(:) = lb_(:) + shp(:) - 1_8
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( check_input_file(&
+        f, dtype_, product(sz_), rec_, check_recl_) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  un = unit_number()
+  if( open_input_file_stream(un, f, endian_) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  byte = byte_of_dtype(dtype_)
+  thresh_ndata = THRESH_DATASIZE / byte
+  nblock = (shp(1)-1_8) / thresh_ndata + 1_8
+  nn = (shp(1)-1_8) / nblock + 1_8
+
+  pos = product(sz_)*(rec_-1)*byte + 1_8
+
+  if( read_block(0, dat(:,1), dtype_, un, 0_8, nn) /= 0 )then
+    info = 1; call errret(); return
+  endif
+
+  pos = pos + sz_(1)*(lb_(2)-1_8)*byte
+  do i2 = 1_8, shp(2)
+    pos = pos + (lb_(1)-1_8)*byte
+    is = 0_8
+    n = shp(1) - nn*(nblock-1_8)
+    do kk = 1_8, nblock
+      if( read_block(1, dat(is+1_8:is+n,i2), dtype_, un, pos, n) /= 0 )then
+        info = 1; call errret(); return
+      endif
+      is = is + n
+      pos = pos + n*byte
+      n = nn
+    enddo
+    pos = pos + (sz_(1)-ub(1))*byte
+  enddo
+  pos = pos + sz_(1)*(sz_(2)-ub(2))*byte
+
+  if( read_block(-1, dat(:,1), dtype_, un, 0_8, 0_8) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  !-------------------------------------------------------------
+  !
+  !-------------------------------------------------------------
+  if( close_file(un) /= 0 )then
+    info = 1; call errret(); return
+  endif
+  !-------------------------------------------------------------
+  call logret(PRCNAM, MODNAM)
+end function rb__log1_2d
 !===============================================================
 !
 !===============================================================
@@ -7024,10 +7138,10 @@ end function wb__dble_3d
 !
 !===============================================================
 integer(4) function read_block__log1(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__log1'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   logical(1)  , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7040,7 +7154,7 @@ integer(4) function read_block__log1(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   case( 0 )
@@ -7049,8 +7163,8 @@ integer(4) function read_block__log1(&
     case( DTYPE_LOG4 ); allocate(tmpl4(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7065,8 +7179,8 @@ integer(4) function read_block__log1(&
       call cpval(tmpl4(:n), dat(:n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7078,8 +7192,8 @@ integer(4) function read_block__log1(&
     case( DTYPE_LOG4 ); deallocate(tmpl4)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7087,8 +7201,8 @@ integer(4) function read_block__log1(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__log1
@@ -7096,10 +7210,10 @@ end function read_block__log1
 !
 !===============================================================
 integer(4) function read_block__log4(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__log4'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   logical(4)  , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7112,7 +7226,7 @@ integer(4) function read_block__log4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7122,8 +7236,8 @@ integer(4) function read_block__log4(&
     case( DTYPE_LOG4 ); continue
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7138,8 +7252,8 @@ integer(4) function read_block__log4(&
       read(un,pos=pos) dat(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7151,8 +7265,8 @@ integer(4) function read_block__log4(&
     case( DTYPE_LOG4 ); continue
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7160,8 +7274,8 @@ integer(4) function read_block__log4(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__log4
@@ -7169,10 +7283,10 @@ end function read_block__log4
 !
 !===============================================================
 integer(4) function read_block__int1(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__int1'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(1)  , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7189,7 +7303,7 @@ integer(4) function read_block__int1(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7203,8 +7317,8 @@ integer(4) function read_block__int1(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7231,8 +7345,8 @@ integer(4) function read_block__int1(&
       call cpval(tmpr8(:n), dat(:n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7248,8 +7362,8 @@ integer(4) function read_block__int1(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7257,8 +7371,8 @@ integer(4) function read_block__int1(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__int1
@@ -7266,10 +7380,10 @@ end function read_block__int1
 !
 !===============================================================
 integer(4) function read_block__int2(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__int2'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(2)  , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7286,7 +7400,7 @@ integer(4) function read_block__int2(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7300,8 +7414,8 @@ integer(4) function read_block__int2(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7328,8 +7442,8 @@ integer(4) function read_block__int2(&
       call cpval(tmpr8(:n), dat(:n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7345,8 +7459,8 @@ integer(4) function read_block__int2(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7354,8 +7468,8 @@ integer(4) function read_block__int2(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__int2
@@ -7363,10 +7477,10 @@ end function read_block__int2
 !
 !===============================================================
 integer(4) function read_block__int4(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__int4'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(4)  , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7383,7 +7497,7 @@ integer(4) function read_block__int4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7397,8 +7511,8 @@ integer(4) function read_block__int4(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7425,8 +7539,8 @@ integer(4) function read_block__int4(&
       call cpval(tmpr8(:n), dat(:n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7442,8 +7556,8 @@ integer(4) function read_block__int4(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7451,8 +7565,8 @@ integer(4) function read_block__int4(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__int4
@@ -7460,10 +7574,10 @@ end function read_block__int4
 !
 !===============================================================
 integer(4) function read_block__int8(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__int8'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(8)  , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7480,7 +7594,7 @@ integer(4) function read_block__int8(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7494,8 +7608,8 @@ integer(4) function read_block__int8(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7522,8 +7636,8 @@ integer(4) function read_block__int8(&
       call cpval(tmpr8(:n), dat(:n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7539,8 +7653,8 @@ integer(4) function read_block__int8(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7548,8 +7662,8 @@ integer(4) function read_block__int8(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__int8
@@ -7557,10 +7671,10 @@ end function read_block__int8
 !
 !===============================================================
 integer(4) function read_block__real(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__real'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   real(4)     , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7577,7 +7691,7 @@ integer(4) function read_block__real(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7591,8 +7705,8 @@ integer(4) function read_block__real(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7619,8 +7733,8 @@ integer(4) function read_block__real(&
       call cpval(tmpr8(:n), dat(:n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7636,8 +7750,8 @@ integer(4) function read_block__real(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7645,8 +7759,8 @@ integer(4) function read_block__real(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__real
@@ -7654,10 +7768,10 @@ end function read_block__real
 !
 !===============================================================
 integer(4) function read_block__dble(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'read_block__dble'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   real(8)     , intent(inout) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7674,7 +7788,7 @@ integer(4) function read_block__dble(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7688,8 +7802,8 @@ integer(4) function read_block__dble(&
     case( DTYPE_DBLE ); continue
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7716,8 +7830,8 @@ integer(4) function read_block__dble(&
       read(un,pos=pos) dat(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7733,8 +7847,8 @@ integer(4) function read_block__dble(&
     case( DTYPE_DBLE ); continue
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7742,8 +7856,8 @@ integer(4) function read_block__dble(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function read_block__dble
@@ -7759,10 +7873,10 @@ end function read_block__dble
 !
 !===============================================================
 integer(4) function write_block__log1(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__log1'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   logical(1)  , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7781,7 +7895,7 @@ integer(4) function write_block__log1(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7797,8 +7911,8 @@ integer(4) function write_block__log1(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7843,8 +7957,8 @@ integer(4) function write_block__log1(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7862,8 +7976,8 @@ integer(4) function write_block__log1(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7871,8 +7985,8 @@ integer(4) function write_block__log1(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__log1
@@ -7880,10 +7994,10 @@ end function write_block__log1
 !
 !===============================================================
 integer(4) function write_block__log4(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__log4'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   logical(4)  , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -7902,7 +8016,7 @@ integer(4) function write_block__log4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -7918,8 +8032,8 @@ integer(4) function write_block__log4(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7964,8 +8078,8 @@ integer(4) function write_block__log4(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7983,8 +8097,8 @@ integer(4) function write_block__log4(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -7992,8 +8106,8 @@ integer(4) function write_block__log4(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__log4
@@ -8001,10 +8115,10 @@ end function write_block__log4
 !
 !===============================================================
 integer(4) function write_block__int1(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__int1'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(1)  , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8021,7 +8135,7 @@ integer(4) function write_block__int1(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8035,8 +8149,8 @@ integer(4) function write_block__int1(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8063,8 +8177,8 @@ integer(4) function write_block__int1(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8080,8 +8194,8 @@ integer(4) function write_block__int1(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8089,8 +8203,8 @@ integer(4) function write_block__int1(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__int1
@@ -8098,10 +8212,10 @@ end function write_block__int1
 !
 !===============================================================
 integer(4) function write_block__int2(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__int2'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(2)  , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8118,7 +8232,7 @@ integer(4) function write_block__int2(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8132,8 +8246,8 @@ integer(4) function write_block__int2(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8160,8 +8274,8 @@ integer(4) function write_block__int2(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8177,8 +8291,8 @@ integer(4) function write_block__int2(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8186,8 +8300,8 @@ integer(4) function write_block__int2(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__int2
@@ -8195,10 +8309,10 @@ end function write_block__int2
 !
 !===============================================================
 integer(4) function write_block__int4(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__int4'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(4)  , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8215,7 +8329,7 @@ integer(4) function write_block__int4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8229,8 +8343,8 @@ integer(4) function write_block__int4(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8257,8 +8371,8 @@ integer(4) function write_block__int4(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8274,8 +8388,8 @@ integer(4) function write_block__int4(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8283,8 +8397,8 @@ integer(4) function write_block__int4(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__int4
@@ -8292,10 +8406,10 @@ end function write_block__int4
 !
 !===============================================================
 integer(4) function write_block__int8(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__int8'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(8)  , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8312,7 +8426,7 @@ integer(4) function write_block__int8(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8326,8 +8440,8 @@ integer(4) function write_block__int8(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8354,8 +8468,8 @@ integer(4) function write_block__int8(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8371,8 +8485,8 @@ integer(4) function write_block__int8(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8380,8 +8494,8 @@ integer(4) function write_block__int8(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__int8
@@ -8389,10 +8503,10 @@ end function write_block__int8
 !
 !===============================================================
 integer(4) function write_block__real(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__real'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   real(4)     , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8409,7 +8523,7 @@ integer(4) function write_block__real(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8423,8 +8537,8 @@ integer(4) function write_block__real(&
     case( DTYPE_DBLE ); allocate(tmpr8(n))
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8451,8 +8565,8 @@ integer(4) function write_block__real(&
       write(un,pos=pos) tmpr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8468,8 +8582,8 @@ integer(4) function write_block__real(&
     case( DTYPE_DBLE ); deallocate(tmpr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8477,8 +8591,8 @@ integer(4) function write_block__real(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__real
@@ -8486,10 +8600,10 @@ end function write_block__real
 !
 !===============================================================
 integer(4) function write_block__dble(&
-    job, dat, dtype, un, pos, n) result(info)
+    task, dat, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'write_block__dble'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   real(8)     , intent(in) :: dat(:)
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8506,7 +8620,7 @@ integer(4) function write_block__dble(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8520,8 +8634,8 @@ integer(4) function write_block__dble(&
     case( DTYPE_DBLE ); continue
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8548,8 +8662,8 @@ integer(4) function write_block__dble(&
       write(un,pos=pos) dat(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8565,8 +8679,8 @@ integer(4) function write_block__dble(&
     case( DTYPE_DBLE ); continue
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8574,8 +8688,8 @@ integer(4) function write_block__dble(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function write_block__dble
@@ -8638,10 +8752,10 @@ end function get_nfill_max
 !
 !===============================================================
 integer(4) function fill_block__log1(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__log1'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   logical(1)  , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8655,7 +8769,7 @@ integer(4) function fill_block__log1(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8665,8 +8779,8 @@ integer(4) function fill_block__log1(&
     case( DTYPE_LOG4 ); allocate(filll4(n)); filll4(:) = logical(fill,4)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8678,8 +8792,8 @@ integer(4) function fill_block__log1(&
     case( DTYPE_LOG4 ); write(un,pos=pos) filll4(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8691,8 +8805,8 @@ integer(4) function fill_block__log1(&
     case( DTYPE_LOG4 ); deallocate(filll4)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8700,8 +8814,8 @@ integer(4) function fill_block__log1(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__log1
@@ -8709,10 +8823,10 @@ end function fill_block__log1
 !
 !===============================================================
 integer(4) function fill_block__log4(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__log4'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   logical(4)  , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8726,7 +8840,7 @@ integer(4) function fill_block__log4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8736,8 +8850,8 @@ integer(4) function fill_block__log4(&
     case( DTYPE_LOG4 ); allocate(filll4(n)); filll4(:) = logical(fill,4)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8749,8 +8863,8 @@ integer(4) function fill_block__log4(&
     case( DTYPE_LOG4 ); write(un,pos=pos) filll4(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8762,8 +8876,8 @@ integer(4) function fill_block__log4(&
     case( DTYPE_LOG4 ); deallocate(filll4)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8771,8 +8885,8 @@ integer(4) function fill_block__log4(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__log4
@@ -8780,10 +8894,10 @@ end function fill_block__log4
 !
 !===============================================================
 integer(4) function fill_block__int1(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__int1'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(1)  , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8801,7 +8915,7 @@ integer(4) function fill_block__int1(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8815,8 +8929,8 @@ integer(4) function fill_block__int1(&
     case( DTYPE_DBLE ); allocate(fillr8(n)); fillr8(:) = real(fill,8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8832,8 +8946,8 @@ integer(4) function fill_block__int1(&
     case( DTYPE_DBLE ); write(un,pos=pos) fillr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8849,8 +8963,8 @@ integer(4) function fill_block__int1(&
     case( DTYPE_DBLE ); deallocate(fillr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8858,8 +8972,8 @@ integer(4) function fill_block__int1(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__int1
@@ -8867,10 +8981,10 @@ end function fill_block__int1
 !
 !===============================================================
 integer(4) function fill_block__int2(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__int2'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(2)  , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8888,7 +9002,7 @@ integer(4) function fill_block__int2(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8902,8 +9016,8 @@ integer(4) function fill_block__int2(&
     case( DTYPE_DBLE ); allocate(fillr8(n)); fillr8(:) = real(fill,8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8919,8 +9033,8 @@ integer(4) function fill_block__int2(&
     case( DTYPE_DBLE ); write(un,pos=pos) fillr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8936,8 +9050,8 @@ integer(4) function fill_block__int2(&
     case( DTYPE_DBLE ); deallocate(fillr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -8945,8 +9059,8 @@ integer(4) function fill_block__int2(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__int2
@@ -8954,10 +9068,10 @@ end function fill_block__int2
 !
 !===============================================================
 integer(4) function fill_block__int4(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__int4'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(4)  , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -8975,7 +9089,7 @@ integer(4) function fill_block__int4(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -8989,8 +9103,8 @@ integer(4) function fill_block__int4(&
     case( DTYPE_DBLE ); allocate(fillr8(n)); fillr8(:) = real(fill,8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9006,8 +9120,8 @@ integer(4) function fill_block__int4(&
     case( DTYPE_DBLE ); write(un,pos=pos) fillr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9023,8 +9137,8 @@ integer(4) function fill_block__int4(&
     case( DTYPE_DBLE ); deallocate(fillr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9032,8 +9146,8 @@ integer(4) function fill_block__int4(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__int4
@@ -9041,10 +9155,10 @@ end function fill_block__int4
 !
 !===============================================================
 integer(4) function fill_block__int8(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__int8'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   integer(8)  , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -9062,7 +9176,7 @@ integer(4) function fill_block__int8(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -9076,8 +9190,8 @@ integer(4) function fill_block__int8(&
     case( DTYPE_DBLE ); allocate(fillr8(n)); fillr8(:) = real(fill,8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9093,8 +9207,8 @@ integer(4) function fill_block__int8(&
     case( DTYPE_DBLE ); write(un,pos=pos) fillr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9110,8 +9224,8 @@ integer(4) function fill_block__int8(&
     case( DTYPE_DBLE ); deallocate(fillr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9119,8 +9233,8 @@ integer(4) function fill_block__int8(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__int8
@@ -9128,10 +9242,10 @@ end function fill_block__int8
 !
 !===============================================================
 integer(4) function fill_block__real(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__real'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   real(4)     , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -9149,7 +9263,7 @@ integer(4) function fill_block__real(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -9163,8 +9277,8 @@ integer(4) function fill_block__real(&
     case( DTYPE_DBLE ); allocate(fillr8(n)); fillr8(:) = real(fill,8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9180,8 +9294,8 @@ integer(4) function fill_block__real(&
     case( DTYPE_DBLE ); write(un,pos=pos) fillr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9197,8 +9311,8 @@ integer(4) function fill_block__real(&
     case( DTYPE_DBLE ); deallocate(fillr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9206,8 +9320,8 @@ integer(4) function fill_block__real(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__real
@@ -9215,10 +9329,10 @@ end function fill_block__real
 !
 !===============================================================
 integer(4) function fill_block__dble(&
-    job, fill, dtype, un, pos, n) result(info)
+    task, fill, dtype, un, pos, n) result(info)
   implicit none
   character(CLEN_PROC), parameter :: PRCNAM = 'fill_block__dble'
-  integer     , intent(in) :: job
+  integer     , intent(in) :: task
   real(8)     , intent(in) :: fill
   character(*), intent(in) :: dtype
   integer     , intent(in) :: un
@@ -9236,7 +9350,7 @@ integer(4) function fill_block__dble(&
   !-------------------------------------------------------------
   !
   !-------------------------------------------------------------
-  selectcase( job )
+  selectcase( task )
   !-------------------------------------------------------------
   ! Case: Allocate
   !-------------------------------------------------------------
@@ -9250,8 +9364,8 @@ integer(4) function fill_block__dble(&
     case( DTYPE_DBLE ); allocate(fillr8(n)); fillr8(:) = real(fill,8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9267,8 +9381,8 @@ integer(4) function fill_block__dble(&
     case( DTYPE_DBLE ); write(un,pos=pos) fillr8(:n)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9284,8 +9398,8 @@ integer(4) function fill_block__dble(&
     case( DTYPE_DBLE ); deallocate(fillr8)
     case default
       info = 1
-      call erradd(msg_invalid_value('dtype', dtype), &
-                  '', PRCNAM, MODNAM)
+      call errnew(ERROR_CODE__VALUE, 'dtype == '//str(dtype), &
+                  MODNAM, PRCNAM)
       return
     endselect
   !-------------------------------------------------------------
@@ -9293,8 +9407,8 @@ integer(4) function fill_block__dble(&
   !-------------------------------------------------------------
   case default
     info = 1
-    call erradd(msg_invalid_value('job', job), &
-                '', PRCNAM, MODNAM)
+    call errnew(ERROR_CODE__VALUE, 'task == '//str(task), &
+                MODNAM, PRCNAM)
     return
   endselect
 end function fill_block__dble
@@ -9410,24 +9524,26 @@ integer(4) function check_input_filesize(&
   if( mod(fs, recl) /= 0_8 )then
     if( check_recl )then
       info = 1
-      call errret('File size is invalid.'//&
-                '\n  Path: '//str(path)//&
-                '\n  Data type: '//str(dtype)//' ('//str(byte)//' byte)'//&
-                '\n  Record length: '//str(recl)//&
-                '\n  File size    : '//str(fs)//&
-                '\nFile size must be a multiple number of record length.')
+      call errret(ERROR_CODE__CONDITION, &
+        'File size is invalid.'//&
+      '\n  Path: '//str(path)//&
+      '\n  Data type: '//str(dtype)//' ('//str(byte)//' byte)'//&
+      '\n  Record length: '//str(recl)//&
+      '\n  File size    : '//str(fs)//&
+      '\nFile size must be a multiple number of record length.')
       return
     endif
   else
     if( fs < fs_min )then
       info = 1
-      call errret('File size is invalid.'//&
-                '\n  Path: '//str(path)//&
-                '\n  Data type: '//str(dtype)//' ('//str(byte)//' byte)'//&
-                '\n  File size                 : '//str(fs)//&
-                '\n  Record length             : '//str(recl)//&
-                '\n  Record number             : '//str(rec)//&
-                '\n  Expected minimum file size: '//str(fs_min))
+      call errret(ERROR_CODE__CONDITION, &
+        'File size is invalid.'//&
+      '\n  Path: '//str(path)//&
+      '\n  Data type: '//str(dtype)//' ('//str(byte)//' byte)'//&
+      '\n  File size                 : '//str(fs)//&
+      '\n  Record length             : '//str(recl)//&
+      '\n  Record number             : '//str(rec)//&
+      '\n  Expected minimum file size: '//str(fs_min))
       return
     endif
   endif
@@ -9467,11 +9583,12 @@ integer(4) function check_output_filesize(&
 
   if( mod(fs, recl) /= 0_8 )then
     info = 1
-    call errret('File size is invalid.'//&
-              '\n  Path: '//str(path)//&
-              '\n  File size    : '//str(fs)//&
-              '\n  Record length: '//str(recl)//&
-              '\nFile size must be a multiple number of record length.')
+    call errret(ERROR_CODE__CONDITION, &
+      'File size is invalid.'//&
+    '\n  Path: '//str(path)//&
+    '\n  File size    : '//str(fs)//&
+    '\n  Record length: '//str(recl)//&
+    '\nFile size must be a multiple number of record length.')
     return
   endif
   !-------------------------------------------------------------
@@ -9505,7 +9622,7 @@ integer(4) function open_input_file_stream(&
          iostat=info)
   case default
     info = 1
-    call errret(msg_invalid_value('endian', endian))
+    call errret(ERROR_CODE__VALUE, 'endian == '//str(endian))
     return
   endselect
   !-------------------------------------------------------------

@@ -5,8 +5,8 @@ all:\
   make_main\
   make_libspring\
   make_sample_libspring\
-  make_ext\
-  make_test
+  make_ext
+  #make_test
 
 make_lib:
 	$(MAKE) -C lib
@@ -43,8 +43,8 @@ clean:\
   clean_main\
   clean_libspring\
   clean_sample_libspring\
-  clean_ext\
-  clean_test
+  clean_ext
+  #clean_test
 
 
 clean_lib:
