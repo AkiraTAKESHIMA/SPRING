@@ -1,9 +1,11 @@
+/bin/
+/ext/
+/data
+/data_*
+/updates.txt
+
 out/
 tmp/
-bin/
-ext/
-dat
-updates.txt
 
 .venv*/
 
