@@ -22,7 +22,6 @@ program main
   call addarg('-m', '--method', '1st_order_conservative', .false., 'Interpolation Method')
 
   call logmsg('------ Test showarg', opt='x0')
-  call showarg()
 
   call logmsg('------ Test parsearg (iend=1)', opt='x0')
   call parsearg(iend=1)
