@@ -6,3 +6,6 @@ dat
 updates.txt
 
 .venv*/
+
+*.o
+*.exe
